@@ -1,0 +1,4 @@
+.vscode
+*.pyc
+cmake-build-debug/
+.idea
