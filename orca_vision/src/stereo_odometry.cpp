@@ -1,5 +1,5 @@
-#include "orca_vision/util.h"
-#include "orca_vision/stereo_image.h"
+#include "orca_vision/util.hpp"
+#include "orca_vision/stereo_image.hpp"
 
 #include <geometry_msgs/TransformStamped.h>
 #include <image_geometry/stereo_camera_model.h>

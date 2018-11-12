@@ -55,8 +55,8 @@ add_library(
   orca_topside
   src/orca_panel.cpp
   src/video_panel.cpp
-  include/orca_topside/orca_panel.h
-  include/orca_topside/video_panel.h
+  include/orca_topside/orca_panel.hpp
+  include/orca_topside/video_panel.hpp
 )
 
 ament_target_dependencies(
@@ -68,6 +68,6 @@ ament_target_dependencies(
   "rviz2"
 )
 
-target_link_libraries(orca_topside ${QT_LIBRARIES} ${QTGSTREAMER_UI_LIBRARIES})  # TODO add libraries
+target_link_libraries(orca_topside ${QT_LIBRARIES} ${QTGSTREAMER_UI_LIBRARIES})  # TODO add libraries, or is this the right thing?
 
 ament_package()

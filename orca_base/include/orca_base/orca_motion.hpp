@@ -2,8 +2,8 @@
 #define ORCA_MOTION_H
 
 #include "eigen3/Eigen/Geometry"
-#include "orca_base/orca_model.h"
-#include "orca_base/pid.h"
+#include "orca_base/orca_model.hpp"
+#include "orca_base/pid.hpp"
 
 namespace orca_base {
 

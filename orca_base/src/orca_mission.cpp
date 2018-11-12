@@ -1,4 +1,4 @@
-#include "orca_base/orca_mission.h"
+#include "orca_base/orca_mission.hpp"
 
 namespace orca_base {
 

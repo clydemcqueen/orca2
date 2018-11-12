@@ -1,4 +1,4 @@
-#include "orca_topside/video_panel.h"
+#include "orca_topside/video_panel.hpp"
 
 #include "rviz_common/logging.hpp"
 

@@ -3,7 +3,7 @@
 
 #include "nav_msgs/msg/path.hpp"
 
-#include "orca_base/orca_motion.h"
+#include "orca_base/orca_motion.hpp"
 
 namespace orca_base {
 

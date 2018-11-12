@@ -1,4 +1,4 @@
-#include "orca_driver/maestro.h"
+#include "orca_driver/maestro.hpp"
 
 #include <unistd.h>
 #include <fcntl.h>

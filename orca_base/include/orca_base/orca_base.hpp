@@ -18,9 +18,9 @@
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
-#include "orca_base/orca_model.h"
-#include "orca_base/pid.h"
-#include "orca_base/orca_mission.h"
+#include "orca_base/orca_model.hpp"
+#include "orca_base/pid.hpp"
+#include "orca_base/orca_mission.hpp"
 
 namespace orca_base {
 

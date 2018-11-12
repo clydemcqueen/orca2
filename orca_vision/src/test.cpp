@@ -1,6 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 
-#include "orca_vision/util.h"
+#include "orca_vision/util.hpp"
 
 namespace orca_vision {
 

@@ -1,4 +1,4 @@
-#include "orca_base/orca_model.h"
+#include "orca_base/orca_model.hpp"
 
 void test4to6()
 {

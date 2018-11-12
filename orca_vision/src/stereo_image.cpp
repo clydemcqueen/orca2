@@ -1,5 +1,5 @@
-#include "orca_vision/util.h"
-#include "orca_vision/stereo_image.h"
+#include "orca_vision/util.hpp"
+#include "orca_vision/stereo_image.hpp"
 
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/opencv.hpp"

@@ -6,7 +6,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "orca_driver/maestro.h"
+#include "orca_driver/maestro.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"

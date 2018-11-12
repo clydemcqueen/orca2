@@ -8,7 +8,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-#include "orca_base/util.h"
+#include "orca_base/util.hpp"
 
 namespace orca_base {
 

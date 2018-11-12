@@ -2,7 +2,7 @@
 #define ORCA_PWM_H
 
 #include <cstdint>
-#include "orca_base/util.h"
+#include "orca_base/util.hpp"
 
 namespace orca_base {
 

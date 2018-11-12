@@ -1,5 +1,5 @@
-#include "orca_base/orca_base.h"
-#include "orca_base/orca_pwm.h"
+#include "orca_base/orca_base.hpp"
+#include "orca_base/orca_pwm.hpp"
 
 namespace orca_base {
 

@@ -9,7 +9,7 @@
 #include "QLabel"
 
 //#include "orca_base/orca_pwm.h"
-#include "orca_topside/orca_panel.h"
+#include "orca_topside/orca_panel.hpp"
 
 namespace orca_topside {
 
