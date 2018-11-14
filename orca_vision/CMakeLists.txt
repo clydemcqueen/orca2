@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(orca_vision)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
@@ -26,34 +30,13 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(
-  altitude
-  src/altitude.cpp
-)
-ament_target_dependencies(
-  altitude
-  ${OpenCV_LIBRARIES}
-)
+#add_executable(altitude src/altitude.cpp)
+#ament_target_dependencies(altitude ${OpenCV_LIBRARIES})
 
-add_executable(
-  orca_mono_odom
-  src/mono_odometry.cpp
-)
-ament_target_dependencies(
-  orca_mono_odom
-  ${OpenCV_LIBRARIES}
-)
+#add_executable(orca_mono_odom src/mono_odometry.cpp)
+#ament_target_dependencies(orca_mono_odom ${OpenCV_LIBRARIES})
 
-add_executable(
-  orca_stereo_odom
-  src/stereo_odometry.cpp
-  src/stereo_image.cpp
-  src/util.cpp
-  src/test.cpp
-)
-ament_target_dependencies(
-  orca_stereo_odom
-  ${OpenCV_LIBRARIES}
-)
+#add_executable(orca_stereo_odom src/stereo_odometry.cpp src/stereo_image.cpp src/util.cpp src/test.cpp)
+#ament_target_dependencies(orca_stereo_odom ${OpenCV_LIBRARIES})
 
 ament_package()

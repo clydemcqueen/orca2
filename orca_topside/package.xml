@@ -16,9 +16,7 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>libqt5-core</depend>
-  <depend>libqt5-gui</depend>
-  <depend>libqt5-widgets</depend>
+  <depend>qt5-widgets</depend>
   <depend>orca_base</depend>
   <depend>orca_msgs</depend>
   <depend>qtbase5-dev</depend>

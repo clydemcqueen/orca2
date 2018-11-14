@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION 3.5)
 project(orca_driver)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
-list(APPEND CMAKE_PREFIX_PATH "/home/clyde/orca_ws/install/orca_msgs/share/orca_msgs/cmake")  # TODO
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+# Emulate colcon by providing paths to other projects in the workspace
+if($ENV{CLION_IDE})
+  set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
+endif()
+
 
 find_package(ament_cmake REQUIRED)
 find_package(orca_msgs REQUIRED)
@@ -14,8 +22,9 @@ find_package(std_msgs REQUIRED)
 
 include_directories(
   include
-  /opt/ros/bouncy/include  # TODO
-  /home/clyde/orca_ws/src/orca/install/orca_msgs/include  # TODO
+  find_package(orca_msgs REQUIRED)
+  find_package(rclcpp REQUIRED)
+  find_package(std_msgs REQUIRED)
 )
 
 add_executable(

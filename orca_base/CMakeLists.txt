@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
 project(orca_base)
-set(CMAKE_CXX_STANDARD 14)
 
-# Emulate colcon
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+# Emulate colcon by providing paths to other projects in the workspace
 if($ENV{CLION_IDE})
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
 endif()
@@ -22,8 +26,15 @@ find_package(visualization_msgs REQUIRED)
 
 include_directories(
   include
-  /opt/ros/bouncy/include  # TODO
-  /home/clyde/orca_ws/src/orca/install/orca_msgs/include  # TODO
+  ${builtin_interfaces_INCLUDE_DIRS}
+  ${geometry_msgs_INCLUDE_DIRS}
+  ${nav_msgs_INCLUDE_DIRS}
+  ${orca_msgs_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
+  ${sensor_msgs_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  ${visualization_msgs_INCLUDE_DIRS}
 )
 
 add_executable(
@@ -49,9 +60,11 @@ add_executable(
   src/test.cpp
 )
 
+ament_export_include_directories(include)
+
 install(TARGETS orca_base orca_base_test DESTINATION lib/orca_base)
-install(FILES scripts/local_pose.py scripts/kf.py DESTINATION lib/flock2)
+install(FILES scripts/local_pose.py scripts/kf.py DESTINATION lib/orca_base)
 install(DIRECTORY launch DESTINATION share/orca_base)
-install(DIRECTORY include DESTINATION include)
+install(DIRECTORY include/orca_base DESTINATION include)
 
 ament_package()

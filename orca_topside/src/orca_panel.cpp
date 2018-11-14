@@ -5,8 +5,8 @@
 #include "rviz_common/logging.hpp"
 
 //#include "qt5/QtCore/QtCore"
-#include "QVBoxLayout"
-#include "QLabel"
+#include "QtWidgets/QVBoxLayout"
+#include "QtWidgets/QLabel"
 
 //#include "orca_base/orca_pwm.h"
 #include "orca_topside/orca_panel.hpp"
