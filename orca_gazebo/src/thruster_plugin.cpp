@@ -1,17 +1,11 @@
-#include <boost/bind.hpp>
-#include <gazebo/gazebo.hh>
-#include <gazebo/physics/Model.hh>
-#include <gazebo/physics/physics.hh>
+#include "gazebo/gazebo.hh"
+#include "gazebo/physics/physics.hh"
 
-#include <thread>
-#include <ros/ros.h>
-#include "ros/callback_queue.h"
+#include "rclcpp/rclcpp.hpp"
+#include "gazebo_ros/node.hpp"
 
-#include "orca_base/orca_pwm.h"
-#include "orca_msgs/Control.h"
-
-namespace gazebo
-{
+#include "orca_base/orca_pwm.hpp"
+#include "orca_msgs/msg/control.hpp"
 
 /* A simple thruster plugin. Usage:
  *
@@ -44,29 +38,32 @@ namespace gazebo
  * 3. Use the <dontcollapsejoints> tag. (appears to require SDF 2.0)
  */
 
+namespace gazebo {
+
+// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
+
 constexpr double T200_MAX_POS_FORCE = 50;
 constexpr double T200_MAX_NEG_FORCE = 40;
 
 class OrcaThrusterPlugin : public ModelPlugin
 {
-private:
   // Pointer to our base_link
   physics::LinkPtr base_link_;
 
   // Pointer to the Gazebo update event connection
   event::ConnectionPtr update_connection_;
 
-  // ROS node
-  std::unique_ptr<ros::NodeHandle> nh_;
+  // Pointer to the GazeboROS node
+  gazebo_ros::Node::SharedPtr node_;
 
   // ROS subscriber
-  ros::Subscriber thruster_sub_;
+  rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr thruster_sub_;
 
   // ROS callback queue
-  ros::CallbackQueue callback_queue_;
+  //ros::CallbackQueue callback_queue_;
 
   // Thread that runs the ROS message queue
-  std::thread callback_thread_;
+  //std::thread callback_thread_;
 
   // Model for each thruster
   struct Thruster
@@ -84,35 +81,16 @@ private:
   // Our array of thrusters
   std::vector<Thruster> thrusters_ = {};
 
-  // ROS helper function that processes messages.
-  void QueueThread()
-  {
-    ROS_INFO("ROS queue thread running");
-
-    static const double timeout = 0.01;
-    while (nh_->ok())
-    {
-      callback_queue_.callAvailable(ros::WallDuration(timeout));
-    }
-  }
-
 public:
 
   // Called once when the plugin is loaded.
   void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
   {
-    // Make sure that ROS is initialized
-    if (!ros::isInitialized())
-    {
-      ROS_FATAL_STREAM("ROS isn't initialized, unable to load OrcaThrusterPlugin");
-      return;
-    }
-
     // Create a ROS thread queue
-    callback_thread_ = std::thread(std::bind(&OrcaThrusterPlugin::QueueThread, this));
+    //callback_thread_ = std::thread(std::bind(&OrcaThrusterPlugin::QueueThread, this));
 
-    // Initialize our ROS node
-    nh_.reset(new ros::NodeHandle("thruster_plugin"));
+    // Get the GazeboROS node
+    node_ = gazebo_ros::Node::Get(sdf);
 
     // Look for our ROS topic
     std::string ros_topic = "/control";
@@ -120,12 +98,11 @@ public:
     {
       ros_topic = sdf->GetElement("ros_topic")->Get<std::string>();
     }
-    ROS_INFO("OrcaThrusterPlugin will listen on ROS topic %s", ros_topic.c_str());
+    RCLCPP_INFO(node_->get_logger(), "OrcaThrusterPlugin will listen on ROS topic %s", ros_topic.c_str());
 
     // Subscribe to the topic
-    ros::SubscribeOptions so = ros::SubscribeOptions::create<orca_msgs::Control>(ros_topic, 1,
-        boost::bind(&OrcaThrusterPlugin::OnRosMsg, this, _1), ros::VoidPtr(), &callback_queue_);
-    thruster_sub_ = nh_->subscribe(so);
+    // Note the use of std::placeholders::_1 vs. the included _1 from Boost
+    thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(ros_topic, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
     
     // Listen to the update event. This event is broadcast every simulation iteration.
     update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaThrusterPlugin::OnUpdate, this, _1));
@@ -161,7 +138,7 @@ public:
         }
       }
 
-      ROS_INFO("Thruster pos %g neg %g xyz {%g, %g, %g} rpy {%g, %g, %g}",
+      RCLCPP_INFO(node_->get_logger(), "Thruster pos %g neg %g xyz {%g, %g, %g} rpy {%g, %g, %g}",
         t.pos_force, t.neg_force, t.xyz.X(), t.xyz.Y(), t.xyz.Z(), t.rpy.X(), t.rpy.Y(), t.rpy.Z());
       thrusters_.push_back(t);
     }
@@ -171,7 +148,7 @@ public:
   }
 
   // Handle an incoming message from ROS
-  void OnRosMsg(const orca_msgs::ControlConstPtr &msg)
+  void OnRosMsg(const orca_msgs::msg::Control::SharedPtr msg)
   {
     for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i)
     {

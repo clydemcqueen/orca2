@@ -1,7 +1,5 @@
-#include <boost/bind.hpp>
-#include <gazebo/gazebo.hh>
-#include <gazebo/physics/Model.hh>
-#include <gazebo/physics/physics.hh>
+#include "gazebo/gazebo.hh"
+#include "gazebo/physics/physics.hh"
 
 /* A simple drag plugin. Usage:
  *
@@ -30,6 +28,8 @@
  */
 
 namespace gazebo {
+
+// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
 
 /* drag = 0.5 * density * area * velocity^2 * coefficient
  *
@@ -65,8 +65,6 @@ constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_C
 
 class OrcaDragPlugin : public ModelPlugin
 {
-private:
-
   physics::LinkPtr base_link_;
 
   // Drag force will be applied to the center_of_mass_ (body frame)

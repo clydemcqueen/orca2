@@ -1,4 +1,4 @@
-#include "orca_gazebo/orca_gazebo_util.h"
+#include "orca_gazebo/orca_gazebo_util.hpp"
 
 void testGaussianKernel()
 {

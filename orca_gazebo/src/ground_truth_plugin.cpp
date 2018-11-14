@@ -1,13 +1,13 @@
-#include <gazebo/gazebo.hh>
-#include <gazebo/physics/Model.hh>
-#include <gazebo/physics/physics.hh>
+#include "gazebo/gazebo.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/World.hh"
 
-#include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_broadcaster.h>
+#include "rclcpp/rclcpp.hpp"
+#include "gazebo_ros/node.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
-#include "orca_gazebo/orca_gazebo_util.h"
+#include "orca_gazebo/orca_gazebo_util.hpp"
 
 /* Publish a ground truth pose for a link.
  * Usage:
@@ -22,21 +22,24 @@
  *    </gazebo>
  *
  *    <odom_topic> Topic for nav_msgs/Odometry messages. Default is /ground_truth.
- *    <surface> How far above z=0 the surface of the water is; used to calculate depth. Default is 20.
+ *    <surface> How far above z=0 the surface of the water is; used to calculate depth. Default is 10.
  */
 
 namespace gazebo {
 
+// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
+// TODO: do we need a tf broadcaster?
+
 class OrcaGroundTruthPlugin : public ModelPlugin
 {
-private:
-
   physics::LinkPtr base_link_;
-  std::unique_ptr<ros::NodeHandle> nh_;
-  ros::Timer timer_;
-  ros::Publisher ground_truth_pub_;
+  gazebo_ros::Node::SharedPtr node_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr ground_truth_pub_;
+  event::ConnectionPtr update_connection_;
 
-  double surface_ = 20;
+  double surface_ = 10;                       // Altitude of water surface above the ground
+  gazebo::common::Time last_update_time_;     // Last time we got an update event
+  double update_period_;                      // Seconds between GPS readings
 
 public:
 
@@ -46,15 +49,8 @@ public:
     GZ_ASSERT(model != nullptr, "Model is null");
     GZ_ASSERT(sdf != nullptr, "SDF is null");
 
-    // Make sure that ROS is initialized
-    if (!ros::isInitialized())
-    {
-      ROS_FATAL_STREAM("ROS isn't initialized, unable to load OrcaGroundTruthPlugin");
-      return;
-    }
-
-    // Initialize our ROS node
-    nh_.reset(new ros::NodeHandle("ground_truth_plugin"));
+    // Get the GazeboROS node
+    node_ = gazebo_ros::Node::Get(sdf);
 
     std::string link_name = "base_link";
     std::string odom_topic = "/ground_truth";
@@ -93,18 +89,37 @@ public:
     GZ_ASSERT(base_link_ != nullptr, "Missing link");
 
     // Set up ROS publisher
-    ground_truth_pub_ = nh_->advertise<nav_msgs::Odometry>(odom_topic, 1);
+    ground_truth_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 1);
 
-    // Create timer
-    timer_ = nh_->createTimer(ros::Duration(0.1), &OrcaGroundTruthPlugin::TimerCallback, this); // TODO spin rate should be a parameter
+    // Listen for the update event. This event is broadcast every simulation iteration.
+    update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaGroundTruthPlugin::OnUpdate, this, _1));
+
+    // Start the timer
+    update_period_ = 1 / 100;
+    last_update_time_ = model->GetWorld()->SimTime();
 
     std::cout << "-----------------------------------------" << std::endl;
     std::cout << std::endl;
   }
 
-  // Called by the ROS timer.
-  void TimerCallback(const ros::TimerEvent &event)
+  // Called by the world update start event, up to 1kHz
+  void OnUpdate(const common::UpdateInfo& info)
   {
+    gazebo::common::Time current_time = info.simTime;
+
+    // Check for negative elapsed time, e.g., if the world is reset
+    if (current_time < last_update_time_)
+    {
+      RCLCPP_INFO(node_->get_logger(), "Negative elapsed sim time");
+      last_update_time_ = current_time;
+    }
+
+    // Check period
+    if ((current_time - last_update_time_).Double() < update_period_)
+    {
+      return;
+    }
+
     // Pose in world frame
     ignition::math::Pose3d pose = base_link_->WorldPose();
 
@@ -115,10 +130,10 @@ public:
 
     // TODO set covar (very small, and fixed)
 
-    nav_msgs::Odometry msg;
+    nav_msgs::msg::Odometry msg;
     msg.header.frame_id = "odom";
-    msg.header.stamp = event.current_real;
-    msg.child_frame_id = "base_link"; // TODO child frame id should be a parameter
+    msg.header.stamp = node_->now();
+    msg.child_frame_id = "base_link";
     msg.pose.pose.position.x = pose.Pos().X();
     msg.pose.pose.position.y = pose.Pos().Y();;
     msg.pose.pose.position.z = pose.Pos().Z() - surface_;
@@ -130,7 +145,7 @@ public:
     msg.twist.twist.linear.y = linear_vel.Y();
     msg.twist.twist.linear.z = linear_vel.Z();
 
-    ground_truth_pub_.publish(msg);
+    ground_truth_pub_->publish(msg);
   }
 };
 

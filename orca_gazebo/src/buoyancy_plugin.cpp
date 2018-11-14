@@ -1,7 +1,5 @@
-#include <boost/bind.hpp>
-#include <gazebo/gazebo.hh>
-#include <gazebo/physics/Model.hh>
-#include <gazebo/physics/physics.hh>
+#include "gazebo/gazebo.hh"
+#include "gazebo/physics/physics.hh"
 
 /* A simple buoyancy plugin. Usage:
  *
@@ -32,16 +30,16 @@
 
 namespace gazebo {
 
+// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
+
 class OrcaBuoyancyPlugin : public ModelPlugin
 {
-private:
-
   event::ConnectionPtr update_connection_;                // Connection to update event
   ignition::math::Vector3d gravity_;                      // Gravity vector in world frame
   physics::LinkPtr base_link_;                            // Pointer to the base link
 
   double fluid_density_ {1029};                           // Fluid density of seawater
-  double surface_ {20};                                   // Distance to surface
+  double surface_ {10};                                   // Distance to surface
   double volume_ {0.01};                                  // base_link_ volume
   ignition::math::Vector3d center_of_volume_ {0, 0, 0};   // base_link_ center of volume
   double height_{0.254};                                  // base_link_ height

@@ -1,13 +1,13 @@
-#include <gazebo/gazebo.hh>
-#include <gazebo/physics/Model.hh>
-#include <gazebo/physics/physics.hh>
+#include "gazebo/gazebo.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/World.hh"
 
-#include <ros/ros.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_broadcaster.h>
+#include "rclcpp/rclcpp.hpp"
+#include "gazebo_ros/node.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
-#include "orca_gazebo/orca_gazebo_util.h"
+#include "orca_gazebo/orca_gazebo_util.hpp"
 
 /* Simulate a GPS sensor attached to a mast on a submersible vehicle. Generates geometry_msgs/Vector3Stamped messages.
  * Usage:
@@ -23,27 +23,30 @@
  *    </gazebo>
  *
  *    <pose_topic> Topic for geometry_msgs/PoseWithCovarianceStamped messages. Default is /gps.
- *    <mast_height> Height of the mast above the water. Default is 0.5.
+ *    <mast_height> Height of the antenna mast above the water. Default is 0.5.
  *    <surface> How far above z=0 the surface of the water is; used to calculate depth.
  */
 
 namespace gazebo {
+
+// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
+// TODO do we need a tf broadcaster?
 
 // https://www.gps.gov/systems/gps/performance/accuracy/
 constexpr double GPS_STDDEV = 1.891 / 2;
 
 class OrcaGPSPlugin : public ModelPlugin
 {
-private:
-
   physics::LinkPtr base_link_;
-  std::unique_ptr<ros::NodeHandle> nh_;
-  ros::Timer timer_;
-  ros::Publisher gps_pub_;
+  gazebo_ros::Node::SharedPtr node_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped >::SharedPtr gps_pub_;
+  event::ConnectionPtr update_connection_;
 
-  double time_above_surface_ = 0;
-  double mast_height_ = 0.50;
-  double surface_ = 20;
+  double time_above_surface_ = 0;             // Seconds above the surface
+  double mast_height_ = 0.50;                 // Height of antenna mast
+  double surface_ = 10;                       // Altitude of water surface above the ground
+  gazebo::common::Time last_update_time_;     // Last time we got an update event
+  double update_period_;                      // Seconds between GPS readings
 
 public:
 
@@ -53,15 +56,8 @@ public:
     GZ_ASSERT(model != nullptr, "Model is null");
     GZ_ASSERT(sdf != nullptr, "SDF is null");
 
-    // Make sure that ROS is initialized
-    if (!ros::isInitialized())
-    {
-      ROS_FATAL_STREAM("ROS isn't initialized, unable to load OrcaGPSPlugin");
-      return;
-    }
-
-    // Initialize our ROS node
-    nh_.reset(new ros::NodeHandle("gps_plugin"));
+    // Get the GazeboROS node
+    node_ = gazebo_ros::Node::Get(sdf);
 
     std::string link_name = "base_link";
     std::string pose_topic = "/gps";
@@ -107,18 +103,37 @@ public:
     GZ_ASSERT(base_link_ != nullptr, "Missing link");
 
     // Set up ROS publisher
-    gps_pub_ = nh_->advertise<geometry_msgs::PoseWithCovarianceStamped>(pose_topic, 1);
+    gps_pub_ = node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(pose_topic, 1);
 
-    // Create timer
-    timer_ = nh_->createTimer(ros::Duration(1.0), &OrcaGPSPlugin::TimerCallback, this);
+    // Listen for the update event. This event is broadcast every simulation iteration.
+    update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaGPSPlugin::OnUpdate, this, _1));
+
+    // Start the timer
+    update_period_ = 1 / 100;
+    last_update_time_ = model->GetWorld()->SimTime();
 
     std::cout << "-----------------------------------------" << std::endl;
     std::cout << std::endl;
   }
 
-  // Called by the ROS timer.
-  void TimerCallback(const ros::TimerEvent &event)
+  // Called by the world update start event, up to 1kHz
+  void OnUpdate(const common::UpdateInfo& info)
   {
+    gazebo::common::Time current_time = info.simTime;
+
+    // Check for negative elapsed time, e.g., if the world is reset
+    if (current_time < last_update_time_)
+    {
+      RCLCPP_INFO(node_->get_logger(), "Negative elapsed sim time");
+      last_update_time_ = current_time;
+    }
+
+    // Check period
+    if ((current_time - last_update_time_).Double() < update_period_)
+    {
+      return;
+    }
+
     // Is the GPS sensor above the water surface?
     ignition::math::Vector3d pos = base_link_->WorldPose().Pos();
     if (pos.Z() + mast_height_ > surface_)
@@ -127,19 +142,19 @@ public:
       if (time_above_surface_ > 5)
       {
         // Publish pose
-        geometry_msgs::PoseWithCovarianceStamped msg;
+        geometry_msgs::msg::PoseWithCovarianceStamped msg;
         msg.header.frame_id = "odom";
-        msg.header.stamp = event.current_real;
+        msg.header.stamp = node_->now();
         msg.pose.pose.position.x = orca_gazebo::gaussianKernel(pos.X(), GPS_STDDEV);
         msg.pose.pose.position.y = orca_gazebo::gaussianKernel(pos.Y(), GPS_STDDEV);
         msg.pose.pose.position.z = orca_gazebo::gaussianKernel(pos.Z() - surface_, GPS_STDDEV);
         msg.pose.covariance[0] = GPS_STDDEV * GPS_STDDEV;
         msg.pose.covariance[7] = GPS_STDDEV * GPS_STDDEV;
-        gps_pub_.publish(msg);
+        gps_pub_->publish(msg);
       }
       else
       {
-        time_above_surface_ += (event.current_real - event.last_real).toSec();
+        time_above_surface_ += (current_time - last_update_time_).Double();
       }
     }
     else
