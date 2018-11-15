@@ -51,38 +51,37 @@ OrcaBase::OrcaBase(tf2_ros::TransformListener &tf):
   yaw_controller_{true, 0.007, 0, 0}
 {
   // TODO parameters
-#if 0
-  nh_priv_.param("joy_axis_yaw", joy_axis_yaw_, 0);                      // Left stick left/right; 1.0 is left and -1.0 is right
-  nh_priv_.param("joy_axis_forward", joy_axis_forward_, 1);              // Left stick up/down; 1.0 is forward and -1.0 is backward
-  nh_priv_.param("joy_axis_strafe", joy_axis_strafe_, 3);                // Right stick left/right; 1.0 is left and -1.0 is right
-  nh_priv_.param("joy_axis_vertical", joy_axis_vertical_, 4);            // Right stick up/down; 1.0 is ascend and -1.0 is descend
-  nh_priv_.param("joy_axis_yaw_trim", joy_axis_yaw_trim_, 6);            // Trim left/right; acts like 2 buttons; 1.0 for left and -1.0 for right
-  nh_priv_.param("joy_axis_vertical_trim", joy_axis_vertical_trim_, 7);  // Trim up/down; acts like 2 buttons; 1.0 for up and -1.0 for down
+  joy_axis_yaw_ = 0;            // Left stick left/right; 1.0 is left and -1.0 is right
+  joy_axis_forward_ = 1;        // Left stick up/down; 1.0 is forward and -1.0 is backward
+  joy_axis_strafe_ = 3;         // Right stick left/right; 1.0 is left and -1.0 is right
+  joy_axis_vertical_ = 4;       // Right stick up/down; 1.0 is ascend and -1.0 is descend
+  joy_axis_yaw_trim_ = 6;       // Trim left/right; acts like 2 buttons; 1.0 for left and -1.0 for right
+  joy_axis_vertical_trim_ = 7;  // Trim up/down; acts like 2 buttons; 1.0 for up and -1.0 for down
 
-  nh_priv_.param("joy_button_disarm", joy_button_disarm_, 6);            // View
-  nh_priv_.param("joy_button_arm", joy_button_arm_, 7);                  // Menu
-  nh_priv_.param("joy_button_manual", joy_button_manual_, 0);            // A
-  nh_priv_.param("joy_button_hold_y", joy_button_hold_h_, 2);            // X
-  nh_priv_.param("joy_button_hold_d", joy_button_hold_d_, 1);            // B
-  nh_priv_.param("joy_button_hold_hd", joy_button_hold_hd_, 3);          // Y
-  nh_priv_.param("joy_button_tilt_down", joy_button_tilt_down_, 4);      // Left bumper
-  nh_priv_.param("joy_button_tilt_up", joy_button_tilt_up_, 5);          // Right bumper
-  nh_priv_.param("joy_button_bright", joy_button_bright_, 9);            // Left stick
-  nh_priv_.param("joy_button_dim", joy_button_dim_, 10);                 // Right stick
+  joy_button_disarm_ = 6;       // View
+  joy_button_arm_ = 7;          // Menu
+  joy_button_manual_ = 0;       // A
+  joy_button_hold_h_ = 2;       // X
+  joy_button_hold_d_ = 1;       // B
+  joy_button_hold_hd_ = 3;      // Y
+  joy_button_tilt_down_ = 4;    // Left bumper
+  joy_button_tilt_up_ = 5;      // Right bumper
+  joy_button_bright_ = 9;       // Left stick
+  joy_button_dim_ = 10;         // Right stick
 
-  nh_priv_.param("inc_yaw", inc_yaw_, M_PI/36);
-  nh_priv_.param("inc_depth", inc_depth_, 0.1);
-  nh_priv_.param("inc_tilt", inc_tilt_, 5);
-  nh_priv_.param("inc_lights", inc_lights_, 20);
-  nh_priv_.param("input_dead_band", input_dead_band_, 0.05f);            // Don't respond to tiny joystick movements
-  nh_priv_.param("yaw_pid_dead_band", yaw_pid_dead_band_, 0.0005);
-  nh_priv_.param("depth_pid_dead_band", depth_pid_dead_band_, 0.002);
-  nh_priv_.param("xy_gain", xy_gain_, 0.5);
-  nh_priv_.param("yaw_gain", yaw_gain_, 0.2);
-  nh_priv_.param("vertical_gain", vertical_gain_, 0.5);
+  inc_yaw_ = M_PI/36;
+  inc_depth_ = 0.1;
+  inc_tilt_ = 5;
+  inc_lights_ = 20;
+  input_dead_band_ = 0.05f;     // Don't respond to tiny joystick movements
+  yaw_pid_dead_band_ = 0.0005;
+  depth_pid_dead_band_ = 0.002;
+  xy_gain_ = 0.5;
+  yaw_gain_ = 0.2;
+  vertical_gain_ = 0.5;
 
-  nh_priv_.param("simulation", simulation_, true);
-#endif
+  simulation_ = true;
+
   if (simulation_)
   {
     // The simulated IMU is not rotated
@@ -112,7 +111,7 @@ OrcaBase::OrcaBase(tf2_ros::TransformListener &tf):
   ping_sub_ = create_subscription<std_msgs::msg::Empty>("/ping", std::bind(&OrcaBase::pingCallback, this, _1));
 
   // Advertise all topics that we'll publish on
-  control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
+  control_pub_ = create_publisher<orca_msgs::msg::Control>("/orca_base/control", 1);
   odom_plan_pub_ = create_publisher<nav_msgs::msg::Odometry>("/odometry/plan", 1);
   thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
   mission_plan_pub_ = create_publisher<nav_msgs::msg::Path>("mission_plan", 1);
@@ -413,7 +412,7 @@ void OrcaBase::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
   // If we're disarmed, ignore everything else
   if (mode_ == orca_msgs::msg::Control::DISARMED)
   {
-    RCLCPP_INFO(get_logger(), "Disarmed, ignoring further input");
+    // RCLCPP_INFO(get_logger(), "Disarmed, ignoring further input");
     return;
   }
 
@@ -546,7 +545,8 @@ void OrcaBase::spinOnce()
   double dt = (actually_now - prev_loop_time_).nanoseconds() / 1000000.0; // TODO maybe pass around nanoseconds?
   prev_loop_time_ = actually_now;
 
-  // Check for communication problems
+  // Check for communication problems TODO re-enable
+#if 0
   if (rovOperation() && actually_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_DISARM_NS))
   {
     if (actually_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_SOS_NS))
@@ -560,6 +560,7 @@ void OrcaBase::spinOnce()
       setMode(orca_msgs::msg::Control::DISARMED);
     }
   }
+#endif
 
   // Compute yaw effort
   if (holdingHeading())
