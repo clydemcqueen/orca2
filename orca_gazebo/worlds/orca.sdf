@@ -410,7 +410,7 @@
     <static>0</static>
     <plugin name='OrcaGroundTruthPlugin' filename='libOrcaGroundTruthPlugin.so'>
       <link name='base_link'/>
-      <ros_topic>/gps</ros_topic>
+      <odom_topic>/ground_truth</odom_topic>
       <surface>10</surface>
     </plugin>
   </model>

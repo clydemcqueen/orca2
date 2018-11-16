@@ -1,1 +1,1 @@
-Simulation environment for [Orca](https://github.com/clydemcqueen/orca).
+Simulation environment for [Orca2](https://github.com/clydemcqueen/orca2).

@@ -1,1 +1,1 @@
-Robot description files for [Orca](https://github.com/clydemcqueen/orca).
+Robot description files for [Orca2](https://github.com/clydemcqueen/orca2).

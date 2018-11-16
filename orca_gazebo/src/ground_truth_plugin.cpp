@@ -75,8 +75,8 @@ public:
 
     if (sdf->HasElement("odom_topic"))
     {
-      odom_topic = sdf->GetElement("odom_topic")->Get<std::string>();
-      std::cout << "Pose topic: " << odom_topic << std::endl;
+      odom_topic = sdf->GetElement("odom_topic")->Get<std::string>(); // TODO why isn't this getting picked up?
+      std::cout << "Odom topic: " << odom_topic << std::endl;
     }
 
     if (sdf->HasElement("surface"))

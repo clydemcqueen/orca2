@@ -77,7 +77,7 @@ bool BaseMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
 
 bool BaseMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, OrcaPose &u_bar)
 {
-#if 0
+#if 1
   u_bar.x = x_controller_.calc(curr.x, dt, ff_.x);
   u_bar.y = y_controller_.calc(curr.y, dt, ff_.y);
   u_bar.z = z_controller_.calc(curr.z, dt, ff_.z);
@@ -121,7 +121,7 @@ bool RotateMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   ff_.yaw = torque_to_accel_yaw(-drag_torque_yaw(plan.velo.yaw));
   ff_.z = HOVER_ACCEL_Z;
 
-  RCLCPP_DEBUG(logger_, "Rotate init: start %g, goal %g, velocity %g, accel %g", plan.pose.yaw, goal.yaw, plan.velo.yaw, ff_.yaw);
+  RCLCPP_INFO(logger_, "Rotate init: start %g, goal %g, velocity %g, accel %g", plan.pose.yaw, goal.yaw, plan.velo.yaw, ff_.yaw);
   return true;
 }
 
@@ -170,7 +170,7 @@ bool LineMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   drag_force_to_accel_xy(goal.yaw, VELO_XY * cos(angle_to_goal), VELO_XY * sin(angle_to_goal), ff_.x, ff_.y);
   ff_.z = HOVER_ACCEL_Z;
 
-  RCLCPP_DEBUG(logger_, "Line init: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)", plan.pose.x, plan.pose.y, plan.pose.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
+  RCLCPP_INFO(logger_, "Line init: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)", plan.pose.x, plan.pose.y, plan.pose.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
   return true;
 }
 
@@ -254,7 +254,7 @@ bool ArcMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   ff_.yaw = torque_to_accel_yaw(-drag_torque_yaw(plan.velo.yaw));
   ff_.z = HOVER_ACCEL_Z;
 
-  RCLCPP_DEBUG(logger_, "Arc init: center (%g, %g), radius %g, velo yaw %g, ff yaw %g", arc_.center_.x, arc_.center_.y, arc_.radius_, plan.velo.yaw, ff_.yaw);
+  RCLCPP_INFO(logger_, "Arc init: center (%g, %g), radius %g, velo yaw %g, ff yaw %g", arc_.center_.x, arc_.center_.y, arc_.radius_, plan.velo.yaw, ff_.yaw);
   return true;
 }
 
@@ -329,7 +329,7 @@ bool VerticalMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   // Drag force => thrust force => acceleration => feedforward
   ff_.z = direction * force_to_accel_z(-drag_force_z(VELO_Z)) + HOVER_ACCEL_Z;
 
-  RCLCPP_DEBUG(logger_, "Vertical init: start %g, goal %g, velocity %g, ff %g", plan.pose.z, goal.z, plan.velo.z, ff_.z);
+  RCLCPP_INFO(logger_, "Vertical init: start %g, goal %g, velocity %g, ff %g", plan.pose.z, goal.z, plan.velo.z, ff_.z);
   return true;
 }
 

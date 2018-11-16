@@ -1,1 +1,1 @@
-Topside systems for [Orca](https://github.com/clydemcqueen/orca).
+Topside systems for [Orca2](https://github.com/clydemcqueen/orca2).

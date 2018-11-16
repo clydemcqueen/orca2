@@ -64,7 +64,6 @@ ament_export_include_directories(include)
 
 install(TARGETS orca_base orca_base_test DESTINATION lib/orca_base)
 install(FILES scripts/local_pose.py scripts/kf.py DESTINATION lib/orca_base)
-install(DIRECTORY launch DESTINATION share/orca_base)
 install(DIRECTORY include/orca_base DESTINATION include)
 
 ament_package()

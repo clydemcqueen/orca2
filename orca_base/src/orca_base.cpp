@@ -11,8 +11,8 @@ constexpr double DEPTH_HOLD_MAX = 50;   // Max depth is 100m, but provide a marg
 constexpr int SPIN_RATE = 10;
 
 // Timeouts
-constexpr int64_t COMM_ERROR_TIMEOUT_DISARM_NS = 5000000; // Disarm if we can't communicate with the topside
-constexpr int64_t COMM_ERROR_TIMEOUT_SOS_NS = 100000000;  // Panic if it's been too long
+constexpr int64_t COMM_ERROR_TIMEOUT_DISARM_NS = 5e+9;  // Disarm if we can't communicate with the topside
+constexpr int64_t COMM_ERROR_TIMEOUT_SOS_NS = 1e+11;    // Panic if it's been too long
 
 struct Thruster
 {
@@ -107,7 +107,7 @@ OrcaBase::OrcaBase(tf2_ros::TransformListener &tf):
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", std::bind(&OrcaBase::imuCallback, this, _1));
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", std::bind(&OrcaBase::joyCallback, this, _1));
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", std::bind(&OrcaBase::leakCallback, this, _1));
-  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/odometry/local", std::bind(&OrcaBase::odomLocalCallback, this, _1));
+  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", std::bind(&OrcaBase::odomLocalCallback, this, _1)); // TODO
   ping_sub_ = create_subscription<std_msgs::msg::Empty>("/ping", std::bind(&OrcaBase::pingCallback, this, _1));
 
   // Advertise all topics that we'll publish on
@@ -541,15 +541,15 @@ void OrcaBase::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 // Our main loop
 void OrcaBase::spinOnce()
 {
-  auto actually_now = now(); // TODO odd syntax -- rename this var to something more interesting
-  double dt = (actually_now - prev_loop_time_).nanoseconds() / 1000000.0; // TODO maybe pass around nanoseconds?
-  prev_loop_time_ = actually_now;
+  auto time_now = now();
+  double dt = (time_now - prev_loop_time_).nanoseconds() / 1e+9;
+  prev_loop_time_ = time_now;
 
   // Check for communication problems TODO re-enable
 #if 0
-  if (rovOperation() && actually_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_DISARM_NS))
+  if (rovOperation() && time_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_DISARM_NS))
   {
-    if (actually_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_SOS_NS))
+    if (time_now - ping_time_ > rclcpp::Duration(COMM_ERROR_TIMEOUT_SOS_NS))
     {
       RCLCPP_ERROR(get_logger(), "SOS! Lost contact for way too long");
       setMode(orca_msgs::msg::Control::SOS);
@@ -586,7 +586,7 @@ void OrcaBase::spinOnce()
     mission_ground_truth_pub_->publish(mission_ground_truth_path_);
 
     OrcaPose u_bar;
-    if (mission_->advance(actually_now, odom_local_, odom_plan_, u_bar))
+    if (mission_->advance(time_now, odom_local_, odom_plan_, u_bar))
     {
       // u_bar in world frame => normalized efforts in body frame
       efforts_.fromAcceleration(u_bar, odom_plan_.pose.yaw);

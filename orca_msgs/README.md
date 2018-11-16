@@ -1,1 +1,1 @@
-Custom messages for [Orca](https://github.com/clydemcqueen/orca).
+Custom messages for [Orca2](https://github.com/clydemcqueen/orca2).

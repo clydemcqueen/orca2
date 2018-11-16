@@ -1,4 +1,4 @@
-ROV and AUV functionality for [Orca](https://github.com/clydemcqueen/orca).
+ROV and AUV functionality for [Orca2](https://github.com/clydemcqueen/orca2).
 
 Modes:
 * disarmed: thrusters are off, all joystick buttons except "arm" are ignored

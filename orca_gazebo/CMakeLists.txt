@@ -140,10 +140,10 @@ install(
   RUNTIME DESTINATION bin
 )
 
-## Install worlds
+## Install worlds and launch files
 install(
-  DIRECTORY worlds
-  DESTINATION share/orca_gazebo/
+  DIRECTORY worlds launch
+  DESTINATION share/orca_gazebo
 )
 
 ament_package()
