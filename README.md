@@ -2,31 +2,64 @@
 
 Orca2 is a [ROS2](https://index.ros.org/doc/ros2/) port of [Orca](https://github.com/clydemcqueen/orca).
 
+Orca is a ROS driver for the BlueROV2.
+
 ## Status
 
-The overall goal is to port Orca to ROS2. It's possible that some components won't be ported. 
+The overall goal is to port Orca to ROS2, then continue work on a BlueROV2-based AUV.
 
-* `orca_msgs` ported
-* `orca_description` ported, missing features
-* `orca_driver` blocked on several packages
-* `orca_base` ported, missing features
-* `orca_topside` not ported
-* `orca_gazebo` ported
-* `orca_vision` blocked on several packages
+* `orca_msgs` is ported
+* `orca_description` is ported. Xacro must be run manually
+* `orca_driver` is blocked on several packages
+* `orca_base` is ported
+* `orca_topside` the Rviz2 plugins are building but are not loading correctly
+* `orca_gazebo` is ported. The URDF file must be manually converted to SDF and added to the world file
+* `orca_vision` is blocked on pcl and possibly other packages
 
 ## Requirements
 
-* Ubuntu 18.04
-* ROS2 Bouncy
-* gazebo_ros_pkgs
+[Install ROS2 Bouncy Bolson](https://index.ros.org/doc/ros2/Installation/)
+with the `ros-bouncy-desktop` option.
+
+If you install binaries, be sure to also install the 
+[development tools and ROS tools](https://index.ros.org/doc/ros2/Linux-Development-Setup/)
+from the source installation instructions.
+
+Requires a joystick compatible with ROS2. Install the ROS2 joystick drivers:
+
+~~~
+sudo apt install ros-bouncy-joystick-drivers
+~~~
 
 ## Building
 
-TODO
+~~~
+mkdir -p ~/orca2_ws/src
+cd ~/orca2_ws/src
+git clone https://github.com/clydemcqueen/orca2.git
+git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git
+cd gazebo_ros_pkgs
+git checkout ros2
+cd ~/orca2_ws
+source /opt/ros/bouncy/setup.bash
+colcon build --event-handlers console_direct+
+~~~
 
-## Running
+## Running in Gazebo
 
-* `gazebo --verbose ~/orca_ws/src/orca/orca_gazebo/worlds/orca.world`
-* `ros2 launch orca_description description_launch.py`
-* `ros2 launch orca_base base_launch.py`
-* `rviz2`
+Install Gazebo v9:
+
+~~~
+sudo apt install gazebo9 libgazebo9 libgazebo9-dev
+~~~
+
+Run Orca2 in Gazebo:
+
+~~~
+cd ~/orca2_ws
+source /opt/ros/bouncy/setup.bash
+source install/setup.bash
+ros2 launch orca_gazebo sim_launch.py
+~~~
+
+See the [Orca](https://github.com/clydemcqueen/orca) README for more information.
