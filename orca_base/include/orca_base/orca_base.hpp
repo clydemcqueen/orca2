@@ -10,8 +10,6 @@
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "tf2/LinearMath/Matrix3x3.h"
-//#include "tf2_ros/transform_broadcaster.h"
-#include "tf2_ros/transform_listener.h"
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "orca_msgs/msg/barometer.hpp"
@@ -33,8 +31,6 @@ constexpr const bool auvMode(uint8_t mode) { return mode == orca_msgs::msg::Cont
 class OrcaBase: public rclcpp::Node
 {
 private:
-  tf2_ros::TransformListener &tf_;
-
   // Parameters from the parameter server TODO
   int joy_axis_yaw_;
   int joy_axis_forward_;
@@ -159,7 +155,7 @@ private:
   bool auvOperation() { return auvMode(mode_); };
 
 public:
-  explicit OrcaBase(tf2_ros::TransformListener &tf);
+  explicit OrcaBase();
   ~OrcaBase() {}; // Suppress default copy and move constructors
 
   void spinOnce();

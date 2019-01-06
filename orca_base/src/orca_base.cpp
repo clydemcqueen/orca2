@@ -34,9 +34,8 @@ const std::vector<Thruster> THRUSTERS = {
   {"t200_link_vertical_left", true, 0.0, 0.0, 0.0, -1.0},
 };
 
-OrcaBase::OrcaBase(tf2_ros::TransformListener &tf):
+OrcaBase::OrcaBase():
   Node{"orca_base"},
-  tf_{tf}, // TODO required?
   simulation_{true},
   mode_{orca_msgs::msg::Control::DISARMED},
   imu_ready_{false},
@@ -624,12 +623,8 @@ int main(int argc, char **argv)
   // Init ROS
   rclcpp::init(argc, argv);
 
-  // Allocate transform listener
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf{tf_buffer};
-
   // Init node
-  auto node = std::make_shared<orca_base::OrcaBase>(tf);
+  auto node = std::make_shared<orca_base::OrcaBase>();
 
   RCLCPP_INFO(node->get_logger(), "Entering main loop");
   rclcpp::Rate r(orca_base::SPIN_RATE);
