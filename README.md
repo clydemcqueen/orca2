@@ -18,34 +18,16 @@ The overall goal is to port Orca to ROS2, then continue work on a BlueROV2-based
 
 ## Requirements
 
-[Install ROS2 Bouncy Bolson](https://index.ros.org/doc/ros2/Installation/)
-with the `ros-bouncy-desktop` option.
+[Install ROS2 Crystal](https://index.ros.org/doc/ros2/Installation/)
+with the `ros-crystal-desktop` option.
 
-If you install binaries, be sure to also install the 
-[development tools and ROS tools](https://index.ros.org/doc/ros2/Linux-Development-Setup/)
-from the source installation instructions.
+If you install binaries, be sure to also install the development tools and ROS tools from the
+[source installation instructions](https://index.ros.org/doc/ros2/Installation/Linux-Development-Setup/).
 
 Requires a joystick compatible with ROS2. Install the ROS2 joystick drivers:
-
 ~~~
-sudo apt install ros-bouncy-joystick-drivers
+sudo apt install ros-crystal-joystick-drivers
 ~~~
-
-## Building
-
-~~~
-mkdir -p ~/orca2_ws/src
-cd ~/orca2_ws/src
-git clone https://github.com/clydemcqueen/orca2.git
-git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git
-cd gazebo_ros_pkgs
-git checkout ros2
-cd ~/orca2_ws
-source /opt/ros/bouncy/setup.bash
-colcon build --event-handlers console_direct+
-~~~
-
-## Running in Gazebo
 
 Install Gazebo v9:
 
@@ -53,11 +35,29 @@ Install Gazebo v9:
 sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 ~~~
 
+Install the Gazebo ROS packages:
+~~~
+sudo apt install ros-crystal-gazebo-ros-pkgs
+~~~
+
+## Install and build
+
+~~~
+mkdir -p ~/orca2_ws/src
+cd ~/orca2_ws/src
+git clone https://github.com/clydemcqueen/orca2.git
+cd ~/orca2_ws
+source /opt/ros/crystal/setup.bash
+colcon build --event-handlers console_direct+
+~~~
+
+## Run simulation
+
 Run Orca2 in Gazebo:
 
 ~~~
 cd ~/orca2_ws
-source /opt/ros/bouncy/setup.bash
+source /opt/ros/crystal/setup.bash
 source install/setup.bash
 ros2 launch orca_gazebo sim_launch.py
 ~~~
