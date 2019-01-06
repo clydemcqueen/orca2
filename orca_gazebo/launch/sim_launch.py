@@ -15,7 +15,7 @@ def generate_launch_description():
     world = os.path.join(get_package_share_directory('orca_gazebo'), 'worlds', 'orca.world')
     return LaunchDescription([
         ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
-        ExecuteProcess(cmd=['rviz2'], output='screen'),
+        ExecuteProcess(cmd=['rviz2', '-d', 'install/orca_topside/share/orca_topside/cfg/topside.rviz'], output='screen'),
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen', arguments=[urdf]),
         Node(package='joy', node_executable='joy_node', output='screen'),
         Node(package='orca_base', node_executable='orca_base', output='screen'),

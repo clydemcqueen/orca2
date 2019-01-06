@@ -94,4 +94,11 @@ install(
   RUNTIME DESTINATION bin
 )
 
+# Install cfg directory
+install(
+  DIRECTORY
+  cfg
+  DESTINATION share/orca_topside
+)
+
 ament_package()
