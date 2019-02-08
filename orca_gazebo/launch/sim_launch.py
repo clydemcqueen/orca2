@@ -19,4 +19,5 @@ def generate_launch_description():
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen', arguments=[urdf]),
         Node(package='joy', node_executable='joy_node', output='screen'),
         Node(package='orca_base', node_executable='orca_base', output='screen'),
+        Node(package='orca_base', node_executable='filter_node', output='screen'),
     ])

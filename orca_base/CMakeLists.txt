@@ -13,6 +13,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(Eigen3)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(orca_msgs REQUIRED)
@@ -27,6 +28,7 @@ find_package(visualization_msgs REQUIRED)
 include_directories(
   include
   ${builtin_interfaces_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${nav_msgs_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
@@ -46,13 +48,29 @@ add_executable(
 
 ament_target_dependencies(
   orca_base
-  "orca_msgs"
-  "nav_msgs"
-  "rclcpp"
-  "sensor_msgs"
-  "tf2"
-  "tf2_ros"
-  "visualization_msgs"
+  orca_msgs
+  nav_msgs
+  rclcpp
+  sensor_msgs
+  tf2
+  tf2_ros
+  visualization_msgs
+)
+
+add_executable(
+  filter_node
+  src/filter_node.cpp
+  src/kf.cpp
+)
+
+ament_target_dependencies(
+  filter_node
+  geometry_msgs
+  nav_msgs
+  rclcpp
+  std_msgs
+  tf2
+  tf2_msgs
 )
 
 add_executable(
@@ -62,8 +80,7 @@ add_executable(
 
 ament_export_include_directories(include)
 
-install(TARGETS orca_base orca_base_test DESTINATION lib/orca_base)
-install(FILES scripts/local_pose.py scripts/kf.py DESTINATION lib/orca_base)
+install(TARGETS orca_base filter_node orca_base_test DESTINATION lib/orca_base)
 install(DIRECTORY include/orca_base DESTINATION include)
 
 ament_package()
