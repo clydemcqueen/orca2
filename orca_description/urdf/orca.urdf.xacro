@@ -273,7 +273,7 @@
   <gazebo>
     <plugin name="OrcaGroundTruthPlugin" filename="libOrcaGroundTruthPlugin.so">
       <link name="base_link" />
-      <ros_topic>/gps</ros_topic>
+      <ros_topic>/ground_truth</ros_topic>
       <surface>${SURFACE}</surface>
     </plugin>
   </gazebo>
