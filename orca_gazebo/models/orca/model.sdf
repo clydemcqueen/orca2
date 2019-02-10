@@ -6,12 +6,12 @@
         <pose frame=''>0 0 0.011 0 -0 0</pose>
         <mass>10</mass>
         <inertia>
-          <ixx>0.148967</ixx>
+          <ixx>0.148968</ixx>
           <ixy>0</ixy>
           <ixz>0</ixz>
-          <iyy>0.227804</iyy>
+          <iyy>0.227806</iyy>
           <iyz>0</iyz>
-          <izz>0.269244</izz>
+          <izz>0.269245</izz>
         </inertia>
       </inertial>
       <collision name='base_link_collision'>
@@ -19,6 +19,22 @@
         <geometry>
           <box>
             <size>0.457 0.338 0.254</size>
+          </box>
+        </geometry>
+        <surface>
+          <contact>
+            <ode/>
+          </contact>
+          <friction>
+            <ode/>
+          </friction>
+        </surface>
+      </collision>
+      <collision name='base_link_fixed_joint_lump__camera_link_collision_1'>
+        <pose frame=''>0 0 -0.2 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.05 0.05</size>
           </box>
         </geometry>
         <surface>
@@ -130,7 +146,21 @@
           </script>
         </material>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_7'>
+      <visual name='base_link_fixed_joint_lump__camera_link_visual_7'>
+        <pose frame=''>0 0 -0.2 0 -0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.05 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <script>
+            <uri>__default__</uri>
+            <name>__default__</name>
+          </script>
+        </material>
+      </visual>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_8'>
         <pose frame=''>0.15 0.09 -0.009 3.14159 1.57079 2.3562</pose>
         <geometry>
           <sphere>
@@ -138,7 +168,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_8'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_9'>
         <pose frame=''>0.100503 0.139497 -0.009 3.14159 1.57079 2.3562</pose>
         <geometry>
           <sphere>
@@ -146,7 +176,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_9'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_10'>
         <pose frame=''>0.125251 0.114749 -0.009 3.14159 1.57079 2.3562</pose>
         <geometry>
           <cylinder>
@@ -155,7 +185,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_10'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_left_visual_11'>
         <pose frame=''>0.13409 0.10591 -0.009 3.14159 1.57079 2.3562</pose>
         <geometry>
           <cylinder>
@@ -164,7 +194,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_11'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_12'>
         <pose frame=''>0.15 -0.09 -0.009 -3.14159 1.57079 -2.3562</pose>
         <geometry>
           <sphere>
@@ -172,7 +202,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_12'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_13'>
         <pose frame=''>0.100503 -0.139497 -0.009 -3.14159 1.57079 -2.3562</pose>
         <geometry>
           <sphere>
@@ -180,7 +210,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_13'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_14'>
         <pose frame=''>0.125251 -0.114749 -0.009 -3.14159 1.57079 -2.3562</pose>
         <geometry>
           <cylinder>
@@ -189,7 +219,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_14'>
+      <visual name='base_link_fixed_joint_lump__t200_link_front_right_visual_15'>
         <pose frame=''>0.13409 -0.10591 -0.009 -3.14159 1.57079 -2.3562</pose>
         <geometry>
           <cylinder>
@@ -198,7 +228,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_15'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_16'>
         <pose frame=''>-0.15 0.09 -0.009 3.14159 1.57079 0.785403</pose>
         <geometry>
           <sphere>
@@ -206,7 +236,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_16'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_17'>
         <pose frame=''>-0.100503 0.139497 -0.009 3.14159 1.57079 0.785403</pose>
         <geometry>
           <sphere>
@@ -214,7 +244,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_17'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_18'>
         <pose frame=''>-0.125251 0.114749 -0.009 3.14159 1.57079 0.785403</pose>
         <geometry>
           <cylinder>
@@ -223,7 +253,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_18'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_left_visual_19'>
         <pose frame=''>-0.13409 0.10591 -0.009 3.14159 1.57079 0.785403</pose>
         <geometry>
           <cylinder>
@@ -232,7 +262,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_19'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_20'>
         <pose frame=''>-0.15 -0.09 -0.009 3.14159 1.57079 -0.785403</pose>
         <geometry>
           <sphere>
@@ -240,7 +270,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_20'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_21'>
         <pose frame=''>-0.100503 -0.139497 -0.009 3.14159 1.57079 -0.785403</pose>
         <geometry>
           <sphere>
@@ -248,7 +278,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_21'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_22'>
         <pose frame=''>-0.125251 -0.114749 -0.009 3.14159 1.57079 -0.785403</pose>
         <geometry>
           <cylinder>
@@ -257,7 +287,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_22'>
+      <visual name='base_link_fixed_joint_lump__t200_link_rear_right_visual_23'>
         <pose frame=''>-0.13409 -0.10591 -0.009 3.14159 1.57079 -0.785403</pose>
         <geometry>
           <cylinder>
@@ -266,7 +296,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_23'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_24'>
         <pose frame=''>0 0.105 0.09 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -274,7 +304,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_24'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_25'>
         <pose frame=''>0 0.105 0.02 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -282,7 +312,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_25'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_26'>
         <pose frame=''>0 0.105 0.055 0 -0 0</pose>
         <geometry>
           <cylinder>
@@ -291,7 +321,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_26'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_left_visual_27'>
         <pose frame=''>0 0.105 0.0675 0 -0 0</pose>
         <geometry>
           <cylinder>
@@ -300,7 +330,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_27'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_28'>
         <pose frame=''>0 -0.105 0.09 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -308,7 +338,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_28'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_29'>
         <pose frame=''>0 -0.105 0.02 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -316,7 +346,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_29'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_30'>
         <pose frame=''>0 -0.105 0.055 0 -0 0</pose>
         <geometry>
           <cylinder>
@@ -325,7 +355,7 @@
           </cylinder>
         </geometry>
       </visual>
-      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_30'>
+      <visual name='base_link_fixed_joint_lump__t200_link_vertical_right_visual_31'>
         <pose frame=''>0 -0.105 0.0675 0 -0 0</pose>
         <geometry>
           <cylinder>
@@ -342,13 +372,49 @@
           <fluid_density>1029</fluid_density>
         </plugin>
       </sensor>
-      <gravity>1</gravity>
       <velocity_decay/>
       <gravity>1</gravity>
       <sensor name='imu_sensor' type='imu'>
         <update_rate>50</update_rate>
         <plugin name='OrcaIMUPlugin' filename='libOrcaIMUPlugin.so'/>
         <pose frame=''>0 0 0 0 -0 0</pose>
+      </sensor>
+      <gravity>1</gravity>
+      <velocity_decay/>
+      <sensor name='camera1' type='camera'>
+        <update_rate>30</update_rate>
+        <camera name='head'>
+          <horizontal_fov>1.39626</horizontal_fov>
+          <image>
+            <width>800</width>
+            <height>800</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>300</far>
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+        <plugin name='camera_controller' filename='libgazebo_ros_camera.so'>
+          <alwaysOn>1</alwaysOn>
+          <updateRate>0.0</updateRate>
+          <cameraName>orca/camera1</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>camera_link</frameName>
+          <hackBaseline>0.07</hackBaseline>
+          <distortionK1>0.0</distortionK1>
+          <distortionK2>0.0</distortionK2>
+          <distortionK3>0.0</distortionK3>
+          <distortionT1>0.0</distortionT1>
+          <distortionT2>0.0</distortionT2>
+        </plugin>
+        <pose frame=''>0 0 -0.2 0 -0 0</pose>
       </sensor>
     </link>
     <plugin name='OrcaBuoyancyPlugin' filename='libOrcaBuoyancyPlugin.so'>
@@ -410,7 +476,7 @@
     <static>0</static>
     <plugin name='OrcaGroundTruthPlugin' filename='libOrcaGroundTruthPlugin.so'>
       <link name='base_link'/>
-      <odom_topic>/ground_truth</odom_topic>
+      <ros_topic>/gps</ros_topic>
       <surface>10</surface>
     </plugin>
   </model>
