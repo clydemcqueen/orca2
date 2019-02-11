@@ -75,12 +75,12 @@
       <pose>0 3 0.01 0 0 0</pose>
     </model>
 
-    <model name="camera">
+    <model name="orca">
       <include>
         <static>false</static>
-        <uri>model://camera</uri>
+        <uri>model://orca</uri>
       </include>
-      <pose>0 0 1 0 1 0</pose>
+      <pose>0 0 1 0 0 0</pose>
     </model>
 
   </world>

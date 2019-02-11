@@ -322,6 +322,13 @@
   -->
   <gazebo>
     <plugin filename="libOrcaThrusterPlugin.so" name="OrcaThrusterPlugin">
+
+      <!-- START EDIT -->
+
+      <link_name>orca::base_link</link_name>
+
+      <!-- END EDIT -->
+
       <ros_topic>/orca_base/control</ros_topic>
       <thruster name="front_right">
         <!-- name attributes are ignored; the tag order must match the message array order -->

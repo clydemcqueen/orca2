@@ -414,7 +414,7 @@
           <distortionT1>0.0</distortionT1>
           <distortionT2>0.0</distortionT2>
         </plugin>
-        <pose frame=''>0 0 -0.2 0 -0 0</pose>
+        <pose frame=''>0 0 -0.2 0 1.57079 0</pose>
       </sensor>
     </link>
     <plugin name='OrcaBuoyancyPlugin' filename='libOrcaBuoyancyPlugin.so'>
@@ -434,6 +434,7 @@
       </link>
     </plugin>
     <plugin name='OrcaThrusterPlugin' filename='libOrcaThrusterPlugin.so'>
+      <link_name>orca::base_link</link_name>
       <ros_topic>/orca_base/control</ros_topic>
       <thruster name='front_right'>
         <pos_force>50</pos_force>
