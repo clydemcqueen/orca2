@@ -6,8 +6,6 @@ Workaround:
 * add ros2 branch of gazebo_ros_pkgs to workspace, and build it
 * export GAZEBO_PLUGIN_PATH=~/ros2/orca_ws/install/gazebo_plugins/lib
 * cp /usr/lib/x86_64-linux-gnu/gazebo-9/plugins/* ~/ros2/orca_ws/install/gazebo_plugins/lib
-* gazebo --verbose /opt/ros/crystal/share/gazebo_plugins/worlds/gazebo_ros_camera_demo.world
 
-Then, to run orca.world:
-* export GAZEBO_MODEL_PATH=~/ros2/orca_ws/install/orca_gazebo/share/orca_gazebo/models
-* gazebo --verbose ~/ros2/orca_ws/install/orca_gazebo/share/orca_gazebo/worlds/orca.world
+Test the workaround:
+* gazebo --verbose /opt/ros/crystal/share/gazebo_plugins/worlds/gazebo_ros_camera_demo.world
