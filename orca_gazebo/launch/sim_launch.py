@@ -12,7 +12,7 @@ from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
-    urdf = os.path.join(get_package_share_directory('orca_description'), 'urdf', 'orca.urdf')
+    urdf = os.path.join(get_package_share_directory('orca_gazebo'), 'urdf', 'orca.urdf')
     world = os.path.join(get_package_share_directory('orca_gazebo'), 'worlds', 'orca.world')
     return LaunchDescription([
         ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
