@@ -11,6 +11,7 @@
  *
  *    <gazebo>
  *      <plugin name="OrcaThrusterPlugin" filename="libOrcaThrusterPlugin.so">
+ *        <link_name>base_link</link_name>
  *        <ros_topic>/control</ros_topic>
  *        <thruster>
  *          <pos_force>50</pos_force>
@@ -59,12 +60,6 @@ class OrcaThrusterPlugin : public ModelPlugin
   // ROS subscriber
   rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr thruster_sub_;
 
-  // ROS callback queue
-  //ros::CallbackQueue callback_queue_;
-
-  // Thread that runs the ROS message queue
-  //std::thread callback_thread_;
-
   // Model for each thruster
   struct Thruster
   {
@@ -86,11 +81,18 @@ public:
   // Called once when the plugin is loaded.
   void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
   {
-    // Create a ROS thread queue
-    //callback_thread_ = std::thread(std::bind(&OrcaThrusterPlugin::QueueThread, this));
-
     // Get the GazeboROS node
     node_ = gazebo_ros::Node::Get(sdf);
+
+    // Look for our link name
+    std::string link_name = "base_link";
+    if (sdf->HasElement("link_name"))
+    {
+      link_name = sdf->GetElement("link_name")->Get<std::string>();
+    }
+    RCLCPP_INFO(node_->get_logger(), "Thrust force will be applied to %s", link_name.c_str());
+    base_link_ = model->GetLink(link_name);
+    GZ_ASSERT(base_link_ != nullptr, "Missing link");
 
     // Look for our ROS topic
     std::string ros_topic = "/control";
@@ -98,7 +100,7 @@ public:
     {
       ros_topic = sdf->GetElement("ros_topic")->Get<std::string>();
     }
-    RCLCPP_INFO(node_->get_logger(), "OrcaThrusterPlugin will listen on ROS topic %s", ros_topic.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Listening on %s", ros_topic.c_str());
 
     // Subscribe to the topic
     // Note the use of std::placeholders::_1 vs. the included _1 from Boost
@@ -142,13 +144,6 @@ public:
         t.pos_force, t.neg_force, t.xyz.X(), t.xyz.Y(), t.xyz.Z(), t.rpy.X(), t.rpy.Y(), t.rpy.Z());
       thrusters_.push_back(t);
     }
-
-    // Thrust forces will be applied to base_link
-    base_link_ = model->GetLink("base_link");
-
-    if (base_link_ == nullptr) {
-      RCLCPP_ERROR(node_->get_logger(), "base_link not found, thruster plugin disabled");
-    }
   }
 
   // Handle an incoming message from ROS
@@ -164,10 +159,6 @@ public:
   // TODO don't apply thrust force if we're above the surface of the water
   void OnUpdate(const common::UpdateInfo & /*info*/)
   {
-    if (base_link_ == nullptr) {
-      return;
-    }
-
     for (Thruster t : thrusters_)
     {
       // Default thruster force points directly up
