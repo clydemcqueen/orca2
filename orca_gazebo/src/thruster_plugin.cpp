@@ -145,6 +145,10 @@ public:
 
     // Thrust forces will be applied to base_link
     base_link_ = model->GetLink("base_link");
+
+    if (base_link_ == nullptr) {
+      RCLCPP_ERROR(node_->get_logger(), "base_link not found, thruster plugin disabled");
+    }
   }
 
   // Handle an incoming message from ROS
@@ -160,6 +164,10 @@ public:
   // TODO don't apply thrust force if we're above the surface of the water
   void OnUpdate(const common::UpdateInfo & /*info*/)
   {
+    if (base_link_ == nullptr) {
+      return;
+    }
+
     for (Thruster t : thrusters_)
     {
       // Default thruster force points directly up
