@@ -59,7 +59,23 @@ source /opt/ros/crystal/setup.bash
 source install/setup.bash
 export GAZEBO_MODEL_PATH=~/ros2/orca2_ws/install/orca_gazebo/share/orca_gazebo/models
 ros2 launch orca_gazebo sim_launch.py
-# See also orca_gazebo/README.md for a possible dynamic linking problem and workaround
 ~~~
 
-See the [Orca](https://github.com/clydemcqueen/orca) README for more information.
+If you run into a dynamic linking problem
+("libCameraPlugin.so: cannot open shared object file")
+try this workaround:
+
+~~~
+cd ~/ros2/orca2_ws/src
+git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git
+cd gazebo_ros_pkgs
+git checkout ros2
+cd ~/ros2/orca2_ws
+colcon build --event-handlers console_direct+
+source install/setup.bash
+export GAZEBO_PLUGIN_PATH=~/ros2/orca2_ws/install/gazebo_plugins/lib
+cp /usr/lib/x86_64-linux-gnu/gazebo-9/plugins/* ~/ros2/orca2_ws/install/gazebo_plugins/lib
+ros2 launch orca_gazebo sim_launch.py
+~~~
+
+See the [Orca](https://github.com/clydemcqueen/orca) README for more information about Orca.

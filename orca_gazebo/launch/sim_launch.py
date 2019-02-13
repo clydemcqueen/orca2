@@ -14,11 +14,17 @@ from launch.actions import ExecuteProcess
 def generate_launch_description():
     urdf = os.path.join(get_package_share_directory('orca_gazebo'), 'urdf', 'orca.urdf')
     world = os.path.join(get_package_share_directory('orca_gazebo'), 'worlds', 'orca.world')
+
+    joy_params = [{
+        # Update joystick device number as required
+        'dev': '/dev/input/js0'
+    }]
+
     return LaunchDescription([
         ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
         ExecuteProcess(cmd=['rviz2', '-d', 'install/orca_topside/share/orca_topside/cfg/topside.rviz'], output='screen'),
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen', arguments=[urdf]),
-        Node(package='joy', node_executable='joy_node', output='screen'),
+        Node(package='joy', node_executable='joy_node', output='screen', node_name='joy_node', parameters=joy_params),
         Node(package='orca_base', node_executable='orca_base', output='screen'),
         Node(package='orca_base', node_executable='filter_node', output='screen'),
         Node(package='flock_vlam', node_executable='vloc_node', output='screen', node_name='vloc_node', node_namespace='camera1'),
