@@ -9,11 +9,10 @@ Orca is a ROS driver for the BlueROV2.
 The overall goal is to port Orca to ROS2, then continue work on a BlueROV2-based AUV.
 
 * `orca_msgs` is ported
-* `orca_description` is ported. Xacro must be run manually
 * `orca_driver` is blocked on several packages
 * `orca_base` is ported
 * `orca_topside` the Rviz2 plugins are building but are not loading correctly
-* `orca_gazebo` is ported. The URDF file must be manually converted to SDF and added to the world file
+* `orca_gazebo` is ported. The URDF file must be manually converted to SDF
 * `orca_vision` is blocked on pcl and possibly other packages
 
 ## Requirements
@@ -43,10 +42,11 @@ sudo apt install ros-crystal-gazebo-ros-pkgs
 ## Install and build
 
 ~~~
-mkdir -p ~/orca2_ws/src
-cd ~/orca2_ws/src
+mkdir -p ~/ros2/orca2_ws/src
+cd ~/ros2/orca2_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
-cd ~/orca2_ws
+git clone https://github.com/ptrmu/flock_vlam.git
+cd ~/ros2/orca2_ws
 source /opt/ros/crystal/setup.bash
 colcon build --event-handlers console_direct+
 ~~~
@@ -56,10 +56,12 @@ colcon build --event-handlers console_direct+
 Run Orca2 in Gazebo:
 
 ~~~
-cd ~/orca2_ws
+cd ~/ros2/orca2_ws
 source /opt/ros/crystal/setup.bash
 source install/setup.bash
+export GAZEBO_MODEL_PATH=~/ros2/orca_ws/install/orca_gazebo/share/orca_gazebo/models
 ros2 launch orca_gazebo sim_launch.py
+# See also orca_gazebo/README.md for a possible dynamic linking problem and workaround
 ~~~
 
 See the [Orca](https://github.com/clydemcqueen/orca) README for more information.

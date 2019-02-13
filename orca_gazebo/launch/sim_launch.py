@@ -1,6 +1,7 @@
 """Launch a simulation, with all the bells and whistles"""
 
-# TODO(crystal): run xacro
+# TODO run xacro
+# TODO export GAZEBO_MODEL_PATH=???
 
 import os
 
@@ -11,7 +12,7 @@ from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
-    urdf = os.path.join(get_package_share_directory('orca_description'), 'urdf', 'orca.urdf')
+    urdf = os.path.join(get_package_share_directory('orca_gazebo'), 'urdf', 'orca.urdf')
     world = os.path.join(get_package_share_directory('orca_gazebo'), 'worlds', 'orca.world')
     return LaunchDescription([
         ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
@@ -19,4 +20,7 @@ def generate_launch_description():
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen', arguments=[urdf]),
         Node(package='joy', node_executable='joy_node', output='screen'),
         Node(package='orca_base', node_executable='orca_base', output='screen'),
+        Node(package='orca_base', node_executable='filter_node', output='screen'),
+        Node(package='flock_vlam', node_executable='vloc_node', output='screen', node_name='vloc_node', node_namespace='camera1'),
+        Node(package='flock_vlam', node_executable='vmap_node', output='screen'),
     ])

@@ -140,9 +140,9 @@ install(
   RUNTIME DESTINATION bin
 )
 
-## Install worlds and launch files
+## Install various directories
 install(
-  DIRECTORY worlds launch
+  DIRECTORY launch models worlds
   DESTINATION share/orca_gazebo
 )
 
