@@ -142,7 +142,7 @@ install(
 
 ## Install various directories
 install(
-  DIRECTORY launch models worlds
+  DIRECTORY launch models worlds urdf
   DESTINATION share/orca_gazebo
 )
 
