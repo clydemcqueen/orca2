@@ -17,8 +17,8 @@ def generate_launch_description():
 
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
-    urdf = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
-    world = os.path.join(orca_gazebo_path, 'worlds', 'orca.world')
+    urdf_path = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'orca.world')
     map_path = os.path.join(orca_gazebo_path, 'worlds', 'orca_map.yaml')
 
     joy_params = [{
@@ -28,11 +28,21 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
-        ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
+        ExecuteProcess(cmd=[
+            'gazebo',
+            '--verbose',
+            '-s', 'libgazebo_ros_init.so',      # Publish /clock
+            '-s', 'libgazebo_ros_factory.so',   # Provide injection endpoints
+            world_path
+        ], output='screen'),
+
+        # Add the AUV to the simulation
+        Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
+             arguments=[urdf_path, '0', '0', '1', '0']),
 
         # Publish static transforms from URDF file
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
-             arguments=[urdf]),
+             arguments=[urdf_path]),
 
         # Joystick driver, generates /namespace/joy messages
         Node(package='joy', node_executable='joy_node', output='screen',

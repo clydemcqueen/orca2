@@ -75,13 +75,5 @@
       <pose>0 3 0.01 0 0 0</pose>
     </model>
 
-    <model name="orca">
-      <include>
-        <static>false</static>
-        <uri>model://orca</uri>
-      </include>
-      <pose>0 0 1 0 0 0</pose>
-    </model>
-
   </world>
 </sdf>

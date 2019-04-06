@@ -146,4 +146,10 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+## Install Python scripts
+install(
+  PROGRAMS src/inject_entity.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()
