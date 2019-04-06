@@ -59,7 +59,6 @@ private:
 
   // General state
   bool simulation_;             // True if we're in a simulation
-  rclcpp::Time ping_time_;      // Last time we heard from the topside
   rclcpp::Time prev_loop_time_; // Last time spinOnce was called
   uint8_t mode_;                // Operating mode
 
@@ -123,7 +122,6 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Subscription<orca_msgs::msg::Leak >::SharedPtr leak_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_local_sub_;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr ping_sub_;
 
   // Callbacks
   void baroCallback(const orca_msgs::msg::Barometer::SharedPtr msg);
@@ -135,8 +133,7 @@ private:
   void joyCallback(const sensor_msgs::msg::Joy::SharedPtr msg);
   void leakCallback(const orca_msgs::msg::Leak::SharedPtr msg);
   void odomLocalCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void pingCallback(const std_msgs::msg::Empty::SharedPtr msg);
-  
+
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_plan_pub_;

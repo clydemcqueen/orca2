@@ -44,7 +44,6 @@ OrcaBase::OrcaBase():
   tilt_trim_button_previous_{false},
   brightness_{0},
   brightness_trim_button_previous_{false},
-  ping_time_{now()},  // TODO valid at this time???
   prev_loop_time_{now()},
   depth_controller_{false, 0.1, 0, 0.05},
   yaw_controller_{true, 0.007, 0, 0}
@@ -106,8 +105,7 @@ OrcaBase::OrcaBase():
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", std::bind(&OrcaBase::imuCallback, this, _1));
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", std::bind(&OrcaBase::joyCallback, this, _1));
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", std::bind(&OrcaBase::leakCallback, this, _1));
-  /* TODO */ odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", std::bind(&OrcaBase::odomLocalCallback, this, _1)); // TODO
-  /* TODO */ ping_sub_ = create_subscription<std_msgs::msg::Empty>("/ping", std::bind(&OrcaBase::pingCallback, this, _1));
+  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", std::bind(&OrcaBase::odomLocalCallback, this, _1)); // TODO
 
   // Advertise all topics that we'll publish on
   control_pub_ = create_publisher<orca_msgs::msg::Control>("/orca_base/control", 1);
@@ -253,12 +251,6 @@ void OrcaBase::leakCallback(const orca_msgs::msg::Leak::SharedPtr leak_msg)
   }
 }
 
-// Ping from topside
-void OrcaBase::pingCallback(const std_msgs::msg::Empty::SharedPtr msg)
-{
-  ping_time_ = now();
-}
-
 // Local odometry -- result from robot_localization, fusing all continuous sensors
 void OrcaBase::odomLocalCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
@@ -345,12 +337,6 @@ void OrcaBase::setMode(uint8_t new_mode)
   // Stop all thrusters when we change modes
   efforts_.clear();
 
-  if (auvOperation() && rovMode(new_mode))
-  {
-    // AUV to ROV transition
-    ping_time_ = now();
-  }
-
   if (depthHoldMode(new_mode)) // TODO move to keep station planner
   {
     // Set target depth
@@ -386,9 +372,6 @@ void OrcaBase::setMode(uint8_t new_mode)
 // New input from the gamepad
 void OrcaBase::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 {
-  // A joystick message means that we're talking to the topside
-  ping_time_ = now();
-
   // If we're in trouble, ignore the joystick
   if (mode_ == orca_msgs::msg::Control::SOS)
   {
