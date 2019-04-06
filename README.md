@@ -11,7 +11,6 @@ The overall goal is to port Orca to ROS2, then continue work on a BlueROV2-based
 * `orca_msgs` is ported
 * `orca_driver` is blocked on several packages
 * `orca_base` is ported
-* `orca_topside` the Rviz2 plugins are building but are not loading correctly
 * `orca_gazebo` is ported. The URDF file must be manually converted to SDF
 * `orca_vision` is blocked on pcl and possibly other packages
 
@@ -56,23 +55,22 @@ Run Orca2 in Gazebo:
 ~~~
 cd ~/ros2/orca2_ws
 source /opt/ros/crystal/setup.bash
-source install/setup.bash
-export GAZEBO_MODEL_PATH=~/ros2/orca2_ws/install/orca_gazebo/share/orca_gazebo/models
+source install/local_setup.bash
+export GAZEBO_MODEL_PATH=install/orca_gazebo/share/orca_gazebo/models
 ros2 launch orca_gazebo sim_launch.py
 ~~~
 
-If you run into a dynamic linking problem
-("libCameraPlugin.so: cannot open shared object file")
-try this workaround:
+If you run into a dynamic linking problem ("libCameraPlugin.so: cannot open shared object file")
+try [this workaround](https://answers.ros.org/question/313761/camera-plugin-failed-to-load-on-crystal/):
 
 ~~~
 cd ~/ros2/orca2_ws/src
 git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git
 cd gazebo_ros_pkgs
-git checkout ros2
+git checkout 9593afce820fd290cb0b0c44dffd4e04d927251a
 cd ~/ros2/orca2_ws
 colcon build --event-handlers console_direct+
-source install/setup.bash
+source install/local_setup.bash
 export GAZEBO_PLUGIN_PATH=~/ros2/orca2_ws/install/gazebo_plugins/lib
 cp /usr/lib/x86_64-linux-gnu/gazebo-9/plugins/* ~/ros2/orca2_ws/install/gazebo_plugins/lib
 ros2 launch orca_gazebo sim_launch.py

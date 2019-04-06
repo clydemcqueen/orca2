@@ -143,7 +143,7 @@ install(
 ## Install various directories
 install(
   DIRECTORY launch models worlds urdf
-  DESTINATION share/orca_gazebo
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()
