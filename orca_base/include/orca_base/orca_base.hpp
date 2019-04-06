@@ -16,6 +16,7 @@
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
+#include "orca_base/joystick.hpp"
 #include "orca_base/orca_model.hpp"
 #include "orca_base/pid.hpp"
 #include "orca_base/orca_mission.hpp"
@@ -27,27 +28,29 @@ constexpr const bool depthHoldMode(uint8_t mode) { return mode == orca_msgs::msg
 constexpr const bool rovMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MANUAL || mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; }
 constexpr const bool auvMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MISSION; }
 
-// OrcaBase provides basic ROV and AUV functions, including joystick operation, heading hold, depth hold, and waypoint navigation.
+// OrcaBase provides basic ROV and AUV functions, including joystick operation and waypoint navigation.
 class OrcaBase: public rclcpp::Node
 {
 private:
-  // Parameters from the parameter server TODO
-  int joy_axis_yaw_;
-  int joy_axis_forward_;
-  int joy_axis_strafe_;
-  int joy_axis_vertical_;
-  int joy_axis_yaw_trim_;
-  int joy_axis_vertical_trim_;
-  int joy_button_disarm_;
-  int joy_button_arm_;
-  int joy_button_manual_;
-  int joy_button_hold_h_;
-  int joy_button_hold_d_;
-  int joy_button_hold_hd_;
-  int joy_button_tilt_down_;
-  int joy_button_tilt_up_;
-  int joy_button_bright_;
-  int joy_button_dim_;
+  // Joystick assignments
+  int joy_axis_yaw_ = JOY_AXIS_LEFT_LR;
+  int joy_axis_forward_ = JOY_AXIS_LEFT_FB;
+  int joy_axis_strafe_ = JOY_AXIS_RIGHT_LR;
+  int joy_axis_vertical_ = JOY_AXIS_RIGHT_FB;
+  int joy_axis_yaw_trim_ = JOY_AXIS_TRIM_LR;
+  int joy_axis_vertical_trim_ = JOY_AXIS_TRIM_FB;
+
+  int joy_button_disarm_ = JOY_BUTTON_VIEW;
+  int joy_button_arm_ = JOY_BUTTON_MENU;
+  int joy_button_manual_ = JOY_BUTTON_A;
+  int joy_button_hold_h_ = JOY_BUTTON_X;
+  int joy_button_hold_d_ = JOY_BUTTON_B;
+  int joy_button_hold_hd_ = JOY_BUTTON_Y;
+  int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
+  int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
+  int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
+  int joy_button_dim_ = JOY_BUTTON_RIGHT_STICK;
+
   double inc_yaw_;
   double inc_depth_;
   int inc_tilt_;

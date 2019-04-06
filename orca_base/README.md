@@ -11,9 +11,8 @@ Modes:
 Orca will enter an "sos" mode if a leak or low battery condition is detected.
 In this mode the thrusters are off, the joystick is ignored, and the lights and radios are calling for help.
 
-Orca supports tethered and untethered operation:
-* Orca will disarm if topside communication is lost, except when running a mission
-* if you run without a tether, make sure the vehicle is positively buoyant!
+Orca supports tethered and untethered operation.
+If you run without a tether, make sure the vehicle is positively buoyant!
 
 World coordinate frame is ENU (East, North, Up).
 This is the default used by ROS and Gazebo.
