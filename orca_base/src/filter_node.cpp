@@ -125,12 +125,22 @@ FilterNode::FilterNode() :
   mission_{false},
   filter_{STATE_DIM, MEASUREMENT_DIM}
 {
-  // Get parameters
+  // Get frame ids
   get_parameter_or<std::string>("map_frame", map_frame_, "map");
   get_parameter_or<std::string>("base_frame", base_frame_, "base_link");
 
-  // Pose of base_frame in camera_frame
-  t_camera_base_ = tf2::Transform(tf2::Quaternion(-0.5, 0.5, -0.5, 0.5), tf2::Vector3(0.035, 0., 0.)).inverse();
+  // Get t_camera_base (pose of base_frame in camera_frame)
+  // Default is a down-facing camera 20cm below the AUV
+  double t_camera_base_x, t_camera_base_y, t_camera_base_z, t_camera_base_roll, t_camera_base_pitch, t_camera_base_yaw;
+  get_parameter_or<double>("t_camera_base_x", t_camera_base_x, -0.2);
+  get_parameter_or<double>("t_camera_base_y", t_camera_base_y, 0.);
+  get_parameter_or<double>("t_camera_base_z", t_camera_base_z, 0.);
+  get_parameter_or<double>("t_camera_base_roll", t_camera_base_roll, 1.57);
+  get_parameter_or<double>("t_camera_base_pitch", t_camera_base_pitch, 3.14);
+  get_parameter_or<double>("t_camera_base_yaw", t_camera_base_yaw, 0.);
+  tf2::Quaternion camera_orientation;
+  camera_orientation.setEuler(t_camera_base_yaw, t_camera_base_pitch, t_camera_base_roll);
+  t_camera_base_ = tf2::Transform(camera_orientation, tf2::Vector3(t_camera_base_x, t_camera_base_y, t_camera_base_z));
 
   // Measurement function
   Eigen::MatrixXd H(MEASUREMENT_DIM, STATE_DIM);

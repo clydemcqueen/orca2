@@ -106,8 +106,8 @@ OrcaBase::OrcaBase():
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", std::bind(&OrcaBase::imuCallback, this, _1));
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", std::bind(&OrcaBase::joyCallback, this, _1));
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", std::bind(&OrcaBase::leakCallback, this, _1));
-  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", std::bind(&OrcaBase::odomLocalCallback, this, _1)); // TODO
-  ping_sub_ = create_subscription<std_msgs::msg::Empty>("/ping", std::bind(&OrcaBase::pingCallback, this, _1));
+  /* TODO */ odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", std::bind(&OrcaBase::odomLocalCallback, this, _1)); // TODO
+  /* TODO */ ping_sub_ = create_subscription<std_msgs::msg::Empty>("/ping", std::bind(&OrcaBase::pingCallback, this, _1));
 
   // Advertise all topics that we'll publish on
   control_pub_ = create_publisher<orca_msgs::msg::Control>("/orca_base/control", 1);

@@ -12,8 +12,14 @@ from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
-    urdf = os.path.join(get_package_share_directory('orca_gazebo'), 'urdf', 'orca.urdf')
-    world = os.path.join(get_package_share_directory('orca_gazebo'), 'worlds', 'orca.world')
+    # Must match camera name in URDF file
+    camera1_name = 'camera1'
+
+    orca_gazebo_path = get_package_share_directory('orca_gazebo')
+
+    urdf = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
+    world = os.path.join(orca_gazebo_path, 'worlds', 'orca.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'orca_map.yaml')
 
     joy_params = [{
         # Update joystick device number as required
@@ -21,12 +27,42 @@ def generate_launch_description():
     }]
 
     return LaunchDescription([
+        # Launch Gazebo, loading orca.world
         ExecuteProcess(cmd=['gazebo', '--verbose', world], output='screen'),
-        ExecuteProcess(cmd=['rviz2', '-d', 'install/orca_topside/share/orca_topside/cfg/topside.rviz'], output='screen'),
-        Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen', arguments=[urdf]),
-        Node(package='joy', node_executable='joy_node', output='screen', node_name='joy_node', parameters=joy_params),
+
+        # Publish static transforms from URDF file
+        Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
+             arguments=[urdf]),
+
+        # Joystick driver, generates /namespace/joy messages
+        Node(package='joy', node_executable='joy_node', output='screen',
+             node_name='joy_node', parameters=joy_params),
+
+        # AUV controller
         Node(package='orca_base', node_executable='orca_base', output='screen'),
-        Node(package='orca_base', node_executable='filter_node', output='screen'),
-        Node(package='flock_vlam', node_executable='vloc_node', output='screen', node_name='vloc_node', node_namespace='camera1'),
-        Node(package='flock_vlam', node_executable='vmap_node', output='screen'),
+
+        # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
+        Node(package='orca_base', node_executable='filter_node', output='screen',
+             node_name='filter_node', node_namespace=camera1_name, parameters=[{
+                't_camera_base_x': -0.2,
+                't_camera_base_y': 0.,
+                't_camera_base_z': 0.,
+                't_camera_base_roll': 1.57,
+                't_camera_base_pitch': 3.14,
+                't_camera_base_yaw': 0.}]),
+
+        # Load and publish a known map
+        Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
+             node_name='vmap_node', parameters=[{
+                'publish_tfs': 1,                               # Publish marker /tf
+                'marker_length': 0.1778,                        # Marker length
+                'marker_map_load_full_filename': map_path,      # Load a pre-built map from disk
+                'make_not_use_map': 0}]),                       # Don't save a map to disk
+
+        # Localize the AUV against the map
+        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+             node_name='vloc_node', node_namespace=camera1_name, parameters=[{
+                'publish_tfs': 0,                           # Don't publish drone /tf
+                'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
+                'camera_frame_id': 'camera_link'}]),
     ])

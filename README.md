@@ -1,8 +1,9 @@
 # Orca2 #
 
 Orca2 is a [ROS2](https://index.ros.org/doc/ros2/) port of [Orca](https://github.com/clydemcqueen/orca).
-
 Orca is a ROS driver for the BlueROV2.
+
+Orca2 depends on [fiducial_vlam](https://github.com/ptrmu/fiducial_vlam).
 
 ## Status
 
@@ -40,11 +41,10 @@ sudo apt install ros-crystal-gazebo-ros-pkgs ros-crystal-cv-bridge
 mkdir -p ~/ros2/orca2_ws/src
 cd ~/ros2/orca2_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
-git clone https://github.com/ptrmu/flock_vlam.git
+git clone https://github.com/ptrmu/fiducial_vlam.git
 cd ~/ros2/orca2_ws
 source /opt/ros/crystal/setup.bash
 colcon build --event-handlers console_direct+
-# Ignore the build warnings from orca_topside; this package hasn't been ported yet
 ~~~
 
 ## Run simulation
