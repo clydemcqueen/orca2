@@ -12,7 +12,6 @@ The overall goal is to port Orca to ROS2, then continue work on a BlueROV2-based
 * `orca_driver` is blocked on several packages
 * `orca_base` is ported
 * `orca_gazebo` is ported. The URDF file must be manually converted to SDF
-* `orca_vision` is blocked on pcl and possibly other packages
 
 ## Requirements
 
