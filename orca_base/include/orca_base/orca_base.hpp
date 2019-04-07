@@ -57,7 +57,7 @@ private:
   int joy_axis_strafe_ = JOY_AXIS_RIGHT_LR;
   int joy_axis_vertical_ = JOY_AXIS_RIGHT_FB;
   int joy_axis_yaw_trim_ = JOY_AXIS_TRIM_LR;
-  int joy_axis_depth_trim_ = JOY_AXIS_TRIM_FB;
+  int joy_axis_z_trim_ = JOY_AXIS_TRIM_FB;
 
   int joy_button_disarm_ = JOY_BUTTON_VIEW;
   int joy_button_arm_ = JOY_BUTTON_MENU;
@@ -71,12 +71,12 @@ private:
   int joy_button_dim_ = JOY_BUTTON_RIGHT_STICK;
 
   double inc_yaw_;
-  double inc_depth_;
+  double inc_z_;
   int inc_tilt_;
   int inc_lights_;
   float input_dead_band_;
   double yaw_pid_dead_band_;
-  double depth_pid_dead_band_;
+  double z_pid_dead_band_;
   tf2::Matrix3x3 imu_rotation_;
 
   // General state
@@ -111,18 +111,18 @@ private:
   double yaw_state_;
   double yaw_setpoint_;  // TODO get from controller
 
-  // Depth controller
-  pid::Controller depth_controller_;
-  double depth_adjustment_;
-  double depth_state_;
-  double depth_setpoint_;  // TODO get from controller
+  // Z controller
+  pid::Controller z_controller_;
+  double z_adjustment_;
+  double z_state_;
+  double z_setpoint_;  // TODO get from controller
 
   // Joystick gain (attenuation), range 0.0 (ignore joystick) to 1.0 (no attenuation)
   double xy_gain_;
   double yaw_gain_;
   double vertical_gain_;
 
-  // Thruster effort from joystick or pid controllers (yaw and depth), ranges from 1.0 for forward to -1.0 for reverse
+  // Thruster effort from joystick or pid controllers (yaw and z), ranges from 1.0 for forward to -1.0 for reverse
   OrcaEfforts efforts_;
 
   // Camera tilt

@@ -111,38 +111,38 @@ bool SurfaceMission::advance(const rclcpp::Time now, const OrcaPose &curr, OrcaO
 
 bool SquareMission::init(const rclcpp::Time now, const OrcaPose &goal, OrcaOdometry &plan)
 {
-  constexpr double TARGET_DEPTH = -0.5;
+  constexpr double TARGET_Z = -0.5;
 
   // Clear previous segments, if any
   segments_.clear();
 
-  if (std::abs(plan.pose.z - TARGET_DEPTH) > EPSILON_PLAN_XYZ)
+  if (std::abs(plan.pose.z - TARGET_Z) > EPSILON_PLAN_XYZ)
   {
-    // Descend/ascend to target depth
-    segments_.push_back(Segment{Planner::vertical, OrcaPose(plan.pose.x, plan.pose.y, TARGET_DEPTH, plan.pose.yaw)});
+    // Descend/ascend to target z
+    segments_.push_back(Segment{Planner::vertical, OrcaPose(plan.pose.x, plan.pose.y, TARGET_Z, plan.pose.yaw)});
   }
 
   bool north_first = goal.y > plan.pose.y;  // North or south first?
   bool east_first = goal.x > plan.pose.x;   // East or west first?
 
   // First leg
-  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, plan.pose.y, TARGET_DEPTH, north_first ? M_PI_2 : -M_PI_2)});
-  segments_.push_back(Segment{Planner::line, OrcaPose(plan.pose.x, goal.y, TARGET_DEPTH, north_first ? M_PI_2 : -M_PI_2)});
+  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, plan.pose.y, TARGET_Z, north_first ? M_PI_2 : -M_PI_2)});
+  segments_.push_back(Segment{Planner::line, OrcaPose(plan.pose.x, goal.y, TARGET_Z, north_first ? M_PI_2 : -M_PI_2)});
 
   // Second leg
-  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, goal.y, TARGET_DEPTH, east_first ? 0 : M_PI)});
-  segments_.push_back(Segment{Planner::line, OrcaPose(goal.x, goal.y, TARGET_DEPTH, east_first ? 0 : M_PI)});
+  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, goal.y, TARGET_Z, east_first ? 0 : M_PI)});
+  segments_.push_back(Segment{Planner::line, OrcaPose(goal.x, goal.y, TARGET_Z, east_first ? 0 : M_PI)});
 
   // Third leg
-  segments_.push_back(Segment{Planner::rotate, OrcaPose(goal.x, goal.y, TARGET_DEPTH, north_first ? -M_PI_2 : M_PI_2)});
-  segments_.push_back(Segment{Planner::line, OrcaPose(goal.x, plan.pose.y, TARGET_DEPTH, north_first ? -M_PI_2 : M_PI_2)});
+  segments_.push_back(Segment{Planner::rotate, OrcaPose(goal.x, goal.y, TARGET_Z, north_first ? -M_PI_2 : M_PI_2)});
+  segments_.push_back(Segment{Planner::line, OrcaPose(goal.x, plan.pose.y, TARGET_Z, north_first ? -M_PI_2 : M_PI_2)});
 
   // Fourth leg
-  segments_.push_back(Segment{Planner::rotate, OrcaPose(goal.x, plan.pose.y, TARGET_DEPTH, east_first ? M_PI : 0)});
-  segments_.push_back(Segment{Planner::line, OrcaPose(plan.pose.x, plan.pose.y, TARGET_DEPTH, east_first ? M_PI : 0)});
+  segments_.push_back(Segment{Planner::rotate, OrcaPose(goal.x, plan.pose.y, TARGET_Z, east_first ? M_PI : 0)});
+  segments_.push_back(Segment{Planner::line, OrcaPose(plan.pose.x, plan.pose.y, TARGET_Z, east_first ? M_PI : 0)});
 
   // Final turn
-  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, plan.pose.y, TARGET_DEPTH, goal.yaw)});
+  segments_.push_back(Segment{Planner::rotate, OrcaPose(plan.pose.x, plan.pose.y, TARGET_Z, goal.yaw)});
 
   // Start
   segment_ = -1;

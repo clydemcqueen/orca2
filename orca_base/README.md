@@ -3,9 +3,9 @@ ROV and AUV functionality for [Orca2](https://github.com/clydemcqueen/orca2).
 Modes:
 * disarmed: thrusters are off, all joystick buttons except "arm" are ignored
 * manual: thrusters are manually controlled
-* hold_h: the autopilot controls heading
-* hold_d: the autopilot controls depth
-* hold_hd: the autopilot controls heading and depth
+* hold_h: the autopilot controls yaw
+* hold_d: the autopilot controls z
+* hold_hd: the autopilot controls yaw and z
 * mission (AUV mode): the autopilot is running a mission, and will switch to manual when complete
 
 Orca will enter an "sos" mode if a leak or low battery condition is detected.

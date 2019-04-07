@@ -49,7 +49,7 @@ private:
     no_goal,    // There's no goal
     turn,       // We're turning toward the goal
     run,        // We're moving toward the goal
-    final_turn  // We're turning to match the goal heading
+    final_turn  // We're turning to match the goal yaw
   };
 
   Phase phase_ = Phase::no_goal;

@@ -7,9 +7,9 @@ namespace orca_base {
 // Constants
 //=============================================================================
 
-const double DEPTH_HOLD_MIN = 0.05;   // Hover just below the surface of the water
-const double DEPTH_HOLD_MAX = 50;     // Max depth is 100m, but provide a margin of safety
-const int SPIN_RATE = 10;             // Message publish rate in Hz
+const double Z_HOLD_MAX = -0.05;  // Highest z hold
+const double Z_HOLD_MIN = -50;    // Lowest z hold
+const int SPIN_RATE = 10;         // Message publish rate in Hz
 
 const rclcpp::Duration COMM_TIMEOUT_DISARM{5000000000};   // Disarm if we can't communicate with the topside
 
@@ -65,7 +65,7 @@ OrcaBase::OrcaBase():
   brightness_{0},
   prev_loop_time_{now()},
   prev_joy_time_{now()},
-  depth_controller_{false, 0.1, 0, 0.05}, // TODO params
+  z_controller_{false, 0.1, 0, 0.05}, // TODO params
   yaw_controller_{true, 0.007, 0, 0}      // TODO params
 {
   // Suppress IDE warnings
@@ -81,12 +81,12 @@ OrcaBase::OrcaBase():
 
   // TODO parameters
   inc_yaw_ = M_PI/36;
-  inc_depth_ = 0.1;
+  inc_z_ = 0.1;
   inc_tilt_ = 5;
   inc_lights_ = 20;
   input_dead_band_ = 0.05f;     // Don't respond to tiny joystick movements
   yaw_pid_dead_band_ = 0.0005;
-  depth_pid_dead_band_ = 0.002;
+  z_pid_dead_band_ = 0.002;
   xy_gain_ = 0.5;
   yaw_gain_ = 0.2;
   vertical_gain_ = 0.5;
@@ -142,13 +142,13 @@ OrcaBase::OrcaBase():
 void OrcaBase::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
 {
   if (!barometer_ready_) {
-    // First depth reading: zero the depth
-    depth_adjustment_ = msg->depth;
-    depth_state_ = 0;
+    // First barometer reading: calibrate
+    z_adjustment_ = -msg->depth;
+    z_state_ = 0;
     barometer_ready_ = true;
-    RCLCPP_INFO(get_logger(), "barometer ready, z adjustment %g", depth_adjustment_);
+    RCLCPP_INFO(get_logger(), "barometer ready, z adjustment %g", z_adjustment_);
   } else {
-    depth_state_ = msg->depth - depth_adjustment_;
+    z_state_ = -msg->depth - z_adjustment_;
   }
 }
 
@@ -345,10 +345,10 @@ void OrcaBase::set_mode(uint8_t new_mode)
   efforts_.clear();
 
   if (is_z_hold_mode(new_mode)) {  // TODO move to keep station planner
-    // Set target depth
-    depth_setpoint_ = depth_state_;
-    depth_controller_.set_target(depth_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold z at %g", depth_setpoint_);
+    // Set target z
+    z_setpoint_ = z_state_;
+    z_controller_.set_target(z_setpoint_);
+    RCLCPP_INFO(get_logger(), "hold z at %g", z_setpoint_);
   }
 
   if (is_yaw_hold_mode(new_mode)) {  // TODO move to keep station planner
@@ -420,12 +420,12 @@ void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
     RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_setpoint_);
   }
 
-  // Depth trim
-  if (holding_z() && trim_down(msg, prev_msg, joy_axis_depth_trim_)) {
-    depth_setpoint_ = msg->axes[joy_axis_depth_trim_] < 0 ? depth_setpoint_ + inc_depth_ : depth_setpoint_ - inc_depth_;
-    depth_setpoint_ = clamp(depth_setpoint_, DEPTH_HOLD_MIN, DEPTH_HOLD_MAX);
-    depth_controller_.set_target(depth_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold z at %g", depth_setpoint_);
+  // Z trim
+  if (holding_z() && trim_down(msg, prev_msg, joy_axis_z_trim_)) {
+    z_setpoint_ = msg->axes[joy_axis_z_trim_] > 0 ? z_setpoint_ + inc_z_ : z_setpoint_ - inc_z_;
+    z_setpoint_ = clamp(z_setpoint_, Z_HOLD_MIN, Z_HOLD_MAX);
+    z_controller_.set_target(z_setpoint_);
+    RCLCPP_INFO(get_logger(), "hold z at %g", z_setpoint_);
   }
 
   // Camera tilt
@@ -482,10 +482,10 @@ void OrcaBase::spin_once()
     efforts_.yaw = dead_band(effort * stability_, yaw_pid_dead_band_);
   }
 
-  // Compute depth effort
+  // Compute z effort
   if (holding_z()) {
-    double effort = depth_controller_.calc(depth_state_, dt, 0);
-    efforts_.vertical = dead_band(-effort * stability_, depth_pid_dead_band_);
+    double effort = z_controller_.calc(z_state_, dt, 0);
+    efforts_.vertical = dead_band(effort * stability_, z_pid_dead_band_);
   }
 
   // Run a mission
