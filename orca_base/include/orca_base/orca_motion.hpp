@@ -126,7 +126,7 @@ private:
     Polar goal_angle_;    // Arc goal angle
 
     // Convert a polar angle on this arc to an OrcaPose
-    void polarToCartesian(const Polar theta, OrcaPose &pose) const
+    void polar_to_cartesian(const Polar theta, OrcaPose &pose) const
     {
       pose.x = center_.x + radius_ * cos(theta);
       pose.y = center_.y + radius_ * sin(theta);
@@ -134,7 +134,7 @@ private:
     }
 
     // Convert an OrcaPose to a polar angle on this arc
-    void cartesianToPolar(const OrcaPose &pose, Polar &theta) const
+    void cartesian_to_polar(const OrcaPose &pose, Polar &theta) const
     {
       // TODO assert that pose is on the circle
       theta = atan2(pose.y - center_.y, pose.x - center_.x);

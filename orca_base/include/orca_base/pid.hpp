@@ -38,7 +38,7 @@ public:
   }
 
   // Set target
-  void setTarget(double target)
+  void set_target(double target)
   {
     target_ = target;
     prev_error_ = 0;

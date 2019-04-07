@@ -126,7 +126,7 @@ struct OrcaPose
 
   void clear() { x = 0; y = 0; z = 0; yaw = 0; }
 
-  void toMsg(geometry_msgs::msg::Pose &msg) const
+  void to_msg(geometry_msgs::msg::Pose &msg) const
   {
     msg.position.x = x;
     msg.position.y = y;
@@ -138,7 +138,7 @@ struct OrcaPose
     msg.orientation = tf2::toMsg(q);
   }
 
-  void fromMsg(const nav_msgs::msg::Odometry &msg)
+  void from_msg(const nav_msgs::msg::Odometry &msg)
   {
     x = msg.pose.pose.position.x;
     y = msg.pose.pose.position.y;
@@ -151,7 +151,7 @@ struct OrcaPose
     tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
   }
 
-  void fromMsg(const geometry_msgs::msg::PoseStamped &msg)
+  void from_msg(const geometry_msgs::msg::PoseStamped &msg)
   {
     x = msg.pose.position.x;
     y = msg.pose.position.y;
@@ -209,13 +209,13 @@ struct OrcaOdometry
     }
   }
 
-  void stopMotion()
+  void stop_motion()
   {
     velo = OrcaPose{};
   }
 
   // Create a 6x6 covariance matrix (x, y, z, roll, pitch, yaw) from a 4x4 matrix (x, y, z, yaw)
-  static void covar4to6(const std::array<double, 16> &four, std::array<double, 36> &six)
+  static void covar_4_to_6(const std::array<double, 16> &four, std::array<double, 36> &six)
   {
     six.fill(0);
 
@@ -231,9 +231,9 @@ struct OrcaOdometry
     }
   }
 
-  void toMsg(nav_msgs::msg::Odometry &msg) const
+  void to_msg(nav_msgs::msg::Odometry &msg) const
   {
-    pose.toMsg(msg.pose.pose);
+    pose.to_msg(msg.pose.pose);
 
     msg.twist.twist.linear.x = velo.x;
     msg.twist.twist.linear.y = velo.y;
@@ -243,8 +243,8 @@ struct OrcaOdometry
     msg.twist.twist.angular.y = 0;
     msg.twist.twist.angular.z = velo.yaw;
 
-    covar4to6(pose_covariance, msg.pose.covariance);
-    covar4to6(velo_covariance, msg.twist.covariance);
+    covar_4_to_6(pose_covariance, msg.pose.covariance);
+    covar_4_to_6(velo_covariance, msg.twist.covariance);
   }
 };
 
@@ -264,7 +264,7 @@ struct OrcaEfforts
 
   void clear() { forward = 0; strafe = 0; vertical = 0; yaw = 0; }
 
-  void fromAcceleration(const OrcaPose &u_bar, const double current_yaw)
+  void from_acceleration(const OrcaPose &u_bar, const double current_yaw)
   {
     // u_bar (acceleration) => u (control inputs normalized from -1 to 1, aka effort)
     double x_effort = accel_to_effort_xy(u_bar.x);
@@ -276,8 +276,6 @@ struct OrcaEfforts
     vertical = -z_effort;
     rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
   }
-
-  // TODO toAcceleration will convert joystick inputs => acceleration
 };
 
 } // namespace orca_base

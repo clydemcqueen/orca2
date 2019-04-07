@@ -29,8 +29,8 @@ public:
   virtual bool init(const rclcpp::Time now, const OrcaPose &goal, OrcaOdometry &plan) = 0;
   virtual bool advance(const rclcpp::Time now, const OrcaPose &curr, OrcaOdometry &plan, OrcaPose &u_bar);
 
-  static void addToPath(nav_msgs::msg::Path &path, const OrcaPose &pose);
-  static void addToPath(nav_msgs::msg::Path &path, const std::vector<OrcaPose> &poses);
+  static void add_to_path(nav_msgs::msg::Path &path, const OrcaPose &pose);
+  static void add_to_path(nav_msgs::msg::Path &path, const std::vector<OrcaPose> &poses);
 };
 
 //=====================================================================================

@@ -23,10 +23,29 @@
 
 namespace orca_base {
 
-constexpr const bool headingHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_HD; }
-constexpr const bool depthHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; }
-constexpr const bool rovMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MANUAL || mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; }
-constexpr const bool auvMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MISSION; }
+bool is_yaw_hold_mode(uint8_t mode)
+{
+  using orca_msgs::msg::Control;
+  return mode == Control::HOLD_H || mode == Control::HOLD_HD;
+}
+
+bool is_z_hold_mode(uint8_t mode)
+{
+  using orca_msgs::msg::Control;
+  return mode == Control::HOLD_D || mode == Control::HOLD_HD;
+}
+
+bool is_rov_mode(uint8_t mode)
+{
+  using orca_msgs::msg::Control;
+  return mode == Control::MANUAL || mode == Control::HOLD_H || mode == Control::HOLD_D || mode == Control::HOLD_HD;
+}
+
+bool is_auv_mode(uint8_t mode)
+{
+  using orca_msgs::msg::Control;
+  return mode == Control::MISSION;
+}
 
 // OrcaBase provides basic ROV and AUV functions, including joystick operation and waypoint navigation.
 class OrcaBase: public rclcpp::Node
@@ -62,7 +81,7 @@ private:
 
   // General state
   bool simulation_;                                 // True if we're in a simulation
-  rclcpp::Time prev_loop_time_;                     // Last time spinOnce was called
+  rclcpp::Time prev_loop_time_;                     // Last time spin_once was called
   rclcpp::Time prev_joy_time_;                      // Last time we heard from the joystick
   uint8_t mode_;                                    // Operating mode
 
@@ -124,15 +143,15 @@ private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_local_sub_;
 
   // Callbacks
-  void baroCallback(const orca_msgs::msg::Barometer::SharedPtr msg);
-  void batteryCallback(const orca_msgs::msg::Battery::SharedPtr msg);
-  void goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
-  void gpsCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-  void groundTruthCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void joyCallback(const sensor_msgs::msg::Joy::SharedPtr msg);
-  void leakCallback(const orca_msgs::msg::Leak::SharedPtr msg);
-  void odomLocalCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
+  void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
+  void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  void gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+  void ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
+  void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
+  void odom_local_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
@@ -143,19 +162,19 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_ground_truth_pub_;
 
   // Helpers
-  void publishControl();
-  void publishOdom();
-  void setMode(uint8_t new_mode);
-  bool holdingHeading() { return headingHoldMode(mode_); };
-  bool holdingDepth() { return depthHoldMode(mode_); };
-  bool rovOperation() { return rovMode(mode_); };
-  bool auvOperation() { return auvMode(mode_); };
+  void publish_control();
+  void publish_odom();
+  void set_mode(uint8_t new_mode);
+  bool holding_yaw() { return is_yaw_hold_mode(mode_); };
+  bool holding_z() { return is_z_hold_mode(mode_); };
+  bool rov_mode() { return is_rov_mode(mode_); };
+  bool auv_mode() { return is_auv_mode(mode_); };
 
 public:
   explicit OrcaBase();
   ~OrcaBase() {}; // Suppress default copy and move constructors
 
-  void spinOnce();
+  void spin_once();
 };
 
 } // namespace orca_base

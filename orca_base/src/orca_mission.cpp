@@ -6,20 +6,20 @@ namespace orca_base {
 // BaseMission
 //=====================================================================================
 
-void BaseMission::addToPath(nav_msgs::msg::Path &path, const OrcaPose &pose)
+void BaseMission::add_to_path(nav_msgs::msg::Path &path, const OrcaPose &pose)
 {
   geometry_msgs::msg::PoseStamped msg;
   msg.header.stamp =  path.header.stamp; // TODO use predicted/actual time
   msg.header.frame_id = path.header.frame_id;
-  pose.toMsg(msg.pose);
+  pose.to_msg(msg.pose);
   path.poses.push_back(msg);
 }
 
-void BaseMission::addToPath(nav_msgs::msg::Path &path, const std::vector<OrcaPose> &poses)
+void BaseMission::add_to_path(nav_msgs::msg::Path &path, const std::vector<OrcaPose> &poses)
 {
   for (int i = 0; i < poses.size(); ++i)
   {
-    addToPath(path, poses[i]);
+    add_to_path(path, poses[i]);
   }
 }
 

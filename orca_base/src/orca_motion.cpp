@@ -62,14 +62,14 @@ bool BaseMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   goal_ = goal;
 
   // Init state
-  plan.stopMotion();
+  plan.stop_motion();
   ff_ = OrcaPose{};
 
   // Init PID controllers
-  x_controller_.setTarget(plan.pose.x);
-  y_controller_.setTarget(plan.pose.y);
-  z_controller_.setTarget(plan.pose.z);
-  yaw_controller_.setTarget(plan.pose.yaw);
+  x_controller_.set_target(plan.pose.x);
+  y_controller_.set_target(plan.pose.y);
+  z_controller_.set_target(plan.pose.z);
+  yaw_controller_.set_target(plan.pose.yaw);
 
   // Always succeed
   return true;
@@ -133,7 +133,7 @@ bool RotateMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, 
     plan.pose.yaw = norm_angle(plan.pose.yaw + plan.velo.yaw * dt);
 
     // Set targets
-    yaw_controller_.setTarget(plan.pose.yaw);
+    yaw_controller_.set_target(plan.pose.yaw);
 
     // Compute efforts
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -143,7 +143,7 @@ bool RotateMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, 
   {
     // We're done
     plan.pose = goal_;
-    plan.stopMotion();
+    plan.stop_motion();
     u_bar.clear();
     return false;
   }
@@ -198,8 +198,8 @@ bool LineMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Or
     plan.pose.y += plan.velo.y * dt;
 
     // Set targets
-    x_controller_.setTarget(plan.pose.x);
-    y_controller_.setTarget(plan.pose.y);
+    x_controller_.set_target(plan.pose.x);
+    y_controller_.set_target(plan.pose.y);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -209,7 +209,7 @@ bool LineMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Or
   {
     // We're done
     plan.pose = goal_;
-    plan.stopMotion();
+    plan.stop_motion();
     u_bar.clear();
     return false;
   }
@@ -269,7 +269,7 @@ bool ArcMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Orc
     polar_pose_ += polar_velo_ * dt;
 
     // Convert polar to cartesian
-    arc_.polarToCartesian(polar_pose_, plan.pose);
+    arc_.polar_to_cartesian(polar_pose_, plan.pose);
 
     // Planned velocity
     plan.velo.x = (plan.pose.x - previous_pose.x) / dt;
@@ -288,9 +288,9 @@ bool ArcMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Orc
     ff_.y = accel_y + accel_drag_y;
 
     // Set targets
-    x_controller_.setTarget(plan.pose.x);
-    y_controller_.setTarget(plan.pose.y);
-    yaw_controller_.setTarget(plan.pose.yaw);
+    x_controller_.set_target(plan.pose.x);
+    y_controller_.set_target(plan.pose.y);
+    yaw_controller_.set_target(plan.pose.yaw);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -300,7 +300,7 @@ bool ArcMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Orc
   {
     // We're done
     plan.pose = goal_;
-    plan.stopMotion();
+    plan.stop_motion();
     u_bar.clear();
     return false;
   }
@@ -341,7 +341,7 @@ bool VerticalMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan
     plan.pose.z += plan.velo.z * dt;
 
     // Set targets
-    z_controller_.setTarget(plan.pose.z);
+    z_controller_.set_target(plan.pose.z);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -351,7 +351,7 @@ bool VerticalMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan
   {
     // We're done
     plan.pose = goal_;
-    plan.stopMotion();
+    plan.stop_motion();
     u_bar.clear();
     return false;
   }
