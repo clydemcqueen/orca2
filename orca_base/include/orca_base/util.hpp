@@ -1,5 +1,5 @@
-#ifndef ORCA_UTIL_H
-#define ORCA_UTIL_H
+#ifndef ORCA_BASE_UTIL_HPP
+#define ORCA_BASE_UTIL_HPP
 
 #include <cstdint>
 #include <math.h>
@@ -49,4 +49,4 @@ constexpr void rotate_frame(const double x, const double y, const double theta, 
 
 } // namespace orca_base
 
-#endif // ORCA_UTIL_H
+#endif // ORCA_BASE_UTIL_HPP

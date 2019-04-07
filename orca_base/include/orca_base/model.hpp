@@ -1,5 +1,5 @@
-#ifndef ORCA_MODEL_H
-#define ORCA_MODEL_H
+#ifndef ORCA_BASE_MODEL_HPP
+#define ORCA_BASE_MODEL_HPP
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -280,4 +280,4 @@ struct OrcaEfforts
 
 } // namespace orca_base
 
-#endif // ORCA_MODEL_H
+#endif // ORCA_BASE_MODEL_HPP

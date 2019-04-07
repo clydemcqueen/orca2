@@ -52,8 +52,8 @@ def generate_launch_description():
             }]),
 
         # AUV controller
-        Node(package='orca_base', node_executable='orca_base', output='screen',
-             node_name='orca_base', parameters=[{
+        Node(package='orca_base', node_executable='base_node', output='screen',
+             node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
             }]),
 

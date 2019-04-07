@@ -1,8 +1,8 @@
-#ifndef ORCA_MOTION_H
-#define ORCA_MOTION_H
+#ifndef ORCA_BASE_MOTION_HPP
+#define ORCA_BASE_MOTION_HPP
 
 #include "eigen3/Eigen/Geometry"
-#include "orca_base/orca_model.hpp"
+#include "orca_base/model.hpp"
 #include "orca_base/pid.hpp"
 
 namespace orca_base {
@@ -175,4 +175,4 @@ public:
 
 } // namespace orca_base
 
-#endif // ORCA_MOTION_H
+#endif // ORCA_BASE_MOTION_HPP

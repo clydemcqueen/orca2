@@ -1,5 +1,5 @@
-#ifndef FILTER_NODE_H
-#define FILTER_NODE_H
+#ifndef ORCA_BASE_FILTER_NODE_HPP
+#define ORCA_BASE_FILTER_NODE_HPP
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -50,4 +50,4 @@ public:
 
 } // namespace filter_node
 
-#endif // FILTER_NODE_H
+#endif // ORCA_BASE_FILTER_NODE_HPP

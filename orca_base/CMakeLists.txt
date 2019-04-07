@@ -40,14 +40,14 @@ include_directories(
 )
 
 add_executable(
-  orca_base
-  src/orca_base.cpp
-  src/orca_motion.cpp
-  src/orca_mission.cpp
+  base_node
+  src/base_node.cpp
+  src/motion.cpp
+  src/mission.cpp
 )
 
 ament_target_dependencies(
-  orca_base
+  base_node
   orca_msgs
   nav_msgs
   rclcpp
@@ -80,7 +80,7 @@ add_executable(
 
 ament_export_include_directories(include)
 
-install(TARGETS orca_base filter_node orca_base_test DESTINATION lib/orca_base)
+install(TARGETS base_node filter_node orca_base_test DESTINATION lib/orca_base)
 install(DIRECTORY include/orca_base DESTINATION include)
 
 ament_package()

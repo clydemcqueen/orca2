@@ -1,5 +1,5 @@
-#ifndef PID_H
-#define PID_H
+#ifndef ORCA_BASE_PID_HPP
+#define ORCA_BASE_PID_HPP
 
 #include <math.h>
 
@@ -73,4 +73,4 @@ public:
 
 } // namespace pid
 
-#endif // PID_H
+#endif // ORCA_BASE_PID_HPP

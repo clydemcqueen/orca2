@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_H
-#define ORCA_BASE_H
+#ifndef ORCA_BASE_BASE_NODE_HPP
+#define ORCA_BASE_BASE_NODE_HPP
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -17,9 +17,9 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 #include "orca_base/joystick.hpp"
-#include "orca_base/orca_model.hpp"
+#include "orca_base/model.hpp"
 #include "orca_base/pid.hpp"
-#include "orca_base/orca_mission.hpp"
+#include "orca_base/mission.hpp"
 
 namespace orca_base {
 
@@ -179,4 +179,4 @@ public:
 
 } // namespace orca_base
 
-#endif // ORCA_BASE_H
+#endif // ORCA_BASE_BASE_NODE_HPP

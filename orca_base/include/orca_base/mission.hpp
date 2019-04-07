@@ -1,9 +1,9 @@
-#ifndef ORCA_MISSION_H
-#define ORCA_MISSION_H
+#ifndef ORCA_BASE_MISSION_HPP
+#define ORCA_BASE_MISSION_HPP
 
 #include "nav_msgs/msg/path.hpp"
 
-#include "orca_base/orca_motion.hpp"
+#include "orca_base/motion.hpp"
 
 namespace orca_base {
 
@@ -136,4 +136,4 @@ public:
 
 } // namespace orca_base
 
-#endif // ORCA_MISSION_H
+#endif // ORCA_BASE_MISSION_HPP

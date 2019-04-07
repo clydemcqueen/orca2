@@ -1,5 +1,5 @@
-#ifndef ORCA_PWM_H
-#define ORCA_PWM_H
+#ifndef ORCA_BASE_PWM_HPP
+#define ORCA_BASE_PWM_HPP
 
 #include <cstdint>
 #include "orca_base/util.hpp"
@@ -78,4 +78,4 @@ constexpr const double pwm_to_effort(const uint16_t pwm)
 
 } // namespace orca_base
 
-#endif // ORCA_PWM_H
+#endif // ORCA_BASE_PWM_HPP

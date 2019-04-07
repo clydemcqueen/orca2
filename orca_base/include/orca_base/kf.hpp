@@ -1,5 +1,5 @@
-#ifndef KF_H
-#define KF_H
+#ifndef ORCA_BASE_KF_HPP
+#define ORCA_BASE_KF_HPP
 
 #include "eigen3/Eigen/Dense"
 
@@ -48,4 +48,4 @@ public:
 
 } // namespace kf
 
-#endif // KF_H
+#endif // ORCA_BASE_KF_HPP

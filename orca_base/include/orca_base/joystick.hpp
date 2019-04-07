@@ -1,5 +1,5 @@
-#ifndef JOYSTICK_H
-#define JOYSTICK_H
+#ifndef ORCA_BASE_JOYSTICK_HPP
+#define ORCA_BASE_JOYSTICK_HPP
 
 // XBox One joystick axes and buttons
 const int JOY_AXIS_LEFT_LR = 0;           // Left stick left/right; 1.0 is left and -1.0 is right
@@ -22,4 +22,4 @@ const int JOY_BUTTON_LOGO = 8;            // XBox logo button
 const int JOY_BUTTON_LEFT_STICK = 9;      // Left stick button
 const int JOY_BUTTON_RIGHT_STICK = 10;    // Right stick button
 
-#endif // JOYSTICK_H
+#endif // ORCA_BASE_JOYSTICK_HPP
