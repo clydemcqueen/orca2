@@ -4,7 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "gazebo_ros/node.hpp"
 
-#include "orca_base/orca_pwm.hpp"
+#include "orca_base/pwm.hpp"
 #include "orca_msgs/msg/control.hpp"
 
 /* A simple thruster plugin. Usage:
