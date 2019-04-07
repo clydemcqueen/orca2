@@ -23,8 +23,8 @@
 
 namespace orca_base {
 
-constexpr const bool headingHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_HD; };
-constexpr const bool depthHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; };
+constexpr const bool headingHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_HD; }
+constexpr const bool depthHoldMode(uint8_t mode) { return mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; }
 constexpr const bool rovMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MANUAL || mode == orca_msgs::msg::Control::HOLD_H || mode == orca_msgs::msg::Control::HOLD_D || mode == orca_msgs::msg::Control::HOLD_HD; }
 constexpr const bool auvMode(uint8_t mode) { return mode == orca_msgs::msg::Control::MISSION; }
 
@@ -38,7 +38,7 @@ private:
   int joy_axis_strafe_ = JOY_AXIS_RIGHT_LR;
   int joy_axis_vertical_ = JOY_AXIS_RIGHT_FB;
   int joy_axis_yaw_trim_ = JOY_AXIS_TRIM_LR;
-  int joy_axis_vertical_trim_ = JOY_AXIS_TRIM_FB;
+  int joy_axis_depth_trim_ = JOY_AXIS_TRIM_FB;
 
   int joy_button_disarm_ = JOY_BUTTON_VIEW;
   int joy_button_arm_ = JOY_BUTTON_MENU;
@@ -61,14 +61,15 @@ private:
   tf2::Matrix3x3 imu_rotation_;
 
   // General state
-  bool simulation_;             // True if we're in a simulation
-  rclcpp::Time prev_loop_time_; // Last time spinOnce was called
-  uint8_t mode_;                // Operating mode
+  bool simulation_;                                 // True if we're in a simulation
+  rclcpp::Time prev_loop_time_;                     // Last time spinOnce was called
+  rclcpp::Time prev_joy_time_;                      // Last time we heard from the joystick
+  uint8_t mode_;                                    // Operating mode
 
   // State estimation and planning
-  OrcaOdometry odom_plan_;            // Planned state
-  OrcaPose odom_local_;               // Estimated state
-  OrcaPose odom_ground_truth_;        // Ground truth
+  OrcaOdometry odom_plan_;                          // Planned state
+  OrcaPose odom_local_;                             // Estimated state
+  OrcaPose odom_ground_truth_;                      // Ground truth
 
   // Current mission
   std::unique_ptr<BaseMission> mission_;            // The mission we're running
@@ -77,10 +78,10 @@ private:
   nav_msgs::msg::Path mission_ground_truth_path_;   // Ground truth (data from odom_ground_truth_)
 
   // Sensor status
-  bool barometer_ready_;              // True if we're receiving barometer messages
-  bool gps_ready_;                    // True if we're receiving GPS messages
-  bool ground_truth_ready_;           // True if we're receiving ground truth messages
-  bool imu_ready_;                    // True if we're receiving IMU messages
+  bool barometer_ready_;                            // True if we're receiving barometer messages
+  bool gps_ready_;                                  // True if we're receiving GPS messages
+  bool ground_truth_ready_;                         // True if we're receiving ground truth messages
+  bool imu_ready_;                                  // True if we're receiving IMU messages
 
   // IMU
   tf2::Matrix3x3 base_orientation_;   // Orientation
@@ -89,15 +90,13 @@ private:
   // Yaw controller
   pid::Controller yaw_controller_;
   double yaw_state_;
-  double yaw_setpoint_;
-  bool yaw_trim_button_previous_;
+  double yaw_setpoint_;  // TODO get from controller
 
   // Depth controller
   pid::Controller depth_controller_;
   double depth_adjustment_;
   double depth_state_;
-  double depth_setpoint_;
-  bool depth_trim_button_previous_;
+  double depth_setpoint_;  // TODO get from controller
 
   // Joystick gain (attenuation), range 0.0 (ignore joystick) to 1.0 (no attenuation)
   double xy_gain_;
@@ -109,11 +108,9 @@ private:
 
   // Camera tilt
   int tilt_;
-  bool tilt_trim_button_previous_;
 
   // Lights
   int brightness_;
-  bool brightness_trim_button_previous_;
 
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;

@@ -15,6 +15,9 @@ def generate_launch_description():
     # Must match camera name in URDF file
     camera1_name = 'camera1'
 
+    # The AUV must be injected at the surface to calibrate the barometer
+    surface = '10'
+
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
@@ -33,7 +36,7 @@ def generate_launch_description():
 
         # Add the AUV to the simulation
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
-             arguments=[urdf_path, '0', '0', '1', '0']),
+             arguments=[urdf_path, '0', '0', surface, '0']),
 
         # Publish static transforms from URDF file
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
@@ -49,7 +52,10 @@ def generate_launch_description():
             }]),
 
         # AUV controller
-        Node(package='orca_base', node_executable='orca_base', output='screen'),
+        Node(package='orca_base', node_executable='orca_base', output='screen',
+             node_name='orca_base', parameters=[{
+                'use_sim_time': True,                       # Use /clock if available
+            }]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
         Node(package='orca_base', node_executable='filter_node', output='screen',
