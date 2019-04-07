@@ -26,7 +26,7 @@
   <xacro:property name="FORWARD_FORCE" value="50"/>
   <xacro:property name="REVERSE_FORCE" value="40"/>
   <xacro:property name="HAS_TETHER" default="false"/>
-  <xacro:property name="SURFACE" default="10"/>
+  <xacro:property name="SURFACE" default="0"/>
 
   <!-- Physics properties -->
   <xacro:property name="FLUID_DENSITY" value="1029"/>
@@ -238,6 +238,7 @@
       <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
         <ros_topic>/barometer</ros_topic>
         <fluid_density>${FLUID_DENSITY}</fluid_density>
+        <surface>${SURFACE}</surface>
       </plugin>
     </sensor>
   </gazebo>

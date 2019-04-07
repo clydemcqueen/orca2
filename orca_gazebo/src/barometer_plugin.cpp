@@ -101,7 +101,7 @@ public:
     // Get surface
     if (sdf->HasElement("surface"))
     {
-      fluid_density_ = sdf->GetElement("surface")->Get<double>();
+      surface_ = sdf->GetElement("surface")->Get<double>();
       std::cout << "Surface: " << surface_ << std::endl;
     }
 

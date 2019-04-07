@@ -3,9 +3,9 @@
 <sdf version="1.6">
   <world name="default">
 
-    <include>
+    <!-- <include>
       <uri>model://ground_plane</uri>
-    </include>
+    </include> -->
 
     <include>
       <uri>model://sun</uri>
@@ -16,7 +16,7 @@
         <static>true</static>
         <uri>model://marker_0_pad</uri>
       </include>
-      <pose>1 0 0.01 0 0 0</pose>
+      <pose>2 0 -2 0 0 0</pose>
     </model>
 
     <model name="marker1">
@@ -24,7 +24,7 @@
         <static>true</static>
         <uri>model://marker_1_pad</uri>
       </include>
-      <pose>1 1 0.01 0 0 0</pose>
+      <pose>2 2 -2 0 0 0</pose>
     </model>
 
     <model name="marker2">
@@ -32,7 +32,7 @@
         <static>true</static>
         <uri>model://marker_2_pad</uri>
       </include>
-      <pose>1 2 0.01 0 0 0</pose>
+      <pose>2 4 -2 0 0 0</pose>
     </model>
 
     <model name="marker3">
@@ -40,7 +40,7 @@
         <static>true</static>
         <uri>model://marker_3_pad</uri>
       </include>
-      <pose>1 3 0.01 0 0 0</pose>
+      <pose>2 6 -2 0 0 0</pose>
     </model>
 
     <model name="marker4">
@@ -48,7 +48,7 @@
         <static>true</static>
         <uri>model://marker_4_pad</uri>
       </include>
-      <pose>0 0 0.01 0 0 0</pose>
+      <pose>0 0 -2 0 0 0</pose>
     </model>
 
     <model name="marker5">
@@ -56,7 +56,7 @@
         <static>true</static>
         <uri>model://marker_5_pad</uri>
       </include>
-      <pose>0 1 0.01 0 0 0</pose>
+      <pose>0 2 -2 0 0 0</pose>
     </model>
 
     <model name="marker6">
@@ -64,7 +64,7 @@
         <static>true</static>
         <uri>model://marker_6_pad</uri>
       </include>
-      <pose>0 2 0.01 0 0 0</pose>
+      <pose>0 4 -2 0 0 0</pose>
     </model>
 
     <model name="marker7">
@@ -72,7 +72,7 @@
         <static>true</static>
         <uri>model://marker_7_pad</uri>
       </include>
-      <pose>0 3 0.01 0 0 0</pose>
+      <pose>0 6 -2 0 0 0</pose>
     </model>
 
   </world>

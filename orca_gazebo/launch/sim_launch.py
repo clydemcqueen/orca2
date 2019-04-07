@@ -16,7 +16,7 @@ def generate_launch_description():
     camera1_name = 'camera1'
 
     # The AUV must be injected at the surface to calibrate the barometer
-    surface = '10'
+    surface = '0'
 
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 

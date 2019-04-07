@@ -111,7 +111,7 @@ bool SurfaceMission::advance(const rclcpp::Time now, const OrcaPose &curr, OrcaO
 
 bool SquareMission::init(const rclcpp::Time now, const OrcaPose &goal, OrcaOdometry &plan)
 {
-  constexpr double TARGET_DEPTH = -9;
+  constexpr double TARGET_DEPTH = -0.5;
 
   // Clear previous segments, if any
   segments_.clear();
