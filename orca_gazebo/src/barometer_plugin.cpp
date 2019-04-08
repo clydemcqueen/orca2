@@ -17,7 +17,6 @@
  *          <baro_topic>/barometer</baro_topic>
  *          <pose_topic>/depth</pose_topic>
  *          <fluid_density>1029</fluid_density>
- *          <surface>10</surface>
  *        </plugin>
  *      </sensor>
  *    </gazebo>
@@ -25,7 +24,6 @@
  *    <baro_topic> Topic for orca_msgs/Barometer messages. Default is /barometer.
  *    <pose_topic> Topic for geometry_msgs/PoseWithCovarianceStamped messages. Default is /depth.
  *    <fluid_density> Fluid density in kg/m^3. Default is 1029 (seawater), use 997 for freshwater.
- *    <surface> How far above z=0 the surface of the water is; used to calculate depth.
  */
 
 namespace gazebo {
@@ -53,7 +51,6 @@ class OrcaBarometerPlugin : public SensorPlugin
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
 
   double fluid_density_ = SEAWATER_DENSITY;   // Fluid density
-  double surface_ = 10;                       // Altitude of water surface above the ground
 
 public:
 
@@ -75,7 +72,6 @@ public:
     std::cout << "Default baro topic: " << baro_topic << std::endl;
     std::cout << "Default pose topic: " << pose_topic << std::endl;
     std::cout << "Default fluid density: " << fluid_density_ << std::endl;
-    std::cout << "Default surface: " << surface_ << std::endl;
 
     if (sdf->HasElement("baro_topic"))
     {
@@ -96,13 +92,6 @@ public:
     {
       fluid_density_ = sdf->GetElement("fluid_density")->Get<double>();
       std::cout << "Fluid density: " << fluid_density_ << std::endl;
-    }
-
-    // Get surface
-    if (sdf->HasElement("surface"))
-    {
-      surface_ = sdf->GetElement("surface")->Get<double>();
-      std::cout << "Surface: " << surface_ << std::endl;
     }
 
     // Get the parent sensor
@@ -126,7 +115,7 @@ public:
     pose_msg.pose.covariance[14] = DEPTH_STDDEV * DEPTH_STDDEV;
 
     // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
-    double depth = orca_gazebo::gaussianKernel(surface_ - altimeter_->Altitude(), DEPTH_STDDEV);
+    double depth = orca_gazebo::gaussianKernel(-altimeter_->Altitude(), DEPTH_STDDEV);
     if (depth >= 0.0)
     {
       baro_msg.depth = depth;

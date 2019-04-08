@@ -6,7 +6,6 @@
  *    <gazebo>
  *      <plugin name="OrcaBuoyancyPlugin" filename="libOrcaBuoyancyPlugin.so">
  *        <fluid_density>1029</fluid_density>
- *        <surface>10</surface>
  *        <link name="base_link">
  *          <volume>0.01</volume>
  *          <center_of_volume>0 0 0.06</center_of_volume>
@@ -16,7 +15,6 @@
  *    </gazebo>
  *
  *    <fluid_density> Density of fluid.
- *    <surface> How far above z=0 the surface of the water is; buoyancy force stops at the surface.
  *    <center_of_volume> Buoyancy force is applied to the center of volume.
  *    <volume> Total volume in m^3.
  *    <height> Height of vehicle
@@ -39,7 +37,6 @@ class OrcaBuoyancyPlugin : public ModelPlugin
   physics::LinkPtr base_link_;                            // Pointer to the base link
 
   double fluid_density_ {1029};                           // Fluid density of seawater
-  double surface_ {10};                                   // Distance to surface
   double volume_ {0.01};                                  // base_link_ volume
   ignition::math::Vector3d center_of_volume_ {0, 0, 0};   // base_link_ center of volume
   double height_{0.254};                                  // base_link_ height
@@ -61,7 +58,6 @@ public:
     std::cout << "ORCA BUOYANCY PLUGIN PARAMETERS" << std::endl;
     std::cout << "-----------------------------------------" << std::endl;
     std::cout << "Default fluid density: " << fluid_density_ << std::endl;
-    std::cout << "Default surface: " << surface_ << std::endl;
     std::cout << "Default link name: " << link_name << std::endl;
     std::cout << "Default volume: " << volume_ << std::endl;
     std::cout << "Default center of volume: " << center_of_volume_ << std::endl;
@@ -72,12 +68,6 @@ public:
     {
       fluid_density_ = sdf->GetElement("fluid_density")->Get<double>();
       std::cout << "Fluid density: " << fluid_density_ << std::endl;
-    }
-
-    if (sdf->HasElement("surface"))
-    {
-      surface_ = sdf->GetElement("surface")->Get<double>();
-      std::cout << "Surface: " << surface_ << std::endl;
     }
 
     if (sdf->HasElement("link"))
@@ -126,15 +116,15 @@ public:
     // Get link pose in the world frame
     ignition::math::Pose3d link_frame = base_link_->WorldPose();
 
-    if (link_frame.Pos().Z() < surface_ + height_ / 2)
+    if (link_frame.Pos().Z() < height_ / 2)
     {
       // Compute buoyancy force in the world frame
       ignition::math::Vector3d buoyancy_world_frame = -fluid_density_ * volume_ * gravity_;
 
       // Scale buoyancy force near the surface
-      if (link_frame.Pos().Z() > surface_ - height_ / 2)
+      if (link_frame.Pos().Z() > -height_ / 2)
       {
-        double scale = (link_frame.Pos().Z() - surface_ - height_ / 2) / -height_;
+        double scale = (link_frame.Pos().Z() - height_ / 2) / -height_;
         buoyancy_world_frame = buoyancy_world_frame * scale;
       }
 

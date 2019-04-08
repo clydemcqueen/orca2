@@ -16,13 +16,11 @@
  *      <plugin name="OrcaGroundTruthPlugin" filename="libOrcaGroundTruthPlugin.so">
  *        <link name="base_link">
  *          <odom_topic>/ground_truth</odom_topic>
- *          <surface>10</surface>
  *        </link>
  *      </plugin>
  *    </gazebo>
  *
  *    <odom_topic> Topic for nav_msgs/Odometry messages. Default is /ground_truth.
- *    <surface> How far above z=0 the surface of the water is; used to calculate depth. Default is 10.
  */
 
 namespace gazebo {
@@ -37,7 +35,6 @@ class OrcaGroundTruthPlugin : public ModelPlugin
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr ground_truth_pub_;
   event::ConnectionPtr update_connection_;
 
-  double surface_ = 10;                       // Altitude of water surface above the ground
   gazebo::common::Time last_update_time_;     // Last time we got an update event
   double update_period_;                      // Seconds between GPS readings
 
@@ -60,7 +57,6 @@ public:
     std::cout << "-----------------------------------------" << std::endl;
     std::cout << "Default link name: " << link_name << std::endl;
     std::cout << "Default odom topic: " << odom_topic << std::endl;
-    std::cout << "Default surface: " << surface_ << std::endl;
 
     if (sdf->HasElement("link"))
     {
@@ -77,12 +73,6 @@ public:
     {
       odom_topic = sdf->GetElement("odom_topic")->Get<std::string>(); // TODO why isn't this getting picked up?
       std::cout << "Odom topic: " << odom_topic << std::endl;
-    }
-
-    if (sdf->HasElement("surface"))
-    {
-      surface_ = sdf->GetElement("surface")->Get<double>();
-      std::cout << "Surface: " << surface_ << std::endl;
     }
 
     base_link_ = model->GetLink(link_name);
@@ -136,7 +126,7 @@ public:
     msg.child_frame_id = "base_link";
     msg.pose.pose.position.x = pose.Pos().X();
     msg.pose.pose.position.y = pose.Pos().Y();;
-    msg.pose.pose.position.z = pose.Pos().Z() - surface_;
+    msg.pose.pose.position.z = pose.Pos().Z();
     msg.pose.pose.orientation.x = pose.Rot().X();
     msg.pose.pose.orientation.y = pose.Rot().Y();
     msg.pose.pose.orientation.z = pose.Rot().Z();

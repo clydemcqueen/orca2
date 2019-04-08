@@ -164,7 +164,6 @@
   <gazebo>
     <plugin name="OrcaBuoyancyPlugin" filename="libOrcaBuoyancyPlugin.so">
       <fluid_density>${FLUID_DENSITY}</fluid_density>
-      <surface>${SURFACE}</surface>
       <link name="base_link">
         <center_of_volume>0 0 0.06</center_of_volume>
         <volume>${TOTAL_VOLUME}</volume>
@@ -183,7 +182,6 @@
         <xacro:unless value="${HAS_TETHER}">
           <tether_drag>0</tether_drag>
         </xacro:unless>
-        <surface>${SURFACE}</surface>
       </link>
     </plugin>
   </gazebo>
@@ -238,7 +236,6 @@
       <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
         <ros_topic>/barometer</ros_topic>
         <fluid_density>${FLUID_DENSITY}</fluid_density>
-        <surface>${SURFACE}</surface>
       </plugin>
     </sensor>
   </gazebo>
@@ -264,7 +261,6 @@
       <link name="base_link">
         <ros_topic>/gps</ros_topic>
         <mast_height>1</mast_height>
-        <surface>${SURFACE}</surface>
       </link>
     </plugin>
   </gazebo>
@@ -276,7 +272,6 @@
     <plugin name="OrcaGroundTruthPlugin" filename="libOrcaGroundTruthPlugin.so">
       <link name="base_link" />
       <ros_topic>/ground_truth</ros_topic>
-      <surface>${SURFACE}</surface>
     </plugin>
   </gazebo>
 

@@ -11,7 +11,6 @@
  *          <linear_drag>10 20 30</linear_drag>
  *          <angular_drag>5 10 15</angular_drag>
  *          <tether_drag>4</tether_drag>
- *          <surface>10</surface>
  *        </link>
  *      </plugin>
  *    </gazebo>
@@ -21,7 +20,6 @@
  *    <linear_drag> Linear drag constants. See default calculation.
  *    <angular_drag> Angular drag constants. See defaut calculation.
  *    <tether_drag> Tether drag constant. See default calculation.
- *    <surface> How far above z=0 the surface of the water is; used to calculate depth.
  *
  * Limitations:
  *    Tether drag is modeled only in x
@@ -78,9 +76,6 @@ class OrcaDragPlugin : public ModelPlugin
   ignition::math::Vector3d angular_drag_ {ANGULAR_DRAG_X, ANGULAR_DRAG_Y, ANGULAR_DRAG_Z};
   double tether_drag_ {TETHER_DRAG};
 
-  // Distance to surface
-  double surface_ {10};
-
   event::ConnectionPtr update_connection_;
 
 public:
@@ -99,7 +94,6 @@ public:
     std::cout << "Default linear drag: " << linear_drag_ << std::endl;
     std::cout << "Default angular drag: " << angular_drag_ << std::endl;
     std::cout << "Default tether drag: " << tether_drag_ << std::endl;
-    std::cout << "Default surface: " << surface_ << std::endl;
 
     GZ_ASSERT(model != nullptr, "Model is null");
     GZ_ASSERT(sdf != nullptr, "SDF is null");
@@ -143,12 +137,6 @@ public:
         tether_drag_ = linkElem->GetElement("tether_drag")->Get<double>();
         std::cout << "Tether drag: " << tether_drag_ << std::endl;
       }
-
-      if (linkElem->HasElement("surface")) // TODO should be child of gazebo element, not link element
-      {
-        surface_ = linkElem->GetElement("surface")->Get<double>();
-        std::cout << "Surface: " << surface_ << std::endl;
-      }
     }
 
     base_link_ = model->GetLink(link_name);
@@ -181,7 +169,7 @@ public:
 
     // Tether drag only accounts for motion in x (forward/reverse)
     ignition::math::Vector3d tether_force;
-    double depth = surface_ - base_link_->WorldPose().Pos().Z();
+    double depth = -base_link_->WorldPose().Pos().Z();
     tether_force.X() = linear_velocity.X() * fabs(linear_velocity.X()) * depth * -tether_drag_;
     tether_force.Y() = 0;
     tether_force.Z() = 0;
