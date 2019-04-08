@@ -35,10 +35,10 @@ protected:
   OrcaPose ff_;
 
   // PID controllers
-  pid::Controller x_controller_{false, 0.5, 0.2};
-  pid::Controller y_controller_{false, 0.5, 0.2};
-  pid::Controller z_controller_{false, 0.5, 0.2};
-  pid::Controller yaw_controller_{true, 0.5, 0.5};
+  std::shared_ptr<pid::Controller> x_controller_;
+  std::shared_ptr<pid::Controller> y_controller_;
+  std::shared_ptr<pid::Controller> z_controller_;
+  std::shared_ptr<pid::Controller> yaw_controller_;
 
 public:
 

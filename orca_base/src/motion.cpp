@@ -65,11 +65,18 @@ bool BaseMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
   plan.stop_motion();
   ff_ = OrcaPose{};
 
+  // Make PID controllers
+  // TODO need cxt
+  x_controller_ = std::make_shared<pid::Controller>(false, 0.1, 0, 0.05);
+  y_controller_ = std::make_shared<pid::Controller>(false, 0.1, 0, 0.05);
+  z_controller_ = std::make_shared<pid::Controller>(false, 0.1, 0, 0.05);
+  yaw_controller_ = std::make_shared<pid::Controller>(true, 0.05, 0, 0);
+
   // Init PID controllers
-  x_controller_.set_target(plan.pose.x);
-  y_controller_.set_target(plan.pose.y);
-  z_controller_.set_target(plan.pose.z);
-  yaw_controller_.set_target(plan.pose.yaw);
+  x_controller_->set_target(plan.pose.x);
+  y_controller_->set_target(plan.pose.y);
+  z_controller_->set_target(plan.pose.z);
+  yaw_controller_->set_target(plan.pose.yaw);
 
   // Always succeed
   return true;
@@ -78,10 +85,10 @@ bool BaseMotion::init(const OrcaPose &goal, OrcaOdometry &plan)
 bool BaseMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, OrcaPose &u_bar)
 {
 #if 1
-  u_bar.x = x_controller_.calc(curr.x, dt, ff_.x);
-  u_bar.y = y_controller_.calc(curr.y, dt, ff_.y);
-  u_bar.z = z_controller_.calc(curr.z, dt, ff_.z);
-  u_bar.yaw = yaw_controller_.calc(curr.yaw, dt, ff_.yaw);
+  u_bar.x = x_controller_->calc(curr.x, dt, ff_.x);
+  u_bar.y = y_controller_->calc(curr.y, dt, ff_.y);
+  u_bar.z = z_controller_->calc(curr.z, dt, ff_.z);
+  u_bar.yaw = yaw_controller_->calc(curr.yaw, dt, ff_.yaw);
 #else
   // TODO temp while debugging -- remove this
   u_bar.x = ff_.x;
@@ -133,7 +140,7 @@ bool RotateMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, 
     plan.pose.yaw = norm_angle(plan.pose.yaw + plan.velo.yaw * dt);
 
     // Set targets
-    yaw_controller_.set_target(plan.pose.yaw);
+    yaw_controller_->set_target(plan.pose.yaw);
 
     // Compute efforts
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -198,8 +205,8 @@ bool LineMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Or
     plan.pose.y += plan.velo.y * dt;
 
     // Set targets
-    x_controller_.set_target(plan.pose.x);
-    y_controller_.set_target(plan.pose.y);
+    x_controller_->set_target(plan.pose.x);
+    y_controller_->set_target(plan.pose.y);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -288,9 +295,9 @@ bool ArcMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan, Orc
     ff_.y = accel_y + accel_drag_y;
 
     // Set targets
-    x_controller_.set_target(plan.pose.x);
-    y_controller_.set_target(plan.pose.y);
-    yaw_controller_.set_target(plan.pose.yaw);
+    x_controller_->set_target(plan.pose.x);
+    y_controller_->set_target(plan.pose.y);
+    yaw_controller_->set_target(plan.pose.yaw);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);
@@ -341,7 +348,7 @@ bool VerticalMotion::advance(double dt, const OrcaPose &curr, OrcaOdometry &plan
     plan.pose.z += plan.velo.z * dt;
 
     // Set targets
-    z_controller_.set_target(plan.pose.z);
+    z_controller_->set_target(plan.pose.z);
 
     // Compute u_bar
     BaseMotion::advance(dt, curr, plan, u_bar);

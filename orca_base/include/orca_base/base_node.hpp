@@ -74,7 +74,6 @@ private:
   BaseContext cxt_;
 
   // General state
-  bool simulation_;                           // True if we're in a simulation TODO move to cxt
   uint8_t mode_;                              // Operating mode
   rclcpp::Time prev_loop_time_;               // Last time spin_once was called
   rclcpp::Time prev_joy_time_;                // Last time we heard from the joystick
@@ -90,14 +89,14 @@ private:
   double yaw_;                                // Yaw value
   double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
-  // Manual operation
-  pid::Controller yaw_pid_;
-  pid::Controller z_pid_;
+  // ROV operation
+  std::shared_ptr<pid::Controller> yaw_pid_;
+  std::shared_ptr<pid::Controller> z_pid_;
 
-  // Automated operation
+  // AUV operation
+  std::shared_ptr<BaseMission> mission_;      // The mission we're running
   OrcaOdometry plan_;                         // Planned state
   OrcaPose estimate_;                         // Estimated state
-  std::unique_ptr<BaseMission> mission_;      // The mission we're running TODO shared_ptr?
   nav_msgs::msg::Path plan_path_;             // The planned path (data from plan_)
   nav_msgs::msg::Path estimate_path_;         // Best estimate of the actual path (data from estimate_)
 

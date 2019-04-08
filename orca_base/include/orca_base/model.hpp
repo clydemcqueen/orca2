@@ -255,14 +255,14 @@ struct OrcaOdometry
 
 struct OrcaEfforts
 {
-  double forward;
+  double forward;  // TODO clamp(-1, 1) on set
   double strafe;
   double vertical;
   double yaw;
 
   OrcaEfforts(): forward(0), strafe(0), vertical(0), yaw(0) {}
 
-  void clear() { forward = 0; strafe = 0; vertical = 0; yaw = 0; }
+  void all_stop() { forward = 0; strafe = 0; vertical = 0; yaw = 0; }
 
   void from_acceleration(const OrcaPose &u_bar, const double current_yaw)
   {

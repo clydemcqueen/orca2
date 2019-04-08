@@ -55,7 +55,9 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
-            }]),
+            }], remappings=[
+                ('filtered_odom', '/camera1/filtered_odom')
+            ]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
         Node(package='orca_base', node_executable='filter_node', output='screen',
