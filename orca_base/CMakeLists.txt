@@ -42,6 +42,7 @@ include_directories(
 add_executable(
   base_node
   src/base_node.cpp
+  src/base_context.cpp
   src/motion.cpp
   src/mission.cpp
 )

@@ -52,10 +52,10 @@ const std::vector<Thruster> THRUSTERS = {
 };
 
 //=============================================================================
-// OrcaBase node
+// BaseNode
 //=============================================================================
 
-OrcaBase::OrcaBase():
+BaseNode::BaseNode():
   Node{"orca_base"},
   simulation_{true},
   mode_{orca_msgs::msg::Control::DISARMED},
@@ -66,7 +66,7 @@ OrcaBase::OrcaBase():
   prev_loop_time_{now()},
   prev_joy_time_{now()},
   z_controller_{false, 0.1, 0, 0.05}, // TODO params
-  yaw_controller_{true, 0.007, 0, 0}      // TODO params
+  yaw_controller_{true, 0.007, 0, 0}  // TODO params
 {
   // Suppress IDE warnings
   (void)baro_sub_;
@@ -79,17 +79,8 @@ OrcaBase::OrcaBase():
   (void)leak_sub_;
   (void)odom_local_sub_;
 
-  // TODO parameters
-  inc_yaw_ = M_PI/36;
-  inc_z_ = 0.1;
-  inc_tilt_ = 5;
-  inc_lights_ = 20;
-  input_dead_band_ = 0.05f;     // Don't respond to tiny joystick movements
-  yaw_pid_dead_band_ = 0.0005;
-  z_pid_dead_band_ = 0.002;
-  xy_gain_ = 0.5;
-  yaw_gain_ = 0.2;
-  vertical_gain_ = 0.5;
+  // Get parameters
+  cxt_.load_parameters(*this);
 
   if (simulation_) {
     // The simulated IMU is not rotated
@@ -113,15 +104,15 @@ OrcaBase::OrcaBase():
 
   // Callbacks
   using std::placeholders::_1;
-  auto baro_cb = std::bind(&OrcaBase::baro_callback, this, _1);
-  auto battery_cb = std::bind(&OrcaBase::battery_callback, this, _1);
-  auto goal_cb = std::bind(&OrcaBase::goal_callback, this, _1);
-  auto gps_cb = std::bind(&OrcaBase::gps_callback, this, _1);
-  auto ground_truth_cb = std::bind(&OrcaBase::ground_truth_callback, this, _1);
-  auto imu_cb = std::bind(&OrcaBase::imu_callback, this, _1);
-  auto joy_cb = std::bind(&OrcaBase::joy_callback, this, _1);
-  auto leak_cb = std::bind(&OrcaBase::leak_callback, this, _1);
-  auto odom_local_cb = std::bind(&OrcaBase::odom_local_callback, this, _1);
+  auto baro_cb = std::bind(&BaseNode::baro_callback, this, _1);
+  auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
+  auto goal_cb = std::bind(&BaseNode::goal_callback, this, _1);
+  auto gps_cb = std::bind(&BaseNode::gps_callback, this, _1);
+  auto ground_truth_cb = std::bind(&BaseNode::ground_truth_callback, this, _1);
+  auto imu_cb = std::bind(&BaseNode::imu_callback, this, _1);
+  auto joy_cb = std::bind(&BaseNode::joy_callback, this, _1);
+  auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
+  auto odom_local_cb = std::bind(&BaseNode::odom_local_callback, this, _1);
 
   // Subscriptions
   baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("/barometer", baro_cb);
@@ -139,7 +130,7 @@ OrcaBase::OrcaBase():
 }
 
 // New barometer reading
-void OrcaBase::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
+void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
 {
   if (!barometer_ready_) {
     // First barometer reading: calibrate
@@ -153,7 +144,7 @@ void OrcaBase::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
 }
 
 // New battery reading
-void OrcaBase::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
+void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 {
   if (msg->low_battery) {
     RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
@@ -162,7 +153,7 @@ void OrcaBase::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 }
 
 // New 2D goal
-void OrcaBase::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
   // TODO move some of this logic to set_mode
   if (mode_ != orca_msgs::msg::Control::DISARMED && barometer_ready_ && imu_ready_) {
@@ -205,7 +196,7 @@ void OrcaBase::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
 }
 
 // New GPS reading
-void OrcaBase::gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+void BaseNode::gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
   if (!gps_ready_) {
     gps_ready_ = true;
@@ -215,7 +206,7 @@ void OrcaBase::gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped:
 }
 
 // New ground truth message
-void OrcaBase::ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+void BaseNode::ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   if (!ground_truth_ready_) {
     ground_truth_ready_ = true;
@@ -226,7 +217,7 @@ void OrcaBase::ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr ms
 }
 
 // New IMU reading
-void OrcaBase::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
+void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
   // The IMU was rotated before mounting, so the orientation reading needs to be rotated back.
   tf2::Quaternion imu_orientation;
@@ -253,7 +244,7 @@ void OrcaBase::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 }
 
 // Leak detector
-void OrcaBase::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
+void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
 {
   if (msg->leak_detected) {
     RCLCPP_ERROR(get_logger(), "leak detected, disarming");
@@ -262,12 +253,12 @@ void OrcaBase::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
 }
 
 // Local odometry -- result from robot_localization, fusing all continuous sensors
-void OrcaBase::odom_local_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+void BaseNode::odom_local_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
   odom_local_.from_msg(*msg);
 }
 
-void OrcaBase::publish_odom()
+void BaseNode::publish_odom()
 {
   nav_msgs::msg::Odometry odom_msg;
 
@@ -280,14 +271,14 @@ void OrcaBase::publish_odom()
   odom_plan_pub_->publish(odom_msg);
 }
 
-void OrcaBase::publish_control()
+void BaseNode::publish_control()
 {
   // Combine joystick efforts to get thruster efforts.
   std::vector<double> thruster_efforts = {};
   for (int i = 0; i < THRUSTERS.size(); ++i) {
     // Clamp forward + strafe to xy_gain_
     double xy_effort = clamp(efforts_.forward * THRUSTERS[i].forward_factor + efforts_.strafe * THRUSTERS[i].strafe_factor,
-      -xy_gain_, xy_gain_);
+      -cxt_.xy_gain_, cxt_.xy_gain_);
 
     // Clamp total thrust
     thruster_efforts.push_back(clamp(xy_effort + efforts_.yaw * THRUSTERS[i].yaw_factor + efforts_.vertical * THRUSTERS[i].vertical_factor,
@@ -339,7 +330,7 @@ void OrcaBase::publish_control()
 }
 
 // Change operation mode
-void OrcaBase::set_mode(uint8_t new_mode)
+void BaseNode::set_mode(uint8_t new_mode)
 {
   // Stop all thrusters when we change modes
   efforts_.clear();
@@ -368,7 +359,7 @@ void OrcaBase::set_mode(uint8_t new_mode)
 }
 
 // New input from the gamepad
-void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
+void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 {
   static sensor_msgs::msg::Joy prev_msg;
   prev_joy_time_ = msg->header.stamp;
@@ -414,7 +405,7 @@ void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
   // Yaw trim
   if (holding_yaw() && trim_down(msg, prev_msg, joy_axis_yaw_trim_)) {
-    yaw_setpoint_ = msg->axes[joy_axis_yaw_trim_] > 0 ? yaw_setpoint_ + inc_yaw_ : yaw_setpoint_ - inc_yaw_;
+    yaw_setpoint_ = msg->axes[joy_axis_yaw_trim_] > 0 ? yaw_setpoint_ + cxt_.inc_yaw_ : yaw_setpoint_ - cxt_.inc_yaw_;
     yaw_setpoint_ = norm_angle(yaw_setpoint_);
     yaw_controller_.set_target(yaw_setpoint_);
     RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_setpoint_);
@@ -422,7 +413,7 @@ void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
   // Z trim
   if (holding_z() && trim_down(msg, prev_msg, joy_axis_z_trim_)) {
-    z_setpoint_ = msg->axes[joy_axis_z_trim_] > 0 ? z_setpoint_ + inc_z_ : z_setpoint_ - inc_z_;
+    z_setpoint_ = msg->axes[joy_axis_z_trim_] > 0 ? z_setpoint_ + cxt_.inc_z_ : z_setpoint_ - cxt_.inc_z_;
     z_setpoint_ = clamp(z_setpoint_, Z_HOLD_MIN, Z_HOLD_MAX);
     z_controller_.set_target(z_setpoint_);
     RCLCPP_INFO(get_logger(), "hold z at %g", z_setpoint_);
@@ -430,31 +421,31 @@ void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
   // Camera tilt
   if (button_down(msg, prev_msg, joy_button_tilt_up_)) {
-    tilt_ = clamp(tilt_ + inc_tilt_, TILT_MIN, TILT_MAX);
+    tilt_ = clamp(tilt_ + cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
     RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
   } else if (button_down(msg, prev_msg, joy_button_tilt_down_)) {
-    tilt_ = clamp(tilt_ - inc_tilt_, TILT_MIN, TILT_MAX);
+    tilt_ = clamp(tilt_ - cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
     RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
   }
 
   // Lights
   if (button_down(msg, prev_msg, joy_button_bright_)) {
-    brightness_ = clamp(brightness_ + inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+    brightness_ = clamp(brightness_ + cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
     RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
   } else if (button_down(msg, prev_msg, joy_button_dim_)) {
-    brightness_ = clamp(brightness_ - inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+    brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
     RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
   }
 
   // Thrusters
   if (rov_mode()) {
-    efforts_.forward = dead_band(msg->axes[joy_axis_forward_], input_dead_band_) * xy_gain_;
+    efforts_.forward = dead_band(msg->axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_;
     if (!holding_yaw()) {
-      efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], input_dead_band_) * yaw_gain_;
+      efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_;
     }
-    efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], input_dead_band_) * xy_gain_;
+    efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_;
     if (!holding_z()) {
-      efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], input_dead_band_) * vertical_gain_;
+      efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_;
     }
   }
 
@@ -462,7 +453,7 @@ void OrcaBase::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 }
 
 // Our main loop
-void OrcaBase::spin_once()
+void BaseNode::spin_once()
 {
   auto time_now = now();
   double dt = (time_now - prev_loop_time_).seconds();
@@ -479,13 +470,13 @@ void OrcaBase::spin_once()
   // Compute yaw effort
   if (holding_yaw()) {
     double effort = yaw_controller_.calc(yaw_state_, dt, 0);
-    efforts_.yaw = dead_band(effort * stability_, yaw_pid_dead_band_);
+    efforts_.yaw = dead_band(effort * stability_, cxt_.yaw_pid_dead_band_);
   }
 
   // Compute z effort
   if (holding_z()) {
     double effort = z_controller_.calc(z_state_, dt, 0);
-    efforts_.vertical = dead_band(effort * stability_, z_pid_dead_band_);
+    efforts_.vertical = dead_band(effort * stability_, cxt_.z_pid_dead_band_);
   }
 
   // Run a mission
@@ -533,7 +524,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Init node
-  auto node = std::make_shared<orca_base::OrcaBase>();
+  auto node = std::make_shared<orca_base::BaseNode>();
 
   // TODO rclcpp::Rate doesn't honor /clock, possibly fixed in Dashing
   rclcpp::Rate r(orca_base::SPIN_RATE);
