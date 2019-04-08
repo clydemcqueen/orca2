@@ -95,7 +95,6 @@ private:
 
   // Sensor status
   bool barometer_ready_;                            // True if we're receiving barometer messages
-  bool gps_ready_;                                  // True if we're receiving GPS messages
   bool ground_truth_ready_;                         // True if we're receiving ground truth messages
   bool imu_ready_;                                  // True if we're receiving IMU messages
 
@@ -127,7 +126,6 @@ private:
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
   rclcpp::Subscription<orca_msgs::msg::Battery >::SharedPtr battery_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr gps_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr ground_truth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
@@ -138,7 +136,6 @@ private:
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
   void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
-  void gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);

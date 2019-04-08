@@ -72,7 +72,6 @@ BaseNode::BaseNode():
   (void)baro_sub_;
   (void)battery_sub_;
   (void)goal_sub_;
-  (void)gps_sub_;
   (void)ground_truth_sub_;
   (void)imu_sub_;
   (void)joy_sub_;
@@ -107,7 +106,6 @@ BaseNode::BaseNode():
   auto baro_cb = std::bind(&BaseNode::baro_callback, this, _1);
   auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
   auto goal_cb = std::bind(&BaseNode::goal_callback, this, _1);
-  auto gps_cb = std::bind(&BaseNode::gps_callback, this, _1);
   auto ground_truth_cb = std::bind(&BaseNode::ground_truth_callback, this, _1);
   auto imu_cb = std::bind(&BaseNode::imu_callback, this, _1);
   auto joy_cb = std::bind(&BaseNode::joy_callback, this, _1);
@@ -118,7 +116,6 @@ BaseNode::BaseNode():
   baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("/barometer", baro_cb);
   battery_sub_ = create_subscription<orca_msgs::msg::Battery>("/orca_driver/battery", battery_cb);
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", goal_cb);
-  gps_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/gps", gps_cb);
   ground_truth_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", ground_truth_cb);
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", imu_cb);
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", joy_cb);
@@ -192,16 +189,6 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
     }
   } else {
     RCLCPP_ERROR(get_logger(), "can't start mission, possible reasons: disarmed, barometer not ready, IMU not ready");
-  }
-}
-
-// New GPS reading
-void BaseNode::gps_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
-{
-  if (!gps_ready_) {
-    gps_ready_ = true;
-    RCLCPP_INFO(get_logger(), "GPS ready (%g, %g, %g)",
-      msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
   }
 }
 
