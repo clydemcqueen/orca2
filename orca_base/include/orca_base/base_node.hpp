@@ -73,51 +73,38 @@ private:
   // Parameters
   BaseContext cxt_;
 
-  // How IMU is positioned on the AUV TODO use t_x_y notation
-  tf2::Matrix3x3 imu_rotation_;
-
   // General state
-  bool simulation_;                                 // True if we're in a simulation
-  rclcpp::Time prev_loop_time_;                     // Last time spin_once was called
-  rclcpp::Time prev_joy_time_;                      // Last time we heard from the joystick
-  uint8_t mode_;                                    // Operating mode
+  bool simulation_;                           // True if we're in a simulation TODO move to cxt
+  uint8_t mode_;                              // Operating mode
+  rclcpp::Time prev_loop_time_;               // Last time spin_once was called
+  rclcpp::Time prev_joy_time_;                // Last time we heard from the joystick
 
-  // State estimation and planning
-  OrcaOdometry odom_plan_;                          // Planned state
-  OrcaPose odom_local_;                             // Estimated state
+  // Barometer readings
+  bool barometer_ready_;                      // True if we're receiving barometer messages
+  double z_initial_;                          // First z value, used to adjust barometer
+  double z_;                                  // Z value
 
-  // Current mission
-  std::unique_ptr<BaseMission> mission_;            // The mission we're running
-  nav_msgs::msg::Path mission_plan_path_;           // The planned path (data from odom_plan_)
-  nav_msgs::msg::Path mission_estimated_path_;      // Best estimate of the actual path (data from odom_local_)
+  // IMU readings
+  bool imu_ready_;                            // True if we're receiving IMU messages
+  tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
+  double yaw_;                                // Yaw value
+  double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
-  // Sensor status
-  bool barometer_ready_;                            // True if we're receiving barometer messages
-  bool imu_ready_;                                  // True if we're receiving IMU messages
+  // Manual operation
+  pid::Controller yaw_pid_;
+  pid::Controller z_pid_;
 
-  // IMU
-  tf2::Matrix3x3 base_orientation_;   // Orientation
-  double stability_;                  // Roll and pitch stability from 1.0 (flat) to 0.0 (90 tilt or worse)
+  // Automated operation
+  OrcaOdometry plan_;                         // Planned state
+  OrcaPose estimate_;                         // Estimated state
+  std::unique_ptr<BaseMission> mission_;      // The mission we're running TODO shared_ptr?
+  nav_msgs::msg::Path plan_path_;             // The planned path (data from plan_)
+  nav_msgs::msg::Path estimate_path_;         // Best estimate of the actual path (data from estimate_)
 
-  // Yaw controller
-  pid::Controller yaw_controller_;
-  double yaw_state_;
-  double yaw_setpoint_;  // TODO get from controller
-
-  // Z controller
-  pid::Controller z_controller_;
-  double z_adjustment_;
-  double z_state_;
-  double z_setpoint_;  // TODO get from controller
-
-  // Thruster effort from joystick or pid controllers (yaw and z), ranges from 1.0 for forward to -1.0 for reverse
-  OrcaEfforts efforts_;
-
-  // Camera tilt
-  int tilt_;
-
-  // Lights
-  int brightness_;
+  // Outputs
+  OrcaEfforts efforts_;                       // Thruster forces
+  int tilt_;                                  // Camera tilt
+  int brightness_;                            // Lights
 
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
@@ -126,7 +113,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Subscription<orca_msgs::msg::Leak >::SharedPtr leak_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_local_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
   // Callbacks
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
@@ -135,7 +122,7 @@ private:
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
-  void odom_local_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;

@@ -5,6 +5,16 @@
 
 namespace pid {
 
+constexpr void norm_angle(double &a)
+{
+  while (a < -M_PI) {
+    a += 2 * M_PI;
+  }
+  while (a > M_PI) {
+    a -= 2 * M_PI;
+  }
+}
+
 class Controller
 {
 private:
@@ -40,6 +50,10 @@ public:
   // Set target
   void set_target(double target)
   {
+    if (angle_) {
+      norm_angle(target);
+    }
+
     target_ = target;
     prev_error_ = 0;
     integral_ = 0;
@@ -50,17 +64,8 @@ public:
   {
     double error = target_ - state;
 
-    if (angle_)
-    {
-      // Deal with discontinuity
-      while (error < -M_PI)
-      {
-        error += 2 * M_PI;
-      }
-      while (error > M_PI)
-      {
-        error -= 2 * M_PI;
-      }
+    if (angle_) {
+      norm_angle(error);
     }
 
     integral_ = integral_ + (error * dt);
@@ -69,6 +74,8 @@ public:
 
     return Kp_ * error + Ki_ * integral_ + Kd_ * derivative + bias;
   }
+
+  double target() { return target_; }
 };
 
 } // namespace pid

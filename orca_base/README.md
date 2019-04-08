@@ -8,14 +8,22 @@ Modes:
 * hold_hd: the autopilot controls yaw and z
 * mission (AUV mode): the autopilot is running a mission, and will switch to manual when complete
 
-Orca will enter an "sos" mode if a leak or low battery condition is detected.
-In this mode the thrusters are off, the joystick is ignored, and the lights and radios are calling for help.
-
 Orca supports tethered and untethered operation.
 If you run without a tether, make sure the vehicle is positively buoyant!
 
-World coordinate frame is ENU (East, North, Up).
-This is the default used by ROS and Gazebo.
+The world coordinate frame is ENU (East, North, Up).
+Rotations follow the right hand rule.
+These are the default used by ROS and Gazebo.
+To avoid confusion the code uses names like _z_ and _yaw_ instead of _depth_ and _heading_.
+
+Coordinate frame conventions:
+* t_destination_source is a transformation from source frame to destination frame
+* xxx_f_destination means xxx is expressed in destination frame
+
+Therefore:
+* t_destination_source == source_f_destination
+* t_a_c = t_a_b * t_b_c
+
 
 Forces that we model:
 * gravity

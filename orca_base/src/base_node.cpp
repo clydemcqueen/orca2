@@ -65,8 +65,8 @@ BaseNode::BaseNode():
   brightness_{0},
   prev_loop_time_{now()},
   prev_joy_time_{now()},
-  z_controller_{false, 0.1, 0, 0.05},
-  yaw_controller_{true, 0.007, 0, 0}
+  z_pid_{false, 0.1, 0, 0.05},
+  yaw_pid_{true, 0.007, 0, 0}
 {
   // Suppress IDE warnings
   (void)baro_sub_;
@@ -75,7 +75,7 @@ BaseNode::BaseNode():
   (void)imu_sub_;
   (void)joy_sub_;
   (void)leak_sub_;
-  (void)odom_local_sub_;
+  (void)odom_sub_;
 
   // Get parameters
   cxt_.load_parameters(*this);
@@ -83,13 +83,13 @@ BaseNode::BaseNode():
   if (simulation_) {
     // The simulated IMU is not rotated
     RCLCPP_INFO(get_logger(), "running in a simulation");
-    imu_rotation_ = tf2::Matrix3x3::getIdentity();
+    t_imu_base_ = tf2::Matrix3x3::getIdentity();
   } else {
     // The actual IMU is rotated
     RCLCPP_INFO(get_logger(), "running in real life");
-    tf2::Matrix3x3 imu_orientation;
-    imu_orientation.setRPY(-M_PI/2, -M_PI/2, 0);
-    imu_rotation_ =  imu_orientation.inverse();
+    tf2::Matrix3x3 imu_f_base;
+    imu_f_base.setRPY(-M_PI/2, -M_PI/2, 0);
+    t_imu_base_ =  imu_f_base.inverse();
   }
 
   // Publications
@@ -107,7 +107,7 @@ BaseNode::BaseNode():
   auto imu_cb = std::bind(&BaseNode::imu_callback, this, _1);
   auto joy_cb = std::bind(&BaseNode::joy_callback, this, _1);
   auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
-  auto odom_local_cb = std::bind(&BaseNode::odom_local_callback, this, _1);
+  auto odom_local_cb = std::bind(&BaseNode::odom_callback, this, _1);
 
   // Subscriptions
   baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("/barometer", baro_cb);
@@ -116,8 +116,8 @@ BaseNode::BaseNode():
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", imu_cb);
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", joy_cb);
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", leak_cb);
-  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", odom_local_cb);
-  //odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", odom_local_cb); // TODO
+  //odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", odom_local_cb);
+  odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", odom_local_cb);
 
   RCLCPP_INFO(get_logger(), "orca_base ready");
 }
@@ -127,12 +127,12 @@ void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
 {
   if (!barometer_ready_) {
     // First barometer reading: calibrate
-    z_adjustment_ = -msg->depth;
-    z_state_ = 0;
+    z_initial_ = -msg->depth;
+    z_ = 0;
     barometer_ready_ = true;
-    RCLCPP_INFO(get_logger(), "barometer ready, z adjustment %g", z_adjustment_);
+    RCLCPP_INFO(get_logger(), "barometer ready, z adjustment %g", z_initial_);
   } else {
-    z_state_ = -msg->depth - z_adjustment_;
+    z_ = -msg->depth - z_initial_;
   }
 }
 
@@ -151,8 +151,8 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
   // TODO move some of this logic to set_mode
   if (mode_ != orca_msgs::msg::Control::DISARMED && barometer_ready_ && imu_ready_) {
     // Start plan at current estimate
-    odom_plan_.pose = odom_local_;
-    odom_plan_.stop_motion();
+    plan_.pose = estimate_;
+    plan_.stop_motion();
 
     // Pull out yaw (kinda cumbersome)
     tf2::Quaternion goal_orientation;
@@ -160,20 +160,20 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
     double roll = 0, pitch = 0, goal_yaw = 0;
     tf2::Matrix3x3(goal_orientation).getRPY(roll, pitch, goal_yaw);
 
-    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, odom_plan_.pose.z, goal_yaw);
+    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, plan_.pose.z, goal_yaw);
 
     RCLCPP_INFO(get_logger(), "start mission at (%g, %g, %g), goal is (%g, %g, %g), yaw %g",
-      odom_plan_.pose.x, odom_plan_.pose.y, odom_plan_.pose.z, goal_pose.x, goal_pose.y, goal_pose.z, goal_pose.yaw);
+      plan_.pose.x, plan_.pose.y, plan_.pose.z, goal_pose.x, goal_pose.y, goal_pose.z, goal_pose.yaw);
 
     mission_.reset(new SquareMission(get_logger()));
-    if (mission_->init(now(), goal_pose, odom_plan_)) {
-      mission_plan_path_.header.stamp = now();
-      mission_plan_path_.header.frame_id = "map";
-      mission_plan_path_.poses.clear();
+    if (mission_->init(now(), goal_pose, plan_)) {
+      plan_path_.header.stamp = now();
+      plan_path_.header.frame_id = "map";
+      plan_path_.poses.clear();
 
-      mission_estimated_path_.header.stamp = now();
-      mission_estimated_path_.header.frame_id = "map";
-      mission_estimated_path_.poses.clear();
+      estimate_path_.header.stamp = now();
+      estimate_path_.header.frame_id = "map";
+      estimate_path_.poses.clear();
 
       set_mode(orca_msgs::msg::Control::MISSION);
     } else {
@@ -187,27 +187,24 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
 // New IMU reading
 void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  // The IMU was rotated before mounting, so the orientation reading needs to be rotated back.
-  tf2::Quaternion imu_orientation;
-  tf2::fromMsg(msg->orientation, imu_orientation);
-  base_orientation_ = tf2::Matrix3x3(imu_orientation) * imu_rotation_;
-
-  // Get Euler angles
+  // Get yaw
+  tf2::Quaternion imu_f_map;
+  tf2::fromMsg(msg->orientation, imu_f_map);
+  tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
   double roll = 0, pitch = 0;
-  base_orientation_.getRPY(roll, pitch, yaw_state_);
+  base_f_map.getRPY(roll, pitch, yaw_);
+
+#if 0
+  // NWU to ENU TODO still need this?
+  yaw_ += M_PI_2;
+#endif
 
   // Compute a stability metric, used to throttle the pid controllers
   stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 
-#if 0
-  // NWU to ENU TODO do we need this?
-  yaw_state_ += M_PI_2;
-  base_orientation_.setRPY(roll, pitch, yaw_state_);
-#endif
-
   if (!imu_ready_) {
     imu_ready_ = true;
-    RCLCPP_INFO(get_logger(), "IMU ready, roll %4.2f pitch %4.2f yaw %4.2f", roll, pitch, yaw_state_);
+    RCLCPP_INFO(get_logger(), "IMU ready, roll %4.2f pitch %4.2f yaw %4.2f", roll, pitch, yaw_);
   }
 }
 
@@ -220,10 +217,10 @@ void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
   }
 }
 
-// Local odometry -- result from robot_localization, fusing all continuous sensors
-void BaseNode::odom_local_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+// New estimate available
+void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
-  odom_local_.from_msg(*msg);
+  estimate_.from_msg(*msg);
 }
 
 void BaseNode::publish_odom()
@@ -234,7 +231,7 @@ void BaseNode::publish_odom()
   odom_msg.header.frame_id = "map";
   odom_msg.child_frame_id = "base_link";
 
-  odom_plan_.to_msg(odom_msg);
+  plan_.to_msg(odom_msg);
 
   odom_plan_pub_->publish(odom_msg);
 }
@@ -305,16 +302,14 @@ void BaseNode::set_mode(uint8_t new_mode)
 
   if (is_z_hold_mode(new_mode)) {  // TODO move to keep station planner
     // Set target z
-    z_setpoint_ = z_state_;
-    z_controller_.set_target(z_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold z at %g", z_setpoint_);
+    z_pid_.set_target(z_);
+    RCLCPP_INFO(get_logger(), "hold z at %g", z_pid_.target());
   }
 
   if (is_yaw_hold_mode(new_mode)) {  // TODO move to keep station planner
     // Set target angle
-    yaw_setpoint_ = yaw_state_;
-    yaw_controller_.set_target(yaw_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_setpoint_);
+    yaw_pid_.set_target(yaw_);
+    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_pid_.target());
   }
 
   if (new_mode == orca_msgs::msg::Control::DISARMED) {
@@ -373,18 +368,16 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
   // Yaw trim
   if (holding_yaw() && trim_down(msg, prev_msg, joy_axis_yaw_trim_)) {
-    yaw_setpoint_ = msg->axes[joy_axis_yaw_trim_] > 0 ? yaw_setpoint_ + cxt_.inc_yaw_ : yaw_setpoint_ - cxt_.inc_yaw_;
-    yaw_setpoint_ = norm_angle(yaw_setpoint_);
-    yaw_controller_.set_target(yaw_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_setpoint_);
+    yaw_pid_.set_target(yaw_pid_.target() + msg->axes[joy_axis_yaw_trim_] > 0 ? cxt_.inc_yaw_ : -cxt_.inc_yaw_);
+    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_pid_.target());
   }
 
   // Z trim
   if (holding_z() && trim_down(msg, prev_msg, joy_axis_z_trim_)) {
-    z_setpoint_ = msg->axes[joy_axis_z_trim_] > 0 ? z_setpoint_ + cxt_.inc_z_ : z_setpoint_ - cxt_.inc_z_;
-    z_setpoint_ = clamp(z_setpoint_, Z_HOLD_MIN, Z_HOLD_MAX);
-    z_controller_.set_target(z_setpoint_);
-    RCLCPP_INFO(get_logger(), "hold z at %g", z_setpoint_);
+    z_pid_.set_target(clamp(
+      msg->axes[joy_axis_z_trim_] > 0 ? z_pid_.target() + cxt_.inc_z_ : z_pid_.target() - cxt_.inc_z_,
+      Z_HOLD_MIN, Z_HOLD_MAX));
+    RCLCPP_INFO(get_logger(), "hold z at %g", z_pid_.target());
   }
 
   // Camera tilt
@@ -437,28 +430,28 @@ void BaseNode::spin_once()
 
   // Compute yaw effort
   if (holding_yaw()) {
-    double effort = yaw_controller_.calc(yaw_state_, dt, 0);
+    double effort = yaw_pid_.calc(yaw_, dt, 0);
     efforts_.yaw = dead_band(effort * stability_, cxt_.yaw_pid_dead_band_);
   }
 
   // Compute z effort
   if (holding_z()) {
-    double effort = z_controller_.calc(z_state_, dt, 0);
+    double effort = z_pid_.calc(z_, dt, 0);
     efforts_.vertical = dead_band(effort * stability_, cxt_.z_pid_dead_band_);
   }
 
   // Run a mission
   if (auv_mode()) {
-    BaseMission::add_to_path(mission_estimated_path_, odom_local_);
-    mission_estimated_pub_->publish(mission_estimated_path_);
+    BaseMission::add_to_path(estimate_path_, estimate_);
+    mission_estimated_pub_->publish(estimate_path_);
 
     OrcaPose u_bar;
-    if (mission_->advance(time_now, odom_local_, odom_plan_, u_bar)) {
+    if (mission_->advance(time_now, estimate_, plan_, u_bar)) {
       // u_bar in world frame => normalized efforts in body frame
-      efforts_.from_acceleration(u_bar, odom_plan_.pose.yaw);
+      efforts_.from_acceleration(u_bar, plan_.pose.yaw);
 
-      BaseMission::add_to_path(mission_plan_path_, odom_plan_.pose);
-      mission_plan_pub_->publish(mission_plan_path_);
+      BaseMission::add_to_path(plan_path_, plan_.pose);
+      mission_plan_pub_->publish(plan_path_);
 
       // TODO deadband?
       efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
