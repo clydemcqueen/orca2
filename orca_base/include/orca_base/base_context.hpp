@@ -26,6 +26,11 @@ namespace orca_base {
   CXT_ELEM(vertical_gain, 0.5, double)                                  /* Attenuate joystick inputs  */ \
   /* End of list */
 
+// TODO add map_frame_id_ "map"
+// TODO add base_frame_id_ "base_link"
+// TODO add z_controller kp, ki, kd
+// TODO add yaw_controller kp, ki, kd
+
 struct BaseContext
 {
 #undef CXT_ELEM

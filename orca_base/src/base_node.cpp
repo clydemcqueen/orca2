@@ -56,7 +56,7 @@ const std::vector<Thruster> THRUSTERS = {
 //=============================================================================
 
 BaseNode::BaseNode():
-  Node{"orca_base"},
+  Node{"base_node"},
   simulation_{true},
   mode_{orca_msgs::msg::Control::DISARMED},
   imu_ready_{false},
@@ -65,14 +65,13 @@ BaseNode::BaseNode():
   brightness_{0},
   prev_loop_time_{now()},
   prev_joy_time_{now()},
-  z_controller_{false, 0.1, 0, 0.05}, // TODO params
-  yaw_controller_{true, 0.007, 0, 0}  // TODO params
+  z_controller_{false, 0.1, 0, 0.05},
+  yaw_controller_{true, 0.007, 0, 0}
 {
   // Suppress IDE warnings
   (void)baro_sub_;
   (void)battery_sub_;
   (void)goal_sub_;
-  (void)ground_truth_sub_;
   (void)imu_sub_;
   (void)joy_sub_;
   (void)leak_sub_;
@@ -99,14 +98,12 @@ BaseNode::BaseNode():
   thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
   mission_plan_pub_ = create_publisher<nav_msgs::msg::Path>("mission_plan", 1);
   mission_estimated_pub_ = create_publisher<nav_msgs::msg::Path>("mission_estimated", 1);
-  mission_ground_truth_pub_ = create_publisher<nav_msgs::msg::Path>("mission_ground_truth", 1);
 
   // Callbacks
   using std::placeholders::_1;
   auto baro_cb = std::bind(&BaseNode::baro_callback, this, _1);
   auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
   auto goal_cb = std::bind(&BaseNode::goal_callback, this, _1);
-  auto ground_truth_cb = std::bind(&BaseNode::ground_truth_callback, this, _1);
   auto imu_cb = std::bind(&BaseNode::imu_callback, this, _1);
   auto joy_cb = std::bind(&BaseNode::joy_callback, this, _1);
   auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
@@ -116,11 +113,10 @@ BaseNode::BaseNode():
   baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("/barometer", baro_cb);
   battery_sub_ = create_subscription<orca_msgs::msg::Battery>("/orca_driver/battery", battery_cb);
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", goal_cb);
-  ground_truth_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", ground_truth_cb);
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", imu_cb);
   joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", joy_cb);
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", leak_cb);
-  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", odom_local_cb); // TODO
+  odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/ground_truth", odom_local_cb);
   //odom_local_sub_ = create_subscription<nav_msgs::msg::Odometry>("/camera1/filtered_odom", odom_local_cb); // TODO
 
   RCLCPP_INFO(get_logger(), "orca_base ready");
@@ -172,16 +168,12 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
     mission_.reset(new SquareMission(get_logger()));
     if (mission_->init(now(), goal_pose, odom_plan_)) {
       mission_plan_path_.header.stamp = now();
-      mission_plan_path_.header.frame_id = "odom";
+      mission_plan_path_.header.frame_id = "map";
       mission_plan_path_.poses.clear();
 
       mission_estimated_path_.header.stamp = now();
-      mission_estimated_path_.header.frame_id = "odom";
+      mission_estimated_path_.header.frame_id = "map";
       mission_estimated_path_.poses.clear();
-
-      mission_ground_truth_path_.header.stamp = now();
-      mission_ground_truth_path_.header.frame_id = "odom";
-      mission_ground_truth_path_.poses.clear();
 
       set_mode(orca_msgs::msg::Control::MISSION);
     } else {
@@ -190,17 +182,6 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
   } else {
     RCLCPP_ERROR(get_logger(), "can't start mission, possible reasons: disarmed, barometer not ready, IMU not ready");
   }
-}
-
-// New ground truth message
-void BaseNode::ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
-{
-  if (!ground_truth_ready_) {
-    ground_truth_ready_ = true;
-    RCLCPP_INFO(get_logger(), "ground truth available");
-  }
-
-  odom_ground_truth_.from_msg(*msg);
 }
 
 // New IMU reading
@@ -250,7 +231,7 @@ void BaseNode::publish_odom()
   nav_msgs::msg::Odometry odom_msg;
 
   odom_msg.header.stamp = now(); // TODO motion time
-  odom_msg.header.frame_id = "odom";
+  odom_msg.header.frame_id = "map";
   odom_msg.child_frame_id = "base_link";
 
   odom_plan_.to_msg(odom_msg);
@@ -470,9 +451,6 @@ void BaseNode::spin_once()
   if (auv_mode()) {
     BaseMission::add_to_path(mission_estimated_path_, odom_local_);
     mission_estimated_pub_->publish(mission_estimated_path_);
-
-    BaseMission::add_to_path(mission_ground_truth_path_, odom_ground_truth_);
-    mission_ground_truth_pub_->publish(mission_ground_truth_path_);
 
     OrcaPose u_bar;
     if (mission_->advance(time_now, odom_local_, odom_plan_, u_bar)) {

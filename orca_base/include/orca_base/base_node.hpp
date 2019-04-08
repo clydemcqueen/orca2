@@ -85,17 +85,14 @@ private:
   // State estimation and planning
   OrcaOdometry odom_plan_;                          // Planned state
   OrcaPose odom_local_;                             // Estimated state
-  OrcaPose odom_ground_truth_;                      // Ground truth
 
   // Current mission
   std::unique_ptr<BaseMission> mission_;            // The mission we're running
   nav_msgs::msg::Path mission_plan_path_;           // The planned path (data from odom_plan_)
   nav_msgs::msg::Path mission_estimated_path_;      // Best estimate of the actual path (data from odom_local_)
-  nav_msgs::msg::Path mission_ground_truth_path_;   // Ground truth (data from odom_ground_truth_)
 
   // Sensor status
   bool barometer_ready_;                            // True if we're receiving barometer messages
-  bool ground_truth_ready_;                         // True if we're receiving ground truth messages
   bool imu_ready_;                                  // True if we're receiving IMU messages
 
   // IMU
@@ -126,7 +123,6 @@ private:
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
   rclcpp::Subscription<orca_msgs::msg::Battery >::SharedPtr battery_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr ground_truth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::Subscription<orca_msgs::msg::Leak >::SharedPtr leak_sub_;
@@ -136,7 +132,6 @@ private:
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
   void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
-  void ground_truth_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
@@ -148,7 +143,6 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_plan_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_estimated_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_ground_truth_pub_;
 
   // Helpers
   void publish_control();
