@@ -82,16 +82,6 @@ ament_target_dependencies(
 )
 ament_export_libraries(OrcaThrusterPlugin)
 
-add_library(OrcaGPSPlugin SHARED src/gps_plugin.cpp)
-ament_target_dependencies(
-  OrcaGPSPlugin
-  "gazebo_dev"
-  "gazebo_ros"
-  "geometry_msgs"
-  "rclcpp"
-)
-ament_export_libraries(OrcaGPSPlugin)
-
 add_library(OrcaGroundTruthPlugin SHARED src/ground_truth_plugin.cpp)
 ament_target_dependencies(
   OrcaGroundTruthPlugin
@@ -130,7 +120,6 @@ install(
   OrcaDragPlugin
   OrcaThrusterPlugin
   OrcaBarometerPlugin
-  OrcaGPSPlugin
   OrcaBuoyancyPlugin
   OrcaIMUPlugin
   OrcaGroundTruthPlugin
