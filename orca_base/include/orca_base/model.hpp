@@ -115,6 +115,8 @@ constexpr double accel_to_effort_yaw(double accel_yaw) { return torque_to_effort
 
 struct OrcaPose
 {
+  // TODO add stamp
+
   double x;
   double y;
   double z;
@@ -191,6 +193,8 @@ constexpr double DEF_COVAR = 0.05;
 
 struct OrcaOdometry
 {
+  // TODO add stamp
+
   OrcaPose pose;
   std::array<double, 16> pose_covariance;
 

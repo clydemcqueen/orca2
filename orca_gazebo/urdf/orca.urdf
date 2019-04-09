@@ -328,7 +328,6 @@
 
       <!-- END EDIT -->
 
-      <ros_topic>/orca_base/control</ros_topic>
       <thruster name="front_right">
         <!-- name attributes are ignored; the tag order must match the message array order -->
         <pos_force>50</pos_force>
@@ -372,7 +371,6 @@
       <update_rate>50</update_rate>
       <!-- Match orca_driver rate -->
       <plugin filename="libOrcaBarometerPlugin.so" name="OrcaBarometerPlugin">
-        <ros_topic>/barometer</ros_topic>
         <fluid_density>1029</fluid_density>
       </plugin>
     </sensor>

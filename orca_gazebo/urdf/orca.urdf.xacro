@@ -193,7 +193,6 @@
   <gazebo>
     <plugin name="OrcaThrusterPlugin" filename="libOrcaThrusterPlugin.so">
       <link_name>orca::base_link</link_name>
-      <ros_topic>/orca_base/control</ros_topic>
       <thruster name="front_right"> <!-- name attributes are ignored; the tag order must match the message array order -->
         <pos_force>${FORWARD_FORCE}</pos_force> <!-- units are N, positive for ccw, negative for cw -->
         <neg_force>${REVERSE_FORCE}</neg_force> <!-- units are N, positive for ccw, negative for cw -->
@@ -234,7 +233,6 @@
     <sensor name="barometer_sensor" type="altimeter">
       <update_rate>50</update_rate> <!-- Match orca_driver rate -->
       <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
-        <ros_topic>/barometer</ros_topic>
         <fluid_density>${FLUID_DENSITY}</fluid_density>
       </plugin>
     </sensor>

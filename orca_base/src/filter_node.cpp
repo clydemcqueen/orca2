@@ -160,36 +160,16 @@ FilterNode::FilterNode() :
   path_msg_.header.frame_id = map_frame_;
 
   // Callbacks
-  auto start_mission_cb = std::bind(&FilterNode::start_mission_callback, this, std::placeholders::_1);
-  auto stop_mission_cb = std::bind(&FilterNode::stop_mission_callback, this, std::placeholders::_1);
   auto pose_cb = std::bind(&FilterNode::camera_pose_callback, this, std::placeholders::_1);
 
   // Subscriptions
-  start_mission_sub_ = create_subscription<std_msgs::msg::Empty>("/start_mission", start_mission_cb);
-  stop_mission_sub_ = create_subscription<std_msgs::msg::Empty>("/stop_mission", stop_mission_cb);
   camera_pose_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", pose_cb);
 
   // Publications
   filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
-  path_pub_ = create_publisher<nav_msgs::msg::Path>("estimated_path", 1);
   tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 1);
 
   RCLCPP_INFO(get_logger(), "filter_node ready");
-}
-
-// Start mission
-void FilterNode::start_mission_callback(std_msgs::msg::Empty::SharedPtr msg)
-{
-  (void)msg;
-  path_msg_.poses.clear();
-  mission_ = true;
-}
-
-// Stop mission
-void FilterNode::stop_mission_callback(std_msgs::msg::Empty::SharedPtr msg)
-{
-  (void)msg;
-  mission_ = false;
 }
 
 // Process raw camera pose and publish estimated drone pose
@@ -265,16 +245,6 @@ void FilterNode::camera_pose_callback(geometry_msgs::msg::PoseWithCovarianceStam
     x_to_twist(filter_.x(), filtered_odom_msg.twist.twist);
     P_to_twist(filter_.P(), filtered_odom_msg.twist.covariance);
     filtered_odom_pub_->publish(filtered_odom_msg);
-  }
-
-  // Publish path
-  if (mission_ && count_subscribers(path_pub_->get_topic_name()) > 0) {
-    geometry_msgs::msg::PoseStamped pose_stamped_msg;
-    pose_stamped_msg.header.stamp = msg->header.stamp;
-    pose_stamped_msg.header.frame_id = base_frame_;
-    x_to_pose(filter_.x(), pose_stamped_msg.pose);
-    path_msg_.poses.push_back(pose_stamped_msg);
-    path_pub_->publish(path_msg_);
   }
 
   // Publish tf

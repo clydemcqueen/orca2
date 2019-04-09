@@ -29,17 +29,12 @@ class FilterNode : public rclcpp::Node
   nav_msgs::msg::Path path_msg_;
 
   // Subscriptions
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr start_mission_sub_;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr stop_mission_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_sub_;
 
   // Publications
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
-  void start_mission_callback(std_msgs::msg::Empty::SharedPtr msg);
-  void stop_mission_callback(std_msgs::msg::Empty::SharedPtr msg);
   void camera_pose_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
 public:

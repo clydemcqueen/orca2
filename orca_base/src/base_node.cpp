@@ -9,9 +9,11 @@ namespace orca_base {
 
 const double Z_HOLD_MAX = -0.05;  // Highest z hold
 const double Z_HOLD_MIN = -50;    // Lowest z hold
-const int SPIN_RATE = 10;         // Message publish rate in Hz
 
-const rclcpp::Duration COMM_TIMEOUT_DISARM{5000000000};   // Disarm if we can't communicate with the topside
+const rclcpp::Duration JOY_TIMEOUT{1000000000};   // ROV: disarm if we lose communication
+const rclcpp::Duration ODOM_TIMEOUT{1000000000};  // AUV: disarm if we lose odometry
+const rclcpp::Duration BARO_TIMEOUT{1000000000};  // All modes: disarm if we lose barometer
+const rclcpp::Duration IMU_TIMEOUT{1000000000};   // All modes: disarm if we lose IMU
 
 //=============================================================================
 // Utilities
@@ -25,6 +27,29 @@ bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs
 bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
 {
   return curr->axes[axis] && !prev.axes[axis];
+}
+
+//=============================================================================
+// Possible time problems, particularly during simulations:
+// -- msg.header.stamp might be 0
+// -- msg.header.stamp might repeat over consecutive messages
+// -- msg.header.stamp might go backwards over consecutive messages
+// Could use macros or lambdas to do inversion-of-control in callbacks
+//=============================================================================
+
+bool valid(const rclcpp::Time &t)
+{
+  return t.nanoseconds() > 0;
+}
+
+bool bootstrap(const rclcpp::Time &msg, const rclcpp::Time &prev)
+{
+  return valid(msg) && !valid(prev);
+}
+
+bool good_dt(const rclcpp::Time &msg, const rclcpp::Time &prev)
+{
+  return msg > prev;
 }
 
 //=============================================================================
@@ -58,12 +83,8 @@ const std::vector<Thruster> THRUSTERS = {
 BaseNode::BaseNode() :
   Node{"base_node"},
   mode_{orca_msgs::msg::Control::DISARMED},
-  imu_ready_{false},
-  barometer_ready_{false},
   tilt_{0},
-  brightness_{0},
-  prev_loop_time_{now()},
-  prev_joy_time_{now()}
+  brightness_{0}
 {
   // Suppress IDE warnings
   (void) baro_sub_;
@@ -89,16 +110,17 @@ BaseNode::BaseNode() :
     t_imu_base_ = imu_f_base.inverse();
   }
 
-  // PID controllers
-  z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
-  yaw_pid_ = std::make_shared<pid::Controller>(true, cxt_.rov_yaw_pid_kp_, cxt_.rov_yaw_pid_ki_, cxt_.rov_yaw_pid_kd_);
+  // ROV PID controllers
+  rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
+  rov_yaw_pid_ = std::make_shared<pid::Controller>(true, cxt_.rov_yaw_pid_kp_, cxt_.rov_yaw_pid_ki_,
+    cxt_.rov_yaw_pid_kd_);
 
-  // Publications TODO rethink default topic names
-  control_pub_ = create_publisher<orca_msgs::msg::Control>("/orca_base/control", 1);
-  odom_plan_pub_ = create_publisher<nav_msgs::msg::Odometry>("/odometry/plan", 1);
+  // Publications
+  control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
+  planned_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("planned_odom", 1);
   thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
-  mission_plan_pub_ = create_publisher<nav_msgs::msg::Path>("mission_plan", 1);
-  mission_estimated_pub_ = create_publisher<nav_msgs::msg::Path>("mission_estimated", 1);
+  planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
+  filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
 
   // Callbacks
   using std::placeholders::_1;
@@ -110,13 +132,13 @@ BaseNode::BaseNode() :
   auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
   auto odom_cb = std::bind(&BaseNode::odom_callback, this, _1);
 
-  // Subscriptions TODO rethink default topic names
-  baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("/barometer", baro_cb);
-  battery_sub_ = create_subscription<orca_msgs::msg::Battery>("/orca_driver/battery", battery_cb);
+  // Subscriptions
+  baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("barometer", baro_cb);
+  battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", goal_cb);
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", imu_cb);
-  joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("/joy", joy_cb);
-  leak_sub_ = create_subscription<orca_msgs::msg::Leak>("/orca_driver/leak", leak_cb);
+  joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("joy", joy_cb);
+  leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
   odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("filtered_odom", odom_cb);
 
   RCLCPP_INFO(get_logger(), "orca_base ready");
@@ -125,14 +147,25 @@ BaseNode::BaseNode() :
 // New barometer reading
 void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
 {
-  if (!barometer_ready_) {
-    // First barometer reading: calibrate
+  // Ignore zero
+  rclcpp::Time msg_time{msg->header.stamp};
+  if (!valid(msg_time)) {
+    return;
+  }
+
+  // Bootstrap
+  if (bootstrap(msg_time, baro_time_)) {
+    baro_time_ = msg_time;
     z_initial_ = -msg->depth;
     z_ = 0;
-    barometer_ready_ = true;
-    RCLCPP_INFO(get_logger(), "barometer ready, z adjustment %g", z_initial_);
-  } else {
+    RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
+    return;
+  }
+
+  // Ignore dt <= 0
+  if (good_dt(msg_time, baro_time_)) {
     z_ = -msg->depth - z_initial_;
+    baro_time_ = msg_time;
   }
 }
 
@@ -149,10 +182,10 @@ void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
   // TODO move some of this logic to set_mode
-  if (mode_ != orca_msgs::msg::Control::DISARMED && barometer_ready_ && imu_ready_) {
+  if (mode_ != orca_msgs::msg::Control::DISARMED && valid(odom_time_)) {
     // Start plan at current estimate
-    plan_.pose = estimate_;
-    plan_.stop_motion();
+    planned_pose_.pose = filtered_pose_;
+    planned_pose_.stop_motion();
 
     // Pull out yaw (kinda cumbersome)
     tf2::Quaternion goal_orientation;
@@ -160,20 +193,21 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
     double roll = 0, pitch = 0, goal_yaw = 0;
     tf2::Matrix3x3(goal_orientation).getRPY(roll, pitch, goal_yaw);
 
-    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, plan_.pose.z, goal_yaw);
+    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, planned_pose_.pose.z, goal_yaw);
 
     RCLCPP_INFO(get_logger(), "start mission at (%g, %g, %g), goal is (%g, %g, %g), yaw %g",
-      plan_.pose.x, plan_.pose.y, plan_.pose.z, goal_pose.x, goal_pose.y, goal_pose.z, goal_pose.yaw);
+      planned_pose_.pose.x, planned_pose_.pose.y, planned_pose_.pose.z, goal_pose.x, goal_pose.y, goal_pose.z,
+      goal_pose.yaw);
 
     mission_ = std::make_shared<SquareMission>(get_logger());
-    if (mission_->init(now(), goal_pose, plan_)) {
-      plan_path_.header.stamp = now();
-      plan_path_.header.frame_id = cxt_.map_frame_;
-      plan_path_.poses.clear();
+    if (mission_->init(odom_time_, goal_pose, planned_pose_)) {
+      planned_path_.header.stamp = now();
+      planned_path_.header.frame_id = cxt_.map_frame_;
+      planned_path_.poses.clear();
 
-      estimate_path_.header.stamp = now();
-      estimate_path_.header.frame_id = cxt_.map_frame_;
-      estimate_path_.poses.clear();
+      filtered_path_.header.stamp = now();
+      filtered_path_.header.frame_id = cxt_.map_frame_;
+      filtered_path_.poses.clear();
 
       set_mode(orca_msgs::msg::Control::MISSION);
     } else {
@@ -187,24 +221,156 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
 // New IMU reading
 void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  // Get yaw
-  tf2::Quaternion imu_f_map;
-  tf2::fromMsg(msg->orientation, imu_f_map);
-  tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
-  double roll = 0, pitch = 0;
-  base_f_map.getRPY(roll, pitch, yaw_);
+  // Ignore zero
+  rclcpp::Time msg_time{msg->header.stamp};
+  if (!valid(msg_time)) {
+    return;
+  }
+
+  // Bootstrap
+  if (bootstrap(msg_time, imu_time_)) {
+    imu_time_ = msg_time;
+    return;
+  }
+
+  // Ignore dt <= 0
+  if (good_dt(msg_time, imu_time_)) {
+
+    // Get yaw
+    tf2::Quaternion imu_f_map;
+    tf2::fromMsg(msg->orientation, imu_f_map);
+    tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
+    double roll = 0, pitch = 0;
+    base_f_map.getRPY(roll, pitch, yaw_);
 
 #if 0
-  // NWU to ENU TODO still need this?
-  yaw_ += M_PI_2;
+    // NWU to ENU TODO still need this?
+    yaw_ += M_PI_2;
 #endif
 
-  // Compute a stability metric, used to throttle the pid controllers
-  stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+    // Compute a stability metric, used to throttle the pid controllers
+    stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 
-  if (!imu_ready_) {
-    imu_ready_ = true;
-    RCLCPP_INFO(get_logger(), "IMU ready, roll %4.2f pitch %4.2f yaw %4.2f", roll, pitch, yaw_);
+    imu_time_ = msg_time;
+  }
+}
+
+// New input from the gamepad
+void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
+{
+  // Ignore zero
+  rclcpp::Time msg_time{msg->header.stamp};
+  if (!valid(msg_time)) {
+    return;
+  }
+
+  // Bootstrap
+  rclcpp::Time prev_time{joy_msg_.header.stamp};
+  if (bootstrap(msg_time, prev_time)) {
+    joy_msg_ = *msg;
+    return;
+  }
+
+  // Ignore dt <= 0
+  if (good_dt(msg_time, prev_time)) {
+
+    // Arm/disarm
+    if (button_down(msg, joy_msg_, joy_button_disarm_)) {
+      RCLCPP_INFO(get_logger(), "disarmed");
+      set_mode(orca_msgs::msg::Control::DISARMED);
+    } else if (button_down(msg, joy_msg_, joy_button_arm_)) {
+      RCLCPP_INFO(get_logger(), "armed, manual");
+      set_mode(orca_msgs::msg::Control::MANUAL);
+    }
+
+    // If we're disarmed, ignore everything else
+    if (mode_ == orca_msgs::msg::Control::DISARMED) {
+      joy_msg_ = *msg;
+      return;
+    }
+
+    // Mode
+    if (button_down(msg, joy_msg_, joy_button_manual_)) {
+      RCLCPP_INFO(get_logger(), "manual");
+      set_mode(orca_msgs::msg::Control::MANUAL);
+    } else if (button_down(msg, joy_msg_, joy_button_hold_h_)) {
+      if (valid(imu_time_)) {
+        set_mode(orca_msgs::msg::Control::HOLD_H);
+      } else {
+        RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
+      }
+    } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
+      if (valid(baro_time_)) {
+        set_mode(orca_msgs::msg::Control::HOLD_D);
+      } else {
+        RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
+      }
+    } else if (button_down(msg, joy_msg_, joy_button_hold_hd_)) {
+      if (valid(imu_time_) && valid(baro_time_)) {
+        set_mode(orca_msgs::msg::Control::HOLD_HD);
+      } else {
+        RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
+      }
+    }
+
+    // Yaw trim
+    if (holding_yaw() && trim_down(msg, joy_msg_, joy_axis_yaw_trim_)) {
+      rov_yaw_pid_->set_target(
+        rov_yaw_pid_->target() + msg->axes[joy_axis_yaw_trim_] > 0 ? cxt_.inc_yaw_ : -cxt_.inc_yaw_);
+      RCLCPP_INFO(get_logger(), "hold yaw at %g", rov_yaw_pid_->target());
+    }
+
+    // Z trim
+    if (holding_z() && trim_down(msg, joy_msg_, joy_axis_z_trim_)) {
+      rov_z_pid_->set_target(clamp(
+        msg->axes[joy_axis_z_trim_] > 0 ? rov_z_pid_->target() + cxt_.inc_z_ : rov_z_pid_->target() - cxt_.inc_z_,
+        Z_HOLD_MIN, Z_HOLD_MAX));
+      RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
+    }
+
+    // Camera tilt
+    if (button_down(msg, joy_msg_, joy_button_tilt_up_)) {
+      tilt_ = clamp(tilt_ + cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
+      RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
+    } else if (button_down(msg, joy_msg_, joy_button_tilt_down_)) {
+      tilt_ = clamp(tilt_ - cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
+      RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
+    }
+
+    // Lights
+    if (button_down(msg, joy_msg_, joy_button_bright_)) {
+      brightness_ = clamp(brightness_ + cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+      RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
+    } else if (button_down(msg, joy_msg_, joy_button_dim_)) {
+      brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+      RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
+    }
+
+    // Thrusters
+    if (rov_mode()) {
+      double dt = (msg_time - prev_time).seconds();
+      assert(dt > 0);
+
+      efforts_.forward = dead_band(msg->axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_;
+      efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_;
+
+      if (holding_yaw()) {
+        efforts_.yaw = clamp(rov_yaw_pid_->calc(yaw_, dt, 0) * stability_, -1.0, 1.0);
+      } else {
+        efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_;
+      }
+
+      if (holding_z()) {
+        efforts_.vertical = clamp(rov_z_pid_->calc(z_, dt, 0) * stability_, -1.0, 1.0);
+      } else {
+        efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_;
+      }
+    }
+
+    // Publish controls for thrusters, lights and camera tilt
+    publish_control();
+
+    joy_msg_ = *msg;
   }
 }
 
@@ -217,23 +383,58 @@ void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
   }
 }
 
-// New estimate available
+// New pose estimate available
 void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
-  estimate_.from_msg(*msg);
-}
+  // Ignore zero
+  rclcpp::Time msg_time{msg->header.stamp};
+  if (!valid(msg_time)) {
+    return;
+  }
 
-void BaseNode::publish_odom()
-{
-  nav_msgs::msg::Odometry odom_msg;
+  // Bootstrap
+  if (bootstrap(msg_time, odom_time_)) {
+    odom_time_ = msg_time;
+    return;
+  }
 
-  odom_msg.header.stamp = now(); // TODO motion time
-  odom_msg.header.frame_id = cxt_.map_frame_;
-  odom_msg.child_frame_id = cxt_.base_frame_;
+  // Ignore dt <= 0
+  if (good_dt(msg_time, odom_time_)) {
 
-  plan_.to_msg(odom_msg);
+    filtered_pose_.from_msg(*msg);
 
-  odom_plan_pub_->publish(odom_msg);
+    // AUV operation
+    if (auv_mode()) {
+      BaseMission::add_to_path(filtered_path_, filtered_pose_);
+      filtered_path_pub_->publish(filtered_path_);
+
+      OrcaPose u_bar;
+      if (mission_->advance(msg_time, filtered_pose_, planned_pose_, u_bar)) {
+        efforts_.from_acceleration(u_bar, planned_pose_.pose.yaw);
+        efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
+        efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
+        efforts_.vertical = clamp(-efforts_.vertical * stability_, -1.0, 1.0);
+        efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
+        publish_control();
+
+        // Publish plan for rviz TODO count subscribers
+        nav_msgs::msg::Odometry odom_msg;
+        odom_msg.header.stamp = msg_time;
+        odom_msg.header.frame_id = cxt_.map_frame_;
+        odom_msg.child_frame_id = cxt_.base_frame_;
+        planned_pose_.to_msg(odom_msg);
+        planned_odom_pub_->publish(odom_msg);
+
+        BaseMission::add_to_path(planned_path_, planned_pose_.pose);
+        planned_path_pub_->publish(planned_path_);
+      } else {
+        RCLCPP_INFO(get_logger(), "mission complete");
+        set_mode(orca_msgs::msg::Control::MANUAL);
+      }
+    }
+
+    odom_time_ = msg_time;
+  }
 }
 
 void BaseNode::publish_control()
@@ -263,7 +464,7 @@ void BaseNode::publish_control()
   }
   control_pub_->publish(control_msg);
 
-  // Publish rviz marker message
+  // Publish rviz thrust markers TODO count subscribers
   visualization_msgs::msg::MarkerArray markers_msg;
   for (int i = 0; i < thruster_efforts.size(); ++i) {
     int32_t action =
@@ -304,13 +505,13 @@ void BaseNode::set_mode(uint8_t new_mode)
   efforts_.all_stop();
 
   if (is_z_hold_mode(new_mode)) {
-    z_pid_->set_target(z_);
-    RCLCPP_INFO(get_logger(), "hold z at %g", z_pid_->target());
+    rov_z_pid_->set_target(z_);
+    RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
   }
 
   if (is_yaw_hold_mode(new_mode)) {
-    yaw_pid_->set_target(yaw_);
-    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_pid_->target());
+    rov_yaw_pid_->set_target(yaw_);
+    RCLCPP_INFO(get_logger(), "hold yaw at %g", rov_yaw_pid_->target());
   }
 
   if (new_mode == orca_msgs::msg::Control::DISARMED) {
@@ -322,150 +523,34 @@ void BaseNode::set_mode(uint8_t new_mode)
   mode_ = new_mode;
 }
 
-// New input from the gamepad
-void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
+void BaseNode::spin_once()
 {
-  static sensor_msgs::msg::Joy prev_msg;
-  prev_joy_time_ = msg->header.stamp;
-
-  // Arm/disarm
-  if (button_down(msg, prev_msg, joy_button_disarm_)) {
-    RCLCPP_INFO(get_logger(), "disarmed");
-    set_mode(orca_msgs::msg::Control::DISARMED);
-  } else if (button_down(msg, prev_msg, joy_button_arm_)) {
-    RCLCPP_INFO(get_logger(), "armed, manual");
-    set_mode(orca_msgs::msg::Control::MANUAL);
-  }
-
-  // If we're disarmed, ignore everything else
-  if (mode_ == orca_msgs::msg::Control::DISARMED) {
-    prev_msg = *msg;
+  // Ignore 0
+  auto spin_time = now();
+  if (!valid(spin_time)) {
     return;
   }
 
-  // Mode
-  if (button_down(msg, prev_msg, joy_button_manual_)) {
-    RCLCPP_INFO(get_logger(), "manual");
-    set_mode(orca_msgs::msg::Control::MANUAL);
-  } else if (button_down(msg, prev_msg, joy_button_hold_h_)) {
-    if (imu_ready_) {
-      set_mode(orca_msgs::msg::Control::HOLD_H);
-    } else {
-      RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
-    }
-  } else if (button_down(msg, prev_msg, joy_button_hold_d_)) {
-    if (barometer_ready_) {
-      set_mode(orca_msgs::msg::Control::HOLD_D);
-    } else {
-      RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
-    }
-  } else if (button_down(msg, prev_msg, joy_button_hold_hd_)) {
-    if (imu_ready_ && barometer_ready_) {
-      set_mode(orca_msgs::msg::Control::HOLD_HD);
-    } else {
-      RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
-    }
-  }
-
-  // Yaw trim
-  if (holding_yaw() && trim_down(msg, prev_msg, joy_axis_yaw_trim_)) {
-    yaw_pid_->set_target(yaw_pid_->target() + msg->axes[joy_axis_yaw_trim_] > 0 ? cxt_.inc_yaw_ : -cxt_.inc_yaw_);
-    RCLCPP_INFO(get_logger(), "hold yaw at %g", yaw_pid_->target());
-  }
-
-  // Z trim
-  if (holding_z() && trim_down(msg, prev_msg, joy_axis_z_trim_)) {
-    z_pid_->set_target(clamp(
-      msg->axes[joy_axis_z_trim_] > 0 ? z_pid_->target() + cxt_.inc_z_ : z_pid_->target() - cxt_.inc_z_,
-      Z_HOLD_MIN, Z_HOLD_MAX));
-    RCLCPP_INFO(get_logger(), "hold z at %g", z_pid_->target());
-  }
-
-  // Camera tilt
-  if (button_down(msg, prev_msg, joy_button_tilt_up_)) {
-    tilt_ = clamp(tilt_ + cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
-    RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
-  } else if (button_down(msg, prev_msg, joy_button_tilt_down_)) {
-    tilt_ = clamp(tilt_ - cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
-    RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
-  }
-
-  // Lights
-  if (button_down(msg, prev_msg, joy_button_bright_)) {
-    brightness_ = clamp(brightness_ + cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
-    RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
-  } else if (button_down(msg, prev_msg, joy_button_dim_)) {
-    brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
-    RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
-  }
-
-  // Thrusters
-  if (rov_mode()) {
-    efforts_.forward = dead_band(msg->axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_;
-    if (!holding_yaw()) {
-      efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_;
-    }
-    efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_;
-    if (!holding_z()) {
-      efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_;
-    }
-  }
-
-  prev_msg = *msg;
-}
-
-// Our main loop
-void BaseNode::spin_once()
-{
-  auto time_now = now();
-  double dt = (time_now - prev_loop_time_).seconds();
-  // TODO check for 0 or negative dt (side effect of rclcpp::Rate limitation)
-  if (dt <= 0.001) { return; }
-  prev_loop_time_ = time_now;
-
-  // Check for communication problems
-  if (rov_mode() && time_now - prev_joy_time_ > COMM_TIMEOUT_DISARM) {
-    RCLCPP_ERROR(get_logger(), "lost contact with topside, disarming");
+  rclcpp::Time joy_time{joy_msg_.header.stamp};
+  if (rov_mode() && valid(joy_time) && spin_time - joy_time > JOY_TIMEOUT) {
+    RCLCPP_ERROR(get_logger(), "lost joystick, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  // Compute yaw effort
-  if (holding_yaw()) {
-    efforts_.yaw = clamp(yaw_pid_->calc(yaw_, dt, 0) * stability_, -1.0, 1.0);
+  if (auv_mode() && valid(odom_time_) && spin_time - odom_time_ > ODOM_TIMEOUT) {
+    RCLCPP_ERROR(get_logger(), "lost odometry, disarming");
+    set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  // Compute z effort
-  if (holding_z()) {
-    efforts_.vertical = clamp(z_pid_->calc(z_, dt, 0) * stability_, -1.0, 1.0);
+  if (valid(baro_time_) && spin_time - baro_time_ > BARO_TIMEOUT) {
+    RCLCPP_ERROR(get_logger(), "lost barometer, disarming");
+    set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  // Run a mission
-  if (auv_mode()) {
-    BaseMission::add_to_path(estimate_path_, estimate_);
-    mission_estimated_pub_->publish(estimate_path_);
-
-    OrcaPose u_bar;
-    if (mission_->advance(time_now, estimate_, plan_, u_bar)) {
-      // u_bar in world frame => normalized efforts in body frame
-      efforts_.from_acceleration(u_bar, plan_.pose.yaw);
-      efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
-      efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
-      efforts_.vertical = clamp(-efforts_.vertical * stability_, -1.0, 1.0);
-      efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
-
-      BaseMission::add_to_path(plan_path_, plan_.pose);
-      mission_plan_pub_->publish(plan_path_);
-    } else {
-      RCLCPP_INFO(get_logger(), "mission complete");
-      set_mode(orca_msgs::msg::Control::MANUAL);
-    }
+  if (valid(imu_time_) && spin_time - imu_time_ > IMU_TIMEOUT) {
+    RCLCPP_ERROR(get_logger(), "lost IMU, disarming");
+    set_mode(orca_msgs::msg::Control::DISARMED);
   }
-
-  // Publish controls for thrusters, lights and camera tilt
-  publish_control();
-
-  // Publish odometry
-  publish_odom();
 }
 
 } // namespace orca_base
@@ -481,8 +566,8 @@ int main(int argc, char **argv)
   // Init node
   auto node = std::make_shared<orca_base::BaseNode>();
 
-  // TODO rclcpp::Rate doesn't honor /clock, possibly fixed in Dashing
-  rclcpp::Rate r(orca_base::SPIN_RATE);
+  // rclcpp::Rate doesn't honor /clock in Crystal -- loop will run at ~constant wall speed
+  rclcpp::Rate r(100);
   while (rclcpp::ok()) {
     // Do our work
     node->spin_once();

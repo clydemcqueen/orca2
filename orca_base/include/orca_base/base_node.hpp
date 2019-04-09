@@ -75,30 +75,34 @@ private:
 
   // General state
   uint8_t mode_;                              // Operating mode
-  rclcpp::Time prev_loop_time_;               // Last time spin_once was called
-  rclcpp::Time prev_joy_time_;                // Last time we heard from the joystick
 
-  // Barometer readings
-  bool barometer_ready_;                      // True if we're receiving barometer messages
+  // Barometer state
+  rclcpp::Time baro_time_;                    // Time of most recent message
   double z_initial_;                          // First z value, used to adjust barometer
-  double z_;                                  // Z value
+  double z_;                                  // Z from barometer
 
-  // IMU readings
-  bool imu_ready_;                            // True if we're receiving IMU messages
+  // IMU state
   tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
-  double yaw_;                                // Yaw value
+  rclcpp::Time imu_time_;                     // Time of most recent message
+  double yaw_;                                // Yaw from IMU
   double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
+  // Joystick state
+  sensor_msgs::msg::Joy joy_msg_;             // Most recent message
+
+  // Odometry state
+  rclcpp::Time odom_time_;                    // Time of most recent message
+  OrcaPose filtered_pose_;                    // Estimated pose from odometry
+
   // ROV operation
-  std::shared_ptr<pid::Controller> yaw_pid_;
-  std::shared_ptr<pid::Controller> z_pid_;
+  std::shared_ptr<pid::Controller> rov_yaw_pid_;
+  std::shared_ptr<pid::Controller> rov_z_pid_;
 
   // AUV operation
   std::shared_ptr<BaseMission> mission_;      // The mission we're running
-  OrcaOdometry plan_;                         // Planned state
-  OrcaPose estimate_;                         // Estimated state
-  nav_msgs::msg::Path plan_path_;             // The planned path (data from plan_)
-  nav_msgs::msg::Path estimate_path_;         // Best estimate of the actual path (data from estimate_)
+  OrcaOdometry planned_pose_;                 // Planned pose
+  nav_msgs::msg::Path planned_path_;          // The planned path (from planned_pose_)
+  nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
   // Outputs
   OrcaEfforts efforts_;                       // Thruster forces
@@ -125,14 +129,13 @@ private:
 
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_plan_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr planned_odom_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_plan_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr mission_estimated_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
   // Helpers
   void publish_control();
-  void publish_odom();
   void set_mode(uint8_t new_mode);
   bool holding_yaw() { return is_yaw_hold_mode(mode_); };
   bool holding_z() { return is_z_hold_mode(mode_); };

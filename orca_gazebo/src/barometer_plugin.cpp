@@ -107,10 +107,19 @@ public:
   // The update event is broadcast at the sensor frequency, roughly 60Hz
   void OnUpdate()
   {
-    orca_msgs::msg::Barometer baro_msg;
-    geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
+    // Don't publish bogus time stamps
+    if (node_->now().nanoseconds() <= 0) {
+      return;
+    }
 
-    pose_msg.header.frame_id = "odom";
+    // TODO count subscribers
+
+    orca_msgs::msg::Barometer baro_msg;
+    baro_msg.header.frame_id = "map";
+    baro_msg.header.stamp = node_->now();
+
+    geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
+    pose_msg.header.frame_id = "map";
     pose_msg.header.stamp = node_->now();
     pose_msg.pose.covariance[14] = DEPTH_STDDEV * DEPTH_STDDEV;
 

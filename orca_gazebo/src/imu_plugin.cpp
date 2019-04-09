@@ -92,6 +92,11 @@ public:
     // Only publish if there are subscribers
     if(node_->count_subscribers(IMU_TOPIC) > 0)
     {
+      // Don't publish bogus time stamps
+      if (node_->now().nanoseconds() <= 0) {
+        return;
+      }
+
       imu_msg_.header.stamp = node_->now();
 
       // Get accel and gyro readings in the sensor frame (base_link)

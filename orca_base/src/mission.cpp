@@ -28,6 +28,7 @@ bool BaseMission::advance(const rclcpp::Time now, const OrcaPose &curr, OrcaOdom
   u_bar.clear();
 
   dt_ = (now - last_time_).nanoseconds() / 1e+9;
+  assert(dt_ > 0);
   last_time_ = now;
 }
 

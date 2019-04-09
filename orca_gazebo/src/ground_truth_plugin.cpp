@@ -95,6 +95,13 @@ public:
   // Called by the world update start event, up to 1kHz
   void OnUpdate(const common::UpdateInfo& info)
   {
+    // Don't publish bogus time stamps
+    if (node_->now().nanoseconds() <= 0) {
+      return;
+    }
+
+    // TODO count subscribers
+
     gazebo::common::Time current_time = info.simTime;
 
     // Check for negative elapsed time, e.g., if the world is reset
