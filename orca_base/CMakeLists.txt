@@ -45,6 +45,7 @@ add_executable(
   src/base_context.cpp
   src/motion.cpp
   src/mission.cpp
+  src/util.cpp
 )
 
 ament_target_dependencies(

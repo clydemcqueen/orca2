@@ -145,12 +145,7 @@ struct OrcaPose
     x = msg.pose.pose.position.x;
     y = msg.pose.pose.position.y;
     z = msg.pose.pose.position.z;
-
-    // Quaternion to yaw
-    tf2::Quaternion q;
-    tf2::fromMsg(msg.pose.pose.orientation, q);
-    double roll = 0, pitch = 0;
-    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    yaw = get_yaw(msg.pose.pose.orientation);
   }
 
   void from_msg(const geometry_msgs::msg::PoseStamped &msg)
@@ -158,12 +153,7 @@ struct OrcaPose
     x = msg.pose.position.x;
     y = msg.pose.position.y;
     z = msg.pose.position.z;
-
-    // Quaternion to yaw TODO util
-    tf2::Quaternion q;
-    tf2::fromMsg(msg.pose.orientation, q);
-    double roll = 0, pitch = 0;
-    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    yaw = get_yaw(msg.pose.orientation);
   }
 
   // Distance between 2 poses on the xy plane

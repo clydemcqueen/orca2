@@ -16,20 +16,6 @@ const rclcpp::Duration BARO_TIMEOUT{1000000000};  // All modes: disarm if we los
 const rclcpp::Duration IMU_TIMEOUT{1000000000};   // All modes: disarm if we lose IMU
 
 //=============================================================================
-// Utilities
-//=============================================================================
-
-bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button)
-{
-  return curr->buttons[button] && !prev.buttons[button];
-}
-
-bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
-{
-  return curr->axes[axis] && !prev.axes[axis];
-}
-
-//=============================================================================
 // Possible time problems, particularly during simulations:
 // -- msg.header.stamp might be 0
 // -- msg.header.stamp might repeat over consecutive messages
@@ -141,7 +127,7 @@ BaseNode::BaseNode() :
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
   odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("filtered_odom", odom_cb);
 
-  RCLCPP_INFO(get_logger(), "orca_base ready");
+  RCLCPP_INFO(get_logger(), "base_node ready");
 }
 
 // New barometer reading
@@ -181,19 +167,12 @@ void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 // New 2D goal
 void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
-  // TODO move some of this logic to set_mode
   if (mode_ != orca_msgs::msg::Control::DISARMED && valid(odom_time_)) {
     // Start plan at current estimate
     planned_pose_.pose = filtered_pose_;
     planned_pose_.stop_motion();
 
-    // Pull out yaw (kinda cumbersome)
-    tf2::Quaternion goal_orientation;
-    tf2::fromMsg(msg->pose.orientation, goal_orientation);
-    double roll = 0, pitch = 0, goal_yaw = 0;
-    tf2::Matrix3x3(goal_orientation).getRPY(roll, pitch, goal_yaw);
-
-    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, planned_pose_.pose.z, goal_yaw);
+    OrcaPose goal_pose(msg->pose.position.x, msg->pose.position.y, planned_pose_.pose.z, get_yaw(msg->pose.orientation));
 
     RCLCPP_INFO(get_logger(), "start mission at (%g, %g, %g), goal is (%g, %g, %g), yaw %g",
       planned_pose_.pose.x, planned_pose_.pose.y, planned_pose_.pose.z, goal_pose.x, goal_pose.y, goal_pose.z,
@@ -214,7 +193,7 @@ void BaseNode::goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
       RCLCPP_ERROR(get_logger(), "can't initialize mission, internal error");
     }
   } else {
-    RCLCPP_ERROR(get_logger(), "can't start mission, possible reasons: disarmed, barometer not ready, IMU not ready");
+    RCLCPP_ERROR(get_logger(), "can't start mission, possible reasons: disarmed, no odometry");
   }
 }
 
@@ -410,6 +389,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
       OrcaPose u_bar;
       if (mission_->advance(msg_time, filtered_pose_, planned_pose_, u_bar)) {
+        // Publish controls
         efforts_.from_acceleration(u_bar, planned_pose_.pose.yaw);
         efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
         efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
@@ -417,16 +397,18 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
         efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
         publish_control();
 
-        // Publish plan for rviz TODO count subscribers
-        nav_msgs::msg::Odometry odom_msg;
-        odom_msg.header.stamp = msg_time;
-        odom_msg.header.frame_id = cxt_.map_frame_;
-        odom_msg.child_frame_id = cxt_.base_frame_;
-        planned_pose_.to_msg(odom_msg);
-        planned_odom_pub_->publish(odom_msg);
+        // Publish plan for rviz
+        if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
+          nav_msgs::msg::Odometry odom_msg;
+          odom_msg.header.stamp = msg_time;
+          odom_msg.header.frame_id = cxt_.map_frame_;
+          odom_msg.child_frame_id = cxt_.base_frame_;
+          planned_pose_.to_msg(odom_msg);
+          planned_odom_pub_->publish(odom_msg);
 
-        BaseMission::add_to_path(planned_path_, planned_pose_.pose);
-        planned_path_pub_->publish(planned_path_);
+          BaseMission::add_to_path(planned_path_, planned_pose_.pose);
+          planned_path_pub_->publish(planned_path_);
+        }
       } else {
         RCLCPP_INFO(get_logger(), "mission complete");
         set_mode(orca_msgs::msg::Control::MANUAL);
@@ -464,38 +446,40 @@ void BaseNode::publish_control()
   }
   control_pub_->publish(control_msg);
 
-  // Publish rviz thrust markers TODO count subscribers
-  visualization_msgs::msg::MarkerArray markers_msg;
-  for (int i = 0; i < thruster_efforts.size(); ++i) {
-    int32_t action =
-      thruster_efforts[i] == 0.0 ? visualization_msgs::msg::Marker::DELETE : visualization_msgs::msg::Marker::ADD;
-    double scale = (THRUSTERS[i].ccw ? -thruster_efforts[i] : thruster_efforts[i]) / 5.0;
-    double offset = scale > 0 ? -0.1 : 0.1;
+  // Publish rviz thrust markers
+  if (count_subscribers(thrust_marker_pub_->get_topic_name()) > 0) {
+    visualization_msgs::msg::MarkerArray markers_msg;
+    for (int i = 0; i < thruster_efforts.size(); ++i) {
+      int32_t action =
+        thruster_efforts[i] == 0.0 ? visualization_msgs::msg::Marker::DELETE : visualization_msgs::msg::Marker::ADD;
+      double scale = (THRUSTERS[i].ccw ? -thruster_efforts[i] : thruster_efforts[i]) / 5.0;
+      double offset = scale > 0 ? -0.1 : 0.1;
 
-    visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = THRUSTERS[i].frame_id;
-    marker.header.stamp = now();
-    marker.ns = "thruster";
-    marker.id = i;
-    marker.type = visualization_msgs::msg::Marker::ARROW;
-    marker.action = action;
-    marker.pose.position.x = 0;
-    marker.pose.position.y = 0;
-    marker.pose.position.z = offset;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.7071068;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 0.7071068;
-    marker.scale.x = scale;
-    marker.scale.y = 0.01;
-    marker.scale.z = 0.01;
-    marker.color.a = 1.0;
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
-    markers_msg.markers.push_back(marker);
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = THRUSTERS[i].frame_id;
+      marker.header.stamp = now();
+      marker.ns = "thruster";
+      marker.id = i;
+      marker.type = visualization_msgs::msg::Marker::ARROW;
+      marker.action = action;
+      marker.pose.position.x = 0;
+      marker.pose.position.y = 0;
+      marker.pose.position.z = offset;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.7071068;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 0.7071068;
+      marker.scale.x = scale;
+      marker.scale.y = 0.01;
+      marker.scale.z = 0.01;
+      marker.color.a = 1.0;
+      marker.color.r = 0.0;
+      marker.color.g = 1.0;
+      marker.color.b = 0.0;
+      markers_msg.markers.push_back(marker);
+    }
+    thrust_marker_pub_->publish(markers_msg);
   }
-  thrust_marker_pub_->publish(markers_msg);
 }
 
 // Change operation mode
