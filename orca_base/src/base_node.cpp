@@ -318,8 +318,6 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
     // Thrusters
     if (rov_mode()) {
-      // TODO harmonize this with auv controller
-
       double dt = (msg_time - prev_time).seconds();
       assert(dt > 0);
 
@@ -327,13 +325,13 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
       efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_;
 
       if (holding_yaw()) {
-        efforts_.yaw = clamp(rov_yaw_pid_->calc(yaw_, dt, 0) * stability_, -1.0, 1.0);
+        efforts_.yaw = clamp(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_, -1.0, 1.0);
       } else {
         efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_;
       }
 
       if (holding_z()) {
-        efforts_.vertical = clamp(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z) * stability_, -1.0, 1.0);
+        efforts_.vertical = clamp(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_, -1.0, 1.0);
       } else {
         efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_;
       }

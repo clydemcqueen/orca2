@@ -23,14 +23,14 @@ namespace orca_base {
   \
   CXT_ELEM(input_dead_band, 0.05f, float)                               /* Ignore small joystick inputs  */ \
   CXT_ELEM(xy_gain, 0.5, double)                                        /* Attenuate joystick inputs  */ \
-  CXT_ELEM(yaw_gain, 0.2, double)                                       /* Attenuate joystick inputs  */ \
+  CXT_ELEM(yaw_gain, 0.3, double)                                       /* Attenuate joystick inputs  */ \
   CXT_ELEM(vertical_gain, 0.5, double)                                  /* Attenuate joystick inputs  */ \
   \
-  CXT_ELEM(rov_z_pid_kp, 0.1, double)                                   /* ROV z pid Kp  */ \
+  CXT_ELEM(rov_z_pid_kp, 1, double)                                     /* ROV z pid Kp  */ \
   CXT_ELEM(rov_z_pid_ki, 0, double)                                     /* ROV z pid Ki  */ \
-  CXT_ELEM(rov_z_pid_kd, 0.05, double)                                  /* ROV z pid Kd  */ \
+  CXT_ELEM(rov_z_pid_kd, 0, double)                                     /* ROV z pid Kd  */ \
   \
-  CXT_ELEM(rov_yaw_pid_kp, 0.05, double)                                /* ROV yaw pid Kp  */ \
+  CXT_ELEM(rov_yaw_pid_kp, 0.5, double)                                 /* ROV yaw pid Kp  */ \
   CXT_ELEM(rov_yaw_pid_ki, 0, double)                                   /* ROV yaw pid Ki  */ \
   CXT_ELEM(rov_yaw_pid_kd, 0, double)                                   /* ROV yaw pid Kd  */ \
   \
@@ -42,8 +42,8 @@ namespace orca_base {
   CXT_ELEM(auv_y_pid_ki, 0, double)                                     /* AUV y pid Ki  */ \
   CXT_ELEM(auv_y_pid_kd, 0, double)                                     /* AUV y pid Kd  */ \
   \
-  CXT_ELEM(auv_z_pid_kp, 2, double)                                     /* AUV z pid Kp  */ \
-  CXT_ELEM(auv_z_pid_ki, 0.05, double)                                  /* AUV z pid Ki  */ \
+  CXT_ELEM(auv_z_pid_kp, 1, double)                                     /* AUV z pid Kp  */ \
+  CXT_ELEM(auv_z_pid_ki, 0, double)                                     /* AUV z pid Ki  */ \
   CXT_ELEM(auv_z_pid_kd, 0, double)                                     /* AUV z pid Kd  */ \
   \
   CXT_ELEM(auv_yaw_pid_kp, 0.5, double)                                 /* AUV yaw pid Kp  */ \
