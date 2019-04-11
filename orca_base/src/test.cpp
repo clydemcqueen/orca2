@@ -1,4 +1,4 @@
-#include "orca_base/model.hpp"
+#include "orca_base/geometry.hpp"
 
 void test4to6()
 {
@@ -15,7 +15,7 @@ void test4to6()
     std::cout << "four[" << i << "]: " << four[i] << std::endl;
   }
 
-  orca_base::OrcaOdometry::covar_4_to_6(four, six);
+  orca_base::Odometry::covar_4_to_6(four, six);
 
   for (int i = 0; i < six.size(); ++i)
   {

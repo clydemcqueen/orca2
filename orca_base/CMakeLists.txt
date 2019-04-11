@@ -47,6 +47,7 @@ add_executable(
   src/base_context.cpp
   src/controller.cpp
   src/planner.cpp
+  src/trajectory.cpp
   src/util.cpp
 )
 

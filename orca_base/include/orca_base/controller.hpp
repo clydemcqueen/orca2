@@ -4,9 +4,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/path.hpp"
 
-#include "base_context.hpp"
-#include "model.hpp"
-#include "pid.hpp"
+#include "orca_base/base_context.hpp"
+#include "orca_base/geometry.hpp"
+#include "orca_base/pid.hpp"
+#include "orca_base/trajectory.hpp"
 
 namespace orca_base {
 
@@ -24,14 +25,7 @@ class Controller
   // Path to follow
   nav_msgs::msg::Path path_;
   int target_;
-  OrcaPose prev_target_;
-  rclcpp::Time prev_target_time_;
-  OrcaPose curr_target_;
-  rclcpp::Time curr_target_time_;
-  double vx_, vy_, vz_, vyaw_;
-
-  // Feedforward = planned acceleration + acceleration due to drag + acceleration due to buoyancy
-  OrcaPose ff_;
+  Trajectory trajectory_;
 
 public:
 
@@ -41,7 +35,7 @@ public:
   void init(const nav_msgs::msg::Path &path);
 
   // Advance the controller, return true to continue
-  bool advance(const rclcpp::Time &msg_time, const double dt, const OrcaPose &curr, OrcaOdometry &plan, OrcaPose &u_bar);
+  bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
 
 private:
 

@@ -10,19 +10,19 @@ double distance(const geometry_msgs::msg::Point &p1, const geometry_msgs::msg::P
   return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2) + pow(p2.z - p1.z, 2));
 }
 
-nav_msgs::msg::Path plan(const rclcpp::Time &msg_time, const fiducial_vlam_msgs::msg::Map &map, const OrcaPose &start)
+nav_msgs::msg::Path plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
 {
   nav_msgs::msg::Path path{};
-  path.header.stamp = msg_time;
+  path.header.stamp = start.t;
   path.header.frame_id = "map";
 
-  rclcpp::Time running_time = msg_time + STABILIZE;
+  rclcpp::Time running_time = start.t + STABILIZE;
 
   // Start pose
   geometry_msgs::msg::PoseStamped p;
   p.header.frame_id = "map";
   p.header.stamp = running_time;
-  start.to_msg(p.pose);
+  start.pose.to_msg(p.pose);
   path.poses.push_back(p);
 
   // Travel to each marker in order

@@ -5,14 +5,13 @@
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "nav_msgs/msg/path.hpp"
 
-#include "model.hpp"
+#include "orca_base/geometry.hpp"
 
 namespace orca_base {
 
-const rclcpp::Duration STABILIZE{2000000000}; // TODO move to shared hpp
+const rclcpp::Duration STABILIZE{5000000000};
 
-// TODO move msg_time into OrcaPose
-nav_msgs::msg::Path plan(const rclcpp::Time &msg_time, const fiducial_vlam_msgs::msg::Map &map, const OrcaPose &start);
+nav_msgs::msg::Path plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
 } // namespace orca_base
 

@@ -90,8 +90,7 @@ private:
   sensor_msgs::msg::Joy joy_msg_;             // Most recent message
 
   // Odometry state
-  rclcpp::Time odom_time_;                    // Time of most recent message
-  OrcaPose filtered_pose_;                    // Estimated pose from odometry
+  PoseStamped filtered_pose_;                 // Estimated pose
 
   // ROV operation
   std::shared_ptr<pid::Controller> rov_yaw_pid_;
@@ -100,11 +99,10 @@ private:
   // AUV operation
   std::shared_ptr<Controller> controller_;    // The mission we're running
   fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
-  OrcaOdometry planned_pose_;                 // Planned pose TODO not needed
   nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
   // Outputs
-  OrcaEfforts efforts_;                       // Thruster forces
+  Efforts efforts_;                           // Thruster forces
   int tilt_;                                  // Camera tilt
   int brightness_;                            // Lights
 
@@ -134,7 +132,7 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
   // Helpers
-  void publish_control();
+  void publish_control(const rclcpp::Time &msg_time);
   void set_mode(uint8_t new_mode);
   bool holding_yaw() { return is_yaw_hold_mode(mode_); };
   bool holding_z() { return is_z_hold_mode(mode_); };
