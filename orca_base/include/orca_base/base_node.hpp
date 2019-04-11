@@ -2,6 +2,7 @@
 #define ORCA_BASE_BASE_NODE_HPP
 
 #include "builtin_interfaces/msg/time.hpp"
+#include "fiducial_vlam_msgs/msg/map.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joy.hpp"
@@ -10,16 +11,13 @@
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-#include "orca_base/base_context.hpp"
-#include "orca_base/joystick.hpp"
-#include "orca_base/model.hpp"
-#include "orca_base/pid.hpp"
-#include "orca_base/mission.hpp"
-
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
+
+#include "orca_base/controller.hpp"
+#include "orca_base/joystick.hpp"
 
 namespace orca_base {
 
@@ -65,6 +63,7 @@ private:
   const int joy_button_hold_h_ = JOY_BUTTON_X;
   const int joy_button_hold_d_ = JOY_BUTTON_B;
   const int joy_button_hold_hd_ = JOY_BUTTON_Y;
+  const int joy_button_mission_ = JOY_BUTTON_LOGO;
   const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
   const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
   const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
@@ -99,9 +98,9 @@ private:
   std::shared_ptr<pid::Controller> rov_z_pid_;
 
   // AUV operation
-  std::shared_ptr<BaseMission> mission_;      // The mission we're running
-  OrcaOdometry planned_pose_;                 // Planned pose
-  nav_msgs::msg::Path planned_path_;          // The planned path (from planned_pose_)
+  std::shared_ptr<Controller> controller_;    // The mission we're running
+  fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
+  OrcaOdometry planned_pose_;                 // Planned pose TODO not needed
   nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
   // Outputs
@@ -112,19 +111,19 @@ private:
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
   rclcpp::Subscription<orca_msgs::msg::Battery >::SharedPtr battery_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
-  rclcpp::Subscription<orca_msgs::msg::Leak >::SharedPtr leak_sub_;
+  rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
+  rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
   // Callbacks
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
-  void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
+  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   // Publications

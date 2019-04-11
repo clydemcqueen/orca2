@@ -17,6 +17,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>builtin_interfaces</depend>
+  <depend>fiducial_vlam_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>orca_msgs</depend>

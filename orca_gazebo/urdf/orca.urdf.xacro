@@ -251,19 +251,6 @@
   </gazebo>
 
   <!--
-    The OrcaGPSPlugin simulates a GPS receiver attached to an ROV.
-    When it goes underwater, the GPS signal is lost.
-  -->
-  <gazebo>
-    <plugin name="OrcaGPSPlugin" filename="libOrcaGPSPlugin.so">
-      <link name="base_link">
-        <ros_topic>/gps</ros_topic>
-        <mast_height>1</mast_height>
-      </link>
-    </plugin>
-  </gazebo>
-
-  <!--
     The OrcaGroundTruthPlugin publishes a ground truth pose.
   -->
   <gazebo>

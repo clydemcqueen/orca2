@@ -6,6 +6,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "nav_msgs/msg/path.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include "orca_base/util.hpp"
@@ -173,6 +174,28 @@ struct OrcaPose
   {
     return std::abs(norm_angle(yaw - that.yaw));
   }
+
+  // Within some epsilon
+  bool close_enough(const OrcaPose &that) const
+  {
+    const double EPSILON_XYZ = 0.25;
+    const double EPSILON_YAW = 0.25;
+
+    return
+      std::abs(x - that.x) < EPSILON_XYZ &&
+        std::abs(y - that.y) < EPSILON_XYZ &&
+        std::abs(z - that.z) < EPSILON_XYZ &&
+        std::abs(yaw - that.yaw) < EPSILON_YAW;
+  }
+
+  static void add_to_path(nav_msgs::msg::Path &path, const OrcaPose &pose)
+  {
+    geometry_msgs::msg::PoseStamped msg;  // TODO rename
+    msg.header.stamp =  path.header.stamp; // TODO pull from pose
+    msg.header.frame_id = path.header.frame_id;
+    pose.to_msg(msg.pose);
+    path.poses.push_back(msg);
+  }
 };
 
 //=====================================================================================
@@ -267,7 +290,7 @@ struct OrcaEfforts
     yaw = accel_to_effort_yaw(u_bar.yaw);
 
     // Convert from world frame to body frame
-    vertical = -z_effort;
+    vertical = z_effort;
     rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
   }
 };

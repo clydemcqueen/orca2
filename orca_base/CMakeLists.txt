@@ -14,6 +14,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(Eigen3)
+find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(orca_msgs REQUIRED)
@@ -29,6 +30,7 @@ include_directories(
   include
   ${builtin_interfaces_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
+  ${fiducial_vlam_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${nav_msgs_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
@@ -43,13 +45,14 @@ add_executable(
   base_node
   src/base_node.cpp
   src/base_context.cpp
-  src/motion.cpp
-  src/mission.cpp
+  src/controller.cpp
+  src/planner.cpp
   src/util.cpp
 )
 
 ament_target_dependencies(
   base_node
+  fiducial_vlam_msgs
   orca_msgs
   nav_msgs
   rclcpp
