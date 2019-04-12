@@ -193,23 +193,6 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
       }
     } else if (button_down(msg, joy_msg_, joy_button_mission_)) {
       if (mode_ != orca_msgs::msg::Control::DISARMED && odom_cb_.receiving() && map_cb_.receiving()) {
-        // Generate a path
-        nav_msgs::msg::Path planned_path = plan(map_, filtered_pose_);
-
-        // Publish path for rviz
-        if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-          planned_path_pub_->publish(planned_path);
-        }
-
-        // Init filtered_path
-        filtered_path_.header.stamp = joy_cb_.curr();
-        filtered_path_.header.frame_id = cxt_.map_frame_;
-        filtered_path_.poses.clear();
-
-        // Init mission controller
-        controller_->init(planned_path);
-
-        // Start mission
         set_mode(orca_msgs::msg::Control::MISSION);
       } else {
         RCLCPP_ERROR(get_logger(), "disarmed, no odometry and/or no map, can't start mission");
@@ -251,26 +234,10 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
 
     // Thrusters
     if (rov_mode()) {
-      double dt = (joy_cb_.curr() - joy_cb_.prev()).seconds();
-      assert(dt > 0);
-
-      efforts_.forward = dead_band(msg->axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_;
-      efforts_.strafe = dead_band(msg->axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_;
-
-      if (holding_yaw()) {
-        efforts_.yaw = clamp(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_, -1.0, 1.0);
-      } else {
-        efforts_.yaw = dead_band(msg->axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_;
-      }
-
-      if (holding_z()) {
-        efforts_.vertical = clamp(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_, -1.0, 1.0);
-      } else {
-        efforts_.vertical = dead_band(msg->axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_;
-      }
-
-      // Publish controls for thrusters, lights and camera tilt
-      publish_control(joy_cb_.curr());
+      rov_advance(msg->axes[joy_axis_forward_],
+        msg->axes[joy_axis_strafe_],
+        msg->axes[joy_axis_yaw_],
+        msg->axes[joy_axis_vertical_]);
     }
   }
 
@@ -321,6 +288,37 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
       set_mode(orca_msgs::msg::Control::MANUAL);
     }
   }
+}
+
+void BaseNode::rov_advance(float forward, float strafe, float yaw, float vertical)
+{
+  double dt = (joy_cb_.curr() - joy_cb_.prev()).seconds();
+  assert(dt > 0);
+
+  efforts_.forward = dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_;
+  efforts_.strafe = dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_;
+
+  if (holding_yaw()) {
+    efforts_.yaw = clamp(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_, -1.0, 1.0);
+  } else {
+    efforts_.yaw = dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_;
+  }
+
+  if (holding_z()) {
+    efforts_.vertical = clamp(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_, -1.0, 1.0);
+  } else {
+    efforts_.vertical = dead_band(vertical, cxt_.input_dead_band_) * cxt_.vertical_gain_;
+  }
+
+  publish_control(joy_cb_.curr());
+}
+
+void BaseNode::all_stop()
+{
+  brightness_ = 0;
+  tilt_ = 0;
+  efforts_.all_stop();
+  publish_control(now());
 }
 
 void BaseNode::publish_control(const rclcpp::Time &msg_time)
@@ -403,8 +401,26 @@ void BaseNode::set_mode(uint8_t new_mode)
   }
 
   if (new_mode == orca_msgs::msg::Control::DISARMED) {
-    // Turn off lights
-    brightness_ = 0;
+    all_stop();
+  }
+
+  if (new_mode == orca_msgs::msg::Control::MISSION) {
+    // Generate a path
+    nav_msgs::msg::Path planned_path = plan(map_, filtered_pose_);
+
+    // Publish path for rviz
+    if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
+      planned_path_pub_->publish(planned_path);
+    }
+
+    // Init filtered_path
+    filtered_path_.header.stamp = joy_cb_.curr();
+    filtered_path_.header.frame_id = cxt_.map_frame_;
+    filtered_path_.poses.clear();
+
+    // Init mission controller
+    controller_->init(planned_path);
+    RCLCPP_INFO(get_logger(), "starting mission with %d waypoints", planned_path.poses.size());
   }
 
   // Set the new mode

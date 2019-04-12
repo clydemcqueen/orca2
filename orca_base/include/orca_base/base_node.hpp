@@ -22,25 +22,25 @@
 
 namespace orca_base {
 
-bool is_yaw_hold_mode(uint8_t mode)
+constexpr bool is_yaw_hold_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::HOLD_H || mode == Control::HOLD_HD;
 }
 
-bool is_z_hold_mode(uint8_t mode)
+constexpr bool is_z_hold_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::HOLD_D || mode == Control::HOLD_HD;
 }
 
-bool is_rov_mode(uint8_t mode)
+constexpr bool is_rov_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::MANUAL || mode == Control::HOLD_H || mode == Control::HOLD_D || mode == Control::HOLD_HD;
 }
 
-bool is_auv_mode(uint8_t mode)
+constexpr bool is_auv_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::MISSION;
@@ -137,6 +137,8 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
   // Helpers
+  void all_stop();
+  void rov_advance(float forward, float strafe, float yaw, float vertical);
   void publish_control(const rclcpp::Time &msg_time);
   void set_mode(uint8_t new_mode);
   bool holding_yaw() { return is_yaw_hold_mode(mode_); };
