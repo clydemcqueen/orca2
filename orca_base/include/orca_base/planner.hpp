@@ -9,7 +9,7 @@
 
 namespace orca_base {
 
-const rclcpp::Duration STABILIZE{5000000000};
+const rclcpp::Duration STABILIZE{0 /*5000000000*/};
 
 nav_msgs::msg::Path plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
