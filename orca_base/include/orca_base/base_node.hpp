@@ -1,47 +1,41 @@
 #ifndef ORCA_BASE_BASE_NODE_HPP
 #define ORCA_BASE_BASE_NODE_HPP
 
-#include "builtin_interfaces/msg/time.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "fiducial_vlam_msgs/msg/map.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joy.hpp"
-#include "std_msgs/msg/empty.hpp"
-#include "std_msgs/msg/float64.hpp"
-#include "tf2/LinearMath/Matrix3x3.h"
 #include "visualization_msgs/msg/marker_array.hpp"
-
-#include "orca_base/base_context.hpp"
-#include "orca_base/joystick.hpp"
-#include "orca_base/model.hpp"
-#include "orca_base/pid.hpp"
-#include "orca_base/mission.hpp"
 
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
+#include "orca_base/controller.hpp"
+#include "orca_base/joystick.hpp"
+#include "orca_base/monotonic.hpp"
+
 namespace orca_base {
 
-bool is_yaw_hold_mode(uint8_t mode)
+constexpr bool is_yaw_hold_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::HOLD_H || mode == Control::HOLD_HD;
 }
 
-bool is_z_hold_mode(uint8_t mode)
+constexpr bool is_z_hold_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::HOLD_D || mode == Control::HOLD_HD;
 }
 
-bool is_rov_mode(uint8_t mode)
+constexpr bool is_rov_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::MANUAL || mode == Control::HOLD_H || mode == Control::HOLD_D || mode == Control::HOLD_HD;
 }
 
-bool is_auv_mode(uint8_t mode)
+constexpr bool is_auv_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
   return mode == Control::MISSION;
@@ -65,6 +59,7 @@ private:
   const int joy_button_hold_h_ = JOY_BUTTON_X;
   const int joy_button_hold_d_ = JOY_BUTTON_B;
   const int joy_button_hold_hd_ = JOY_BUTTON_Y;
+  const int joy_button_mission_ = JOY_BUTTON_LOGO;
   const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
   const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
   const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
@@ -77,13 +72,11 @@ private:
   uint8_t mode_;                              // Operating mode
 
   // Barometer state
-  rclcpp::Time baro_time_;                    // Time of most recent message
   double z_initial_;                          // First z value, used to adjust barometer
   double z_;                                  // Z from barometer
 
   // IMU state
   tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
-  rclcpp::Time imu_time_;                     // Time of most recent message
   double yaw_;                                // Yaw from IMU
   double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
@@ -91,51 +84,57 @@ private:
   sensor_msgs::msg::Joy joy_msg_;             // Most recent message
 
   // Odometry state
-  rclcpp::Time odom_time_;                    // Time of most recent message
-  OrcaPose filtered_pose_;                    // Estimated pose from odometry
+  PoseStamped filtered_pose_;                 // Estimated pose
 
   // ROV operation
   std::shared_ptr<pid::Controller> rov_yaw_pid_;
   std::shared_ptr<pid::Controller> rov_z_pid_;
 
   // AUV operation
-  std::shared_ptr<BaseMission> mission_;      // The mission we're running
-  OrcaOdometry planned_pose_;                 // Planned pose
-  nav_msgs::msg::Path planned_path_;          // The planned path (from planned_pose_)
+  std::shared_ptr<Controller> controller_;    // The mission we're running
+  fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
   nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
   // Outputs
-  OrcaEfforts efforts_;                       // Thruster forces
+  Efforts efforts_;                           // Thruster forces
   int tilt_;                                  // Camera tilt
   int brightness_;                            // Lights
 
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
   rclcpp::Subscription<orca_msgs::msg::Battery >::SharedPtr battery_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
-  rclcpp::Subscription<orca_msgs::msg::Leak >::SharedPtr leak_sub_;
+  rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
+  rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
   // Callbacks
-  void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
+  void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
-  void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
+  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
-  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
+  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first);
+
+  // Callback wrappers
+  Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
+  Valid<BaseNode *, const sensor_msgs::msg::Imu::SharedPtr> imu_cb_{this, &BaseNode::imu_callback};
+  Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
+  Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+  Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
 
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr planned_odom_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
   // Helpers
-  void publish_control();
+  void all_stop();
+  void rov_advance(float forward, float strafe, float yaw, float vertical);
+  void publish_control(const rclcpp::Time &msg_time);
   void set_mode(uint8_t new_mode);
   bool holding_yaw() { return is_yaw_hold_mode(mode_); };
   bool holding_z() { return is_z_hold_mode(mode_); };

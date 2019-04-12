@@ -1,5 +1,7 @@
 #include "orca_base/base_context.hpp"
 
+#include "rclcpp/rclcpp.hpp"
+
 namespace orca_base {
 
 void BaseContext::load_parameters(rclcpp::Node &node)
