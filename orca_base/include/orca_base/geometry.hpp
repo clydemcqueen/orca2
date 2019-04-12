@@ -66,8 +66,16 @@ struct Pose
 struct PoseStamped
 {
   rclcpp::Time t;
+  // TODO add frame_id for round trip
   int64_t nanoseconds; // TODO debug
   Pose pose;
+
+  void to_msg(geometry_msgs::msg::PoseStamped &msg) const
+  {
+    msg.header.stamp = t;
+    // msg.header.frame_id?
+    pose.to_msg(msg.pose);
+  }
 
   void from_msg(const geometry_msgs::msg::PoseStamped &msg)
   {
@@ -85,9 +93,8 @@ struct PoseStamped
   void add_to_path(nav_msgs::msg::Path &path)
   {
     geometry_msgs::msg::PoseStamped msg;
-    msg.header.stamp = t;
+    to_msg(msg);
     msg.header.frame_id = path.header.frame_id;
-    pose.to_msg(msg.pose);
     path.poses.push_back(msg);
   }
 };

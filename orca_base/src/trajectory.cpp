@@ -21,6 +21,37 @@ void drag_force_to_accel_xy(const double yaw, const double x_v, const double y_v
   rotate_frame(forward_a, strafe_a, -yaw, x_a, y_a);
 }
 
+// Compute the deceleration (glide) distance
+double deceleration_distance_xy(const double yaw, double velo_x, double velo_y)
+{
+  constexpr double dt = 0.1;
+  double x = 0;
+  double y = 0;
+
+  for (double t = 0; t < 10; t += dt)
+  {
+    // Compute drag force
+    double accel_drag_x, accel_drag_y;
+    drag_force_to_accel_xy(yaw, velo_x, velo_y, accel_drag_x, accel_drag_y);
+
+    // Update velocity
+    velo_x -= accel_drag_x * dt;
+    velo_y -= accel_drag_y * dt;
+
+    // Update distance
+    x += velo_x * dt;
+    y += velo_y * dt;
+
+    if (std::hypot(velo_x, velo_y) < 0.1)
+    {
+      // Close enough
+      return std::hypot(x, y);
+    }
+  }
+
+  return 0;
+}
+
 //=====================================================================================
 // Trajectory
 //=====================================================================================

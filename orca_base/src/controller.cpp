@@ -25,7 +25,7 @@ bool Controller::advance(const double dt, const PoseStamped &curr, Acceleration 
   if (curr.t < trajectory_.p1().t) {
     // Odom pipeline has a lag, ignore old messages
     return true;
-  } else if (curr.t > trajectory_.p2().t + STABILIZE) {
+  } else if (curr.t > trajectory_.p2().t /* + STABILIZE */) {
     // We hit the time limit for this target
     // TODO don't wait the full STABILIZE time
     if (trajectory_.p2().pose.close_enough(curr.pose)) {
@@ -67,7 +67,7 @@ bool Controller::set_target(int target)
   PoseStamped p1, p2;
   p1.from_msg(path_.poses[target_ - 1]);
   p2.from_msg(path_.poses[target_]);
-  p2.t = p2.t - STABILIZE;
+  p2.t = p2.t /* - STABILIZE */;
   trajectory_.init(p1, p2);
 
   RCLCPP_INFO(logger_, "target %d position: (%g, %g, %g), yaw %g",
