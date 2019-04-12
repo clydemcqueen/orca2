@@ -1,9 +1,6 @@
 #ifndef ORCA_BASE_MONOTONIC_HPP
 #define ORCA_BASE_MONOTONIC_HPP
 
-#include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/joy.hpp"
-
 namespace orca_base {
 
 //=============================================================================

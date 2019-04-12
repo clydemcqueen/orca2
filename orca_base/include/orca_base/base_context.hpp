@@ -1,12 +1,12 @@
 #ifndef ORCA_BASE_BASE_CONTEXT_HPP
 #define ORCA_BASE_BASE_CONTEXT_HPP
 
+#include <string>
+
 #include "orca_base/context_macros.hpp"
 
-#include "rclcpp/rclcpp.hpp"
-
 namespace rclcpp {
-  class Node;
+class Node;
 }
 
 namespace orca_base {

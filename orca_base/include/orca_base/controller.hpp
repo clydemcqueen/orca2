@@ -1,11 +1,9 @@
 #ifndef ORCA_BASE_CONTROLLER_HPP
 #define ORCA_BASE_CONTROLLER_HPP
 
-#include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/path.hpp"
 
 #include "orca_base/base_context.hpp"
-#include "orca_base/geometry.hpp"
 #include "orca_base/pid.hpp"
 #include "orca_base/trajectory.hpp"
 

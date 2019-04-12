@@ -1,7 +1,6 @@
 #ifndef ORCA_BASE_PLANNER_HPP
 #define ORCA_BASE_PLANNER_HPP
 
-#include "rclcpp/rclcpp.hpp"
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "nav_msgs/msg/path.hpp"
 

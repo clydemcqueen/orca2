@@ -1,14 +1,9 @@
 #ifndef ORCA_BASE_BASE_NODE_HPP
 #define ORCA_BASE_BASE_NODE_HPP
 
-#include "builtin_interfaces/msg/time.hpp"
 #include "fiducial_vlam_msgs/msg/map.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joy.hpp"
-#include "std_msgs/msg/empty.hpp"
-#include "std_msgs/msg/float64.hpp"
-#include "tf2/LinearMath/Matrix3x3.h"
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "orca_msgs/msg/barometer.hpp"
