@@ -17,29 +17,6 @@ const rclcpp::Duration BARO_TIMEOUT{1000000000};  // All modes: disarm if we los
 const rclcpp::Duration IMU_TIMEOUT{1000000000};   // All modes: disarm if we lose IMU
 
 //=============================================================================
-// Possible time problems, particularly during simulations:
-// -- msg.header.stamp might be 0
-// -- msg.header.stamp might repeat over consecutive messages
-// -- msg.header.stamp might go backwards over consecutive messages
-// Could use macros or lambdas to do inversion-of-control in callbacks
-//=============================================================================
-
-bool valid(const rclcpp::Time &t)
-{
-  return t.nanoseconds() > 0;
-}
-
-bool bootstrap(const rclcpp::Time &msg, const rclcpp::Time &prev)
-{
-  return valid(msg) && !valid(prev);
-}
-
-bool good_dt(const rclcpp::Time &msg, const rclcpp::Time &prev)
-{
-  return msg > prev;
-}
-
-//=============================================================================
 // Thrusters
 //=============================================================================
 
@@ -105,54 +82,43 @@ BaseNode::BaseNode() :
   // AUV controller
   controller_ = std::make_shared<Controller>(get_logger(), cxt_);
 
+  // Publications
   control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
-  planned_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("planned_odom", 1);
   thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
   planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
   filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
 
-  using std::placeholders::_1;
-  auto baro_cb = std::bind(&BaseNode::baro_callback, this, _1);
-  auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
-  auto imu_cb = std::bind(&BaseNode::imu_callback, this, _1);
-  auto joy_cb = std::bind(&BaseNode::joy_callback, this, _1);
-  auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
-  auto map_cb = std::bind(&BaseNode::map_callback, this, _1);
-  auto odom_cb = std::bind(&BaseNode::odom_callback, this, _1);
+  // Monotonic subscriptions
+  baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("barometer",
+    [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void { this->baro_cb_.call(msg); });
+  imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data",
+    [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void { this->imu_cb_.call(msg); });
+  joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("joy",
+    [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void { this->joy_cb_.call(msg); });
+  map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>("fiducial_map",
+    [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void { this->map_cb_.call(msg); });
+  odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("filtered_odom",
+    [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void { this->odom_cb_.call(msg); });
 
-  baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("barometer", baro_cb);
+  // Other subscriptions
+  using std::placeholders::_1;
+  auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
   battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
-  imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data", imu_cb);
-  joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("joy", joy_cb);
+  auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
-  map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>("fiducial_map", map_cb);
-  odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("filtered_odom", odom_cb);
 
   RCLCPP_INFO(get_logger(), "base_node ready");
 }
 
 // New barometer reading
-void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
+void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
 {
-  // Ignore zero
-  rclcpp::Time msg_time{msg->header.stamp};
-  if (!valid(msg_time)) {
-    return;
-  }
-
-  // Bootstrap
-  if (bootstrap(msg_time, baro_time_)) {
-    baro_time_ = msg_time;
+  if (first) {
     z_initial_ = -msg->depth;
     z_ = 0;
     RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
-    return;
-  }
-
-  // Ignore dt <= 0
-  if (good_dt(msg_time, baro_time_)) {
+  } else {
     z_ = -msg->depth - z_initial_;
-    baro_time_ = msg_time;
   }
 }
 
@@ -166,61 +132,32 @@ void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 }
 
 // New IMU reading
-void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
+void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg, bool first)
 {
-  // Ignore zero
-  rclcpp::Time msg_time{msg->header.stamp};
-  if (!valid(msg_time)) {
-    return;
-  }
+  (void) first;
 
-  // Bootstrap
-  if (bootstrap(msg_time, imu_time_)) {
-    imu_time_ = msg_time;
-    return;
-  }
-
-  // Ignore dt <= 0
-  if (good_dt(msg_time, imu_time_)) {
-
-    // Get yaw
-    tf2::Quaternion imu_f_map;
-    tf2::fromMsg(msg->orientation, imu_f_map);
-    tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
-    double roll = 0, pitch = 0;
-    base_f_map.getRPY(roll, pitch, yaw_);
+  // Get yaw
+  tf2::Quaternion imu_f_map;
+  tf2::fromMsg(msg->orientation, imu_f_map);
+  tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
+  double roll = 0, pitch = 0;
+  base_f_map.getRPY(roll, pitch, yaw_);
 
 #if 0
-    // NWU to ENU TODO still need this?
-    yaw_ += M_PI_2;
+  // NWU to ENU TODO still need this?
+  yaw_ += M_PI_2;
 #endif
 
-    // Compute a stability metric, used to throttle the pid controllers
-    stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
-
-    imu_time_ = msg_time;
-  }
+  // Compute a stability metric, used to throttle the pid controllers
+  stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 }
 
 // New input from the gamepad
-void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
+void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first)
 {
-  // Ignore zero
-  rclcpp::Time msg_time{msg->header.stamp};
-  if (!valid(msg_time)) {
-    return;
-  }
-
-  // Bootstrap
-  rclcpp::Time prev_time{joy_msg_.header.stamp};
-  if (bootstrap(msg_time, prev_time)) {
+  if (first) {
     joy_msg_ = *msg;
-    return;
-  }
-
-  // Ignore dt <= 0
-  if (good_dt(msg_time, prev_time)) {
-
+  } else {
     // Arm/disarm
     if (button_down(msg, joy_msg_, joy_button_disarm_)) {
       RCLCPP_INFO(get_logger(), "disarmed");
@@ -241,25 +178,25 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
       RCLCPP_INFO(get_logger(), "manual");
       set_mode(orca_msgs::msg::Control::MANUAL);
     } else if (button_down(msg, joy_msg_, joy_button_hold_h_)) {
-      if (valid(imu_time_)) {
+      if (imu_cb_.receiving()) {
         set_mode(orca_msgs::msg::Control::HOLD_H);
       } else {
         RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
       }
     } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
-      if (valid(baro_time_)) {
+      if (baro_cb_.receiving()) {
         set_mode(orca_msgs::msg::Control::HOLD_D);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
       }
     } else if (button_down(msg, joy_msg_, joy_button_hold_hd_)) {
-      if (valid(imu_time_) && valid(baro_time_)) {
+      if (imu_cb_.receiving() && baro_cb_.receiving()) {
         set_mode(orca_msgs::msg::Control::HOLD_HD);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
       }
     } else if (button_down(msg, joy_msg_, joy_button_mission_)) {
-      if (mode_ != orca_msgs::msg::Control::DISARMED && valid(filtered_pose_.t) && valid(map_.header.stamp)) {
+      if (mode_ != orca_msgs::msg::Control::DISARMED && odom_cb_.receiving() && map_cb_.receiving()) {
         // Generate a path
         nav_msgs::msg::Path planned_path = plan(map_, filtered_pose_);
 
@@ -269,7 +206,7 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
         }
 
         // Init filtered_path
-        filtered_path_.header.stamp = msg_time;
+        filtered_path_.header.stamp = joy_cb_.curr();
         filtered_path_.header.frame_id = cxt_.map_frame_;
         filtered_path_.poses.clear();
 
@@ -318,7 +255,7 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 
     // Thrusters
     if (rov_mode()) {
-      double dt = (msg_time - prev_time).seconds();
+      double dt = (joy_cb_.curr() - joy_cb_.prev()).seconds();
       assert(dt > 0);
 
       efforts_.forward = dead_band(msg->axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_;
@@ -337,7 +274,7 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
       }
 
       // Publish controls for thrusters, lights and camera tilt
-      publish_control(msg_time);
+      publish_control(joy_cb_.curr());
     }
 
     joy_msg_ = *msg;
@@ -354,29 +291,18 @@ void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
 }
 
 // New map available
-void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
+void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg, bool first)
 {
+  (void) first;
   map_ = *msg;
 }
 
 // New pose estimate available
-void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
 {
-  // Ignore zero
-  rclcpp::Time msg_time{msg->header.stamp};
-  if (!valid(msg_time)) {
-    return;
-  }
-
-  // Bootstrap
-  rclcpp::Time prev_time{filtered_pose_.t};
-  if (bootstrap(msg_time, prev_time)) {
+  if (first) {
     filtered_pose_.from_msg(*msg);
-    return;
-  }
-
-  // Ignore dt <= 0
-  if (good_dt(msg_time, prev_time)) {
+  } else {
     filtered_pose_.from_msg(*msg);
 
     // AUV operation
@@ -388,7 +314,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
       }
 
       Acceleration u_bar;
-      double dt = (msg_time - prev_time ).seconds();
+      double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
       if (controller_->advance(dt, filtered_pose_, u_bar)) {
         // Acceleration => effort
         efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
@@ -399,7 +325,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
         efforts_.vertical = clamp(efforts_.vertical * stability_, -1.0, 1.0);
         efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
 
-        publish_control(msg_time);
+        publish_control(odom_cb_.curr());
       } else {
         // Stop mission
         set_mode(orca_msgs::msg::Control::MANUAL);
@@ -500,27 +426,26 @@ void BaseNode::spin_once()
 {
   // Ignore 0
   auto spin_time = now();
-  if (!valid(spin_time)) {
+  if (spin_time.nanoseconds() <= 0) {
     return;
   }
 
-  rclcpp::Time joy_time{joy_msg_.header.stamp};
-  if (rov_mode() && valid(joy_time) && spin_time - joy_time > JOY_TIMEOUT) {
+  if (rov_mode() && joy_cb_.receiving() && spin_time - joy_cb_.prev() > JOY_TIMEOUT) {
     RCLCPP_ERROR(get_logger(), "lost joystick, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (auv_mode() && valid(filtered_pose_.t) && spin_time - filtered_pose_.t > ODOM_TIMEOUT) {
+  if (auv_mode() && odom_cb_.receiving() && spin_time - odom_cb_.prev() > ODOM_TIMEOUT) {
     RCLCPP_ERROR(get_logger(), "lost odometry, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (valid(baro_time_) && spin_time - baro_time_ > BARO_TIMEOUT) {
+  if (baro_cb_.receiving() && spin_time - baro_cb_.prev() > BARO_TIMEOUT) {
     RCLCPP_ERROR(get_logger(), "lost barometer, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (valid(imu_time_) && spin_time - imu_time_ > IMU_TIMEOUT) {
+  if (imu_cb_.receiving() && spin_time - imu_cb_.prev() > IMU_TIMEOUT) {
     RCLCPP_ERROR(get_logger(), "lost IMU, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }

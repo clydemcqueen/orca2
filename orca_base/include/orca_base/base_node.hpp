@@ -18,6 +18,7 @@
 
 #include "orca_base/controller.hpp"
 #include "orca_base/joystick.hpp"
+#include "orca_base/monotonic.hpp"
 
 namespace orca_base {
 
@@ -76,13 +77,11 @@ private:
   uint8_t mode_;                              // Operating mode
 
   // Barometer state
-  rclcpp::Time baro_time_;                    // Time of most recent message
   double z_initial_;                          // First z value, used to adjust barometer
   double z_;                                  // Z from barometer
 
   // IMU state
   tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
-  rclcpp::Time imu_time_;                     // Time of most recent message
   double yaw_;                                // Yaw from IMU
   double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
@@ -116,17 +115,23 @@ private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
   // Callbacks
-  void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg);
+  void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
-  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
+  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg, bool first);
+  void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
-  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
-  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg, bool first);
+  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first);
+
+  // Monotonic wrappers
+  Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
+  Monotonic<BaseNode *, const sensor_msgs::msg::Imu::SharedPtr> imu_cb_{this, &BaseNode::imu_callback};
+  Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
+  Monotonic<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+  Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
 
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr planned_odom_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;

@@ -84,6 +84,17 @@ add_executable(
   src/test.cpp
 )
 
+add_executable(
+  test_node
+  src/test_node.cpp
+)
+
+ament_target_dependencies(
+  test_node
+  rclcpp
+  sensor_msgs
+)
+
 ament_export_include_directories(include)
 
 install(TARGETS base_node filter_node orca_base_test DESTINATION lib/orca_base)

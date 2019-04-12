@@ -30,7 +30,7 @@ namespace orca_base {
   CXT_ELEM(rov_z_pid_ki, 0, double)                                     /* ROV z pid Ki  */ \
   CXT_ELEM(rov_z_pid_kd, 0, double)                                     /* ROV z pid Kd  */ \
   \
-  CXT_ELEM(rov_yaw_pid_kp, 0.5, double)                                 /* ROV yaw pid Kp  */ \
+  CXT_ELEM(rov_yaw_pid_kp, 2, double)                                   /* ROV yaw pid Kp  */ \
   CXT_ELEM(rov_yaw_pid_ki, 0, double)                                   /* ROV yaw pid Ki  */ \
   CXT_ELEM(rov_yaw_pid_kd, 0, double)                                   /* ROV yaw pid Kd  */ \
   \
@@ -46,7 +46,7 @@ namespace orca_base {
   CXT_ELEM(auv_z_pid_ki, 0, double)                                     /* AUV z pid Ki  */ \
   CXT_ELEM(auv_z_pid_kd, 0, double)                                     /* AUV z pid Kd  */ \
   \
-  CXT_ELEM(auv_yaw_pid_kp, 0.5, double)                                 /* AUV yaw pid Kp  */ \
+  CXT_ELEM(auv_yaw_pid_kp, 2, double)                                   /* AUV yaw pid Kp  */ \
   CXT_ELEM(auv_yaw_pid_ki, 0, double)                                   /* AUV yaw pid Ki  */ \
   CXT_ELEM(auv_yaw_pid_kd, 0, double)                                   /* AUV yaw pid Kd  */ \
   /* End of list */
