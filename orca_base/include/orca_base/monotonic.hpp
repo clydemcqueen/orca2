@@ -7,14 +7,46 @@
 namespace orca_base {
 
 //=============================================================================
-// Monotonic avoids common simulation problems:
+// Common simulation problems:
 // -- msg.header.stamp might be 0
 // -- msg.header.stamp might repeat over consecutive messages
-//
-// Requirements:
-// -- message must have a .header field
-// -- callback takes a bool that indicates "first message"
 //=============================================================================
+
+template <typename N, typename M>
+class Valid
+{
+  N node_;
+  std::function<void(N, M)> process_;         // Process good messages
+  rclcpp::Time curr_;                         // Stamp of current message
+  rclcpp::Time prev_;                         // Stamp of previous message
+
+  static bool valid(const rclcpp::Time &t)
+  {
+    return t.nanoseconds() > 0;
+  }
+
+public:
+
+  Valid(N node, std::function<void(N, M)> callback)
+  {
+    node_ = node;
+    process_ = callback;
+  }
+
+  void call(M msg)
+  {
+    curr_ = msg->header.stamp;
+
+    if (valid(curr_)) {
+      process_(node_, msg);
+      prev_ = curr_;
+    }
+  }
+
+  const rclcpp::Time &curr() const { return curr_; };
+  const rclcpp::Time &prev() const { return prev_; };
+  bool receiving() const { return valid(prev_); }
+};
 
 template <typename N, typename M>
 class Monotonic

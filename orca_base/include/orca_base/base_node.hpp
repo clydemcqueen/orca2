@@ -117,17 +117,17 @@ private:
   // Callbacks
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
-  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg, bool first);
+  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first);
   void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
-  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg, bool first);
+  void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first);
 
-  // Monotonic wrappers
+  // Callback wrappers
   Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
-  Monotonic<BaseNode *, const sensor_msgs::msg::Imu::SharedPtr> imu_cb_{this, &BaseNode::imu_callback};
+  Valid<BaseNode *, const sensor_msgs::msg::Imu::SharedPtr> imu_cb_{this, &BaseNode::imu_callback};
   Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
-  Monotonic<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+  Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
   Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
 
   // Publications

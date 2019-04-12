@@ -132,10 +132,8 @@ void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
 }
 
 // New IMU reading
-void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg, bool first)
+void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  (void) first;
-
   // Get yaw
   tf2::Quaternion imu_f_map;
   tf2::fromMsg(msg->orientation, imu_f_map);
@@ -155,9 +153,7 @@ void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg, bool fir
 // New input from the gamepad
 void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first)
 {
-  if (first) {
-    joy_msg_ = *msg;
-  } else {
+  if (!first) {
     // Arm/disarm
     if (button_down(msg, joy_msg_, joy_button_disarm_)) {
       RCLCPP_INFO(get_logger(), "disarmed");
@@ -276,9 +272,9 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
       // Publish controls for thrusters, lights and camera tilt
       publish_control(joy_cb_.curr());
     }
-
-    joy_msg_ = *msg;
   }
+
+  joy_msg_ = *msg;
 }
 
 // Leak detector
@@ -291,45 +287,38 @@ void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
 }
 
 // New map available
-void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg, bool first)
+void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
 {
-  (void) first;
   map_ = *msg;
 }
 
 // New pose estimate available
 void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
 {
-  if (first) {
-    filtered_pose_.from_msg(*msg);
-  } else {
-    filtered_pose_.from_msg(*msg);
+  filtered_pose_.from_msg(*msg);
+  if (!first && auv_mode()) {
+    // Publish path for rviz
+    if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
+      filtered_pose_.add_to_path(filtered_path_);
+      filtered_path_pub_->publish(filtered_path_);
+    }
 
-    // AUV operation
-    if (auv_mode()) {
-      // Publish path for rviz
-      if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
-        filtered_pose_.add_to_path(filtered_path_);
-        filtered_path_pub_->publish(filtered_path_);
-      }
+    Acceleration u_bar;
+    double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
+    if (controller_->advance(dt, filtered_pose_, u_bar)) {
+      // Acceleration => effort
+      efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
-      Acceleration u_bar;
-      double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
-      if (controller_->advance(dt, filtered_pose_, u_bar)) {
-        // Acceleration => effort
-        efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
+      // Throttle back if AUV is unstable
+      efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
+      efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
+      efforts_.vertical = clamp(efforts_.vertical * stability_, -1.0, 1.0);
+      efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
 
-        // Throttle back if AUV is unstable
-        efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
-        efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
-        efforts_.vertical = clamp(efforts_.vertical * stability_, -1.0, 1.0);
-        efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
-
-        publish_control(odom_cb_.curr());
-      } else {
-        // Stop mission
-        set_mode(orca_msgs::msg::Control::MANUAL);
-      }
+      publish_control(odom_cb_.curr());
+    } else {
+      // Stop mission
+      set_mode(orca_msgs::msg::Control::MANUAL);
     }
   }
 }
