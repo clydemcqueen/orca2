@@ -1,5 +1,4 @@
 #include "orca_base/base_node.hpp"
-#include "orca_base/planner.hpp"
 #include "orca_base/pwm.hpp"
 
 namespace orca_base {
@@ -44,7 +43,7 @@ const std::vector<Thruster> THRUSTERS = {
 // BaseNode
 //=============================================================================
 
-BaseNode::BaseNode() :
+BaseNode::BaseNode():
   Node{"base_node"},
   mode_{orca_msgs::msg::Control::DISARMED},
   tilt_{0},
@@ -78,9 +77,6 @@ BaseNode::BaseNode() :
   rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
   rov_yaw_pid_ = std::make_shared<pid::Controller>(true, cxt_.rov_yaw_pid_kp_, cxt_.rov_yaw_pid_ki_,
     cxt_.rov_yaw_pid_kd_);
-
-  // AUV controller
-  controller_ = std::make_shared<Controller>(get_logger(), cxt_);
 
   // Publications
   control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
@@ -272,15 +268,15 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
 
     Acceleration u_bar;
     double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
-    if (controller_->advance(dt, filtered_pose_, u_bar)) {
+    if (mission_->advance(dt, filtered_pose_, u_bar)) {
       // Acceleration => effort
       efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
       // Throttle back if AUV is unstable
-      efforts_.forward = clamp(efforts_.forward * stability_, -1.0, 1.0);
-      efforts_.strafe = clamp(efforts_.strafe * stability_, -1.0, 1.0);
-      efforts_.vertical = clamp(efforts_.vertical * stability_, -1.0, 1.0);
-      efforts_.yaw = clamp(efforts_.yaw * stability_, -1.0, 1.0);
+      efforts_.set_forward(efforts_.forward() * stability_);
+      efforts_.set_strafe(efforts_.strafe() * stability_);
+      efforts_.set_vertical(efforts_.vertical() * stability_);
+      efforts_.set_yaw(efforts_.yaw() * stability_);
 
       publish_control(odom_cb_.curr());
     } else {
@@ -295,19 +291,19 @@ void BaseNode::rov_advance(float forward, float strafe, float yaw, float vertica
   double dt = (joy_cb_.curr() - joy_cb_.prev()).seconds();
   assert(dt > 0);
 
-  efforts_.forward = dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_;
-  efforts_.strafe = dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_;
+  efforts_.set_forward(dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_);
+  efforts_.set_strafe(dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_);
 
   if (holding_yaw()) {
-    efforts_.yaw = clamp(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_, -1.0, 1.0);
+    efforts_.set_yaw(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_);
   } else {
-    efforts_.yaw = dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_;
+    efforts_.set_yaw(dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_);
   }
 
   if (holding_z()) {
-    efforts_.vertical = clamp(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_, -1.0, 1.0);
+    efforts_.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_);
   } else {
-    efforts_.vertical = dead_band(vertical, cxt_.input_dead_band_) * cxt_.vertical_gain_;
+    efforts_.set_vertical(dead_band(vertical, cxt_.input_dead_band_) * cxt_.vertical_gain_);
   }
 
   publish_control(joy_cb_.curr());
@@ -328,12 +324,12 @@ void BaseNode::publish_control(const rclcpp::Time &msg_time)
   for (int i = 0; i < THRUSTERS.size(); ++i) {
     // Clamp forward + strafe to xy_gain_
     double xy_effort = clamp(
-      efforts_.forward * THRUSTERS[i].forward_factor + efforts_.strafe * THRUSTERS[i].strafe_factor,
+      efforts_.forward() * THRUSTERS[i].forward_factor + efforts_.strafe() * THRUSTERS[i].strafe_factor,
       -cxt_.xy_gain_, cxt_.xy_gain_);
 
     // Clamp total thrust
     thruster_efforts.push_back(
-      clamp(xy_effort + efforts_.yaw * THRUSTERS[i].yaw_factor + efforts_.vertical * THRUSTERS[i].vertical_factor,
+      clamp(xy_effort + efforts_.yaw() * THRUSTERS[i].yaw_factor + efforts_.vertical() * THRUSTERS[i].vertical_factor,
         THRUST_FULL_REV, THRUST_FULL_FWD));
   }
 
@@ -405,22 +401,18 @@ void BaseNode::set_mode(uint8_t new_mode)
   }
 
   if (new_mode == orca_msgs::msg::Control::MISSION) {
-    // Generate a path
-    nav_msgs::msg::Path planned_path = plan(map_, filtered_pose_);
+    // Start mission
+    mission_ = std::make_shared<Mission>(get_logger(), cxt_, map_, filtered_pose_);
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-      planned_path_pub_->publish(planned_path);
+      planned_path_pub_->publish(mission_->planned_path());
     }
 
     // Init filtered_path
     filtered_path_.header.stamp = joy_cb_.curr();
     filtered_path_.header.frame_id = cxt_.map_frame_;
     filtered_path_.poses.clear();
-
-    // Init mission controller
-    controller_->init(planned_path);
-    RCLCPP_INFO(get_logger(), "starting mission with %d waypoints", planned_path.poses.size());
   }
 
   // Set the new mode

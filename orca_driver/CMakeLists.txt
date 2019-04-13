@@ -22,9 +22,9 @@ find_package(std_msgs REQUIRED)
 
 include_directories(
   include
-  find_package(orca_msgs REQUIRED)
-  find_package(rclcpp REQUIRED)
-  find_package(std_msgs REQUIRED)
+  ${orca_msgs_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
+  ${std_msgs_INCLUDE_DIRS}
 )
 
 add_executable(
@@ -34,10 +34,10 @@ add_executable(
 )
 ament_target_dependencies(
   orca_driver
-  "orca_msgs"
-  "rclcpp"
-  "rclpy"
-  "std_msgs"
+  orca_msgs
+  rclcpp
+  rclpy
+  std_msgs
 )
 
 ament_package()

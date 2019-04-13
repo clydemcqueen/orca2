@@ -45,9 +45,8 @@ add_executable(
   base_node
   src/base_node.cpp
   src/base_context.cpp
-  src/controller.cpp
-  src/planner.cpp
-  src/trajectory.cpp
+  src/mission.cpp
+  src/motion.cpp
   src/util.cpp
 )
 
@@ -80,11 +79,6 @@ ament_target_dependencies(
 )
 
 add_executable(
-  orca_base_test
-  src/test.cpp
-)
-
-add_executable(
   test_node
   src/test_node.cpp
 )
@@ -97,7 +91,7 @@ ament_target_dependencies(
 
 ament_export_include_directories(include)
 
-install(TARGETS base_node filter_node orca_base_test DESTINATION lib/orca_base)
+install(TARGETS base_node filter_node DESTINATION lib/orca_base)
 install(DIRECTORY include/orca_base DESTINATION include)
 
 ament_package()

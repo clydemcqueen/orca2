@@ -10,36 +10,33 @@ constexpr int SPIN_RATE = 50;
 OrcaDriver::OrcaDriver():
   Node{"orca_driver"}
 {
-  // TODO parameters
-#if 0
-  nh_priv_.param<std::string>("maestro_port", maestro_port_, "/dev/ttyACM0");
+  get_parameter_or<std::string>("maestro_port", maestro_port_, "/dev/ttyACM0");
   RCLCPP_INFO(get_logger(), "Expecting Maestro on port %s", maestro_port_.c_str());
 
-  nh_priv_.param("num_thrusters", num_thrusters_, 6);
+  get_parameter_or("num_thrusters", num_thrusters_, 6);
   RCLCPP_INFO(get_logger(), "Configuring for %d thrusters:", num_thrusters_);
   for (int i = 0; i < num_thrusters_; ++i)
   {
     Thruster t;
-    nh_priv_.param("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for channel conflicts!
-    nh_priv_.param("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
+    get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for channel conflicts!
+    get_parameter_or("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
     thrusters_.push_back(t);
     RCLCPP_INFO(get_logger(), "Thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
   }
 
-  nh_priv_.param("lights_channel", lights_channel_, 8);
+  get_parameter_or("lights_channel", lights_channel_, 8);
   RCLCPP_INFO(get_logger(), "Lights on channel %d", lights_channel_);
 
-  nh_priv_.param("tilt_channel", tilt_channel_, 9);
+  get_parameter_or("tilt_channel", tilt_channel_, 9);
   RCLCPP_INFO(get_logger(), "Camera servo on channel %d", tilt_channel_);
 
-  nh_priv_.param("voltage_channel", voltage_channel_, 11); // Must be analog input
-  nh_priv_.param("voltage_multiplier", voltage_multiplier_, 4.7);
-  nh_priv_.param("voltage_min", voltage_min_, 12.0);
+  get_parameter_or("voltage_channel", voltage_channel_, 11); // Must be analog input
+  get_parameter_or("voltage_multiplier", voltage_multiplier_, 4.7);
+  get_parameter_or("voltage_min", voltage_min_, 12.0);
   RCLCPP_INFO(get_logger(), "Voltage sensor on channel %d, multiplier is %g, minimum is %g", voltage_channel_, voltage_multiplier_, voltage_min_);
 
-  nh_priv_.param("leak_channel", leak_channel_, 12); // Must be digital input
+  get_parameter_or("leak_channel", leak_channel_, 12); // Must be digital input
   RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", leak_channel_);
-#endif
 
   // Set up subscription
   control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", std::bind(&OrcaDriver::controlCallback, this, _1));
