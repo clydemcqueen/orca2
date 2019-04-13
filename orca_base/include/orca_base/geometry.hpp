@@ -2,6 +2,7 @@
 #define ORCA_BASE_GEOMETRY_HPP
 
 #include "orca_base/model.hpp"
+#include "orca_base/util.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -62,19 +63,6 @@ struct Pose
   {
     return std::abs(norm_angle(yaw - that.yaw));
   }
-
-  // Within some epsilon
-  bool close_enough(const Pose &that) const
-  {
-    const double EPSILON_XYZ = 0.25;
-    const double EPSILON_YAW = 0.25;
-
-    return
-      std::abs(x - that.x) < EPSILON_XYZ &&
-        std::abs(y - that.y) < EPSILON_XYZ &&
-        std::abs(z - that.z) < EPSILON_XYZ &&
-        std::abs(yaw - that.yaw) < EPSILON_YAW;
-  }
 };
 
 //=====================================================================================
@@ -84,14 +72,13 @@ struct Pose
 struct PoseStamped
 {
   rclcpp::Time t;
-  // TODO add frame_id for round trip
   int64_t nanoseconds; // TODO debug
   Pose pose;
 
   void to_msg(geometry_msgs::msg::PoseStamped &msg) const
   {
     msg.header.stamp = t;
-    // msg.header.frame_id?
+    // msg.header.frame_id TODO for round trip
     pose.to_msg(msg.pose);
   }
 
@@ -140,20 +127,6 @@ struct Twist
 };
 
 //=====================================================================================
-// Feedforward
-//=====================================================================================
-
-struct Feedforward
-{
-  double x;
-  double y;
-  double z;
-  double yaw;
-
-  constexpr Feedforward(): x{0}, y{0}, z{0}, yaw{0} {}
-};
-
-//=====================================================================================
 // Acceleration
 //=====================================================================================
 
@@ -172,34 +145,53 @@ struct Acceleration
 // Ranges from 1.0 for forward to -1.0 for reverse
 //=====================================================================================
 
-struct Efforts
+class Efforts
 {
-  double forward; // TODO clamp(-1, 1) on set
-  double strafe;
-  double vertical;
-  double yaw;
+  double forward_;
+  double strafe_;
+  double vertical_;
+  double yaw_;
 
-  Efforts(): forward{0}, strafe{0}, vertical{0}, yaw{0} {}
+public:
+
+  Efforts(): forward_{0}, strafe_{0}, vertical_{0}, yaw_{0} {}
+
+  double forward() { return forward_; }
+
+  double strafe() { return strafe_; }
+
+  double vertical() { return vertical_; }
+
+  double yaw() { return yaw_; }
+
+  void set_forward(double forward) { forward_ = clamp(forward, -1.0, 1.0); }
+
+  void set_strafe(double strafe) { strafe_ = clamp(strafe, -1.0, 1.0); }
+
+  void set_vertical(double vertical) { vertical_ = clamp(vertical, -1.0, 1.0); }
+
+  void set_yaw(double yaw) { yaw_ = clamp(yaw, -1.0, 1.0); }
 
   void all_stop()
   {
-    forward = 0;
-    strafe = 0;
-    vertical = 0;
-    yaw = 0;
+    forward_ = 0;
+    strafe_ = 0;
+    vertical_ = 0;
+    yaw_ = 0;
   }
 
   void from_acceleration(const Acceleration &u_bar, const double current_yaw)
   {
-    // u_bar (acceleration) => u (control inputs normalized from -1 to 1, aka effort)
+    // Convert from world frame to body frame
     double x_effort = accel_to_effort_xy(u_bar.x);
     double y_effort = accel_to_effort_xy(u_bar.y);
-    double z_effort = accel_to_effort_z(u_bar.z);
-    yaw = accel_to_effort_yaw(u_bar.yaw);
-
-    // Convert from world frame to body frame
-    vertical = z_effort;
+    double forward, strafe;
     rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
+
+    set_forward(forward);
+    set_strafe(strafe);
+    set_vertical(accel_to_effort_z(u_bar.z));
+    set_yaw(accel_to_effort_yaw(u_bar.yaw));
   }
 };
 

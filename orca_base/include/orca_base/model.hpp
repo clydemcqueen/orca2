@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_MODEL_HPP
 #define ORCA_BASE_MODEL_HPP
 
-#include "orca_base/util.hpp" // TODO remove dep on clamp()
+#include <math.h>
 
 namespace orca_base {
 
@@ -80,15 +80,13 @@ constexpr double drag_force_z(double velo_z) { return velo_z * std::abs(velo_z) 
 constexpr double drag_torque_yaw(double velo_yaw) { return velo_yaw * std::abs(velo_yaw) * -ANGULAR_DRAG_YAW; }
 
 // Force / torque => acceleration
-constexpr double force_to_accel_xy(double force_xy) { return force_xy / ORCA_MASS; }
-constexpr double force_to_accel_z(double force_z) { return force_z / ORCA_MASS; } // TODO combine _xy and _z forms
+constexpr double force_to_accel(double force) { return force / ORCA_MASS; }
 constexpr double torque_to_accel_yaw(double torque_yaw) { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
 
 // Force / torque => effort
-// TODO add deadband
-constexpr double force_to_effort_xy(double force_xy) { return clamp(force_xy / BOLLARD_FORCE_XY, -1.0, 1.0); }
-constexpr double force_to_effort_z(double force_z) { return clamp(force_z / BOLLARD_FORCE_Z, -1.0, 1.0); }
-constexpr double torque_to_effort_yaw(double torque_yaw) { return clamp(torque_yaw / MAX_TORQUE_YAW, -1.0, 1.0); }
+constexpr double force_to_effort_xy(double force_xy) { return force_xy / BOLLARD_FORCE_XY; }
+constexpr double force_to_effort_z(double force_z) { return force_z / BOLLARD_FORCE_Z; }
+constexpr double torque_to_effort_yaw(double torque_yaw) { return torque_yaw / MAX_TORQUE_YAW; }
 
 // Acceleration => force / torque
 constexpr double accel_to_force_xy(double accel_xy) { return ORCA_MASS * accel_xy; }
@@ -96,16 +94,9 @@ constexpr double accel_to_force_z(double accel_z) { return ORCA_MASS * accel_z; 
 constexpr double accel_to_torque_yaw(double accel_yaw) { return MOMENT_OF_INERTIA_YAW * accel_yaw; }
 
 // Acceleration => effort
-// TODO add deadband
 constexpr double accel_to_effort_xy(double accel_xy) { return force_to_effort_xy(accel_to_force_xy(accel_xy)); }
 constexpr double accel_to_effort_z(double accel_z) { return force_to_effort_z(accel_to_force_z(accel_z)); }
 constexpr double accel_to_effort_yaw(double accel_yaw) { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
-
-// Acceleration required to counteract drag force
-void drag_force_to_accel_xy(const double yaw, const double x_v, const double y_v, double &x_a, double &y_a);
-
-// Deceleration (glide) distance
-double deceleration_distance(const double yaw, double velo_x, double velo_y);
 
 } // namespace orca_base
 

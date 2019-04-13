@@ -30,12 +30,10 @@ constexpr const B scale(const A a, const A a_min, const A a_max, const B b_min, 
 // Move an angle to the region [-M_PI, M_PI]
 constexpr double norm_angle(double a)
 {
-  while (a < -M_PI)
-  {
+  while (a < -M_PI) {
     a += 2 * M_PI;
   }
-  while (a > M_PI)
-  {
+  while (a > M_PI) {
     a -= 2 * M_PI;
   }
 

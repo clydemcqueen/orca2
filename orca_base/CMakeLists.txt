@@ -46,7 +46,6 @@ add_executable(
   src/base_node.cpp
   src/base_context.cpp
   src/mission.cpp
-  src/model.cpp
   src/motion.cpp
   src/util.cpp
 )
