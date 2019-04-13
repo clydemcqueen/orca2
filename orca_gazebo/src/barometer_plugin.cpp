@@ -28,14 +28,12 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
-
 constexpr double SEAWATER_DENSITY = 1029;
 constexpr double ATMOSPHERIC_PRESSURE = 101325;   // Pascals
 constexpr double GRAVITY = 9.80665;               // m/s^2
 constexpr double DEPTH_STDDEV = 0.01;             // m
 
-class OrcaBarometerPlugin : public SensorPlugin
+class OrcaBarometerPlugin: public SensorPlugin
 {
   // Our parent sensor is an altimeter
   sensors::AltimeterSensorPtr altimeter_;
@@ -66,33 +64,22 @@ public:
     std::string baro_topic = "/barometer";
     std::string pose_topic = "/depth";
 
-    std::cout << std::endl;
-    std::cout << "ORCA BAROMETER PLUGIN PARAMETERS" << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
-    std::cout << "Default baro topic: " << baro_topic << std::endl;
-    std::cout << "Default pose topic: " << pose_topic << std::endl;
-    std::cout << "Default fluid density: " << fluid_density_ << std::endl;
-
-    if (sdf->HasElement("baro_topic"))
-    {
+    if (sdf->HasElement("baro_topic")) {
       baro_topic = sdf->GetElement("baro_topic")->Get<std::string>();
-      std::cout << "Baro topic: " << baro_topic << std::endl;
     }
+    RCLCPP_INFO(node_->get_logger(), "baro topic: %s", baro_topic.c_str());
     baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 1);
 
-    if (sdf->HasElement("pose_topic"))
-    {
+    if (sdf->HasElement("pose_topic")) {
       pose_topic = sdf->GetElement("pose_topic")->Get<std::string>();
-      std::cout << "Pose topic: " << pose_topic << std::endl;
     }
+    RCLCPP_INFO(node_->get_logger(), "pose topic: %s", pose_topic.c_str());
     pose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(pose_topic, 1);
 
-    // Get fluid density
-    if (sdf->HasElement("fluid_density"))
-    {
+    if (sdf->HasElement("fluid_density")) {
       fluid_density_ = sdf->GetElement("fluid_density")->Get<double>();
-      std::cout << "Fluid density: " << fluid_density_ << std::endl;
     }
+    RCLCPP_INFO(node_->get_logger(), "fluid density: %g", fluid_density_);
 
     // Get the parent sensor
     altimeter_ = std::dynamic_pointer_cast<sensors::AltimeterSensor>(sensor);
@@ -112,38 +99,41 @@ public:
       return;
     }
 
-    // TODO count subscribers
-
-    orca_msgs::msg::Barometer baro_msg;
-    baro_msg.header.frame_id = "map";
-    baro_msg.header.stamp = node_->now();
-
-    geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
-    pose_msg.header.frame_id = "map";
-    pose_msg.header.stamp = node_->now();
-    pose_msg.pose.covariance[14] = DEPTH_STDDEV * DEPTH_STDDEV;
-
     // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
     double depth = orca_gazebo::gaussianKernel(-altimeter_->Altitude(), DEPTH_STDDEV);
-    if (depth >= 0.0)
-    {
-      baro_msg.depth = depth;
-      baro_msg.pressure = fluid_density_ * GRAVITY * depth + ATMOSPHERIC_PRESSURE; // Pascals
-      baro_msg.temperature = 10; // Celsius
 
-      pose_msg.pose.pose.position.z = -depth; // ENU
+    if (node_->count_subscribers(baro_pub_->get_topic_name()) > 0) {
+      orca_msgs::msg::Barometer baro_msg;
+      baro_msg.header.frame_id = "map";
+      baro_msg.header.stamp = node_->now();
+
+      if (depth >= 0.0) {
+        baro_msg.depth = depth;
+        baro_msg.pressure = fluid_density_ * GRAVITY * depth + ATMOSPHERIC_PRESSURE; // Pascals
+        baro_msg.temperature = 10; // Celsius
+      } else {
+        baro_msg.depth = 0;
+        baro_msg.pressure = ATMOSPHERIC_PRESSURE;
+        baro_msg.temperature = 20;
+      }
+
+      baro_pub_->publish(baro_msg);
     }
-    else
-    {
-      baro_msg.depth = 0;
-      baro_msg.pressure = ATMOSPHERIC_PRESSURE;
-      baro_msg.temperature = 20;
 
-      pose_msg.pose.pose.position.z = 0;
+    if (node_->count_subscribers(pose_pub_->get_topic_name()) > 0) {
+      geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
+      pose_msg.header.frame_id = "map";
+      pose_msg.header.stamp = node_->now();
+      pose_msg.pose.covariance[14] = DEPTH_STDDEV * DEPTH_STDDEV;
+
+      if (depth >= 0.0) {
+        pose_msg.pose.pose.position.z = -depth; // ENU
+      } else {
+        pose_msg.pose.pose.position.z = 0;
+      }
+
+      pose_pub_->publish(pose_msg);
     }
-
-    pose_pub_->publish(pose_msg);
-    baro_pub_->publish(baro_msg);
   }
 };
 

@@ -24,7 +24,6 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
 // TODO publish sensor_msgs::MagneticField messages on /imu/mag
 // TODO remove orientation from sensor_msgs::Imu messages, and publish on /imu/data_raw instead
 // TODO allow use of rotated links like imu_link
@@ -38,7 +37,7 @@ constexpr double ORIENTATION_STDDEV = MAG_STDDEV; // Temporary hack
 
 const std::string IMU_TOPIC = "/imu/data";
 
-class OrcaIMUPlugin : public SensorPlugin
+class OrcaIMUPlugin: public SensorPlugin
 {
   // Our parent sensor is an imu sensor
   sensors::ImuSensorPtr sensor_;
@@ -90,8 +89,7 @@ public:
   void OnUpdate()
   {
     // Only publish if there are subscribers
-    if(node_->count_subscribers(IMU_TOPIC) > 0)
-    {
+    if (node_->count_subscribers(IMU_TOPIC) > 0) {
       // Don't publish bogus time stamps
       if (node_->now().nanoseconds() <= 0) {
         return;

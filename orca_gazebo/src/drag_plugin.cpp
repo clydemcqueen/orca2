@@ -27,8 +27,6 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
-
 /* drag = 0.5 * density * area * velocity^2 * coefficient
  *
  * The drag coefficient for a box is 1.0, so we'll use 0.9 for the ROV.
@@ -61,20 +59,20 @@ constexpr double TETHER_DIAM = 0.008;
 constexpr double TETHER_DRAG_COEFFICIENT = 1.1;
 constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
 
-class OrcaDragPlugin : public ModelPlugin
+class OrcaDragPlugin: public ModelPlugin
 {
   physics::LinkPtr base_link_;
 
   // Drag force will be applied to the center_of_mass_ (body frame)
-  ignition::math::Vector3d center_of_mass_ {0, 0, 0};
+  ignition::math::Vector3d center_of_mass_{0, 0, 0};
 
   // Tether drag will be applied to the tether attachment point (body frame)
-  ignition::math::Vector3d tether_attach_ {0, 0, 0};
+  ignition::math::Vector3d tether_attach_{0, 0, 0};
 
   // Drag constants (body frame)
-  ignition::math::Vector3d linear_drag_ {ROV_LINEAR_DRAG_X, ROV_LINEAR_DRAG_Y, ROV_LINEAR_DRAG_Z};
-  ignition::math::Vector3d angular_drag_ {ANGULAR_DRAG_X, ANGULAR_DRAG_Y, ANGULAR_DRAG_Z};
-  double tether_drag_ {TETHER_DRAG};
+  ignition::math::Vector3d linear_drag_{ROV_LINEAR_DRAG_X, ROV_LINEAR_DRAG_Y, ROV_LINEAR_DRAG_Z};
+  ignition::math::Vector3d angular_drag_{ANGULAR_DRAG_X, ANGULAR_DRAG_Y, ANGULAR_DRAG_Z};
+  double tether_drag_{TETHER_DRAG};
 
   event::ConnectionPtr update_connection_;
 
@@ -83,7 +81,7 @@ public:
   // Called once when the plugin is loaded.
   void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
   {
-    std::string link_name {"base_link"};
+    std::string link_name{"base_link"};
 
     std::cout << std::endl;
     std::cout << "ORCA DRAG PLUGIN PARAMETERS" << std::endl;
@@ -98,36 +96,30 @@ public:
     GZ_ASSERT(model != nullptr, "Model is null");
     GZ_ASSERT(sdf != nullptr, "SDF is null");
 
-    if (sdf->HasElement("link"))
-    {
+    if (sdf->HasElement("link")) {
       sdf::ElementPtr linkElem = sdf->GetElement("link"); // Only one link is supported
 
-      if (linkElem->HasAttribute("name"))
-      {
+      if (linkElem->HasAttribute("name")) {
         linkElem->GetAttribute("name")->Get(link_name);
         std::cout << "Link name: " << link_name << std::endl;
       }
 
-      if (linkElem->HasElement("center_of_mass"))
-      {
+      if (linkElem->HasElement("center_of_mass")) {
         center_of_mass_ = linkElem->GetElement("center_of_mass")->Get<ignition::math::Vector3d>();
         std::cout << "Center of mass: " << center_of_mass_ << std::endl;
       }
 
-      if (linkElem->HasElement("tether_attach"))
-      {
+      if (linkElem->HasElement("tether_attach")) {
         tether_attach_ = linkElem->GetElement("tether_attach")->Get<ignition::math::Vector3d>();
         std::cout << "Tether attachment point: " << tether_attach_ << std::endl;
       }
 
-      if (linkElem->HasElement("linear_drag"))
-      {
+      if (linkElem->HasElement("linear_drag")) {
         linear_drag_ = linkElem->GetElement("linear_drag")->Get<ignition::math::Vector3d>();
         std::cout << "Linear drag: " << linear_drag_ << std::endl;
       }
 
-      if (linkElem->HasElement("angular_drag"))
-      {
+      if (linkElem->HasElement("angular_drag")) {
         angular_drag_ = linkElem->GetElement("angular_drag")->Get<ignition::math::Vector3d>();
         std::cout << "Angular drag: " << angular_drag_ << std::endl;
       }
@@ -150,7 +142,7 @@ public:
   }
 
   // Called by the world update start event, up to 1000 times per second.
-  void OnUpdate(const common::UpdateInfo& /*info*/)
+  void OnUpdate(const common::UpdateInfo & /*info*/)
   {
     ignition::math::Vector3d linear_velocity = base_link_->RelativeLinearVel();
     ignition::math::Vector3d angular_velocity = base_link_->RelativeAngularVel();

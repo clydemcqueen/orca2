@@ -28,17 +28,15 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
-
-class OrcaBuoyancyPlugin : public ModelPlugin
+class OrcaBuoyancyPlugin: public ModelPlugin
 {
   event::ConnectionPtr update_connection_;                // Connection to update event
   ignition::math::Vector3d gravity_;                      // Gravity vector in world frame
   physics::LinkPtr base_link_;                            // Pointer to the base link
 
-  double fluid_density_ {1029};                           // Fluid density of seawater
-  double volume_ {0.01};                                  // base_link_ volume
-  ignition::math::Vector3d center_of_volume_ {0, 0, 0};   // base_link_ center of volume
+  double fluid_density_{1029};                            // Fluid density of seawater
+  double volume_{0.01};                                   // base_link_ volume
+  ignition::math::Vector3d center_of_volume_{0, 0, 0};    // base_link_ center of volume
   double height_{0.254};                                  // base_link_ height
 
 public:
@@ -53,7 +51,7 @@ public:
     gravity_ = model->GetWorld()->Gravity();
 
     // Print defaults
-    std::string link_name {"base_link"};
+    std::string link_name{"base_link"};
     std::cout << std::endl;
     std::cout << "ORCA BUOYANCY PLUGIN PARAMETERS" << std::endl;
     std::cout << "-----------------------------------------" << std::endl;
@@ -64,36 +62,30 @@ public:
     std::cout << "Default height: " << height_ << std::endl;
 
     // Get overrides, and print them
-    if (sdf->HasElement("fluid_density"))
-    {
+    if (sdf->HasElement("fluid_density")) {
       fluid_density_ = sdf->GetElement("fluid_density")->Get<double>();
       std::cout << "Fluid density: " << fluid_density_ << std::endl;
     }
 
-    if (sdf->HasElement("link"))
-    {
+    if (sdf->HasElement("link")) {
       sdf::ElementPtr linkElem = sdf->GetElement("link"); // Only one link is supported
 
-      if (linkElem->HasAttribute("name"))
-      {
+      if (linkElem->HasAttribute("name")) {
         linkElem->GetAttribute("name")->Get(link_name);
         std::cout << "Link name: " << link_name << std::endl;
       }
 
-      if (linkElem->HasElement("volume"))
-      {
+      if (linkElem->HasElement("volume")) {
         volume_ = linkElem->GetElement("volume")->Get<double>();
         std::cout << "Volume: " << volume_ << std::endl;
       }
 
-      if (linkElem->HasElement("center_of_volume"))
-      {
+      if (linkElem->HasElement("center_of_volume")) {
         center_of_volume_ = linkElem->GetElement("center_of_volume")->Get<ignition::math::Vector3d>();
         std::cout << "Center of volume: " << center_of_volume_ << std::endl;
       }
 
-      if (linkElem->HasElement("height"))
-      {
+      if (linkElem->HasElement("height")) {
         height_ = linkElem->GetElement("height")->Get<double>();
         std::cout << "Height: " << height_ << std::endl;
       }
@@ -111,19 +103,17 @@ public:
   }
 
   // Called by the world update start event, up to 1kHz
-  void OnUpdate(const common::UpdateInfo& /*info*/)
+  void OnUpdate(const common::UpdateInfo & /*info*/)
   {
     // Get link pose in the world frame
     ignition::math::Pose3d link_frame = base_link_->WorldPose();
 
-    if (link_frame.Pos().Z() < height_ / 2)
-    {
+    if (link_frame.Pos().Z() < height_ / 2) {
       // Compute buoyancy force in the world frame
       ignition::math::Vector3d buoyancy_world_frame = -fluid_density_ * volume_ * gravity_;
 
       // Scale buoyancy force near the surface
-      if (link_frame.Pos().Z() > -height_ / 2)
-      {
+      if (link_frame.Pos().Z() > -height_ / 2) {
         double scale = (link_frame.Pos().Z() - height_ / 2) / -height_;
         buoyancy_world_frame = buoyancy_world_frame * scale;
       }

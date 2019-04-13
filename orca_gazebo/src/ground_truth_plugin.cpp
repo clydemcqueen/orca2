@@ -25,10 +25,9 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
 // TODO: do we need a tf broadcaster?
 
-class OrcaGroundTruthPlugin : public ModelPlugin
+class OrcaGroundTruthPlugin: public ModelPlugin
 {
   physics::LinkPtr base_link_;
   gazebo_ros::Node::SharedPtr node_;
@@ -52,28 +51,19 @@ public:
     std::string link_name = "base_link";
     std::string odom_topic = "/ground_truth";
 
-    std::cout << std::endl;
-    std::cout << "ORCA GROUND TRUTH PLUGIN PARAMETERS" << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
-    std::cout << "Default link name: " << link_name << std::endl;
-    std::cout << "Default odom topic: " << odom_topic << std::endl;
-
-    if (sdf->HasElement("link"))
-    {
+    if (sdf->HasElement("link")) {
       sdf::ElementPtr linkElem = sdf->GetElement("link"); // Only one link is supported
 
-      if (linkElem->HasAttribute("name"))
-      {
+      if (linkElem->HasAttribute("name")) {
         linkElem->GetAttribute("name")->Get(link_name);
-        std::cout << "Link name: " << link_name << std::endl;
       }
     }
+    RCLCPP_INFO(node_->get_logger(), "link name: %s", link_name.c_str());
 
-    if (sdf->HasElement("odom_topic"))
-    {
+    if (sdf->HasElement("odom_topic")) {
       odom_topic = sdf->GetElement("odom_topic")->Get<std::string>(); // TODO why isn't this getting picked up?
-      std::cout << "Odom topic: " << odom_topic << std::endl;
     }
+    RCLCPP_INFO(node_->get_logger(), "odom topic: %s", odom_topic.c_str());
 
     base_link_ = model->GetLink(link_name);
     GZ_ASSERT(base_link_ != nullptr, "Missing link");
@@ -82,67 +72,65 @@ public:
     ground_truth_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 1);
 
     // Listen for the update event. This event is broadcast every simulation iteration.
-    update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaGroundTruthPlugin::OnUpdate, this, _1));
+    update_connection_ = event::Events::ConnectWorldUpdateBegin(
+      boost::bind(&OrcaGroundTruthPlugin::OnUpdate, this, _1));
 
     // Start the timer
     update_period_ = 1 / 100;
     last_update_time_ = model->GetWorld()->SimTime();
-
-    std::cout << "-----------------------------------------" << std::endl;
-    std::cout << std::endl;
   }
 
   // Called by the world update start event, up to 1kHz
-  void OnUpdate(const common::UpdateInfo& info)
+  void OnUpdate(const common::UpdateInfo &info)
   {
-    // Don't publish bogus time stamps
+    // Don't publish bogus ROS time
     if (node_->now().nanoseconds() <= 0) {
       return;
     }
 
-    // TODO count subscribers
-
     gazebo::common::Time current_time = info.simTime;
 
     // Check for negative elapsed time, e.g., if the world is reset
-    if (current_time < last_update_time_)
-    {
-      RCLCPP_INFO(node_->get_logger(), "Negative elapsed sim time");
+    if (current_time < last_update_time_) {
+      RCLCPP_INFO(node_->get_logger(), "negative elapsed sim time");
       last_update_time_ = current_time;
     }
 
     // Check period
-    if ((current_time - last_update_time_).Double() < update_period_)
-    {
+    if ((current_time - last_update_time_).Double() < update_period_) {
       return;
     }
 
-    // Pose in world frame
-    ignition::math::Pose3d pose = base_link_->WorldPose();
+    last_update_time_ = current_time;
 
-    // Linear velo in world frame
-    ignition::math::Vector3d linear_vel = base_link_->WorldLinearVel();
+    if (node_->count_subscribers(ground_truth_pub_->get_topic_name()) > 0) {
+      // Pose in world frame
+      ignition::math::Pose3d pose = base_link_->WorldPose();
 
-    // TODO get angular velo in odom frame
+      // Linear velo in world frame
+      ignition::math::Vector3d linear_vel = base_link_->WorldLinearVel();
 
-    // TODO set covar (very small, and fixed)
+      // TODO get angular velo in odom frame
 
-    nav_msgs::msg::Odometry msg;
-    msg.header.frame_id = "odom";
-    msg.header.stamp = node_->now();
-    msg.child_frame_id = "base_link";
-    msg.pose.pose.position.x = pose.Pos().X();
-    msg.pose.pose.position.y = pose.Pos().Y();;
-    msg.pose.pose.position.z = pose.Pos().Z();
-    msg.pose.pose.orientation.x = pose.Rot().X();
-    msg.pose.pose.orientation.y = pose.Rot().Y();
-    msg.pose.pose.orientation.z = pose.Rot().Z();
-    msg.pose.pose.orientation.w = pose.Rot().W();
-    msg.twist.twist.linear.x = linear_vel.X();
-    msg.twist.twist.linear.y = linear_vel.Y();
-    msg.twist.twist.linear.z = linear_vel.Z();
+      // TODO set covar (very small, and fixed)
 
-    ground_truth_pub_->publish(msg);
+      nav_msgs::msg::Odometry msg;
+      msg.header.frame_id = "odom";
+      msg.header.stamp = node_->now();
+      msg.child_frame_id = "base_link";
+      msg.pose.pose.position.x = pose.Pos().X();
+      msg.pose.pose.position.y = pose.Pos().Y();;
+      msg.pose.pose.position.z = pose.Pos().Z();
+      msg.pose.pose.orientation.x = pose.Rot().X();
+      msg.pose.pose.orientation.y = pose.Rot().Y();
+      msg.pose.pose.orientation.z = pose.Rot().Z();
+      msg.pose.pose.orientation.w = pose.Rot().W();
+      msg.twist.twist.linear.x = linear_vel.X();
+      msg.twist.twist.linear.y = linear_vel.Y();
+      msg.twist.twist.linear.z = linear_vel.Z();
+
+      ground_truth_pub_->publish(msg);
+    }
   }
 };
 

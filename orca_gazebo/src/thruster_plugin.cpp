@@ -41,12 +41,10 @@
 
 namespace gazebo {
 
-// TODO(Crystal): use <ros> tags w/ parameters to simplify the parameter blocks for Orca plugins
-
 constexpr double T200_MAX_POS_FORCE = 50;
 constexpr double T200_MAX_NEG_FORCE = 40;
 
-class OrcaThrusterPlugin : public ModelPlugin
+class OrcaThrusterPlugin: public ModelPlugin
 {
   // Pointer to our base_link
   physics::LinkPtr base_link_;
@@ -86,61 +84,54 @@ public:
 
     // Look for our link name
     std::string link_name = "base_link";
-    if (sdf->HasElement("link_name"))
-    {
+    if (sdf->HasElement("link_name")) {
       link_name = sdf->GetElement("link_name")->Get<std::string>();
     }
-    RCLCPP_INFO(node_->get_logger(), "Thrust force will be applied to %s", link_name.c_str());
+    RCLCPP_INFO(node_->get_logger(), "thrust force will be applied to %s", link_name.c_str());
     base_link_ = model->GetLink(link_name);
     GZ_ASSERT(base_link_ != nullptr, "Missing link");
 
     // Look for our ROS topic
     std::string ros_topic = "/control";
-    if (sdf->HasElement("ros_topic"))
-    {
+    if (sdf->HasElement("ros_topic")) {
       ros_topic = sdf->GetElement("ros_topic")->Get<std::string>();
     }
-    RCLCPP_INFO(node_->get_logger(), "Listening on %s", ros_topic.c_str());
+    RCLCPP_INFO(node_->get_logger(), "listening on %s", ros_topic.c_str());
 
     // Subscribe to the topic
     // Note the use of std::placeholders::_1 vs. the included _1 from Boost
-    thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(ros_topic, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
-    
+    thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(ros_topic,
+      std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
+
     // Listen to the update event. This event is broadcast every simulation iteration.
     update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaThrusterPlugin::OnUpdate, this, _1));
-    
+
     // Look for <thruster> tags
-    for (sdf::ElementPtr elem = sdf->GetElement("thruster"); elem; elem = elem->GetNextElement("thruster"))
-    {
+    for (sdf::ElementPtr elem = sdf->GetElement("thruster"); elem; elem = elem->GetNextElement("thruster")) {
       Thruster t = {};
       t.pos_force = T200_MAX_POS_FORCE;
       t.neg_force = T200_MAX_NEG_FORCE;
 
-      if (elem->HasElement("pos_force"))
-      {
+      if (elem->HasElement("pos_force")) {
         t.pos_force = elem->GetElement("pos_force")->Get<double>();
       }
 
-      if (elem->HasElement("neg_force"))
-      {
+      if (elem->HasElement("neg_force")) {
         t.neg_force = elem->GetElement("neg_force")->Get<double>();
       }
 
-      if (elem->HasElement("origin"))
-      {
+      if (elem->HasElement("origin")) {
         sdf::ElementPtr origin = elem->GetElement("origin");
-        if (origin->HasAttribute("xyz"))
-        {
+        if (origin->HasAttribute("xyz")) {
           origin->GetAttribute("xyz")->Get(t.xyz);
         }
 
-        if (origin->HasAttribute("rpy"))
-        {
+        if (origin->HasAttribute("rpy")) {
           origin->GetAttribute("rpy")->Get(t.rpy);
         }
       }
 
-      RCLCPP_INFO(node_->get_logger(), "Thruster pos %g neg %g xyz {%g, %g, %g} rpy {%g, %g, %g}",
+      RCLCPP_INFO(node_->get_logger(), "thruster pos %g neg %g xyz {%g, %g, %g} rpy {%g, %g, %g}",
         t.pos_force, t.neg_force, t.xyz.X(), t.xyz.Y(), t.xyz.Z(), t.rpy.X(), t.rpy.Y(), t.rpy.Z());
       thrusters_.push_back(t);
     }
@@ -149,8 +140,7 @@ public:
   // Handle an incoming message from ROS
   void OnRosMsg(const orca_msgs::msg::Control::SharedPtr msg)
   {
-    for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i)
-    {
+    for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
       thrusters_[i].effort = orca_base::pwm_to_effort(msg->thruster_pwm[i]);
     }
   }
@@ -159,8 +149,7 @@ public:
   // TODO don't apply thrust force if we're above the surface of the water
   void OnUpdate(const common::UpdateInfo & /*info*/)
   {
-    for (Thruster t : thrusters_)
-    {
+    for (Thruster t : thrusters_) {
       // Default thruster force points directly up
       ignition::math::Vector3d force = {0.0, 0.0, t.effort * (t.effort < 0 ? t.neg_force : t.pos_force)};
 
