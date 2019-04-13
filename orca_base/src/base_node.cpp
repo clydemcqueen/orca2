@@ -1,5 +1,4 @@
 #include "orca_base/base_node.hpp"
-#include "orca_base/planner.hpp"
 #include "orca_base/pwm.hpp"
 
 namespace orca_base {
@@ -78,9 +77,6 @@ BaseNode::BaseNode() :
   rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
   rov_yaw_pid_ = std::make_shared<pid::Controller>(true, cxt_.rov_yaw_pid_kp_, cxt_.rov_yaw_pid_ki_,
     cxt_.rov_yaw_pid_kd_);
-
-  // AUV controller
-  controller_ = std::make_shared<Controller>(get_logger(), cxt_);
 
   // Publications
   control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
@@ -272,7 +268,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
 
     Acceleration u_bar;
     double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
-    if (controller_->advance(dt, filtered_pose_, u_bar)) {
+    if (mission_->advance(dt, filtered_pose_, u_bar)) {
       // Acceleration => effort
       efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
@@ -405,22 +401,18 @@ void BaseNode::set_mode(uint8_t new_mode)
   }
 
   if (new_mode == orca_msgs::msg::Control::MISSION) {
-    // Generate a path
-    nav_msgs::msg::Path planned_path = plan(map_, filtered_pose_);
+    // Start mission
+    mission_ = std::make_shared<Mission>(get_logger(), cxt_, map_, filtered_pose_);
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-      planned_path_pub_->publish(planned_path);
+      planned_path_pub_->publish(mission_->planned_path());
     }
 
     // Init filtered_path
     filtered_path_.header.stamp = joy_cb_.curr();
     filtered_path_.header.frame_id = cxt_.map_frame_;
     filtered_path_.poses.clear();
-
-    // Init mission controller
-    controller_->init(planned_path);
-    RCLCPP_INFO(get_logger(), "starting mission with %d waypoints", planned_path.poses.size());
   }
 
   // Set the new mode

@@ -101,6 +101,12 @@ constexpr double accel_to_effort_xy(double accel_xy) { return force_to_effort_xy
 constexpr double accel_to_effort_z(double accel_z) { return force_to_effort_z(accel_to_force_z(accel_z)); }
 constexpr double accel_to_effort_yaw(double accel_yaw) { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
 
+// Acceleration required to counteract drag force
+void drag_force_to_accel_xy(const double yaw, const double x_v, const double y_v, double &x_a, double &y_a);
+
+// Deceleration (glide) distance
+double deceleration_distance(const double yaw, double velo_x, double velo_y);
+
 } // namespace orca_base
 
 #endif // ORCA_BASE_MODEL_HPP

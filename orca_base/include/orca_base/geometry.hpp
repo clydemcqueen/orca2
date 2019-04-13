@@ -45,6 +45,24 @@ struct Pose
     yaw = get_yaw(msg.orientation);
   }
 
+  // Distance between 2 poses on the xy plane
+  double distance_xy(const Pose &that) const
+  {
+    return std::hypot(x - that.x, y - that.y);
+  }
+
+  // Z distance between 2 poses
+  double distance_z(const Pose &that) const
+  {
+    return std::abs(z - that.z);
+  }
+
+  // Yaw distance between 2 poses
+  double distance_yaw(const Pose &that) const
+  {
+    return std::abs(norm_angle(yaw - that.yaw));
+  }
+
   // Within some epsilon
   bool close_enough(const Pose &that) const
   {
@@ -147,81 +165,6 @@ struct Acceleration
   double yaw;
 
   constexpr Acceleration(): x{0}, y{0}, z{0}, yaw{0} {}
-};
-
-//=====================================================================================
-// State
-//=====================================================================================
-
-struct State
-{
-  rclcpp::Time t;
-  Pose pose;
-  Twist twist;
-  Feedforward ff;
-
-  State(const rclcpp::Time &_t, const Pose &_pose, const Twist &_twist, const Feedforward &_ff):
-    t{_t},
-    pose{_pose},
-    twist{_twist},
-    ff{_ff} {}
-};
-
-//=====================================================================================
-// Odometry
-//=====================================================================================
-
-constexpr double DEF_COVAR = 0.05;
-
-struct Odometry
-{
-  Pose pose;
-  std::array<double, 16> pose_covariance;
-
-  Pose velo;
-  std::array<double, 16> velo_covariance;
-
-  Odometry()
-  {
-    pose_covariance.fill(0);
-    velo_covariance.fill(0);
-
-    for (int i = 0; i < 4; ++i) {
-      pose_covariance[i + 4 * i] = DEF_COVAR;
-      velo_covariance[i + 4 * i] = DEF_COVAR;
-    }
-  }
-
-  // Create a 6x6 covariance matrix (x, y, z, roll, pitch, yaw) from a 4x4 matrix (x, y, z, yaw)
-  static void covar_4_to_6(const std::array<double, 16> &four, std::array<double, 36> &six)
-  {
-    six.fill(0);
-
-    six[21] = DEF_COVAR; // roll diag
-    six[28] = DEF_COVAR; // pitch diag
-
-    for (int i = 0; i < 4; ++i) {
-      for (int j = 0; j < 4; ++j) {
-        six[(i < 3 ? i : i + 2) * 6 + (j < 3 ? j : j + 2)] = four[i * 4 + j];
-      }
-    }
-  }
-
-  void to_msg(nav_msgs::msg::Odometry &msg) const
-  {
-    pose.to_msg(msg.pose.pose);
-
-    msg.twist.twist.linear.x = velo.x;
-    msg.twist.twist.linear.y = velo.y;
-    msg.twist.twist.linear.z = velo.z;
-
-    msg.twist.twist.angular.x = 0;
-    msg.twist.twist.angular.y = 0;
-    msg.twist.twist.angular.z = velo.yaw;
-
-    covar_4_to_6(pose_covariance, msg.pose.covariance);
-    covar_4_to_6(velo_covariance, msg.twist.covariance);
-  }
 };
 
 //=====================================================================================
