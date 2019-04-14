@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+
+<sdf version="1.6">
+  <world name="default">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="marker0">
+      <include>
+        <static>true</static>
+        <uri>model://marker_0</uri>
+      </include>
+      <pose>1 0 -1 0 0 0</pose>
+    </model>
+    <model name="marker1">
+      <include>
+        <static>true</static>
+        <uri>model://marker_1</uri>
+      </include>
+      <pose>1 1 -1 0 0 0</pose>
+    </model>
+    <model name="marker2">
+      <include>
+        <static>true</static>
+        <uri>model://marker_2</uri>
+      </include>
+      <pose>1 2 -1 0 0 0</pose>
+    </model>
+    <model name="marker3">
+      <include>
+        <static>true</static>
+        <uri>model://marker_3</uri>
+      </include>
+      <pose>1 3 -1 0 0 0</pose>
+    </model>
+    <model name="marker4">
+      <include>
+        <static>true</static>
+        <uri>model://marker_4</uri>
+      </include>
+      <pose>0 3 -1 0 0 0</pose>
+    </model>
+    <model name="marker5">
+      <include>
+        <static>true</static>
+        <uri>model://marker_5</uri>
+      </include>
+      <pose>0 2 -1 0 0 0</pose>
+    </model>
+    <model name="marker6">
+      <include>
+        <static>true</static>
+        <uri>model://marker_6</uri>
+      </include>
+      <pose>0 1 -1 0 0 0</pose>
+    </model>
+    <model name="marker7">
+      <include>
+        <static>true</static>
+        <uri>model://marker_7</uri>
+      </include>
+      <pose>0 0 -1 0 0 0</pose>
+    </model>
+    <model name="marker8">
+      <include>
+        <static>true</static>
+        <uri>model://marker_8</uri>
+      </include>
+      <pose>-1 0 -1 0 0 0</pose>
+    </model>
+    <model name="marker9">
+      <include>
+        <static>true</static>
+        <uri>model://marker_9</uri>
+      </include>
+      <pose>-1 1 -1 0 0 0</pose>
+    </model>
+    <model name="marker10">
+      <include>
+        <static>true</static>
+        <uri>model://marker_10</uri>
+      </include>
+      <pose>-1 2 -1 0 0 0</pose>
+    </model>
+    <model name="marker11">
+      <include>
+        <static>true</static>
+        <uri>model://marker_11</uri>
+      </include>
+      <pose>-1 3 -1 0 0 0</pose>
+    </model>
+    <model name="marker12">
+      <include>
+        <static>true</static>
+        <uri>model://marker_12</uri>
+      </include>
+      <pose>-2 3 -1 0 0 0</pose>
+    </model>
+    <model name="marker13">
+      <include>
+        <static>true</static>
+        <uri>model://marker_13</uri>
+      </include>
+      <pose>-2 2 -1 0 0 0</pose>
+    </model>
+    <model name="marker14">
+      <include>
+        <static>true</static>
+        <uri>model://marker_14</uri>
+      </include>
+      <pose>-2 1 -1 0 0 0</pose>
+    </model>
+    <model name="marker15">
+      <include>
+        <static>true</static>
+        <uri>model://marker_15</uri>
+      </include>
+      <pose>-2 0 -1 0 0 0</pose>
+    </model>
+  </world>
+</sdf>

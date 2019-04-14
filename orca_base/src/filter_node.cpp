@@ -184,13 +184,6 @@ void FilterNode::camera_pose_callback(geometry_msgs::msg::PoseWithCovarianceStam
     return;
   }
 
-  // Camera pose
-  tf2::Transform t_map_camera;
-  tf2::fromMsg(msg->pose.pose, t_map_camera);
-
-  // Drone pose
-  tf2::Transform t_map_base = t_map_camera * t_camera_base_;
-
   // Negative dt can happen during some testing situations
   auto dt = (stamp - prev_stamp_).seconds();
   prev_stamp_ = stamp;
@@ -198,6 +191,13 @@ void FilterNode::camera_pose_callback(geometry_msgs::msg::PoseWithCovarianceStam
     RCLCPP_ERROR(get_logger(), "time went backwards, ignoring message");
     return;
   }
+
+  // Camera pose
+  tf2::Transform t_map_camera;
+  tf2::fromMsg(msg->pose.pose, t_map_camera);
+
+  // Drone pose
+  tf2::Transform t_map_base = t_map_camera * t_camera_base_;
 
   // Transfer function
   // TODO add drag

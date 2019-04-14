@@ -13,7 +13,7 @@ from launch.actions import ExecuteProcess
 
 def generate_launch_description():
     # Must match camera name in URDF file
-    camera1_name = 'camera1'
+    left_camera_name = 'left_camera'
 
     # The AUV must be injected at the surface to calibrate the barometer
     surface = '0'
@@ -21,8 +21,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'orca.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'orca_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'small.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -56,7 +56,7 @@ def generate_launch_description():
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
             }], remappings=[
-                ('filtered_odom', '/camera1/filtered_odom')
+                ('filtered_odom', '/' + left_camera_name + '/filtered_odom')
             ]),
 
         # Load and publish a known map
@@ -70,15 +70,15 @@ def generate_launch_description():
 
         # Localize the AUV against the map
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_node', node_namespace=camera1_name, parameters=[{
+             node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
                 'publish_tfs': 0,                           # Don't publish drone /tf
                 'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
-                'camera_frame_id': 'camera_link'}]),
+                'camera_frame_id': 'left_camera_link'}]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
         Node(package='orca_base', node_executable='filter_node', output='screen',
-             node_name='filter_node', node_namespace=camera1_name, parameters=[{
+             node_name='filter_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
                 't_camera_base_x': -0.2,
                 't_camera_base_y': 0.,

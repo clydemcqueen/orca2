@@ -2,7 +2,7 @@
 
 namespace orca_base {
 
-const double CRUISING_Z = -.65;
+const double CRUISING_Z = -.25;
 const double SPEED_XY = 0.4;
 const double SPEED_Z = 0.2;
 const double SPEED_YAW = M_PI_4 / 2;
