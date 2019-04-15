@@ -38,9 +38,6 @@ include_directories(
   ${sensor_msgs_INCLUDE_DIRS}
 )
 
-# Set up link directories
-link_directories(${GAZEBO_LIBRARY_DIRS}) # TODO?
-
 # Create plugins (shared libraries) and executables
 
 add_library(OrcaBarometerPlugin SHARED src/barometer_plugin.cpp)

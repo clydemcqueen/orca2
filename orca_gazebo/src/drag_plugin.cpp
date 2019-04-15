@@ -1,6 +1,8 @@
 #include "gazebo/gazebo.hh"
 #include "gazebo/physics/physics.hh"
 
+#include "orca_base/model.hpp"
+
 /* A simple drag plugin. Usage:
  *
  *    <gazebo>
@@ -27,38 +29,6 @@
 
 namespace gazebo {
 
-/* drag = 0.5 * density * area * velocity^2 * coefficient
- *
- * The drag coefficient for a box is 1.0, so we'll use 0.9 for the ROV.
- * The drag coefficient for an unfaired tether is 1.2.
- *
- * The ROV constants below capture all but velocity:
- * constant = 0.5 * density * area * coefficient
- *
- * The tether constant below captures all but depth and velocity:
- * constant = 0.5 * density * width * coefficient
- */
-
-constexpr double FLUID_DENSITY = 1029;    // Fluid density of seawater
-constexpr double ROV_DIM_X = 0.457;       // Length
-constexpr double ROV_DIM_Y = 0.338;       // Width
-constexpr double ROV_DIM_Z = 0.254;       // Height
-constexpr double ROV_AREA_X = ROV_DIM_Y * ROV_DIM_Z;  // Fore, aft area
-constexpr double ROV_AREA_Y = ROV_DIM_X * ROV_DIM_Z;  // Top, bottom area
-constexpr double ROV_AREA_Z = ROV_DIM_X * ROV_DIM_Y;  // Port, starboard area
-constexpr double ROV_DRAG_COEFFICIENT_X = 0.8;
-constexpr double ROV_DRAG_COEFFICIENT_Y = 0.95;
-constexpr double ROV_DRAG_COEFFICIENT_Z = 0.95;
-constexpr double ROV_LINEAR_DRAG_X = 0.5 * FLUID_DENSITY * ROV_AREA_X * ROV_DRAG_COEFFICIENT_X;
-constexpr double ROV_LINEAR_DRAG_Y = 0.5 * FLUID_DENSITY * ROV_AREA_Y * ROV_DRAG_COEFFICIENT_Y;
-constexpr double ROV_LINEAR_DRAG_Z = 0.5 * FLUID_DENSITY * ROV_AREA_Z * ROV_DRAG_COEFFICIENT_Z;
-constexpr double ANGULAR_DRAG_X = ROV_LINEAR_DRAG_X / 2; // A hack
-constexpr double ANGULAR_DRAG_Y = ROV_LINEAR_DRAG_Y / 2;
-constexpr double ANGULAR_DRAG_Z = ROV_LINEAR_DRAG_Z / 2; // TODO these are wrong, see revised cals in orca_mission.cpp
-constexpr double TETHER_DIAM = 0.008;
-constexpr double TETHER_DRAG_COEFFICIENT = 1.1;
-constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
-
 class OrcaDragPlugin: public ModelPlugin
 {
   physics::LinkPtr base_link_;
@@ -70,9 +40,9 @@ class OrcaDragPlugin: public ModelPlugin
   ignition::math::Vector3d tether_attach_{0, 0, 0};
 
   // Drag constants (body frame)
-  ignition::math::Vector3d linear_drag_{ROV_LINEAR_DRAG_X, ROV_LINEAR_DRAG_Y, ROV_LINEAR_DRAG_Z};
-  ignition::math::Vector3d angular_drag_{ANGULAR_DRAG_X, ANGULAR_DRAG_Y, ANGULAR_DRAG_Z};
-  double tether_drag_{TETHER_DRAG};
+  ignition::math::Vector3d linear_drag_{orca_base::LINEAR_DRAG_X, orca_base::LINEAR_DRAG_Y, orca_base::LINEAR_DRAG_Z};
+  ignition::math::Vector3d angular_drag_{orca_base::ANGULAR_DRAG_YAW, orca_base::ANGULAR_DRAG_YAW, orca_base::ANGULAR_DRAG_YAW};
+  double tether_drag_{orca_base::TETHER_DRAG};
 
   event::ConnectionPtr update_connection_;
 
@@ -124,7 +94,7 @@ public:
         std::cout << "Angular drag: " << angular_drag_ << std::endl;
       }
 
-      if (linkElem->HasElement("tether_drag")) // TODO should be child of gazebo element, not link element
+      if (linkElem->HasElement("tether_drag"))
       {
         tether_drag_ = linkElem->GetElement("tether_drag")->Get<double>();
         std::cout << "Tether drag: " << tether_drag_ << std::endl;

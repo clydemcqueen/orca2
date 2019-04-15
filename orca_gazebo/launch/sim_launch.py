@@ -1,8 +1,5 @@
 """Launch a simulation, with all the bells and whistles"""
 
-# TODO run xacro
-# TODO export GAZEBO_MODEL_PATH=???
-
 import os
 
 from ament_index_python.packages import get_package_share_directory

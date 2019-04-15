@@ -25,8 +25,6 @@
 
 namespace gazebo {
 
-// TODO: do we need a tf broadcaster?
-
 class OrcaGroundTruthPlugin: public ModelPlugin
 {
   physics::LinkPtr base_link_;
@@ -111,7 +109,6 @@ public:
       ignition::math::Vector3d linear_vel = base_link_->WorldLinearVel();
 
       // TODO get angular velo in odom frame
-
       // TODO set covar (very small, and fixed)
 
       nav_msgs::msg::Odometry msg;

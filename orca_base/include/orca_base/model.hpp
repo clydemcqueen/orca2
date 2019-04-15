@@ -16,7 +16,7 @@ constexpr double ROV_DIM_X = 0.457;       // Length
 constexpr double ROV_DIM_Y = 0.338;       // Width
 constexpr double ROV_DIM_Z = 0.254;       // Height
 
-//constexpr double TETHER_DIAM = 0.008;
+constexpr double TETHER_DIAM = 0.008;
 
 constexpr double ROV_AREA_X = ROV_DIM_Y * ROV_DIM_Z;  // Area of front (bow) and rear (stern) sides
 constexpr double ROV_AREA_Y = ROV_DIM_X * ROV_DIM_Z;  // Area of top and bottom
@@ -65,8 +65,8 @@ constexpr double LINEAR_DRAG_Z = 0.5 * FLUID_DENSITY * ROV_AREA_Z * DRAG_COEFFIC
 
 constexpr double ANGULAR_DRAG_YAW = 0.5 * (LINEAR_DRAG_X + LINEAR_DRAG_Y);   // Estimated
 
-//constexpr double TETHER_DRAG_COEFFICIENT = 1.1;   // Estimated
-//constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
+constexpr double TETHER_DRAG_COEFFICIENT = 1.1;   // Estimated
+constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
 
 //=====================================================================================
 // Dynamics, in the world frame (ENU)
