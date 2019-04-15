@@ -428,12 +428,17 @@ void BaseNode::spin_once()
   }
 
   if (rov_mode() && joy_cb_.receiving() && spin_time - joy_cb_.prev() > JOY_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost joystick, disarming");
+    RCLCPP_ERROR(get_logger(), "lost joystick run ROV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
   if (auv_mode() && odom_cb_.receiving() && spin_time - odom_cb_.prev() > ODOM_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost odometry, disarming");
+    RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
+    set_mode(orca_msgs::msg::Control::DISARMED);
+  }
+
+  if (auv_mode() && stability_ < 0.4) {
+    RCLCPP_ERROR(get_logger(), "excessive tilt during AUV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 

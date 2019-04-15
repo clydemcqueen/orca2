@@ -1,5 +1,7 @@
 #include "orca_base/mission.hpp"
 
+#include <random>
+
 namespace orca_base {
 
 const double CRUISING_Z = -.25;
@@ -55,6 +57,11 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
     waypoints.push_back(waypoint);
   }
 
+  // Shuffle waypoints
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(waypoints.begin(), waypoints.end(), g);
+
   // Path may contain multiple poses per waypoint, as we break down Z, YAW and XY phases
   std::vector<PoseStamped> path;
 
@@ -73,7 +80,7 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
   }
   prev = curr;
 
-  // Travel to each marker in order
+  // Travel to each marker
   for (auto i = waypoints.begin(); i != waypoints.end(); i++) {
     // Point in the direction fo travel
     curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
