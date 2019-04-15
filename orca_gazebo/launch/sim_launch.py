@@ -38,7 +38,7 @@ def generate_launch_description():
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
              arguments=[urdf_path, '0', '0', surface, '0']),
 
-        # Publish static transforms from URDF file
+        # Publish base_link=>left_camera_link
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
              node_name='robot_state_publisher', arguments=[urdf_path], parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
@@ -56,7 +56,7 @@ def generate_launch_description():
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
             }], remappings=[
-                ('filtered_odom', '/' + left_camera_name + '/filtered_odom')
+                ('filtered_odom', '/' + left_camera_name + '/base_odom')
             ]),
 
         # Load and publish a known map
@@ -72,18 +72,29 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
-                'publish_tfs': 0,                           # Don't publish drone /tf
+                'publish_tfs': 1,                           # Publish map=>base_link and map=>left_camera_frame
+                'publish_camera_pose': 0,
+                'publish_base_pose': 0,
+                'publish_camera_odom': 0,
+                'publish_base_odom': 1,
                 'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
-                'camera_frame_id': 'left_camera_link'}]),
+                'camera_frame_id': 'left_camera_frame',     # left_camera_frame != left_camera_link
+                't_camera_base_x': 0.18,                    # base_link=>left_camera_frame
+                't_camera_base_y': -0.15,
+                't_camera_base_z': -0.0675,
+                't_camera_base_roll': 0.,
+                't_camera_base_pitch': 3.14,
+                't_camera_base_yaw': 1.57
+            }]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
-        Node(package='orca_base', node_executable='filter_node', output='screen',
-             node_name='filter_node', node_namespace=left_camera_name, parameters=[{
-                'use_sim_time': True,                       # Use /clock if available
-                't_camera_base_x': -0.2,
-                't_camera_base_y': 0.,
-                't_camera_base_z': 0.,
-                't_camera_base_roll': 1.57,
-                't_camera_base_pitch': 3.14,
-                't_camera_base_yaw': 0.}]),
+        # Node(package='orca_base', node_executable='filter_node', output='screen',
+        #      node_name='filter_node', node_namespace=left_camera_name, parameters=[{
+        #         'use_sim_time': True,                       # Use /clock if available
+        #         't_camera_base_x': -0.2,
+        #         't_camera_base_y': 0.,
+        #         't_camera_base_z': 0.,
+        #         't_camera_base_roll': 1.57,
+        #         't_camera_base_pitch': 3.14,
+        #         't_camera_base_yaw': 0.}]),
     ])
