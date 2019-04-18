@@ -1,4 +1,4 @@
-#include "orca_driver/orca_driver.hpp"
+#include "orca_driver/driver_node.hpp"
 
 using std::placeholders::_1;
 
@@ -7,7 +7,7 @@ namespace orca_driver {
 // Message publish rate in Hz
 constexpr int SPIN_RATE = 50;
 
-OrcaDriver::OrcaDriver():
+DriverNode::DriverNode():
   Node{"orca_driver"}
 {
   get_parameter_or<std::string>("maestro_port", maestro_port_, "/dev/ttyACM0");
@@ -39,14 +39,14 @@ OrcaDriver::OrcaDriver():
   RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", leak_channel_);
 
   // Set up subscription
-  control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", std::bind(&OrcaDriver::controlCallback, this, _1));
+  control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", std::bind(&DriverNode::controlCallback, this, _1));
   
   // Advertise topics that we'll publish on
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
   leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
 }
 
-void OrcaDriver::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
+void DriverNode::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
 {
   if (maestro_.ready())
   {
@@ -69,7 +69,7 @@ void OrcaDriver::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
   }
 }
 
-bool OrcaDriver::readBattery()
+bool DriverNode::readBattery()
 {
   battery_msg_.header.stamp = now();
 
@@ -89,7 +89,7 @@ bool OrcaDriver::readBattery()
   }
 }
 
-bool OrcaDriver::readLeak()
+bool DriverNode::readLeak()
 {
   leak_msg_.header.stamp = now();
 
@@ -107,14 +107,14 @@ bool OrcaDriver::readLeak()
   }
 }
 
-void OrcaDriver::spinOnce()
+void DriverNode::spinOnce()
 {
   battery_pub_->publish(battery_msg_);
   leak_pub_->publish(leak_msg_);
 }
 
 // Run a bunch of pre-dive checks, return true if everything looks good
-bool OrcaDriver::preDive()
+bool DriverNode::preDive()
 {
   RCLCPP_INFO(get_logger(), "Running pre-dive checks...");
 
@@ -166,7 +166,7 @@ bool OrcaDriver::preDive()
 }
 
 // Connect to Maestro
-bool OrcaDriver::connect()
+bool DriverNode::connect()
 {
   std::string port = maestro_port_;
   RCLCPP_INFO(get_logger(), "Opening port %s...", port.c_str());
@@ -181,7 +181,7 @@ bool OrcaDriver::connect()
   return preDive();
 }
 
-void OrcaDriver::disconnect()
+void DriverNode::disconnect()
 {
   maestro_.disconnect();
 }
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Init node
-  auto node = std::make_shared<orca_driver::OrcaDriver>();
+  auto node = std::make_shared<orca_driver::DriverNode>();
   if (node->connect())
   {
     RCLCPP_INFO(node->get_logger(), "Entering main loop");

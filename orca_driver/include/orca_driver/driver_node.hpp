@@ -19,9 +19,9 @@ struct Thruster
   bool reverse_;
 };
 
-// OrcaDriver provides the interface between the Orca hardware and ROS.
+// DriverNode provides the interface between the Orca hardware and ROS.
 
-class OrcaDriver: public rclcpp::Node
+class DriverNode: public rclcpp::Node
 {
 private:
 
@@ -56,8 +56,8 @@ private:
   bool preDive();
 
 public:
-  explicit OrcaDriver();
-  ~OrcaDriver() {}; // Suppress default copy and move constructors
+  explicit DriverNode();
+  ~DriverNode() {}; // Suppress default copy and move constructors
 
   bool connect();
   void spinOnce();

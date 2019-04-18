@@ -28,12 +28,12 @@ include_directories(
 )
 
 add_executable(
-  orca_driver
-  src/orca_driver.cpp
+  driver_node
+  src/driver_node.cpp
   src/maestro.cpp
 )
 ament_target_dependencies(
-  orca_driver
+  driver_node
   orca_msgs
   rclcpp
   rclpy
