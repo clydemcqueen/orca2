@@ -41,6 +41,10 @@ include_directories(
   ${visualization_msgs_INCLUDE_DIRS}
 )
 
+#=============
+# Base node
+#=============
+
 add_executable(
   base_node
   src/base_node.cpp
@@ -62,6 +66,10 @@ ament_target_dependencies(
   visualization_msgs
 )
 
+#=============
+# Filter node
+#=============
+
 add_executable(
   filter_node
   src/filter_node.cpp
@@ -77,6 +85,10 @@ ament_target_dependencies(
   tf2
   tf2_msgs
 )
+
+#=============
+# Test node
+#=============
 
 add_executable(
   test_node

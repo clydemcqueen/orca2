@@ -65,7 +65,7 @@ def generate_launch_description():
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
                 'make_not_use_map': 0}]),                   # Don't save a map to disk
 
-        # Localize the AUV against the map
+        # Localizer
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
