@@ -20,8 +20,8 @@
   <depend>orca_msgs</depend>
   <depend>phidgets_imu</depend>
   <depend>python-smbus</depend>
-  <depend>roscpp</depend>
-  <depend>rospy</depend>
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
 
   <export>

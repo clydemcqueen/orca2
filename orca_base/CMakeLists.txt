@@ -103,7 +103,7 @@ ament_target_dependencies(
 
 ament_export_include_directories(include)
 
-install(TARGETS base_node filter_node DESTINATION lib/orca_base)
-install(DIRECTORY include/orca_base DESTINATION include)
+install(TARGETS base_node filter_node DESTINATION lib/lib/${PROJECT_NAME})
+install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 
 ament_package()

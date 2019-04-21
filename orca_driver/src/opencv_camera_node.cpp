@@ -7,7 +7,7 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
-namespace usb_camera {
+namespace opencv_camera {
 
 // Target fps = 30 / (SKIP + 1)
 const int SKIP = 0;
@@ -19,6 +19,7 @@ std::string cfg_path("../cfg/camera_info.txt");
 std::string cfg_path("install/orca_driver/share/orca_driver/cfg/camera_info.txt");
 #endif
 
+// TODO camera_info_manager
 bool get_camera_info(sensor_msgs::msg::CameraInfo &info)
 {
   // File format: 2 ints and 9 floats, separated by whitespace:
@@ -77,7 +78,7 @@ bool get_camera_info(sensor_msgs::msg::CameraInfo &info)
   return true;
 }
 
-class USBCamera: public rclcpp::Node
+class OpencvCameraNode: public rclcpp::Node
 {
   cv::VideoCapture camera_;
   sensor_msgs::msg::CameraInfo camera_info_msg_;
@@ -88,7 +89,7 @@ class USBCamera: public rclcpp::Node
 
 public:
 
-  explicit USBCamera(): Node("usb_camera"), camera_(0)
+  explicit OpencvCameraNode(): Node("opencv_camera"), camera_(0)
   {
     camera_info_pub_ = create_publisher<sensor_msgs::msg::CameraInfo>("camera_info", 1);
     image_pub_ = create_publisher<sensor_msgs::msg::Image>("image_raw", 1);
@@ -104,7 +105,7 @@ public:
     header_.frame_id = "camera_frame";
   }
 
-  ~USBCamera() {}
+  ~OpencvCameraNode() {}
 
   void spin()
   {
@@ -140,7 +141,7 @@ public:
   }
 };
 
-} // namespace usb_camera
+} // namespace opencv_camera
 
 int main(int argc, char **argv)
 {
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Create node
-  auto node = std::make_shared<usb_camera::USBCamera>();
+  auto node = std::make_shared<opencv_camera::OpencvCameraNode>();
 
   // Spin until rclcpp::ok() returns false
   node->spin();

@@ -45,15 +45,15 @@ ament_target_dependencies(
 )
 
 #=============
-# USB camera node
+# OpenCV camera node
 #=============
 
 add_executable(
-  usb_camera_node
-  src/usb_camera_node.cpp
+  opencv_camera_node
+  src/opencv_camera_node.cpp
 )
 ament_target_dependencies(
-  usb_camera_node
+  opencv_camera_node
   cv_bridge
   rclcpp
   sensor_msgs
@@ -63,8 +63,8 @@ ament_target_dependencies(
 install(
   TARGETS
   driver_node
-  usb_camera_node
-  DESTINATION lib/orca_driver
+  opencv_camera_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ## Install various directories
