@@ -4,7 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-# USB camera launch, useful for testing the image processing pipeline
+# OpenCV camera launch, useful for testing the image processing pipeline
 
 
 def generate_launch_description():
@@ -16,8 +16,8 @@ def generate_launch_description():
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
              arguments=[urdf]),
 
-        # USB camera node (provides video)
-        Node(package='orca_driver', node_executable='usb_camera_node', output='screen'),
+        # OpenCV camera node (provides video)
+        Node(package='orca_driver', node_executable='opencv_camera_node', output='screen'),
 
         # Mapper
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',

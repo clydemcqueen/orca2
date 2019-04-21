@@ -13,13 +13,13 @@ namespace opencv_camera {
 const int SKIP = 0;
 
 // Camera info is for the BlueROV2 low light USB camera
+// TODO use camera_info_manager
 #ifdef RUN_INSIDE_CLION
-std::string cfg_path("../cfg/camera_info.txt");
+std::string cfg_path("../cfg/brusb_info.txt");
 #else
-std::string cfg_path("install/orca_driver/share/orca_driver/cfg/camera_info.txt");
+std::string cfg_path("install/orca_driver/share/orca_driver/cfg/brusb_info.txt");
 #endif
 
-// TODO camera_info_manager
 bool get_camera_info(sensor_msgs::msg::CameraInfo &info)
 {
   // File format: 2 ints and 9 floats, separated by whitespace:
