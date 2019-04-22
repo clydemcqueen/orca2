@@ -103,7 +103,7 @@ ament_target_dependencies(
 
 ament_export_include_directories(include)
 
-install(TARGETS base_node filter_node DESTINATION lib/lib/${PROJECT_NAME})
+install(TARGETS base_node filter_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 
 ament_package()

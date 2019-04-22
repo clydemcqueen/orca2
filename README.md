@@ -64,9 +64,7 @@ try [this workaround](https://answers.ros.org/question/313761/camera-plugin-fail
 
 ~~~
 cd ~/ros2/orca2_ws/src
-git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git
-cd gazebo_ros_pkgs
-git checkout 9593afce820fd290cb0b0c44dffd4e04d927251a
+git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git -b crystal
 cd ~/ros2/orca2_ws
 colcon build --event-handlers console_direct+
 source install/local_setup.bash
