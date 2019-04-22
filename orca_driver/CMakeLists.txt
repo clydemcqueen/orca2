@@ -45,6 +45,21 @@ ament_target_dependencies(
 )
 
 #=============
+# OpenCV camera component
+#=============
+
+add_library(
+  opencv_camera SHARED
+  src/opencv_camera.cpp
+)
+ament_target_dependencies(
+  opencv_camera
+  cv_bridge
+  rclcpp
+  sensor_msgs
+)
+
+#=============
 # OpenCV camera node
 #=============
 
@@ -52,17 +67,24 @@ add_executable(
   opencv_camera_node
   src/opencv_camera_node.cpp
 )
+target_link_libraries(
+  opencv_camera_node
+  opencv_camera
+)
 ament_target_dependencies(
   opencv_camera_node
-  cv_bridge
   rclcpp
-  sensor_msgs
 )
+
+#=============
+# Install
+#=============
 
 ## Install targets
 install(
   TARGETS
   driver_node
+  opencv_camera
   opencv_camera_node
   DESTINATION lib/${PROJECT_NAME}
 )
