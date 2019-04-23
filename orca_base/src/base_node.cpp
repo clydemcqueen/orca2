@@ -259,6 +259,8 @@ void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
 void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
 {
   filtered_pose_.from_msg(*msg);
+  odom_lag_ = (now() - odom_cb_.curr()).seconds();
+
   if (!first && auv_mode()) {
     // Publish path for rviz
     if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
@@ -342,6 +344,8 @@ void BaseNode::publish_control(const rclcpp::Time &msg_time)
   for (int i = 0; i < thruster_efforts.size(); ++i) {
     control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_efforts[i]));
   }
+  control_msg.stability = stability_;
+  control_msg.odom_lag = odom_lag_;
   control_pub_->publish(control_msg);
 
   // Publish rviz thrust markers

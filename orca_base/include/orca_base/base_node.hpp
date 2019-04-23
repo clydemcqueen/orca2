@@ -85,6 +85,7 @@ private:
 
   // Odometry state
   PoseStamped filtered_pose_;                 // Estimated pose
+  double odom_lag_;                           // Difference between header.stamp and now(), in seconds
 
   // ROV operation
   std::shared_ptr<pid::Controller> rov_yaw_pid_;

@@ -1,6 +1,12 @@
 # Header
 std_msgs/Header header
 
+# Stability, range [1.0, 0.0]
+float64 stability
+
+# Odom lag, seconds
+float64 odom_lag
+
 # Mode
 uint8 DISARMED=0    # Thrusters are off, all joystick buttons except "arm" are ignored
 uint8 MANUAL=1      # Manual thruster control
