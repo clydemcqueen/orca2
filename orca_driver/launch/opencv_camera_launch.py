@@ -8,6 +8,9 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    # Must match camera name in URDF file
+    left_camera_name = 'left_camera'
+
     # TODO move orca.urdf from orca_gazebo to orca_description, and include it here
     urdf = os.path.join(get_package_share_directory('orca_driver'), 'cfg', 'orca.urdf')
 
@@ -17,7 +20,20 @@ def generate_launch_description():
              arguments=[urdf]),
 
         # OpenCV camera node (provides video)
-        Node(package='orca_driver', node_executable='opencv_camera_node', output='screen'),
+        Node(package='orca_driver', node_executable='opencv_camera_node', output='screen',
+             node_name='opencv_camera_node', remappings=[
+                ('image_raw', '/' + left_camera_name + '/image_raw'),
+                ('camera_info', '/' + left_camera_name + '/camera_info'),
+            ]),
+
+        # # Joystick driver, generates /namespace/joy messages
+        # Node(package='joy', node_executable='joy_node', output='screen'),
+
+        # AUV controller
+        # Node(package='orca_base', node_executable='base_node', output='screen',
+        #      node_name='base_node', remappings=[
+        #         ('filtered_odom', '/' + left_camera_name + '/base_odom')
+        #     ]),
 
         # Mapper
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
@@ -28,7 +44,7 @@ def generate_launch_description():
 
         # Localizer
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_node', parameters=[{
+             node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'publish_tfs': 1,                           # Publish map=>base_link and map=>left_camera_frame
                 'publish_camera_pose': 0,
                 'publish_base_pose': 0,
@@ -42,6 +58,5 @@ def generate_launch_description():
                 't_camera_base_roll': 0.,
                 't_camera_base_pitch': 3.14,
                 't_camera_base_yaw': 1.57
-
             }]),
     ])
