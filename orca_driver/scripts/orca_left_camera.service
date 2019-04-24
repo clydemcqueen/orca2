@@ -3,7 +3,7 @@ Description=Orca left camera video stream
 
 [Service]
 User=pi
-ExecStart=/home/pi/orca2/orca_driver/scripts/start_orca_left_camera.sh
+ExecStart=/home/pi/orca2/orca_driver/scripts/start_left_camera.sh
 
 [Install]
 WantedBy=multi-user.target
