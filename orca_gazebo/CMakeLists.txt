@@ -128,7 +128,7 @@ install(
 
 ## Install various directories
 install(
-  DIRECTORY launch models worlds urdf
+  DIRECTORY launch models worlds
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -15,9 +15,10 @@ def generate_launch_description():
     # The AUV must be injected at the surface to calibrate the barometer
     surface = '0'
 
+    orca_description_path = get_package_share_directory('orca_description')
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
-    urdf_path = os.path.join(orca_gazebo_path, 'urdf', 'orca.urdf')
+    urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
     world_path = os.path.join(orca_gazebo_path, 'worlds', 'small.world')
     map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_map.yaml')
 

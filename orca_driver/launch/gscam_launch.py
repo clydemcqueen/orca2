@@ -16,10 +16,8 @@ cfg = 'udpsrc port=5600 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph
 
 
 def generate_launch_description():
-    # TODO move orca.urdf from orca_gazebo to orca_description, and include it here
-    orca_driver_path = get_package_share_directory('orca_driver')
-    urdf_path = os.path.join(orca_driver_path, 'cfg', 'orca.urdf')
-    camera_info_url = 'file://' + orca_driver_path + '/cfg/wa1_dry_800x600.yaml'
+    urdf_path = os.path.join(get_package_share_directory('orca_description'), 'urdf', 'orca.urdf')
+    camera_info_url = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa1_dry_800x600.yaml'
 
     camera_name = 'left_camera'
     map_frame = 'map'

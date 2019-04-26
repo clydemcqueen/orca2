@@ -11,8 +11,7 @@ def generate_launch_description():
     # Must match camera name in URDF file
     left_camera_name = 'left_camera'
 
-    # TODO move orca.urdf from orca_gazebo to orca_description, and include it here
-    urdf = os.path.join(get_package_share_directory('orca_driver'), 'cfg', 'orca.urdf')
+    urdf = os.path.join(get_package_share_directory('orca_description'), 'urdf', 'orca.urdf')
 
     return LaunchDescription([
         # Publish static transforms
