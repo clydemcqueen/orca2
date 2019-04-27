@@ -4,10 +4,6 @@
 
 namespace orca_base {
 
-const double CRUISING_Z = -.25;
-const double SPEED_XY = 0.4;
-const double SPEED_Z = 0.2;
-const double SPEED_YAW = M_PI_4 / 2;
 const rclcpp::Duration MIN_TIME{100000000}; // 0.1s
 
 // TODO reconcile time (mission) vs. progress (motion)
@@ -19,23 +15,23 @@ const rclcpp::Duration MIN_TIME{100000000}; // 0.1s
 // Utilities
 //=====================================================================================
 
-bool set_time_xy(const PoseStamped &p1, PoseStamped &p2)
+bool set_time_xy(const orca_base::BaseContext &cxt, const PoseStamped &p1, PoseStamped &p2)
 {
-  rclcpp::Duration d(sqrt(pow(p2.pose.x - p1.pose.x, 2) + pow(p2.pose.y - p1.pose.y, 2)) / SPEED_XY * 1e9);
+  rclcpp::Duration d(sqrt(pow(p2.pose.x - p1.pose.x, 2) + pow(p2.pose.y - p1.pose.y, 2)) / cxt.auv_xy_speed_ * 1e9);
   p2.t = p1.t + d;
   return d > MIN_TIME;
 }
 
-bool set_time_z(const PoseStamped &p1, PoseStamped &p2)
+bool set_time_z(const orca_base::BaseContext &cxt, const PoseStamped &p1, PoseStamped &p2)
 {
-  rclcpp::Duration d(std::abs(p2.pose.z - p1.pose.z) / SPEED_Z * 1e9);
+  rclcpp::Duration d(std::abs(p2.pose.z - p1.pose.z) / cxt.auv_z_speed_ * 1e9);
   p2.t = p1.t + d;
   return d > MIN_TIME;
 }
 
-bool set_time_yaw(const PoseStamped &p1, PoseStamped &p2)
+bool set_time_yaw(const orca_base::BaseContext &cxt, const PoseStamped &p1, PoseStamped &p2)
 {
-  rclcpp::Duration d(std::abs(norm_angle(p2.pose.yaw - p1.pose.yaw)) / SPEED_YAW * 1e9);
+  rclcpp::Duration d(std::abs(norm_angle(p2.pose.yaw - p1.pose.yaw)) / cxt.auv_yaw_speed_ * 1e9);
   p2.t = p1.t + d;
   return d > MIN_TIME;
 }
@@ -53,7 +49,7 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
   for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
     Pose waypoint;
     waypoint.from_msg(i->pose);
-    waypoint.z = CRUISING_Z;
+    waypoint.z = cxt.auv_z_target_;
     waypoints.push_back(waypoint);
   }
 
@@ -71,8 +67,8 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
 
   // Move to cruising z
   PoseStamped curr = start;
-  curr.pose.z = CRUISING_Z;
-  if (set_time_z(prev, curr)) {
+  curr.pose.z = cxt.auv_z_target_;
+  if (set_time_z(cxt, prev, curr)) {
     path.push_back(curr);
     segments_.push_back(std::make_shared<VerticalMotion>(logger, cxt, prev.pose, curr.pose));
   } else {
@@ -84,7 +80,7 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
   for (auto i = waypoints.begin(); i != waypoints.end(); i++) {
     // Point in the direction fo travel
     curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
-    if (set_time_yaw(prev, curr)) {
+    if (set_time_yaw(cxt, prev, curr)) {
       path.push_back(curr);
       segments_.push_back(std::make_shared<RotateMotion>(logger, cxt, prev.pose, curr.pose));
 
@@ -96,7 +92,7 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
     // Run
     curr.pose.x = i->x;
     curr.pose.y = i->y;
-    if (set_time_xy(prev, curr)) {
+    if (set_time_xy(cxt, prev, curr)) {
       path.push_back(curr);
       segments_.push_back(std::make_shared<LineMotion>(logger, cxt, prev.pose, curr.pose));
 

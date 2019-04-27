@@ -19,8 +19,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'small.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'large.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -53,6 +53,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
+                'auv_z_target': -2.0                        # Mission runs 2m below the surface
             }], remappings=[
                 ('filtered_odom', '/' + left_camera_name + '/base_odom')
             ]),

@@ -3,6 +3,13 @@
 namespace orca_base {
 
 //=====================================================================================
+// Constants
+//=====================================================================================
+
+constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m)
+constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r)
+
+//=====================================================================================
 // Utilities
 //=====================================================================================
 
@@ -100,10 +107,10 @@ VerticalMotion::VerticalMotion(rclcpp::Logger &logger, const BaseContext &cxt, c
   double direction = goal.z > start.z ? 1 : -1;
 
   // Target velocity
-  twist_.z = direction * VELO_Z;
+  twist_.z = direction * cxt.auv_z_speed_;
 
   // Drag force => thrust force => acceleration => feedforward
-  ff_.z = direction * force_to_accel(-drag_force_z(VELO_Z)) + HOVER_ACCEL_Z;
+  ff_.z = direction * force_to_accel(-drag_force_z(cxt.auv_z_speed_)) + HOVER_ACCEL_Z;
 
   RCLCPP_INFO(logger, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
 }
@@ -135,7 +142,7 @@ RotateMotion::RotateMotion(rclcpp::Logger &logger, const BaseContext &cxt, const
   assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ || start.distance_z(goal) < EPSILON_PLAN_XYZ);
 
   // Pick the shortest direction
-  twist_.yaw = norm_angle(goal.yaw - start.yaw) > 0 ? VELO_YAW : -VELO_YAW;
+  twist_.yaw = norm_angle(goal.yaw - start.yaw) > 0 ? cxt.auv_yaw_speed_ : -cxt.auv_yaw_speed_;
 
   // Drag torque => thrust torque => acceleration => feedforward
   ff_.yaw = torque_to_accel_yaw(-drag_torque_yaw(twist_.yaw));
@@ -174,7 +181,7 @@ LineMotion::LineMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pos
   double angle_to_goal = atan2(goal.y - start.y, goal.x - start.x);
 
   // Drag force => thrust force => acceleration => feedforward
-  drag_force_to_accel_xy(goal.yaw, VELO_XY * cos(angle_to_goal), VELO_XY * sin(angle_to_goal), ff_.x, ff_.y);
+  drag_force_to_accel_xy(goal.yaw, cxt.auv_xy_speed_ * cos(angle_to_goal), cxt.auv_xy_speed_ * sin(angle_to_goal), ff_.x, ff_.y);
   ff_.z = HOVER_ACCEL_Z;
 
   RCLCPP_INFO(logger, "line: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)",

@@ -1,6 +1,7 @@
 #ifndef ORCA_BASE_BASE_CONTEXT_HPP
 #define ORCA_BASE_BASE_CONTEXT_HPP
 
+#include <math.h>
 #include <string>
 
 #include "orca_base/context_macros.hpp"
@@ -49,7 +50,12 @@ namespace orca_base {
   CXT_ELEM(auv_yaw_pid_kp, 2, double)                                   /* AUV yaw pid Kp  */ \
   CXT_ELEM(auv_yaw_pid_ki, 0, double)                                   /* AUV yaw pid Ki  */ \
   CXT_ELEM(auv_yaw_pid_kd, 0, double)                                   /* AUV yaw pid Kd  */ \
-  /* End of list */
+  \
+  CXT_ELEM(auv_z_target, -0.25, double)                                 /* AUV path target z position  */ \
+  CXT_ELEM(auv_xy_speed, 0.5, double)                                   /* AUV speed in the xy plane  */ \
+  CXT_ELEM(auv_z_speed, 0.3, double)                                    /* AUV vertical speed  */ \
+  CXT_ELEM(auv_yaw_speed, M_PI_4 / 2, double)                           /* AUV rotation speed  */ \
+/* End of list */
 
 struct BaseContext
 {
