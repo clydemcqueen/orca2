@@ -3,7 +3,7 @@ Description=Orca ROS driver
 
 [Service]
 User=clyde
-ExecStart=/home/clyde/ros2/orca2_ws/src/orca2/orca_driver/scripts/start_driver.sh
+ExecStart=/home/clyde/ros2/orca_ws/src/orca2/orca_driver/scripts/start_driver.sh
 
 [Install]
 WantedBy=multi-user.target
