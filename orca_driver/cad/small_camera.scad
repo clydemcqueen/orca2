@@ -116,6 +116,29 @@ module pibracket() {
   }
 }
 
+// Mounting bracket
+module mount() {
+  color("green") difference() {
+    cube([12, 40, 20]);
+    
+    // Same radius as tube
+    translate([-57.2/2+5, 20, -1]) cylinder(h=22, r=57.2/2);
+    
+    // Notches for o-rings
+    translate([9, -1, -1]) cube([4, 5, 22]);
+    translate([9, 40-4, -1]) cube([4, 5, 22]);
+    translate([7, 2, -1]) cube([3, 2, 22]);
+    translate([7, 40-4, -1]) cube([3, 2, 22]);
+    
+    // Screw hole
+    translate([0, 20, 10]) rotate([0, 90, 0]) cylinder(h=5+3, r=5);
+    translate([0, 20, 10]) rotate([0, 90, 0]) cylinder(h=13, r=1.5);
+  }
+}
+
+// Top mounting bracket
+translate([60, -20, 6]) mount();
+
 // Top (camera side) flange
 flange();
 
@@ -139,3 +162,6 @@ translate([0, 0, 132]) rotate([0, 180, 0]) flange();
 
 // Tube
 color("white", 0.1) translate([0, 0, 6]) tube(120, 57.2/2, 3.2);
+
+// Top mounting bracket
+translate([60, -20, 132-20-6]) mount();
