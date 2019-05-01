@@ -80,12 +80,19 @@ ament_target_dependencies(
 # Install
 #=============
 
-## Install targets
+## Install C++ targets
 install(
   TARGETS
   driver_node
   opencv_camera
   opencv_camera_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install Python nodes
+install(
+  PROGRAMS  # PROGRAMS sets execute bits, FILES clears them
+  scripts/bar30_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

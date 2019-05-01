@@ -3,11 +3,22 @@
 # This is a simple ROS wrapper for the BlueRobotics Bar30 sensor
 # https://github.com/bluerobotics/ms5837-python/blob/master/ms5837.py must be in the Python path
 
+import time
+
 import rclpy
 from rclpy.node import Node
+from builtin_interfaces.msg import Time
 
 from orca_msgs.msg import Barometer
 import ms5837
+
+
+def now() -> Time:
+    """Return builtin_interfaces.msg.Time object with the current CPU time"""
+    cpu_time = time.time()
+    sec = int(cpu_time)
+    nanosec = int((cpu_time - sec) * 1e9)
+    return Time(sec=sec, nanosec=nanosec)
 
 
 class Bar30Node(Node):
@@ -15,9 +26,10 @@ class Bar30Node(Node):
     def __init__(self):
         super().__init__('bar30_node')
 
-        # Connect to the Bar30 sensor on I2C bus 1
+        # Connect to the Bar30 sensor
+        # RPi is bus 1, UP Board is bus 5
         self.get_logger().info("connecting to Bar30...")
-        self._sensor = ms5837.MS5837_30BA(1)
+        self._sensor = ms5837.MS5837_30BA(5)
         if not self._sensor.init():
             self.get_logger().fatal("can't initialize Bar30")
             exit(1)
@@ -31,7 +43,7 @@ class Bar30Node(Node):
     def timer_callback(self):
         if self._sensor.read():
             msg = Barometer()
-            msg.header.stamp = self.get_clock().now()
+            msg.header.stamp = now()
             msg.pressure = self._sensor.pressure() * 100.0  # Pascals
             msg.temperature = self._sensor.temperature()    # Celsius
             msg.depth = self._sensor.depth()                # meters
