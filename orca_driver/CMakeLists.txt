@@ -58,6 +58,10 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
 )
+ament_export_interfaces(
+  opencv_camera
+  HAS_LIBRARY_TARGET
+)
 
 #=============
 # OpenCV camera node
@@ -82,7 +86,7 @@ ament_target_dependencies(
 
 ## Install C++ targets
 install(
-  TARGETS driver_node opencv_camera_node
+  TARGETS driver_node opencv_camera_node opencv_camera
   EXPORT opencv_camera
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
