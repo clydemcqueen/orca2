@@ -12,7 +12,7 @@ colcon build --packages-skip orca_gazebo
 
 For the Bar30:
 ~~~
-pip install smbus
+pip install smbus future
 cd ~
 git clone https://github.com/clydemcqueen/ms5837-python -b python3
 # TODO add ~/ms5837-python to PYTHONPATH
