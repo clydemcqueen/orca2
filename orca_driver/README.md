@@ -17,3 +17,11 @@ cd ~
 git clone https://github.com/clydemcqueen/ms5837-python -b python3
 # TODO add ~/ms5837-python to PYTHONPATH
 ~~~
+
+For mraa:
+~~~
+sudo add-apt-repository ppa:mraa/mraa
+sudo apt-get update
+sudo apt-get install mraa-tools mraa-examples libmraa1 libmraa-dev libupm-dev libupm1 upm-examples
+sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
+~~~

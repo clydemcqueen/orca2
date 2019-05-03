@@ -17,8 +17,7 @@ DriverNode::DriverNode():
   RCLCPP_INFO(get_logger(), "Configuring for %d thrusters:", num_thrusters_);
   for (int i = 0; i < num_thrusters_; ++i) {
     Thruster t;
-    get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_,
-      i); // No checks for channel conflicts!
+    get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for conflicts!
     get_parameter_or("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
     thrusters_.push_back(t);
     RCLCPP_INFO(get_logger(), "Thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
@@ -46,13 +45,13 @@ DriverNode::DriverNode():
   // Advertise topics that we'll publish on
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
   leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
-
-  // Running
-  green_.setBrightness(green_.readMaxBrightness() / 2);
 }
 
 void DriverNode::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
 {
+  led_odom_.setBrightness(msg->odom_lag < 0.5 ? led_odom_.readMaxBrightness() / 2 : 0);
+  led_mission_.setBrightness(msg->mode == msg->MISSION ? led_mission_.readMaxBrightness() / 2 : 0);
+
   if (maestro_.ready()) {
     maestro_.setPWM(static_cast<uint8_t>(tilt_channel_), msg->camera_tilt_pwm);
     maestro_.setPWM(static_cast<uint8_t>(lights_channel_), msg->brightness_pwm);
@@ -76,7 +75,7 @@ bool DriverNode::readBattery()
 {
   battery_msg_.header.stamp = now();
 
-  double value;
+  double value = 0.0;
   if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(voltage_channel_), value)) {
     battery_msg_.voltage = value * voltage_multiplier_;
     battery_msg_.low_battery = static_cast<uint8_t>(battery_msg_.voltage < voltage_min_);
@@ -93,7 +92,7 @@ bool DriverNode::readLeak()
 {
   leak_msg_.header.stamp = now();
 
-  bool value;
+  bool value = 0.0;
   if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(leak_channel_), value)) {
     leak_msg_.leak_detected = static_cast<uint8_t>(value);
     return true;
@@ -142,7 +141,7 @@ bool DriverNode::preDive()
 
   // Check to see that all thrusters are stopped.
   for (int i = 0; i < thrusters_.size(); ++i) {
-    uint16_t value;
+    uint16_t value = 0;
     maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
     RCLCPP_INFO(get_logger(), "Thruster %d is set at %d", i + 1, value);
     if (value != 1500) {
@@ -153,6 +152,7 @@ bool DriverNode::preDive()
   }
 
   RCLCPP_INFO(get_logger(), "Pre-dive checks passed");
+  led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
   return true;
 }
 
@@ -173,6 +173,9 @@ bool DriverNode::connect()
 
 void DriverNode::disconnect()
 {
+  led_ready_.setBrightness(0);
+  led_odom_.setBrightness(0);
+  led_mission_.setBrightness(0);
   maestro_.disconnect();
 }
 

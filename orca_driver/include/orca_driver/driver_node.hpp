@@ -54,10 +54,11 @@ private:
   rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
   rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
 
-  // LEDs
-  mraa::Led green_{"green"};
-  mraa::Led yellow_{"yellow"};
-  mraa::Led red_{"red"};
+  // LEDs on the UP board
+  // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
+  mraa::Led led_ready_{"green"};
+  mraa::Led led_odom_{"yellow"};
+  mraa::Led led_mission_{"red"};
 
   bool readBattery();
   bool readLeak();
