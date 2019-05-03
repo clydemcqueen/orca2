@@ -98,9 +98,8 @@ ament_target_dependencies(
 install(
   TARGETS driver_node opencv_camera_node opencv_camera
   EXPORT opencv_camera
-  LIBRARY DESTINATION lib/${PROJECT_NAME}
-  ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  RUNTIME DESTINATION lib/${PROJECT_NAME} # ros2 run requires this location
+  LIBRARY DESTINATION lib                 # Shared libraries must be in lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2
 )
 
 # Install Python nodes
