@@ -40,6 +40,7 @@ include_directories(
 add_executable(
   driver_node
   src/driver_node.cpp
+  src/driver_context.cpp
   src/maestro.cpp
 )
 ament_target_dependencies(

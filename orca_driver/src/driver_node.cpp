@@ -11,33 +11,23 @@ DriverNode::DriverNode():
   (void) control_sub_;
   (void) spin_timer_;
 
-  get_parameter_or<std::string>("maestro_port", maestro_port_, "/dev/ttyACM0");
-  RCLCPP_INFO(get_logger(), "Expecting Maestro on port %s", maestro_port_.c_str());
+  // Get parameters
+  cxt_.load_parameters(*this);
+  RCLCPP_INFO(get_logger(), "expecting Maestro on port %s", cxt_.maestro_port_.c_str());
+  RCLCPP_INFO(get_logger(), "lights on channel %d", cxt_.lights_channel_);
+  RCLCPP_INFO(get_logger(), "camera servo on channel %d", cxt_.tilt_channel_);
+  RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", cxt_.leak_channel_);
+  RCLCPP_INFO(get_logger(), "voltage sensor on channel %d, multiplier is %g, minimum is %g", cxt_.voltage_channel_,
+    cxt_.voltage_multiplier_, cxt_.voltage_min_);
 
-  get_parameter_or("num_thrusters", num_thrusters_, 6);
-  RCLCPP_INFO(get_logger(), "Configuring for %d thrusters:", num_thrusters_);
-  for (int i = 0; i < num_thrusters_; ++i) {
+  RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
+  for (int i = 0; i < cxt_.num_thrusters_; ++i) {
     Thruster t;
     get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for conflicts!
     get_parameter_or("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
     thrusters_.push_back(t);
-    RCLCPP_INFO(get_logger(), "Thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
+    RCLCPP_INFO(get_logger(), "thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
   }
-
-  get_parameter_or("lights_channel", lights_channel_, 8);
-  RCLCPP_INFO(get_logger(), "Lights on channel %d", lights_channel_);
-
-  get_parameter_or("tilt_channel", tilt_channel_, 9);
-  RCLCPP_INFO(get_logger(), "Camera servo on channel %d", tilt_channel_);
-
-  get_parameter_or("voltage_channel", voltage_channel_, 11); // Must be analog input
-  get_parameter_or("voltage_multiplier", voltage_multiplier_, 4.7);
-  get_parameter_or("voltage_min", voltage_min_, 12.0);
-  RCLCPP_INFO(get_logger(), "Voltage sensor on channel %d, multiplier is %g, minimum is %g", voltage_channel_,
-    voltage_multiplier_, voltage_min_);
-
-  get_parameter_or("leak_channel", leak_channel_, 12); // Must be digital input
-  RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", leak_channel_);
 
   // Advertise topics that we'll publish on
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
@@ -60,8 +50,8 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
   led_mission_.setBrightness(msg->mode == msg->MISSION ? led_mission_.readMaxBrightness() / 2 : 0);
 
   if (maestro_.ready()) {
-    maestro_.setPWM(static_cast<uint8_t>(tilt_channel_), msg->camera_tilt_pwm);
-    maestro_.setPWM(static_cast<uint8_t>(lights_channel_), msg->brightness_pwm);
+    maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm);
+    maestro_.setPWM(static_cast<uint8_t>(cxt_.lights_channel_), msg->brightness_pwm);
 
     for (int i = 0; i < thrusters_.size(); ++i) {
       uint16_t pwm = msg->thruster_pwm[i];
@@ -83,9 +73,9 @@ bool DriverNode::read_battery()
   battery_msg_.header.stamp = now();
 
   double value = 0.0;
-  if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(voltage_channel_), value)) {
-    battery_msg_.voltage = value * voltage_multiplier_;
-    battery_msg_.low_battery = static_cast<uint8_t>(battery_msg_.voltage < voltage_min_);
+  if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
+    battery_msg_.voltage = value * cxt_.voltage_multiplier_;
+    battery_msg_.low_battery = static_cast<uint8_t>(battery_msg_.voltage < cxt_.voltage_min_);
     return true;
   } else {
     RCLCPP_ERROR(get_logger(), "Can't read battery");
@@ -100,7 +90,7 @@ bool DriverNode::read_leak()
   leak_msg_.header.stamp = now();
 
   bool value = 0.0;
-  if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(leak_channel_), value)) {
+  if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
     leak_msg_.leak_detected = static_cast<uint8_t>(value);
     return true;
   } else {
@@ -140,8 +130,8 @@ bool DriverNode::pre_dive()
     return false;
   }
 
-  if (battery_msg_.voltage < voltage_min_) {
-    RCLCPP_ERROR(get_logger(), "Battery voltage %g is below minimum %g", battery_msg_.voltage, voltage_min_);
+  if (battery_msg_.voltage < cxt_.voltage_min_) {
+    RCLCPP_ERROR(get_logger(), "Battery voltage %g is below minimum %g", battery_msg_.voltage, cxt_.voltage_min_);
     maestro_.disconnect();
     return false;
   }
@@ -177,7 +167,7 @@ bool DriverNode::connect()
   led_odom_.setBrightness(0);
   led_mission_.setBrightness(0);
 
-  std::string port = maestro_port_;
+  std::string port = cxt_.maestro_port_;
   RCLCPP_INFO(get_logger(), "Opening port %s...", port.c_str());
   maestro_.connect(port);
   if (!maestro_.ready()) {

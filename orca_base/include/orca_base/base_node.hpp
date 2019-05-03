@@ -11,6 +11,7 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
+#include "orca_base/base_context.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"

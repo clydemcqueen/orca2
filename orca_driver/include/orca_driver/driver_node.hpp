@@ -9,6 +9,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "orca_driver/driver_context.hpp"
 #include "orca_driver/maestro.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
@@ -29,15 +30,8 @@ class DriverNode: public rclcpp::Node
 private:
 
   // Parameters
-  int num_thrusters_;
+  DriverContext cxt_;
   std::vector<Thruster> thrusters_;
-  int lights_channel_;
-  int tilt_channel_;
-  int voltage_channel_;
-  int leak_channel_;
-  std::string maestro_port_;
-  double voltage_multiplier_;
-  double voltage_min_;
 
   // State
   maestro::Maestro maestro_;
