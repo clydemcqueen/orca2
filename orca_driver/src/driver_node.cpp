@@ -4,12 +4,13 @@ using std::placeholders::_1;
 
 namespace orca_driver {
 
-// Message publish rate in Hz
-constexpr int SPIN_RATE = 50;
-
 DriverNode::DriverNode():
   Node{"orca_driver"}
 {
+  // Suppress IDE warnings
+  (void) control_sub_;
+  (void) spin_timer_;
+
   get_parameter_or<std::string>("maestro_port", maestro_port_, "/dev/ttyACM0");
   RCLCPP_INFO(get_logger(), "Expecting Maestro on port %s", maestro_port_.c_str());
 
@@ -38,17 +39,23 @@ DriverNode::DriverNode():
   get_parameter_or("leak_channel", leak_channel_, 12); // Must be digital input
   RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", leak_channel_);
 
-  // Set up subscription
-  control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control",
-    std::bind(&DriverNode::controlCallback, this, _1));
-
   // Advertise topics that we'll publish on
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
   leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
+
+  // Set up subscription
+  auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
+  control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", control_cb);
+
+  // Spin timer
+  using namespace std::chrono_literals;
+  spin_timer_ = create_wall_timer(20ms, std::bind(&DriverNode::spin_once, this));
 }
 
-void DriverNode::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
+void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
 {
+  // TODO timeout if no control messages received in 1s
+
   led_odom_.setBrightness(msg->odom_lag < 0.5 ? led_odom_.readMaxBrightness() / 2 : 0);
   led_mission_.setBrightness(msg->mode == msg->MISSION ? led_mission_.readMaxBrightness() / 2 : 0);
 
@@ -71,7 +78,7 @@ void DriverNode::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
   }
 }
 
-bool DriverNode::readBattery()
+bool DriverNode::read_battery()
 {
   battery_msg_.header.stamp = now();
 
@@ -88,7 +95,7 @@ bool DriverNode::readBattery()
   }
 }
 
-bool DriverNode::readLeak()
+bool DriverNode::read_leak()
 {
   leak_msg_.header.stamp = now();
 
@@ -103,18 +110,24 @@ bool DriverNode::readLeak()
   }
 }
 
-void DriverNode::spinOnce()
+void DriverNode::spin_once()
 {
+  // TODO read battery, and read leak
+
+  // TODO flash battery light to show battery level
+  // TODO abort and light battery light at minimum
+  // TODO abort if leak
+
   battery_pub_->publish(battery_msg_);
   leak_pub_->publish(leak_msg_);
 }
 
 // Run a bunch of pre-dive checks, return true if everything looks good
-bool DriverNode::preDive()
+bool DriverNode::pre_dive()
 {
   RCLCPP_INFO(get_logger(), "Running pre-dive checks...");
 
-  if (!readBattery() || !readLeak()) {
+  if (!read_battery() || !read_leak()) {
     maestro_.disconnect();
     return false;
   }
@@ -135,6 +148,7 @@ bool DriverNode::preDive()
 
   // When the Maestro boots, it should set all thruster channels to 1500.
   // But on a system restart it might be a bad state. Force an all-stop.
+  // TODO all_stop
   for (int i = 0; i < thrusters_.size(); ++i) {
     maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), 1500);
   }
@@ -159,6 +173,10 @@ bool DriverNode::preDive()
 // Connect to Maestro
 bool DriverNode::connect()
 {
+  led_ready_.setBrightness(0);
+  led_odom_.setBrightness(0);
+  led_mission_.setBrightness(0);
+
   std::string port = maestro_port_;
   RCLCPP_INFO(get_logger(), "Opening port %s...", port.c_str());
   maestro_.connect(port);
@@ -168,11 +186,13 @@ bool DriverNode::connect()
   }
   RCLCPP_INFO(get_logger(), "Port %s open", port.c_str());
 
-  return preDive();
+  return pre_dive();
 }
 
 void DriverNode::disconnect()
 {
+  // TODO all_stop before disconnect
+
   led_ready_.setBrightness(0);
   led_odom_.setBrightness(0);
   led_mission_.setBrightness(0);
@@ -191,23 +211,18 @@ int main(int argc, char **argv)
 
   // Init node
   auto node = std::make_shared<orca_driver::DriverNode>();
+
+  // Connect and run pre-dive checks
   if (node->connect()) {
-    RCLCPP_INFO(node->get_logger(), "Entering main loop");
-    rclcpp::Rate r(orca_driver::SPIN_RATE);
-
-    while (rclcpp::ok()) {
-      // Do our work
-      node->spinOnce();
-
-      // Respond to incoming messages
-      rclcpp::spin_some(node);
-
-      // Wait
-      r.sleep();
-    }
+    // Spin node
+    rclcpp::spin(node);
   }
 
+  // Disconnect
   node->disconnect();
+
+  // Shut down ROS
   rclcpp::shutdown();
+
   return 0;
 }

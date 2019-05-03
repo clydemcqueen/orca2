@@ -110,6 +110,9 @@ private:
   rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
+  // Timer
+  rclcpp::TimerBase::SharedPtr spin_timer_;
+
   // Callbacks
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
   void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);

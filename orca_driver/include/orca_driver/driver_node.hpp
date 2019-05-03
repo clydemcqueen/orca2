@@ -46,9 +46,12 @@ private:
   
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
-  
+
+  // Timer
+  rclcpp::TimerBase::SharedPtr spin_timer_;
+
   // Callbacks
-  void controlCallback(const orca_msgs::msg::Control::SharedPtr msg);
+  void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
   
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
@@ -57,19 +60,19 @@ private:
   // LEDs on the UP board
   // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
   mraa::Led led_ready_{"green"};
-  mraa::Led led_odom_{"yellow"};
-  mraa::Led led_mission_{"red"};
+  mraa::Led led_odom_{"yellow"}; // TODO mission
+  mraa::Led led_mission_{"red"}; // TODO low battery or leak (led_problem)
 
-  bool readBattery();
-  bool readLeak();
-  bool preDive();
+  bool read_battery();
+  bool read_leak();
+  bool pre_dive();
 
 public:
   explicit DriverNode();
   ~DriverNode() {}; // Suppress default copy and move constructors
 
   bool connect();
-  void spinOnce();
+  void spin_once();
   void disconnect();
 };
 

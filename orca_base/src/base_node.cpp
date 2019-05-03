@@ -57,6 +57,7 @@ BaseNode::BaseNode():
   (void) leak_sub_;
   (void) map_sub_;
   (void) odom_sub_;
+  (void) spin_timer_;
 
   // Get parameters
   cxt_.load_parameters(*this);
@@ -102,6 +103,10 @@ BaseNode::BaseNode():
   battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
   auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
+
+  // Loop will run at ~constant wall speed, switch to ros_timer when it exists
+  using namespace std::chrono_literals;
+  spin_timer_ = create_wall_timer(50ms, std::bind(&BaseNode::spin_once, this));
 
   RCLCPP_INFO(get_logger(), "base_node ready");
 }
@@ -470,19 +475,11 @@ int main(int argc, char **argv)
   // Init node
   auto node = std::make_shared<orca_base::BaseNode>();
 
-  // rclcpp::Rate doesn't honor /clock in Crystal -- loop will run at ~constant wall speed
-  rclcpp::Rate r(100);
-  while (rclcpp::ok()) {
-    // Do our work
-    node->spin_once();
+  // Spin node
+  rclcpp::spin(node);
 
-    // Respond to incoming messages
-    rclcpp::spin_some(node);
-
-    // Wait
-    r.sleep();
-  }
-
+  // Shut down ROS
   rclcpp::shutdown();
+
   return 0;
 }
