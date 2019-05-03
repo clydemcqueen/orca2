@@ -21,9 +21,13 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
+set (mraa_INCLUDE_DIRS "/usr/include")
+set (mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
+
 include_directories(
   include
   ${cv_bridge_INCLUDE_DIRS}
+  ${mraa_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
@@ -40,6 +44,7 @@ add_executable(
 )
 ament_target_dependencies(
   driver_node
+  mraa
   orca_msgs
   rclcpp
 )
@@ -58,6 +63,11 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
 )
+
+# Export incantations:
+# Call ament_export_interfaces()
+# Reference this in the install() with an EXPORT line
+# Source install/local_setup.bash after the build
 ament_export_interfaces(
   opencv_camera
   HAS_LIBRARY_TARGET

@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "mraa/common.hpp"
+#include "mraa/led.hpp"
+
 #include "rclcpp/rclcpp.hpp"
 
 #include "orca_driver/maestro.hpp"
@@ -50,7 +53,12 @@ private:
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
   rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
-  
+
+  // LEDs
+  mraa::Led green_{"green"};
+  mraa::Led yellow_{"yellow"};
+  mraa::Led red_{"red"};
+
   bool readBattery();
   bool readLeak();
   bool preDive();

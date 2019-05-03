@@ -44,6 +44,9 @@ DriverNode::DriverNode():
   // Advertise topics that we'll publish on
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
   leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
+
+  // Running
+  green_.setBrightness(green_.readMaxBrightness() / 2);
 }
 
 void DriverNode::controlCallback(const orca_msgs::msg::Control::SharedPtr msg)
