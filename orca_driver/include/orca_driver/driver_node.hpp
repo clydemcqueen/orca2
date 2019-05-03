@@ -54,19 +54,21 @@ private:
   // LEDs on the UP board
   // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
   mraa::Led led_ready_{"green"};
-  mraa::Led led_odom_{"yellow"}; // TODO mission
-  mraa::Led led_mission_{"red"}; // TODO low battery or leak (led_problem)
+  mraa::Led led_mission_{"yellow"};
+  mraa::Led led_problem_{"red"};
 
   bool read_battery();
   bool read_leak();
+  void spin_once();
   bool pre_dive();
+  void all_stop();
+  void abort();
 
 public:
   explicit DriverNode();
   ~DriverNode() {}; // Suppress default copy and move constructors
 
   bool connect();
-  void spin_once();
   void disconnect();
 };
 

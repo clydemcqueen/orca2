@@ -140,6 +140,8 @@ public:
   // Handle an incoming message from ROS
   void OnRosMsg(const orca_msgs::msg::Control::SharedPtr msg)
   {
+    // TODO abort if no control messages received in 1s, requires changes to BaseNode
+
     for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
       thrusters_[i].effort = orca_base::pwm_to_effort(msg->thruster_pwm[i]);
     }

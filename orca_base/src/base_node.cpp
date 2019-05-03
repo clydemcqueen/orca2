@@ -324,6 +324,7 @@ void BaseNode::all_stop()
   publish_control(now());
 }
 
+// TODO always send control message, this will allow DriverNode to abort if BaseNode crashes
 void BaseNode::publish_control(const rclcpp::Time &msg_time)
 {
   // Combine joystick efforts to get thruster efforts.
@@ -463,6 +464,10 @@ void BaseNode::spin_once()
 }
 
 } // namespace orca_base
+
+//=============================================================================
+// Main
+//=============================================================================
 
 int main(int argc, char **argv)
 {

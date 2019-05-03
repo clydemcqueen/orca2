@@ -1,8 +1,10 @@
 #include "orca_driver/driver_node.hpp"
 
-using std::placeholders::_1;
-
 namespace orca_driver {
+
+//=============================================================================
+// DriverNode
+//=============================================================================
 
 DriverNode::DriverNode():
   Node{"orca_driver"}
@@ -13,6 +15,7 @@ DriverNode::DriverNode():
 
   // Get parameters
   cxt_.load_parameters(*this);
+
   RCLCPP_INFO(get_logger(), "expecting Maestro on port %s", cxt_.maestro_port_.c_str());
   RCLCPP_INFO(get_logger(), "lights on channel %d", cxt_.lights_channel_);
   RCLCPP_INFO(get_logger(), "camera servo on channel %d", cxt_.tilt_channel_);
@@ -20,6 +23,7 @@ DriverNode::DriverNode():
   RCLCPP_INFO(get_logger(), "voltage sensor on channel %d, multiplier is %g, minimum is %g", cxt_.voltage_channel_,
     cxt_.voltage_multiplier_, cxt_.voltage_min_);
 
+  // Get thruster parameters
   RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
   for (int i = 0; i < cxt_.num_thrusters_; ++i) {
     Thruster t;
@@ -29,11 +33,12 @@ DriverNode::DriverNode():
     RCLCPP_INFO(get_logger(), "thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
   }
 
-  // Advertise topics that we'll publish on
+  // Publish battery and leak messages
   battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
   leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
 
-  // Set up subscription
+  // Subscribe to control messages
+  using std::placeholders::_1;
   auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
   control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", control_cb);
 
@@ -44,9 +49,8 @@ DriverNode::DriverNode():
 
 void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
 {
-  // TODO timeout if no control messages received in 1s
+  // TODO abort if no control messages received in 1s, requires changes to BaseNode
 
-  led_odom_.setBrightness(msg->odom_lag < 0.5 ? led_odom_.readMaxBrightness() / 2 : 0);
   led_mission_.setBrightness(msg->mode == msg->MISSION ? led_mission_.readMaxBrightness() / 2 : 0);
 
   if (maestro_.ready()) {
@@ -64,10 +68,11 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
       maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm);
     }
   } else {
-    RCLCPP_ERROR(get_logger(), "Maestro not ready, ignoring control message");
+    RCLCPP_ERROR(get_logger(), "maestro not ready, ignoring control message");
   }
 }
 
+// Read battery sensor, return true if successful
 bool DriverNode::read_battery()
 {
   battery_msg_.header.stamp = now();
@@ -76,15 +81,19 @@ bool DriverNode::read_battery()
   if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
     battery_msg_.voltage = value * cxt_.voltage_multiplier_;
     battery_msg_.low_battery = static_cast<uint8_t>(battery_msg_.voltage < cxt_.voltage_min_);
+    if (battery_msg_.low_battery) {
+      RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", battery_msg_.voltage, cxt_.voltage_min_);
+    }
     return true;
   } else {
-    RCLCPP_ERROR(get_logger(), "Can't read battery");
+    RCLCPP_ERROR(get_logger(), "can't read battery");
     battery_msg_.voltage = 0;
     battery_msg_.low_battery = 1;
     return false;
   }
 }
 
+// Read leak sensor, return true if successful
 bool DriverNode::read_leak()
 {
   leak_msg_.header.stamp = now();
@@ -92,21 +101,23 @@ bool DriverNode::read_leak()
   bool value = 0.0;
   if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
     leak_msg_.leak_detected = static_cast<uint8_t>(value);
+    if (leak_msg_.leak_detected) {
+      RCLCPP_ERROR(get_logger(), "leak detected");
+    }
     return true;
   } else {
-    RCLCPP_ERROR(get_logger(), "Can't read leak sensor");
+    RCLCPP_ERROR(get_logger(), "can't read leak sensor");
     leak_msg_.leak_detected = 1;
     return false;
   }
 }
 
+// Read sensors and publish messages
 void DriverNode::spin_once()
 {
-  // TODO read battery, and read leak
-
-  // TODO flash battery light to show battery level
-  // TODO abort and light battery light at minimum
-  // TODO abort if leak
+  if (!read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
+    abort();
+  }
 
   battery_pub_->publish(battery_msg_);
   leak_pub_->publish(leak_msg_);
@@ -115,81 +126,101 @@ void DriverNode::spin_once()
 // Run a bunch of pre-dive checks, return true if everything looks good
 bool DriverNode::pre_dive()
 {
-  RCLCPP_INFO(get_logger(), "Running pre-dive checks...");
+  RCLCPP_INFO(get_logger(), "running pre-dive checks...");
 
   if (!read_battery() || !read_leak()) {
     maestro_.disconnect();
     return false;
   }
 
-  RCLCPP_INFO(get_logger(), "Voltage is %g, leak status is %d", battery_msg_.voltage, leak_msg_.leak_detected);
+  RCLCPP_INFO(get_logger(), "voltage is %g, leak status is %d", battery_msg_.voltage, leak_msg_.leak_detected);
 
   if (leak_msg_.leak_detected) {
-    RCLCPP_ERROR(get_logger(), "Leak detected");
     maestro_.disconnect();
     return false;
   }
 
-  if (battery_msg_.voltage < cxt_.voltage_min_) {
-    RCLCPP_ERROR(get_logger(), "Battery voltage %g is below minimum %g", battery_msg_.voltage, cxt_.voltage_min_);
+  if (battery_msg_.low_battery) {
     maestro_.disconnect();
     return false;
   }
 
   // When the Maestro boots, it should set all thruster channels to 1500.
   // But on a system restart it might be a bad state. Force an all-stop.
-  // TODO all_stop
-  for (int i = 0; i < thrusters_.size(); ++i) {
-    maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), 1500);
-  }
+  all_stop();
 
   // Check to see that all thrusters are stopped.
   for (int i = 0; i < thrusters_.size(); ++i) {
     uint16_t value = 0;
     maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
-    RCLCPP_INFO(get_logger(), "Thruster %d is set at %d", i + 1, value);
+    RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
     if (value != 1500) {
-      RCLCPP_ERROR(get_logger(), "Thruster %d didn't initialize properly (and possibly others)", i + 1);
+      RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
       maestro_.disconnect();
       return false;
     }
   }
 
-  RCLCPP_INFO(get_logger(), "Pre-dive checks passed");
+  RCLCPP_INFO(get_logger(), "pre-dive checks passed");
   led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
   return true;
 }
 
-// Connect to Maestro
+// Stop all motion
+void DriverNode::all_stop()
+{
+  RCLCPP_INFO(get_logger(), "all stop");
+  if (maestro_.ready()) {
+    for (int i = 0; i < thrusters_.size(); ++i) {
+      maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), 1500);
+    }
+  }
+}
+
+// Abnormal exit
+void DriverNode::abort()
+{
+  RCLCPP_ERROR(get_logger(), "aborting dive");
+  all_stop();
+  maestro_.disconnect();
+  led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
+}
+
+// Connect to Maestro and run pre-dive checks, return true if we're ready to dive
 bool DriverNode::connect()
 {
   led_ready_.setBrightness(0);
-  led_odom_.setBrightness(0);
   led_mission_.setBrightness(0);
+  led_problem_.setBrightness(0);
 
   std::string port = cxt_.maestro_port_;
-  RCLCPP_INFO(get_logger(), "Opening port %s...", port.c_str());
+  RCLCPP_INFO(get_logger(), "opening port %s...", port.c_str());
   maestro_.connect(port);
   if (!maestro_.ready()) {
-    RCLCPP_ERROR(get_logger(), "Can't open port %s, are you root?", port.c_str());
+    RCLCPP_ERROR(get_logger(), "can't open port %s, are you root?", port.c_str());
     return false;
   }
-  RCLCPP_INFO(get_logger(), "Port %s open", port.c_str());
+  RCLCPP_INFO(get_logger(), "port %s open", port.c_str());
 
   return pre_dive();
 }
 
+// Normal exit
 void DriverNode::disconnect()
 {
-  // TODO all_stop before disconnect
-
+  RCLCPP_INFO(get_logger(), "normal exit");
   led_ready_.setBrightness(0);
-  led_odom_.setBrightness(0);
   led_mission_.setBrightness(0);
+  led_problem_.setBrightness(0);
+  all_stop();
   maestro_.disconnect();
 }
 
 } // namespace orca_driver
+
+//=============================================================================
+// Main
+//=============================================================================
 
 int main(int argc, char **argv)
 {
