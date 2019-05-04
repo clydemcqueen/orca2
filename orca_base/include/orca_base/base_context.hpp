@@ -3,11 +3,13 @@
 
 #include <math.h>
 #include <string>
+#include <vector>
 
 #include "orca_base/context_macros.hpp"
 
 namespace rclcpp {
 class Node;
+class Parameter;
 }
 
 namespace orca_base {
@@ -64,6 +66,7 @@ struct BaseContext
   CXT_MACRO_ALL_PARAMS
 
   void load_parameters(rclcpp::Node &node);
+  void change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
 };
 
 } // namespace orca_base

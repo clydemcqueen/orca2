@@ -62,6 +62,16 @@ BaseNode::BaseNode():
   // Get parameters
   cxt_.load_parameters(*this);
 
+  // Track changes to parameters
+  register_param_change_callback(
+    [this](std::vector<rclcpp::Parameter> parameters) -> rcl_interfaces::msg::SetParametersResult
+    {
+      cxt_.change_parameters(*this, parameters);
+      auto result = rcl_interfaces::msg::SetParametersResult();
+      result.successful = true;
+      return result;
+    });
+
   if (cxt_.simulation_) {
     // The simulated IMU is not rotated
     RCLCPP_INFO(get_logger(), "running in a simulation");
