@@ -61,14 +61,15 @@ double deceleration_distance(const double yaw, double velo_x, double velo_y)
 // BaseMotion
 //=====================================================================================
 
-BaseMotion::BaseMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
+BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
+  logger_{logger},
+  plan_{start},
+  goal_{goal},
   x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
   y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
   z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
   yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
 {
-  plan_ = start;
-  goal_ = goal;
   twist_ = Twist{};
   ff_ = Acceleration{};
 
@@ -98,7 +99,7 @@ void BaseMotion::finish(Acceleration &u_bar)
 // VerticalMotion
 //=====================================================================================
 
-VerticalMotion::VerticalMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
+VerticalMotion::VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
   BaseMotion(logger, cxt, start, goal)
 {
   assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
@@ -112,7 +113,7 @@ VerticalMotion::VerticalMotion(rclcpp::Logger &logger, const BaseContext &cxt, c
   // Drag force => thrust force => acceleration => feedforward
   ff_.z = direction * force_to_accel(-drag_force_z(cxt.auv_z_speed_)) + HOVER_ACCEL_Z;
 
-  RCLCPP_INFO(logger, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
+  RCLCPP_INFO(logger_, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
 }
 
 bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
@@ -136,7 +137,7 @@ bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_ba
 // RotateMotion
 //=====================================================================================
 
-RotateMotion::RotateMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
+RotateMotion::RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
   BaseMotion(logger, cxt, start, goal)
 {
   assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ || start.distance_z(goal) < EPSILON_PLAN_XYZ);
@@ -148,7 +149,7 @@ RotateMotion::RotateMotion(rclcpp::Logger &logger, const BaseContext &cxt, const
   ff_.yaw = torque_to_accel_yaw(-drag_torque_yaw(twist_.yaw));
   ff_.z = HOVER_ACCEL_Z;
 
-  RCLCPP_INFO(logger, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
+  RCLCPP_INFO(logger_, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
 }
 
 bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
@@ -172,7 +173,7 @@ bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
 // LineMotion
 //=====================================================================================
 
-LineMotion::LineMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
+LineMotion::LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal):
   BaseMotion(logger, cxt, start, goal)
 {
   assert(start.distance_z(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
@@ -184,7 +185,7 @@ LineMotion::LineMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pos
   drag_force_to_accel_xy(goal.yaw, cxt.auv_xy_speed_ * cos(angle_to_goal), cxt.auv_xy_speed_ * sin(angle_to_goal), ff_.x, ff_.y);
   ff_.z = HOVER_ACCEL_Z;
 
-  RCLCPP_INFO(logger, "line: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)",
+  RCLCPP_INFO(logger_, "line: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)",
     start.x, start.y, start.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
 }
 

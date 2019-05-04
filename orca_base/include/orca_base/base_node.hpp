@@ -93,7 +93,7 @@ private:
   std::shared_ptr<pid::Controller> rov_z_pid_;
 
   // AUV operation
-  std::shared_ptr<Mission> mission_;          // The mission we're running
+  std::shared_ptr<BaseMission> mission_;      // The mission we're running
   fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
   nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 

@@ -422,7 +422,7 @@ void BaseNode::set_mode(uint8_t new_mode)
 
   if (new_mode == orca_msgs::msg::Control::MISSION) {
     // Start mission
-    mission_ = std::make_shared<Mission>(get_logger(), cxt_, map_, filtered_pose_);
+    mission_ = std::make_shared<DownRandomMission>(get_logger(), cxt_, map_, filtered_pose_);
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {

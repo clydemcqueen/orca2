@@ -37,12 +37,41 @@ bool set_time_yaw(const orca_base::BaseContext &cxt, const PoseStamped &p1, Pose
 }
 
 //=====================================================================================
-// Mission
+// BaseMission
 //=====================================================================================
 
-Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-  const PoseStamped &start):
-  logger_{logger}
+bool BaseMission::advance(const double dt, const PoseStamped &curr, Acceleration &u_bar)
+{
+  if (segments_[segment_idx_]->advance(dt, curr.pose, u_bar)) {
+    return true;
+  }
+
+  if (++segment_idx_ < segments_.size()) {
+    RCLCPP_INFO(logger_, "mission segment %d", segment_idx_);
+    return true;
+  }
+
+  RCLCPP_INFO(logger_, "mission complete");
+  return false;
+}
+
+//=====================================================================================
+// DownRandomMission
+//=====================================================================================
+
+DownRandomMission::DownRandomMission(const rclcpp::Logger &logger, const orca_base::BaseContext &cxt,
+  const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start):
+  BaseMission{logger}
+{
+  // Plan
+  plan(cxt, map, start);
+
+  // Start
+  segment_idx_ = 0;
+  RCLCPP_INFO(logger_, "mission has %d segments, segment 0", segments_.size());
+}
+
+void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
 {
   // Waypoints are directly above markers
   std::vector<Pose> waypoints;
@@ -70,9 +99,9 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
   curr.pose.z = cxt.auv_z_target_;
   if (set_time_z(cxt, prev, curr)) {
     path.push_back(curr);
-    segments_.push_back(std::make_shared<VerticalMotion>(logger, cxt, prev.pose, curr.pose));
+    segments_.push_back(std::make_shared<VerticalMotion>(logger_, cxt, prev.pose, curr.pose));
   } else {
-    RCLCPP_INFO(logger, "skip vertical");
+    RCLCPP_INFO(logger_, "skip vertical");
   }
   prev = curr;
 
@@ -82,10 +111,10 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
     curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
     if (set_time_yaw(cxt, prev, curr)) {
       path.push_back(curr);
-      segments_.push_back(std::make_shared<RotateMotion>(logger, cxt, prev.pose, curr.pose));
+      segments_.push_back(std::make_shared<RotateMotion>(logger_, cxt, prev.pose, curr.pose));
 
     } else {
-      RCLCPP_INFO(logger, "skip rotate");
+      RCLCPP_INFO(logger_, "skip rotate");
     }
     prev = curr;
 
@@ -94,10 +123,10 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
     curr.pose.y = i->y;
     if (set_time_xy(cxt, prev, curr)) {
       path.push_back(curr);
-      segments_.push_back(std::make_shared<LineMotion>(logger, cxt, prev.pose, curr.pose));
+      segments_.push_back(std::make_shared<LineMotion>(logger_, cxt, prev.pose, curr.pose));
 
     } else {
-      RCLCPP_INFO(logger, "skip line");
+      RCLCPP_INFO(logger_, "skip line");
     }
     prev = curr;
   }
@@ -111,25 +140,6 @@ Mission::Mission(rclcpp::Logger logger, const orca_base::BaseContext &cxt, const
     i->to_msg(pose_msg);
     planned_path_.poses.push_back(pose_msg);
   }
-
-  // Start
-  segment_idx_ = 0;
-  RCLCPP_INFO(logger_, "mission has %d segments, segment 0", segments_.size());
-}
-
-bool Mission::advance(const double dt, const PoseStamped &curr, Acceleration &u_bar)
-{
-  if (segments_[segment_idx_]->advance(dt, curr.pose, u_bar)) {
-    return true;
-  }
-
-  if (++segment_idx_ < segments_.size()) {
-    RCLCPP_INFO(logger_, "mission segment %d", segment_idx_);
-    return true;
-  }
-
-  RCLCPP_INFO(logger_, "mission complete");
-  return false;
 }
 
 } // namespace orca_base

@@ -18,6 +18,8 @@ class BaseMotion
 {
 protected:
 
+  rclcpp::Logger logger_;
+
   // State
   Pose goal_;       // Goal pose
   Pose plan_;       // Planned pose, incremented with each call to advance()
@@ -34,7 +36,7 @@ protected:
 
 public:
 
-  BaseMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   // Advance the motion plan, return true to continue, false if we're done
   virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar);
@@ -49,7 +51,7 @@ class VerticalMotion: public BaseMotion
 {
 public:
 
-  VerticalMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };
@@ -63,7 +65,7 @@ class RotateMotion: public BaseMotion
 {
 public:
 
-  RotateMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };
@@ -77,7 +79,7 @@ class LineMotion: public BaseMotion
 {
 public:
 
-  LineMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };
