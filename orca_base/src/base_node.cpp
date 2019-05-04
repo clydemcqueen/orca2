@@ -10,11 +10,6 @@ namespace orca_base {
 const double Z_HOLD_MAX = -0.05;  // Highest z hold
 const double Z_HOLD_MIN = -50;    // Lowest z hold
 
-const rclcpp::Duration JOY_TIMEOUT{1000000000};   // ROV: disarm if we lose communication
-const rclcpp::Duration ODOM_TIMEOUT{1000000000};  // AUV: disarm if we lose odometry
-const rclcpp::Duration BARO_TIMEOUT{1000000000};  // All modes: disarm if we lose barometer
-const rclcpp::Duration IMU_TIMEOUT{1000000000};   // All modes: disarm if we lose IMU
-
 //=============================================================================
 // Thrusters
 //=============================================================================
@@ -72,7 +67,7 @@ BaseNode::BaseNode():
       return result;
     });
 
-  if (cxt_.simulation_) {
+  if (cxt_.use_sim_time_) {
     // The simulated IMU is not rotated
     RCLCPP_INFO(get_logger(), "running in a simulation");
     t_imu_base_ = tf2::Matrix3x3::getIdentity();
@@ -185,25 +180,25 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
       RCLCPP_INFO(get_logger(), "manual");
       set_mode(orca_msgs::msg::Control::MANUAL);
     } else if (button_down(msg, joy_msg_, joy_button_hold_h_)) {
-      if (imu_cb_.receiving()) {
+      if (imu_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_H);
       } else {
         RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
       }
     } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
-      if (baro_cb_.receiving()) {
+      if (baro_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_D);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
       }
     } else if (button_down(msg, joy_msg_, joy_button_hold_hd_)) {
-      if (imu_cb_.receiving() && baro_cb_.receiving()) {
+      if (imu_ok(msg->header.stamp) && baro_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_HD);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
       }
     } else if (button_down(msg, joy_msg_, joy_button_mission_)) {
-      if (mode_ != orca_msgs::msg::Control::DISARMED && odom_cb_.receiving() && map_cb_.receiving()) {
+      if (mode_ != orca_msgs::msg::Control::DISARMED && odom_ok(msg->header.stamp) && map_cb_.receiving()) {
         set_mode(orca_msgs::msg::Control::MISSION);
       } else {
         RCLCPP_ERROR(get_logger(), "disarmed, no odometry and/or no map, can't start mission");
@@ -298,7 +293,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
       publish_control(odom_cb_.curr());
     } else {
       // Stop mission
-      set_mode(orca_msgs::msg::Control::MANUAL);
+      set_mode(orca_msgs::msg::Control::DISARMED);
     }
   }
 }
@@ -447,12 +442,12 @@ void BaseNode::spin_once()
     return;
   }
 
-  if (rov_mode() && joy_cb_.receiving() && spin_time - joy_cb_.prev() > JOY_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost joystick run ROV operation, disarming");
+  if (rov_mode() && !joy_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost joystick during ROV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (auv_mode() && odom_cb_.receiving() && spin_time - odom_cb_.prev() > ODOM_TIMEOUT) {
+  if (auv_mode() && !odom_ok(spin_time)) {
     RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
@@ -462,14 +457,19 @@ void BaseNode::spin_once()
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (baro_cb_.receiving() && spin_time - baro_cb_.prev() > BARO_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost barometer, disarming");
+  if (holding_z() && !baro_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (imu_cb_.receiving() && spin_time - imu_cb_.prev() > IMU_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost IMU, disarming");
+  if (holding_yaw() && !imu_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost IMU while holding yaw, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
+  }
+
+  if (!auv_mode() && cxt_.auto_mission_ && !joy_ok(spin_time) && odom_ok(spin_time)) {
+    RCLCPP_INFO(get_logger(), "auto-starting mission");
+    set_mode(orca_msgs::msg::Control::MISSION);
   }
 }
 
