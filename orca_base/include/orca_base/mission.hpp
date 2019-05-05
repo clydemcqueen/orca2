@@ -18,13 +18,21 @@ class BaseMission
 protected:
 
   rclcpp::Logger logger_;                               // ROS logger
+  const BaseContext cxt_;                               // Parameters
+  const fiducial_vlam_msgs::msg::Map map_;              // Map
+  const PoseStamped start_;                             // Start point
+
   std::vector<std::shared_ptr<BaseMotion>> segments_;   // Trajectory segments
   int segment_idx_;                                     // Current segment
   nav_msgs::msg::Path planned_path_;                    // Path for rviz
 
+  // Build a plan
+  virtual void plan() = 0;
+
 public:
 
-  BaseMission(const rclcpp::Logger &logger): logger_{logger} {}
+  BaseMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    const PoseStamped &start): logger_{logger}, cxt_{cxt}, map_{map}, start_{start} {}
 
   // Advance the controller, return true to continue
   bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
@@ -33,18 +41,19 @@ public:
 };
 
 //=====================================================================================
-// ForwardKeepStationMission
-// -- keep station facing a marker
+// KeepStationMission
+// -- hover in place forever
 //=====================================================================================
 
-// TODO
+class KeepStationMission: public BaseMission
+{
+  void plan() override;
 
-//=====================================================================================
-// ForwardRandomMission
-// -- random zigzag mission for a forward-facing camera
-//=====================================================================================
+public:
 
-// TODO
+  KeepStationMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    const PoseStamped &start): BaseMission(logger, cxt, map, start) {}
+};
 
 //=====================================================================================
 // DownRandomMission
@@ -53,14 +62,21 @@ public:
 
 class DownRandomMission: public BaseMission
 {
-  // Build a plan
-  void plan(const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
+  void plan() override;
 
 public:
 
   DownRandomMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-    const PoseStamped &start);
+    const PoseStamped &start): BaseMission(logger, cxt, map, start) {}
 };
+
+//=====================================================================================
+// ForwardRandomMission
+// -- random zigzag mission for a forward-facing camera
+//=====================================================================================
+
+// TODO
+
 
 } // namespace orca_base
 

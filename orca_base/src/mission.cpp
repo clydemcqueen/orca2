@@ -42,6 +42,15 @@ bool set_time_yaw(const orca_base::BaseContext &cxt, const PoseStamped &p1, Pose
 
 bool BaseMission::advance(const double dt, const PoseStamped &curr, Acceleration &u_bar)
 {
+  if (segments_.size() == 0) {
+    // Create path
+    plan();
+
+    // Start
+    segment_idx_ = 0;
+    RCLCPP_INFO(logger_, "mission has %d segments, segment 0", segments_.size());
+  }
+
   if (segments_[segment_idx_]->advance(dt, curr.pose, u_bar)) {
     return true;
   }
@@ -56,29 +65,34 @@ bool BaseMission::advance(const double dt, const PoseStamped &curr, Acceleration
 }
 
 //=====================================================================================
+// KeepStationMission
+//=====================================================================================
+
+void KeepStationMission::plan()
+{
+  // Keep station over the start pose
+  segments_.push_back(std::make_shared<BaseMotion>(logger_, cxt_, start_.pose, start_.pose));
+
+  // Trivial path message
+  geometry_msgs::msg::PoseStamped pose_msg;
+  start_.to_msg(pose_msg);
+  planned_path_.header.stamp = start_.t;
+  planned_path_.header.frame_id = cxt_.map_frame_;
+  planned_path_.poses.push_back(pose_msg);
+}
+
+//=====================================================================================
 // DownRandomMission
 //=====================================================================================
 
-DownRandomMission::DownRandomMission(const rclcpp::Logger &logger, const orca_base::BaseContext &cxt,
-  const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start):
-  BaseMission{logger}
-{
-  // Plan
-  plan(cxt, map, start);
-
-  // Start
-  segment_idx_ = 0;
-  RCLCPP_INFO(logger_, "mission has %d segments, segment 0", segments_.size());
-}
-
-void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+void DownRandomMission::plan()
 {
   // Waypoints are directly above markers
   std::vector<Pose> waypoints;
-  for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
+  for (auto i = map_.poses.begin(); i != map_.poses.end(); i++) {
     Pose waypoint;
     waypoint.from_msg(i->pose);
-    waypoint.z = cxt.auv_z_target_;
+    waypoint.z = cxt_.auv_z_target_;
     waypoints.push_back(waypoint);
   }
 
@@ -91,15 +105,15 @@ void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::m
   std::vector<PoseStamped> path;
 
   // Start pose
-  PoseStamped prev = start;
+  PoseStamped prev = start_;
   path.push_back(prev);
 
   // Move to cruising z
-  PoseStamped curr = start;
-  curr.pose.z = cxt.auv_z_target_;
-  if (set_time_z(cxt, prev, curr)) {
+  PoseStamped curr = start_;
+  curr.pose.z = cxt_.auv_z_target_;
+  if (set_time_z(cxt_, prev, curr)) {
     path.push_back(curr);
-    segments_.push_back(std::make_shared<VerticalMotion>(logger_, cxt, prev.pose, curr.pose));
+    segments_.push_back(std::make_shared<VerticalMotion>(logger_, cxt_, prev.pose, curr.pose));
   } else {
     RCLCPP_INFO(logger_, "skip vertical");
   }
@@ -109,9 +123,9 @@ void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::m
   for (auto i = waypoints.begin(); i != waypoints.end(); i++) {
     // Point in the direction fo travel
     curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
-    if (set_time_yaw(cxt, prev, curr)) {
+    if (set_time_yaw(cxt_, prev, curr)) {
       path.push_back(curr);
-      segments_.push_back(std::make_shared<RotateMotion>(logger_, cxt, prev.pose, curr.pose));
+      segments_.push_back(std::make_shared<RotateMotion>(logger_, cxt_, prev.pose, curr.pose));
 
     } else {
       RCLCPP_INFO(logger_, "skip rotate");
@@ -121,9 +135,9 @@ void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::m
     // Run
     curr.pose.x = i->x;
     curr.pose.y = i->y;
-    if (set_time_xy(cxt, prev, curr)) {
+    if (set_time_xy(cxt_, prev, curr)) {
       path.push_back(curr);
-      segments_.push_back(std::make_shared<LineMotion>(logger_, cxt, prev.pose, curr.pose));
+      segments_.push_back(std::make_shared<LineMotion>(logger_, cxt_, prev.pose, curr.pose));
 
     } else {
       RCLCPP_INFO(logger_, "skip line");
@@ -132,8 +146,8 @@ void DownRandomMission::plan(const BaseContext &cxt, const fiducial_vlam_msgs::m
   }
 
   // Generate path message
-  planned_path_.header.stamp = start.t;
-  planned_path_.header.frame_id = cxt.map_frame_;
+  planned_path_.header.stamp = start_.t;
+  planned_path_.header.frame_id = cxt_.map_frame_;
 
   for (auto i = path.begin(); i != path.end(); i++) {
     geometry_msgs::msg::PoseStamped pose_msg;

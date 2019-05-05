@@ -162,7 +162,6 @@ private:
   bool rov_mode() { return is_rov_mode(mode_); }
   bool auv_mode() { return is_auv_mode(mode_); }
 
-  // TODO move to Monotonic/Valid
   bool baro_ok(const rclcpp::Time &t) { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
   bool imu_ok(const rclcpp::Time &t) { return imu_cb_.receiving() && t - imu_cb_.prev() < IMU_TIMEOUT; }
   bool joy_ok(const rclcpp::Time &t) { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
