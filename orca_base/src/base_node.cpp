@@ -416,11 +416,13 @@ void BaseNode::set_mode(uint8_t new_mode)
   }
 
   if (is_auv_mode(new_mode)) {
+    std::shared_ptr<BasePlanner> planner;
     if (new_mode == orca_msgs::msg::Control::KEEP_STATION) {
-      mission_ = std::make_shared<KeepStationMission>(get_logger(), cxt_, map_, filtered_pose_);
+      planner = std::make_shared<KeepStationPlanner>();
     } else {
-      mission_ = std::make_shared<DownRandomMission>(get_logger(), cxt_, map_, filtered_pose_);
+      planner = std::make_shared<DownRandomPlanner>();
     }
+    mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
