@@ -11,11 +11,16 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
+#include "orca_base/base_context.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"
 
 namespace orca_base {
+
+//=============================================================================
+// Utils
+//=============================================================================
 
 constexpr bool is_yaw_hold_mode(uint8_t mode)
 {
@@ -38,10 +43,22 @@ constexpr bool is_rov_mode(uint8_t mode)
 constexpr bool is_auv_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
-  return mode == Control::MISSION;
+  return mode == Control::KEEP_STATION || mode == Control::RANDOM_PATH;
 }
 
+//=============================================================================
+// Constants
+//=============================================================================
+
+const rclcpp::Duration JOY_TIMEOUT{1000000000};   // ROV: disarm if we lose communication
+const rclcpp::Duration ODOM_TIMEOUT{1000000000};  // AUV: disarm if we lose odometry
+const rclcpp::Duration BARO_TIMEOUT{1000000000};  // Holding z: disarm if we lose barometer
+const rclcpp::Duration IMU_TIMEOUT{1000000000};   // Holding yaw: disarm if we lose IMU
+
+//=============================================================================
 // BaseNode provides basic ROV and AUV functions, including joystick operation and waypoint navigation.
+//=============================================================================
+
 class BaseNode: public rclcpp::Node
 {
 private:
@@ -56,10 +73,10 @@ private:
   const int joy_button_disarm_ = JOY_BUTTON_VIEW;
   const int joy_button_arm_ = JOY_BUTTON_MENU;
   const int joy_button_manual_ = JOY_BUTTON_A;
-  const int joy_button_hold_h_ = JOY_BUTTON_X;
+  const int joy_button_hold_hd_ = JOY_BUTTON_X;
   const int joy_button_hold_d_ = JOY_BUTTON_B;
-  const int joy_button_hold_hd_ = JOY_BUTTON_Y;
-  const int joy_button_mission_ = JOY_BUTTON_LOGO;
+  const int joy_button_keep_station_ = JOY_BUTTON_Y;
+  const int joy_button_random_ = JOY_BUTTON_LOGO;
   const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
   const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
   const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
@@ -85,13 +102,14 @@ private:
 
   // Odometry state
   PoseStamped filtered_pose_;                 // Estimated pose
+  double odom_lag_;                           // Difference between header.stamp and now(), in seconds
 
   // ROV operation
   std::shared_ptr<pid::Controller> rov_yaw_pid_;
   std::shared_ptr<pid::Controller> rov_z_pid_;
 
   // AUV operation
-  std::shared_ptr<Mission> mission_;          // The mission we're running
+  std::shared_ptr<BaseMission> mission_;      // The mission we're running
   fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
   nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
@@ -108,6 +126,9 @@ private:
   rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
   rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+
+  // Timer
+  rclcpp::TimerBase::SharedPtr spin_timer_;
 
   // Callbacks
   void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
@@ -136,10 +157,15 @@ private:
   void rov_advance(float forward, float strafe, float yaw, float vertical);
   void publish_control(const rclcpp::Time &msg_time);
   void set_mode(uint8_t new_mode);
-  bool holding_yaw() { return is_yaw_hold_mode(mode_); };
-  bool holding_z() { return is_z_hold_mode(mode_); };
-  bool rov_mode() { return is_rov_mode(mode_); };
-  bool auv_mode() { return is_auv_mode(mode_); };
+  bool holding_yaw() { return is_yaw_hold_mode(mode_); }
+  bool holding_z() { return is_z_hold_mode(mode_); }
+  bool rov_mode() { return is_rov_mode(mode_); }
+  bool auv_mode() { return is_auv_mode(mode_); }
+
+  bool baro_ok(const rclcpp::Time &t) { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
+  bool imu_ok(const rclcpp::Time &t) { return imu_cb_.receiving() && t - imu_cb_.prev() < IMU_TIMEOUT; }
+  bool joy_ok(const rclcpp::Time &t) { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
+  bool odom_ok(const rclcpp::Time &t) { return odom_cb_.receiving() && t - odom_cb_.prev() < ODOM_TIMEOUT; }
 
 public:
   explicit BaseNode();

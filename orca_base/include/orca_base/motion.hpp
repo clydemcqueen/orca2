@@ -10,16 +10,6 @@
 namespace orca_base {
 
 //=====================================================================================
-// Constants
-//=====================================================================================
-
-constexpr double VELO_XY = 0.5;                 // Velocity for xy motion (m/s)
-constexpr double VELO_Z = 0.3;                  // Velocity for z motion (m/s)
-constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m)
-constexpr double VELO_YAW = M_PI / 10;          // Rotation velocity (r/s)
-constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r)
-
-//=====================================================================================
 // BaseMotion is a never-ending pid controller
 // -- hold x, y, z, yaw at start value
 //=====================================================================================
@@ -27,6 +17,8 @@ constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (
 class BaseMotion
 {
 protected:
+
+  rclcpp::Logger logger_;
 
   // State
   Pose goal_;       // Goal pose
@@ -44,7 +36,7 @@ protected:
 
 public:
 
-  BaseMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   // Advance the motion plan, return true to continue, false if we're done
   virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar);
@@ -59,7 +51,7 @@ class VerticalMotion: public BaseMotion
 {
 public:
 
-  VerticalMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };
@@ -73,7 +65,7 @@ class RotateMotion: public BaseMotion
 {
 public:
 
-  RotateMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };
@@ -87,7 +79,7 @@ class LineMotion: public BaseMotion
 {
 public:
 
-  LineMotion(rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+  LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
 };

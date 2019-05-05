@@ -464,7 +464,7 @@
     <sensor name="left_camera" type="camera">
       <update_rate>30.0</update_rate>
       <camera name="head">
-        <horizontal_fov>1.92</horizontal_fov>
+        <horizontal_fov>1.4</horizontal_fov>
         <image>
           <width>800</width>
           <height>600</height>

@@ -4,8 +4,12 @@
 #include <string>
 #include <vector>
 
+#include "mraa/common.hpp"
+#include "mraa/led.hpp"
+
 #include "rclcpp/rclcpp.hpp"
 
+#include "orca_driver/driver_context.hpp"
 #include "orca_driver/maestro.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
@@ -26,15 +30,8 @@ class DriverNode: public rclcpp::Node
 private:
 
   // Parameters
-  int num_thrusters_;
+  DriverContext cxt_;
   std::vector<Thruster> thrusters_;
-  int lights_channel_;
-  int tilt_channel_;
-  int voltage_channel_;
-  int leak_channel_;
-  std::string maestro_port_;
-  double voltage_multiplier_;
-  double voltage_min_;
 
   // State
   maestro::Maestro maestro_;
@@ -43,24 +40,35 @@ private:
   
   // Subscriptions
   rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
-  
+
+  // Timer
+  rclcpp::TimerBase::SharedPtr spin_timer_;
+
   // Callbacks
-  void controlCallback(const orca_msgs::msg::Control::SharedPtr msg);
+  void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
   
   // Publications
   rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
   rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
-  
-  bool readBattery();
-  bool readLeak();
-  bool preDive();
+
+  // LEDs on the UP board
+  // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
+  mraa::Led led_ready_{"green"};
+  mraa::Led led_mission_{"yellow"};
+  mraa::Led led_problem_{"red"};
+
+  bool read_battery();
+  bool read_leak();
+  void spin_once();
+  bool pre_dive();
+  void all_stop();
+  void abort();
 
 public:
   explicit DriverNode();
   ~DriverNode() {}; // Suppress default copy and move constructors
 
   bool connect();
-  void spinOnce();
   void disconnect();
 };
 

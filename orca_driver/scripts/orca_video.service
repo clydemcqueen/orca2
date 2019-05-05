@@ -3,7 +3,7 @@ Description=Orca streaming video
 
 [Service]
 User=pi
-ExecStart=/home/pi/orca_catkin_ws/src/orca/orca_driver/scripts/start_orca_video.sh
+ExecStart=/home/pi/orca_catkin_ws/src/orca/orca_driver/scripts/start_main_video.sh
 
 [Install]
 WantedBy=multi-user.target

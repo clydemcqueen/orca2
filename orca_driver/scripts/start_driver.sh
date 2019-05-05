@@ -8,4 +8,7 @@
 # To start on boot:     sudo systemctl enable orca_driver.service
 # To not start on boot: sudo systemctl disable orca_driver.service
 
-bash -c "source /home/pi/orca_catkin_ws/devel/setup.bash && stdbuf -o L roslaunch orca_driver driver.launch"
+# TODO add ~/ms5837-python to PYTHONPATH
+# TODO scrub ref to /home/clyde
+
+bash -c "source /opt/ros/crystal/setup.bash && source /home/clyde/ros2/orca_ws/install/local_setup.bash && stdbuf -o L ros2 launch orca_driver gscam_launch.py"

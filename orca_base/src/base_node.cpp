@@ -10,11 +10,6 @@ namespace orca_base {
 const double Z_HOLD_MAX = -0.05;  // Highest z hold
 const double Z_HOLD_MIN = -50;    // Lowest z hold
 
-const rclcpp::Duration JOY_TIMEOUT{1000000000};   // ROV: disarm if we lose communication
-const rclcpp::Duration ODOM_TIMEOUT{1000000000};  // AUV: disarm if we lose odometry
-const rclcpp::Duration BARO_TIMEOUT{1000000000};  // All modes: disarm if we lose barometer
-const rclcpp::Duration IMU_TIMEOUT{1000000000};   // All modes: disarm if we lose IMU
-
 //=============================================================================
 // Thrusters
 //=============================================================================
@@ -57,11 +52,22 @@ BaseNode::BaseNode():
   (void) leak_sub_;
   (void) map_sub_;
   (void) odom_sub_;
+  (void) spin_timer_;
 
   // Get parameters
   cxt_.load_parameters(*this);
 
-  if (cxt_.simulation_) {
+  // Track changes to parameters
+  register_param_change_callback(
+    [this](std::vector<rclcpp::Parameter> parameters) -> rcl_interfaces::msg::SetParametersResult
+    {
+      cxt_.change_parameters(*this, parameters);
+      auto result = rcl_interfaces::msg::SetParametersResult();
+      result.successful = true;
+      return result;
+    });
+
+  if (cxt_.use_sim_time_) {
     // The simulated IMU is not rotated
     RCLCPP_INFO(get_logger(), "running in a simulation");
     t_imu_base_ = tf2::Matrix3x3::getIdentity();
@@ -102,6 +108,10 @@ BaseNode::BaseNode():
   battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
   auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
   leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
+
+  // Loop will run at ~constant wall speed, switch to ros_timer when it exists
+  using namespace std::chrono_literals;
+  spin_timer_ = create_wall_timer(50ms, std::bind(&BaseNode::spin_once, this));
 
   RCLCPP_INFO(get_logger(), "base_node ready");
 }
@@ -169,29 +179,29 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
     if (button_down(msg, joy_msg_, joy_button_manual_)) {
       RCLCPP_INFO(get_logger(), "manual");
       set_mode(orca_msgs::msg::Control::MANUAL);
-    } else if (button_down(msg, joy_msg_, joy_button_hold_h_)) {
-      if (imu_cb_.receiving()) {
-        set_mode(orca_msgs::msg::Control::HOLD_H);
-      } else {
-        RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
-      }
     } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
-      if (baro_cb_.receiving()) {
+      if (baro_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_D);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
       }
     } else if (button_down(msg, joy_msg_, joy_button_hold_hd_)) {
-      if (imu_cb_.receiving() && baro_cb_.receiving()) {
+      if (imu_ok(msg->header.stamp) && baro_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_HD);
       } else {
         RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
       }
-    } else if (button_down(msg, joy_msg_, joy_button_mission_)) {
-      if (mode_ != orca_msgs::msg::Control::DISARMED && odom_cb_.receiving() && map_cb_.receiving()) {
-        set_mode(orca_msgs::msg::Control::MISSION);
+    } else if (button_down(msg, joy_msg_, joy_button_keep_station_)) {
+      if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        set_mode(orca_msgs::msg::Control::KEEP_STATION);
       } else {
-        RCLCPP_ERROR(get_logger(), "disarmed, no odometry and/or no map, can't start mission");
+        RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't keep station");
+      }
+    } else if (button_down(msg, joy_msg_, joy_button_random_)) {
+      if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        set_mode(orca_msgs::msg::Control::RANDOM_PATH);
+      } else {
+        RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start random path");
       }
     }
 
@@ -259,6 +269,8 @@ void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
 void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
 {
   filtered_pose_.from_msg(*msg);
+  odom_lag_ = (now() - odom_cb_.curr()).seconds();
+
   if (!first && auv_mode()) {
     // Publish path for rviz
     if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
@@ -281,7 +293,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
       publish_control(odom_cb_.curr());
     } else {
       // Stop mission
-      set_mode(orca_msgs::msg::Control::MANUAL);
+      set_mode(orca_msgs::msg::Control::DISARMED);
     }
   }
 }
@@ -317,6 +329,7 @@ void BaseNode::all_stop()
   publish_control(now());
 }
 
+// TODO always send control message, this will allow DriverNode to abort if BaseNode crashes
 void BaseNode::publish_control(const rclcpp::Time &msg_time)
 {
   // Combine joystick efforts to get thruster efforts.
@@ -342,6 +355,8 @@ void BaseNode::publish_control(const rclcpp::Time &msg_time)
   for (int i = 0; i < thruster_efforts.size(); ++i) {
     control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_efforts[i]));
   }
+  control_msg.stability = stability_;
+  control_msg.odom_lag = odom_lag_;
   control_pub_->publish(control_msg);
 
   // Publish rviz thrust markers
@@ -400,9 +415,12 @@ void BaseNode::set_mode(uint8_t new_mode)
     all_stop();
   }
 
-  if (new_mode == orca_msgs::msg::Control::MISSION) {
-    // Start mission
-    mission_ = std::make_shared<Mission>(get_logger(), cxt_, map_, filtered_pose_);
+  if (is_auv_mode(new_mode)) {
+    if (new_mode == orca_msgs::msg::Control::KEEP_STATION) {
+      mission_ = std::make_shared<KeepStationMission>(get_logger(), cxt_, map_, filtered_pose_);
+    } else {
+      mission_ = std::make_shared<DownRandomMission>(get_logger(), cxt_, map_, filtered_pose_);
+    }
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
@@ -427,12 +445,12 @@ void BaseNode::spin_once()
     return;
   }
 
-  if (rov_mode() && joy_cb_.receiving() && spin_time - joy_cb_.prev() > JOY_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost joystick run ROV operation, disarming");
+  if (rov_mode() && !joy_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost joystick during ROV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (auv_mode() && odom_cb_.receiving() && spin_time - odom_cb_.prev() > ODOM_TIMEOUT) {
+  if (auv_mode() && !odom_ok(spin_time)) {
     RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
@@ -442,18 +460,27 @@ void BaseNode::spin_once()
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (baro_cb_.receiving() && spin_time - baro_cb_.prev() > BARO_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost barometer, disarming");
+  if (holding_z() && !baro_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (imu_cb_.receiving() && spin_time - imu_cb_.prev() > IMU_TIMEOUT) {
-    RCLCPP_ERROR(get_logger(), "lost IMU, disarming");
+  if (holding_yaw() && !imu_ok(spin_time)) {
+    RCLCPP_ERROR(get_logger(), "lost IMU while holding yaw, disarming");
     set_mode(orca_msgs::msg::Control::DISARMED);
+  }
+
+  if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
+    RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
+    set_mode(cxt_.auto_start_);
   }
 }
 
 } // namespace orca_base
+
+//=============================================================================
+// Main
+//=============================================================================
 
 int main(int argc, char **argv)
 {
@@ -466,19 +493,11 @@ int main(int argc, char **argv)
   // Init node
   auto node = std::make_shared<orca_base::BaseNode>();
 
-  // rclcpp::Rate doesn't honor /clock in Crystal -- loop will run at ~constant wall speed
-  rclcpp::Rate r(100);
-  while (rclcpp::ok()) {
-    // Do our work
-    node->spin_once();
+  // Spin node
+  rclcpp::spin(node);
 
-    // Respond to incoming messages
-    rclcpp::spin_some(node);
-
-    // Wait
-    r.sleep();
-  }
-
+  // Shut down ROS
   rclcpp::shutdown();
+
   return 0;
 }
