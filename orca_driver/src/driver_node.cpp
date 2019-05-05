@@ -51,7 +51,7 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
 {
   // TODO abort if no control messages received in 1s, requires changes to BaseNode
 
-  led_mission_.setBrightness(msg->mode == msg->MISSION ? led_mission_.readMaxBrightness() / 2 : 0);
+  led_mission_.setBrightness(msg->mode >= msg->KEEP_STATION ? led_mission_.readMaxBrightness() / 2 : 0);
 
   if (maestro_.ready()) {
     maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm);

@@ -179,12 +179,6 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
     if (button_down(msg, joy_msg_, joy_button_manual_)) {
       RCLCPP_INFO(get_logger(), "manual");
       set_mode(orca_msgs::msg::Control::MANUAL);
-    } else if (button_down(msg, joy_msg_, joy_button_hold_h_)) {
-      if (imu_ok(msg->header.stamp)) {
-        set_mode(orca_msgs::msg::Control::HOLD_H);
-      } else {
-        RCLCPP_ERROR(get_logger(), "IMU not ready, can't hold yaw");
-      }
     } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
       if (baro_ok(msg->header.stamp)) {
         set_mode(orca_msgs::msg::Control::HOLD_D);
@@ -197,11 +191,17 @@ void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool fir
       } else {
         RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
       }
-    } else if (button_down(msg, joy_msg_, joy_button_mission_)) {
-      if (mode_ != orca_msgs::msg::Control::DISARMED && odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-        set_mode(orca_msgs::msg::Control::MISSION);
+    } else if (button_down(msg, joy_msg_, joy_button_keep_station_)) {
+      if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        set_mode(orca_msgs::msg::Control::KEEP_STATION);
       } else {
-        RCLCPP_ERROR(get_logger(), "disarmed, no odometry and/or no map, can't start mission");
+        RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't keep station");
+      }
+    } else if (button_down(msg, joy_msg_, joy_button_random_)) {
+      if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        set_mode(orca_msgs::msg::Control::RANDOM_PATH);
+      } else {
+        RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start random path");
       }
     }
 
@@ -415,10 +415,12 @@ void BaseNode::set_mode(uint8_t new_mode)
     all_stop();
   }
 
-  if (new_mode == orca_msgs::msg::Control::MISSION) {
-    // Start mission
-    //mission_ = std::make_shared<DownRandomMission>(get_logger(), cxt_, map_, filtered_pose_);
-    mission_ = std::make_shared<KeepStationMission>(get_logger(), cxt_, map_, filtered_pose_);
+  if (is_auv_mode(new_mode)) {
+    if (new_mode == orca_msgs::msg::Control::KEEP_STATION) {
+      mission_ = std::make_shared<KeepStationMission>(get_logger(), cxt_, map_, filtered_pose_);
+    } else {
+      mission_ = std::make_shared<DownRandomMission>(get_logger(), cxt_, map_, filtered_pose_);
+    }
 
     // Publish path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
@@ -468,9 +470,9 @@ void BaseNode::spin_once()
     set_mode(orca_msgs::msg::Control::DISARMED);
   }
 
-  if (!auv_mode() && cxt_.auto_mission_ && !joy_ok(spin_time) && odom_ok(spin_time)) {
-    RCLCPP_INFO(get_logger(), "auto-starting mission");
-    set_mode(orca_msgs::msg::Control::MISSION);
+  if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
+    RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
+    set_mode(cxt_.auto_start_);
   }
 }
 

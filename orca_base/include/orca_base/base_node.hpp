@@ -43,7 +43,7 @@ constexpr bool is_rov_mode(uint8_t mode)
 constexpr bool is_auv_mode(uint8_t mode)
 {
   using orca_msgs::msg::Control;
-  return mode == Control::MISSION;
+  return mode == Control::KEEP_STATION || mode == Control::RANDOM_PATH;
 }
 
 //=============================================================================
@@ -73,10 +73,10 @@ private:
   const int joy_button_disarm_ = JOY_BUTTON_VIEW;
   const int joy_button_arm_ = JOY_BUTTON_MENU;
   const int joy_button_manual_ = JOY_BUTTON_A;
-  const int joy_button_hold_h_ = JOY_BUTTON_X;
+  const int joy_button_hold_hd_ = JOY_BUTTON_X;
   const int joy_button_hold_d_ = JOY_BUTTON_B;
-  const int joy_button_hold_hd_ = JOY_BUTTON_Y;
-  const int joy_button_mission_ = JOY_BUTTON_LOGO;
+  const int joy_button_keep_station_ = JOY_BUTTON_Y;
+  const int joy_button_random_ = JOY_BUTTON_LOGO;
   const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
   const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
   const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;

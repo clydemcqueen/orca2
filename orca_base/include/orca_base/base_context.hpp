@@ -16,7 +16,7 @@ namespace orca_base {
 
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(use_sim_time, false, bool)                                   /* We're in a simulation  */ \
-  CXT_ELEM(auto_mission, false, bool)                                   /* Auto-start AUV mission  */ \
+  CXT_ELEM(auto_start, 0, int)                                          /* Auto-start AUV mission if > 0  */ \
   CXT_ELEM(map_frame, "map", std::string)                               /* Map frame  */ \
   CXT_ELEM(base_frame, "base_link", std::string)                        /* Base frame  */ \
   \
