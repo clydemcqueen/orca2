@@ -39,7 +39,7 @@ public:
   BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
   // Advance the motion plan, return true to continue, false if we're done
-  virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar);
+  virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error);
 };
 
 //=====================================================================================
@@ -53,7 +53,7 @@ public:
 
   VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-  bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
+  bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
 };
 
 //=====================================================================================
@@ -67,7 +67,7 @@ public:
 
   RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-  bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
+  bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
 };
 
 //=====================================================================================
@@ -81,7 +81,7 @@ public:
 
   LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-  bool advance(double dt, const Pose &estimate, Acceleration &u_bar) override;
+  bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
 };
 
 } // namespace orca_base

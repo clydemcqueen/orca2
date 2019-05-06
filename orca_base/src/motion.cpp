@@ -79,7 +79,7 @@ BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, con
   yaw_controller_.set_target(start.yaw);
 }
 
-bool BaseMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
+bool BaseMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
 {
   u_bar.x = x_controller_.calc(estimate.x, dt, ff_.x);
   u_bar.y = y_controller_.calc(estimate.y, dt, ff_.y);
@@ -116,7 +116,7 @@ VerticalMotion::VerticalMotion(const rclcpp::Logger &logger, const BaseContext &
   RCLCPP_INFO(logger_, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
 }
 
-bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
+bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
 {
   if (goal_.distance_z(plan_) > EPSILON_PLAN_XYZ) {
     // Update plan
@@ -125,8 +125,13 @@ bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_ba
     // Set target
     z_controller_.set_target(plan_.z);
 
+    // Accumulate error
+    error.plan = plan_; // TODO
+    error.estimate = estimate; // TODO
+    error.add_error();
+
     // Compute u_bar
-    return BaseMotion::advance(dt, estimate, u_bar);
+    return BaseMotion::advance(dt, estimate, u_bar, error);
   } else {
     finish(u_bar);
     return false;
@@ -152,7 +157,7 @@ RotateMotion::RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt,
   RCLCPP_INFO(logger_, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
 }
 
-bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
+bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
 {
   if (goal_.distance_yaw(plan_) > EPSILON_PLAN_YAW) {
     // Update plan
@@ -161,8 +166,13 @@ bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
     // Set target
     yaw_controller_.set_target(plan_.yaw);
 
+    // Accumulate error
+    error.plan = plan_; // TODO
+    error.estimate = estimate; // TODO
+    error.add_error();
+
     // Compute u_bar
-    return BaseMotion::advance(dt, estimate, u_bar);
+    return BaseMotion::advance(dt, estimate, u_bar, error);
   } else {
     finish(u_bar);
     return false;
@@ -189,7 +199,7 @@ LineMotion::LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, con
     start.x, start.y, start.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
 }
 
-bool LineMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
+bool LineMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
 {
   double distance_remaining = goal_.distance_xy(plan_);
   if (distance_remaining > EPSILON_PLAN_XYZ) {
@@ -214,8 +224,12 @@ bool LineMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar)
     x_controller_.set_target(plan_.x);
     y_controller_.set_target(plan_.y);
 
+    // Accumulate error
+    error.plan = plan_; // TODO
+    error.estimate = estimate; // TODO
+
     // Compute u_bar
-    return BaseMotion::advance(dt, estimate, u_bar);
+    return BaseMotion::advance(dt, estimate, u_bar, error);
   } else {
     finish(u_bar);
     return false;

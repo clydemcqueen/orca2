@@ -89,6 +89,7 @@ BaseNode::BaseNode():
   thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
   planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
   filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
+  error_pub_ = create_publisher<orca_msgs::msg::PoseError>("error", 1);
 
   // Monotonic subscriptions
   baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("barometer",
@@ -291,6 +292,14 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
       efforts_.set_yaw(efforts_.yaw() * stability_);
 
       publish_control(odom_cb_.curr());
+
+      // Publish error
+      if (count_subscribers(error_pub_->get_topic_name()) > 0) {
+        orca_msgs::msg::PoseError error_msg;
+        error_msg.header.stamp = msg->header.stamp;
+        mission_->error().to_msg(error_msg);
+        error_pub_->publish(error_msg);
+      }
     } else {
       // Stop mission
       set_mode(orca_msgs::msg::Control::DISARMED);

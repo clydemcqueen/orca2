@@ -37,6 +37,9 @@ rosidl_generate_interfaces(
   "msg/Control.msg"
   "msg/Leak.msg"
   "msg/Proc.msg"
+  "msg/Pose.msg"
+  "msg/PoseError.msg"
+  "msg/PoseStamped.msg"
   DEPENDENCIES std_msgs
 )
 

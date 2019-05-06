@@ -149,7 +149,7 @@ Mission::Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, co
 
 bool Mission::advance(const double dt, const PoseStamped &curr, Acceleration &u_bar)
 {
-  if (planner_->segments_[segment_idx_]->advance(dt, curr.pose, u_bar)) {
+  if (planner_->segments_[segment_idx_]->advance(dt, curr.pose, u_bar, error_)) {
     return true;
   }
 

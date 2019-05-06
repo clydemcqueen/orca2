@@ -51,6 +51,7 @@ class Mission
   rclcpp::Logger logger_;                               // ROS logger
   std::shared_ptr<BasePlanner> planner_;                // Path planner
   int segment_idx_;                                     // Current segment
+  PoseError error_;                                     // Total error for this mission
 
 public:
 
@@ -61,6 +62,8 @@ public:
   bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
 
   const nav_msgs::msg::Path &planned_path() const { return planner_->planned_path_; }
+
+  const PoseError &error() const { return error_; }
 };
 
 } // namespace orca_base

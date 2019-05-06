@@ -151,6 +151,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
+  rclcpp::Publisher<orca_msgs::msg::PoseError>::SharedPtr error_pub_;
 
   // Helpers
   void all_stop();

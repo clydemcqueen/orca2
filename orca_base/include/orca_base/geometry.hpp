@@ -4,6 +4,9 @@
 #include "orca_base/model.hpp"
 #include "orca_base/util.hpp"
 
+#include "orca_msgs/msg/pose.hpp"
+#include "orca_msgs/msg/pose_error.hpp"
+
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -36,6 +39,14 @@ struct Pose
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw);
     msg.orientation = tf2::toMsg(q);
+  }
+
+  void to_msg(orca_msgs::msg::Pose &msg) const
+  {
+    msg.x = x;
+    msg.y = y;
+    msg.z = z;
+    msg.yaw = yaw;
   }
 
   void from_msg(const geometry_msgs::msg::Pose &msg)
@@ -101,6 +112,51 @@ struct PoseStamped
     to_msg(msg);
     msg.header.frame_id = path.header.frame_id;
     path.poses.push_back(msg);
+  }
+};
+
+//=====================================================================================
+// PoseError
+//=====================================================================================
+
+struct PoseError
+{
+  Pose plan;      // Planned pose -- where we hoped to be
+  Pose estimate;  // Estimated pose -- where we think we are
+
+  Pose sse;       // Sum of the squared errors
+  int64_t steps;  // Steps
+
+  constexpr PoseError(): steps{0} {}
+
+  void add_error()
+  {
+    sse.x += pow(plan.x - estimate.x, 2);
+    sse.y += pow(plan.y - estimate.y, 2);
+    sse.z += pow(plan.z - estimate.z, 2);
+    sse.yaw += pow(norm_angle(plan.yaw - estimate.yaw), 2);
+    steps++;
+  }
+
+  Pose rms() const
+  {
+    Pose r;
+    if (steps > 0) {
+      r.x = sqrt(sse.x) / steps;
+      r.y = sqrt(sse.y) / steps;
+      r.z = sqrt(sse.z) / steps;
+      r.yaw = sqrt(sse.yaw) / steps;
+
+    }
+    return r;
+  }
+
+  void to_msg(orca_msgs::msg::PoseError &msg) const
+  {
+    plan.to_msg(msg.plan);
+    estimate.to_msg(msg.estimate);
+    sse.to_msg(msg.sse);
+    rms().to_msg(msg.rms);
   }
 };
 
