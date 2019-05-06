@@ -81,6 +81,11 @@ BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, con
 
 bool BaseMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
 {
+  // Accumulate error
+  error.plan = plan_;
+  error.estimate = estimate;
+  error.add_error();
+
   u_bar.x = x_controller_.calc(estimate.x, dt, ff_.x);
   u_bar.y = y_controller_.calc(estimate.y, dt, ff_.y);
   u_bar.z = z_controller_.calc(estimate.z, dt, ff_.z);
@@ -125,11 +130,6 @@ bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_ba
     // Set target
     z_controller_.set_target(plan_.z);
 
-    // Accumulate error
-    error.plan = plan_; // TODO
-    error.estimate = estimate; // TODO
-    error.add_error();
-
     // Compute u_bar
     return BaseMotion::advance(dt, estimate, u_bar, error);
   } else {
@@ -165,11 +165,6 @@ bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar,
 
     // Set target
     yaw_controller_.set_target(plan_.yaw);
-
-    // Accumulate error
-    error.plan = plan_; // TODO
-    error.estimate = estimate; // TODO
-    error.add_error();
 
     // Compute u_bar
     return BaseMotion::advance(dt, estimate, u_bar, error);
@@ -223,10 +218,6 @@ bool LineMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, P
     // Set targets
     x_controller_.set_target(plan_.x);
     y_controller_.set_target(plan_.y);
-
-    // Accumulate error
-    error.plan = plan_; // TODO
-    error.estimate = estimate; // TODO
 
     // Compute u_bar
     return BaseMotion::advance(dt, estimate, u_bar, error);

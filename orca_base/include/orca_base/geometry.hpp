@@ -63,6 +63,18 @@ struct Pose
     return std::hypot(x - that.x, y - that.y);
   }
 
+  // X distance between 2 poses
+  double distance_x(const Pose &that) const
+  {
+    return std::abs(x - that.x);
+  }
+
+  // Y distance between 2 poses
+  double distance_y(const Pose &that) const
+  {
+    return std::abs(y - that.y);
+  }
+
   // Z distance between 2 poses
   double distance_z(const Pose &that) const
   {
@@ -73,6 +85,16 @@ struct Pose
   double distance_yaw(const Pose &that) const
   {
     return std::abs(norm_angle(yaw - that.yaw));
+  }
+
+  Pose error(const Pose &that) const
+  {
+    Pose e;
+    e.x = distance_x(that);
+    e.y = distance_y(that);
+    e.z = distance_z(that);
+    e.yaw = distance_yaw(that);
+    return e;
   }
 };
 
@@ -123,6 +145,7 @@ struct PoseError
 {
   Pose plan;      // Planned pose -- where we hoped to be
   Pose estimate;  // Estimated pose -- where we think we are
+  Pose error;     // Error
 
   Pose sse;       // Sum of the squared errors
   int64_t steps;  // Steps
@@ -131,10 +154,11 @@ struct PoseError
 
   void add_error()
   {
-    sse.x += pow(plan.x - estimate.x, 2);
-    sse.y += pow(plan.y - estimate.y, 2);
-    sse.z += pow(plan.z - estimate.z, 2);
-    sse.yaw += pow(norm_angle(plan.yaw - estimate.yaw), 2);
+    error = estimate.error(plan);
+    sse.x += error.x * error.x;
+    sse.y += error.y * error.y;
+    sse.z += error.z * error.z;
+    sse.yaw += error.yaw * error.yaw;
     steps++;
   }
 
@@ -142,10 +166,10 @@ struct PoseError
   {
     Pose r;
     if (steps > 0) {
-      r.x = sqrt(sse.x) / steps;
-      r.y = sqrt(sse.y) / steps;
-      r.z = sqrt(sse.z) / steps;
-      r.yaw = sqrt(sse.yaw) / steps;
+      r.x = sqrt(sse.x / steps);
+      r.y = sqrt(sse.y / steps);
+      r.z = sqrt(sse.z / steps);
+      r.yaw = sqrt(sse.yaw / steps);
 
     }
     return r;
@@ -155,7 +179,9 @@ struct PoseError
   {
     plan.to_msg(msg.plan);
     estimate.to_msg(msg.estimate);
+    error.to_msg(msg.error);
     sse.to_msg(msg.sse);
+    msg.steps = steps;
     rms().to_msg(msg.rms);
   }
 };
