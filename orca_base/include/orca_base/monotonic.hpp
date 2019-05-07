@@ -42,6 +42,7 @@ public:
 
   const rclcpp::Time &curr() const { return curr_; };
   const rclcpp::Time &prev() const { return prev_; };
+  double dt() const { return (curr() - prev()).seconds(); }
   bool receiving() const { return valid(prev_); }
 };
 
@@ -86,6 +87,7 @@ public:
 
   const rclcpp::Time &curr() const { return curr_; };
   const rclcpp::Time &prev() const { return prev_; };
+  double dt() const { return (curr() - prev()).seconds(); }
   bool receiving() const { return valid(prev_); }
 };
 

@@ -280,7 +280,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
     }
 
     Acceleration u_bar;
-    double dt = (odom_cb_.curr() - odom_cb_.prev()).seconds();
+    double dt = odom_cb_.dt();
     if (mission_->advance(dt, filtered_pose_, u_bar)) {
       // Acceleration => effort
       efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
@@ -309,8 +309,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
 
 void BaseNode::rov_advance(float forward, float strafe, float yaw, float vertical)
 {
-  double dt = (joy_cb_.curr() - joy_cb_.prev()).seconds();
-  assert(dt > 0);
+  double dt = joy_cb_.dt();
 
   efforts_.set_forward(dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_);
   efforts_.set_strafe(dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_);
