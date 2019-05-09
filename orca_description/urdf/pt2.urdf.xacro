@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <!--
-  Generic version of Orca
+  Hardware build for pool test #2
 -->
 
 <robot name="orca" xmlns:xacro="http://ros.org/wiki/xacro">
@@ -127,25 +127,10 @@
       <origin xyz="0 0 0.063" rpy="0 ${PI/2} 0"/>
       <geometry><cylinder length="0.32" radius="0.055"/></geometry>
     </visual>
-    <!-- Front-facing camera hemisphere -->
-    <visual>
-      <origin xyz="0.16 0 0.063" rpy="0 ${PI/2} 0"/>
-      <geometry><sphere radius="0.052"/></geometry>
-    </visual>
     <!-- Battery tube -->
     <visual>
       <origin xyz="0 0 -0.05" rpy="0 ${PI/2} 0"/>
       <geometry><cylinder length="0.25" radius="0.045"/></geometry>
-    </visual>
-    <!-- Left down-facing camera tube -->
-    <visual>
-      <origin xyz="-0.15 0.18 0" rpy="0 0 0"/>
-      <geometry><cylinder length="0.135" radius="0.0275"/></geometry>
-    </visual>
-    <!-- Right down-facing camera tube -->
-    <visual>
-      <origin xyz="-0.15 -0.18 0" rpy="0 0 0"/>
-      <geometry><cylinder length="0.135" radius="0.0275"/></geometry>
     </visual>
     <!-- Collision region -->
     <collision>
@@ -153,40 +138,22 @@
     </collision>
   </link>
 
-  <!-- Left down-facing camera -->
-  <link name="left_camera_link">
+  <!-- Forward camera -->
+  <link name="forward_camera_link">
     <!-- Camera hemisphere -->
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.026"/></geometry>
+      <geometry><sphere radius="0.052"/></geometry>
       <material name="red"/>
     </visual>
   </link>
 
-  <!-- Attach left down-facing camera to base_link -->
-  <joint name="left_camera_joint" type="fixed">
+  <!-- Attach forward camera to base_link -->
+  <joint name="forward_camera_joint" type="fixed">
     <axis xyz="0 1 0" />
-    <origin xyz="-0.15 0.18 -0.0675" rpy="0 ${PI/2} 0"/>
+    <origin xyz="0.16 0 0.063" rpy="0 0 0"/>
     <parent link="base_link"/>
-    <child link="left_camera_link"/>
-  </joint>
-
-  <!-- Right down-facing camera -->
-  <link name="right_camera_link">
-    <!-- Camera hemisphere -->
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry><sphere radius="0.026"/></geometry>
-      <material name="red"/>
-    </visual>
-  </link>
-
-  <!-- Attach right down-facing camera to base_link -->
-  <joint name="right_camera_joint" type="fixed">
-    <axis xyz="0 1 0" />
-    <origin xyz="-0.15 -0.18 -0.0675" rpy="0 1.57079 0"/>
-    <parent link="base_link"/>
-    <child link="right_camera_link"/>
+    <child link="forward_camera_link"/>
   </joint>
 
   <!-- Attach thrusters to the base_link -->
@@ -291,33 +258,11 @@
   </gazebo>
 
   <!--
-    The OrcaIMUPlugin (wraps a Gazebo IMU sensor) simulates an IMU sensor such as the Phidgets 1044.
-  -->
-  <gazebo reference="base_link">
-    <gravity>true</gravity>
-    <sensor name="imu_sensor" type="imu">
-      <update_rate>50</update_rate> <!-- Gazebeo max seems to be 50Hz -->
-      <plugin name="OrcaIMUPlugin" filename="libOrcaIMUPlugin.so" />
-      <pose>0 0 0 0 0 0</pose>
-    </sensor>
-  </gazebo>
-
-  <!--
-    The OrcaGroundTruthPlugin publishes a ground truth pose.
-  -->
-  <gazebo>
-    <plugin name="OrcaGroundTruthPlugin" filename="libOrcaGroundTruthPlugin.so">
-      <link name="base_link" />
-      <ros_topic>/ground_truth</ros_topic>
-    </plugin>
-  </gazebo>
-
-  <!--
     The camera_controller plugin (wraps a Gazebo camera sensor) simulates a camera driver.
-    Left down-facing camera driver:
+    Forward-facing camera driver:
   -->
-  <gazebo reference="left_camera_link">
-    <sensor type="camera" name="left_camera">
+  <gazebo reference="forward_camera_link">
+    <sensor type="camera" name="forward_camera">
       <update_rate>30.0</update_rate>
       <camera name="head">
         <horizontal_fov>1.4</horizontal_fov>
@@ -342,10 +287,10 @@
       <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
         <alwaysOn>true</alwaysOn>
         <updateRate>0.0</updateRate>
-        <cameraName>orca/left_camera</cameraName>
+        <cameraName>orca/forward_camera</cameraName>
         <imageTopicName>image_raw</imageTopicName>
         <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-        <frameName>left_camera_link</frameName>
+        <frameName>forward_camera_link</frameName>
         <hackBaseline>0.07</hackBaseline>
         <distortionK1>0.0</distortionK1>
         <distortionK2>0.0</distortionK2>
