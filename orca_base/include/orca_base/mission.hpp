@@ -33,10 +33,31 @@ struct KeepStationPlanner: BasePlanner
 };
 
 //=====================================================================================
-// DownRandomPlanner
+// RandomPlanner
 //=====================================================================================
 
-struct DownRandomPlanner: BasePlanner
+struct RandomPlanner: BasePlanner
+{
+  void plan_from_waypoints(rclcpp::Logger &logger, const BaseContext &cxt, std::vector<Pose> &waypoints,
+    const PoseStamped &start);
+};
+
+
+//=====================================================================================
+// DownRandomPlanner -- markers are on the floor, and there's a down-facing camera
+//=====================================================================================
+
+struct DownRandomPlanner: RandomPlanner
+{
+  virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    const PoseStamped &start) override;
+};
+
+//=====================================================================================
+// ForwardRandomPlanner -- markers are on the walls, and there's a forward-facing camera
+//=====================================================================================
+
+struct ForwardRandomPlanner: RandomPlanner
 {
   virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
     const PoseStamped &start) override;

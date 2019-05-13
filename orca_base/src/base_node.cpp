@@ -429,7 +429,7 @@ void BaseNode::set_mode(uint8_t new_mode)
     if (new_mode == orca_msgs::msg::Control::KEEP_STATION) {
       planner = std::make_shared<KeepStationPlanner>();
     } else {
-      planner = std::make_shared<DownRandomPlanner>();
+      planner = std::make_shared<ForwardRandomPlanner>();
     }
     mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
 

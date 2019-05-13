@@ -36,6 +36,23 @@ bool set_time_yaw(const orca_base::BaseContext &cxt, const PoseStamped &p1, Pose
   return d > MIN_TIME;
 }
 
+geometry_msgs::msg::Pose map_to_world(const geometry_msgs::msg::Pose &marker_f_map)
+{
+  // Rotation from vlam map frame to ROS world frame
+  const static tf2::Quaternion t_world_map(0, 0, -sqrt(0.5), sqrt(0.5));
+
+  tf2::Quaternion t_map_marker(marker_f_map.orientation.x, marker_f_map.orientation.y, marker_f_map.orientation.z,
+    marker_f_map.orientation.w);
+  tf2::Quaternion t_world_marker = t_world_map * t_map_marker;
+
+  geometry_msgs::msg::Pose marker_f_world = marker_f_map;
+  marker_f_world.orientation.x = t_world_marker.x();
+  marker_f_world.orientation.y = t_world_marker.y();
+  marker_f_world.orientation.z = t_world_marker.z();
+  marker_f_world.orientation.w = t_world_marker.w();
+  return marker_f_world;
+}
+
 //=====================================================================================
 // KeepStationPlanner
 //=====================================================================================
@@ -55,21 +72,14 @@ void KeepStationPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
 }
 
 //=====================================================================================
-// DownRandomPlanner
+// RandomPlanner
+//
+// Generate a random path between waypoints.
 //=====================================================================================
 
-void DownRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
-  const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+void RandomPlanner::plan_from_waypoints(rclcpp::Logger &logger, const BaseContext &cxt, std::vector<Pose> &waypoints,
+  const PoseStamped &start)
 {
-  // Waypoints are directly above markers
-  std::vector<Pose> waypoints;
-  for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
-    Pose waypoint;
-    waypoint.from_msg(i->pose);
-    waypoint.z = cxt.auv_z_target_;
-    waypoints.push_back(waypoint);
-  }
-
   // Shuffle waypoints
   std::random_device rd;
   std::mt19937 g(rd());
@@ -128,6 +138,47 @@ void DownRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
     i->to_msg(pose_msg);
     planned_path_.poses.push_back(pose_msg);
   }
+}
+
+//=====================================================================================
+// DownRandomPlanner
+//=====================================================================================
+
+void DownRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+  const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+{
+  // Waypoints are directly above markers
+  std::vector<Pose> waypoints;
+  for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
+    Pose waypoint;
+    waypoint.from_msg(i->pose);
+    waypoint.z = cxt.auv_z_target_;
+    waypoints.push_back(waypoint);
+  }
+
+  plan_from_waypoints(logger, cxt, waypoints, start);
+}
+
+//=====================================================================================
+// ForwardRandomPlanner
+//=====================================================================================
+
+void ForwardRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+  const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+{
+  // Waypoints are directly in front of markers
+  std::vector<Pose> waypoints;
+  for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
+    geometry_msgs::msg::Pose marker_f_world = map_to_world(i->pose);
+    Pose waypoint;
+    waypoint.from_msg(marker_f_world);
+    waypoint.x += cos(waypoint.yaw) * cxt.auv_xy_distance_;
+    waypoint.y += sin(waypoint.yaw) * cxt.auv_xy_distance_;
+    waypoint.z = cxt.auv_z_target_;
+    waypoints.push_back(waypoint);
+  }
+
+  plan_from_waypoints(logger, cxt, waypoints, start);
 }
 
 //=====================================================================================
