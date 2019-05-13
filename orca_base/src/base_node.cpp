@@ -42,7 +42,8 @@ BaseNode::BaseNode():
   Node{"base_node"},
   mode_{orca_msgs::msg::Control::DISARMED},
   tilt_{0},
-  brightness_{0}
+  brightness_{0},
+  stability_{1.0}  // Default to stable (might not have an IMU)
 {
   // Suppress IDE warnings
   (void) baro_sub_;

@@ -1,5 +1,6 @@
 """Simulate pool test #2"""
 
+import math
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -20,8 +21,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'pt2.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'small.world') # TODO foward.world
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'pt2.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'pt2_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -54,8 +55,8 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
-                'auto_start': 6,                            # Auto-start AUV mission
-                'auv_z_target': -2.0                        # Mission runs 2m below the surface
+                #'auto_start': 6,                            # Auto-start AUV mission TODO
+                'auv_z_target': -0.5                        # Mission runs 0.5m below the surface
             }], remappings=[
                 ('filtered_odom', '/' + camera_name + '/filtered_odom')
             ]),
@@ -85,8 +86,8 @@ def generate_launch_description():
                 't_camera_base_y': 0.,
                 't_camera_base_z': 0.063,
                 't_camera_base_roll': 0.,
-                't_camera_base_pitch': -1.57,
-                't_camera_base_yaw': 1.57
+                't_camera_base_pitch': -math.pi/2,
+                't_camera_base_yaw': math.pi/2
             }]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
