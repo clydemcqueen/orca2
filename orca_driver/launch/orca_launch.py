@@ -52,6 +52,8 @@ def generate_launch_description():
                 'marker_length': 0.1778                     # Marker length
             }]),
 
+        # TODO add odom_filter
+
         # Localizer
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=main_camera_name, parameters=[{

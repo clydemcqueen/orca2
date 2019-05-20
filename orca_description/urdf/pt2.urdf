@@ -76,7 +76,7 @@
       </geometry>
     </collision>
   </link>
-  <!-- Forward camera -->
+  <!-- Forward camera link -->
   <link name="forward_camera_link">
     <!-- Camera hemisphere -->
     <visual>
@@ -87,12 +87,19 @@
       <material name="red"/>
     </visual>
   </link>
-  <!-- Attach forward camera to base_link -->
-  <joint name="forward_camera_joint" type="fixed">
-    <axis xyz="0 1 0"/>
+  <!-- Attach forward_camera_link to base_link -->
+  <joint name="forward_camera_link_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.16 0 0.063"/>
     <parent link="base_link"/>
     <child link="forward_camera_link"/>
+  </joint>
+  <!-- Forward camera frame -->
+  <link name="forward_camera_frame"/>
+  <!-- Attach forward_camera_frame to forward_camera_link -->
+  <joint name="forward_camera_frame_joint" type="fixed">
+    <origin rpy="-1.57079632679 0 -1.57079632679" xyz="0 0 0"/>
+    <parent link="forward_camera_link"/>
+    <child link="forward_camera_frame"/>
   </joint>
   <link name="t200_link_front_right">
     <!-- Front cone -->
