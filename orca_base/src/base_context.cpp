@@ -11,12 +11,20 @@ void BaseContext::load_parameters(rclcpp::Node &node)
   CXT_MACRO_ALL_PARAMS
 }
 
-void BaseContext::change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters)
+bool BaseContext::change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters)
 {
 #undef CXT_ELEM
 #define CXT_ELEM(n, a...) CXT_PARAM_CHANGE_PARAM(n, a)
-  for (auto parameter : parameters) {
-    CXT_MACRO_ALL_PARAMS
+
+  try {
+    for (auto parameter : parameters) {
+      CXT_MACRO_ALL_PARAMS
+    }
+    return true;
+
+  } catch (rclcpp::ParameterTypeException) {
+    std::cout << "type exception trying to change a parameter" << std::endl;
+    return false;
   }
 }
 

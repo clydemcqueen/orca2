@@ -93,14 +93,14 @@
     <parent link="base_link"/>
     <child link="forward_camera_link"/>
   </joint>
-  <!-- Forward camera frame -->
-  <link name="forward_camera_frame"/>
-  <!-- Attach forward_camera_frame to forward_camera_link -->
-  <joint name="forward_camera_frame_joint" type="fixed">
-    <origin rpy="-1.57079632679 0 -1.57079632679" xyz="0 0 0"/>
-    <parent link="forward_camera_link"/>
-    <child link="forward_camera_frame"/>
-  </joint>
+  <!--  &lt;!&ndash; Forward camera frame &ndash;&gt;-->
+  <!--  <link name="forward_camera_frame"/>-->
+  <!--  &lt;!&ndash; Attach forward_camera_frame to forward_camera_link &ndash;&gt;-->
+  <!--  <joint name="forward_camera_frame_joint" type="fixed">-->
+  <!--    <origin xyz="0 0 0" rpy="${-PI/2} 0 ${-PI/2}"/>-->
+  <!--    <parent link="forward_camera_link"/>-->
+  <!--    <child link="forward_camera_frame"/>-->
+  <!--  </joint>-->
   <link name="t200_link_front_right">
     <!-- Front cone -->
     <visual>

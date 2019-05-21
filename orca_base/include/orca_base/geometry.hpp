@@ -220,6 +220,8 @@ struct Acceleration
   double yaw;
 
   constexpr Acceleration(): x{0}, y{0}, z{0}, yaw{0} {}
+
+  constexpr Acceleration(double _x, double _y, double _z, double _yaw): x{_x}, y{_y}, z{_z}, yaw{_yaw} {}
 };
 
 //=====================================================================================

@@ -190,12 +190,18 @@ Mission::Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, co
   logger_{logger},
   planner_{planner}
 {
+  RCLCPP_INFO(logger, "pid x=(%g, %g, %g), y=(%g, %g, %g), z=(%g, %g, %g), yaw=(%g, %g, %g)",
+    cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_,
+    cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_,
+    cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_,
+    cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_);
+
   // Create path
   planner_->plan(logger, cxt, map, start);
 
   // Start
   segment_idx_ = 0;
-  RCLCPP_INFO(logger_, "mission has %d segments, segment 0", planner_->segments_.size());
+  RCLCPP_INFO(logger_, "mission has %d segment(s), segment 0", planner_->segments_.size());
 }
 
 bool Mission::advance(const double dt, const PoseStamped &curr, Acceleration &u_bar)

@@ -62,9 +62,8 @@ BaseNode::BaseNode():
   register_param_change_callback(
     [this](std::vector<rclcpp::Parameter> parameters) -> rcl_interfaces::msg::SetParametersResult
     {
-      cxt_.change_parameters(*this, parameters);
       auto result = rcl_interfaces::msg::SetParametersResult();
-      result.successful = true;
+      result.successful = cxt_.change_parameters(*this, parameters);
       return result;
     });
 
@@ -276,6 +275,9 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
   if (!first && auv_mode()) {
     // Publish path for rviz
     if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
+      if (filtered_path_.poses.size() > cxt_.keep_poses_) {
+        filtered_path_.poses.clear();
+      }
       filtered_pose_.add_to_path(filtered_path_);
       filtered_path_pub_->publish(filtered_path_);
     }
@@ -298,6 +300,7 @@ void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool 
       if (count_subscribers(error_pub_->get_topic_name()) > 0) {
         orca_msgs::msg::PoseError error_msg;
         error_msg.header.stamp = msg->header.stamp;
+        error_msg.header.frame_id = cxt_.map_frame_; // Error is expressed in the map frame
         mission_->error().to_msg(error_msg);
         error_pub_->publish(error_msg);
       }
@@ -358,6 +361,7 @@ void BaseNode::publish_control(const rclcpp::Time &msg_time)
   // Publish control message
   orca_msgs::msg::Control control_msg;
   control_msg.header.stamp = msg_time;
+  control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
   control_msg.mode = mode_;
   control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
   control_msg.brightness_pwm = brightness_to_pwm(brightness_);

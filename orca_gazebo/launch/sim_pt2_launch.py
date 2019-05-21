@@ -55,11 +55,11 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
-                'auto_start': 6,                            # Auto-start AUV mission
+                'auto_start': 5,                            # Auto-start: 5 for keep station, 6 for random pattern
                 'auv_z_target': -0.5,                       # Waypoint z value
                 'auv_xy_distance': 0.7                      # Distance from waypoint to marker
             }], remappings=[
-                ('filtered_odom', '/' + camera_name + '/filtered_odom')
+                ('filtered_odom', '/' + camera_name + '/odom')
             ]),
 
         # Load and publish a known map
@@ -75,7 +75,7 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=camera_name, parameters=[{
                 'use_sim_time': True,                       # Use /clock if available
-                'publish_tfs': 0,                           # Don't publish tf
+                'publish_tfs': 1,
                 'publish_camera_pose': 0,
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
@@ -83,18 +83,19 @@ def generate_launch_description():
                 'base_odometry_pub_topic': 'odom',
                 'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
                 'camera_frame_id': camera_frame,
-                't_camera_base_x': 0.16,
-                't_camera_base_y': 0.,
-                't_camera_base_z': 0.063,
+                't_camera_base_x': 0.,
+                't_camera_base_y': 0.063,
+                't_camera_base_z': -0.16,
                 't_camera_base_roll': 0.,
                 't_camera_base_pitch': -math.pi/2,
                 't_camera_base_yaw': math.pi/2
             }]),
 
         # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
-        Node(package='odom_filter', node_executable='filter_node', output='screen',
-             node_name='filter_node', node_namespace=camera_name, parameters=[{
-                'use_sim_time': True,                       # Use /clock if available
-                'sensor_frame': camera_frame,
-            }]),
+        # (Run w/o filter while PID tuning in pt2)
+        # Node(package='odom_filter', node_executable='filter_node', output='screen',
+        #      node_name='filter_node', node_namespace=camera_name, parameters=[{
+        #         'use_sim_time': True,                       # Use /clock if available
+        #         'sensor_frame': camera_frame,
+        #     }]),
     ])

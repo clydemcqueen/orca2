@@ -71,7 +71,9 @@ BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, con
   yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
 {
   twist_ = Twist{};
-  ff_ = Acceleration{};
+
+  // Default ff includes acceleration to counteract buoyancy
+  ff_ = Acceleration{0, 0, HOVER_ACCEL_Z, 0};
 
   x_controller_.set_target(start.x);
   y_controller_.set_target(start.y);
@@ -116,7 +118,7 @@ VerticalMotion::VerticalMotion(const rclcpp::Logger &logger, const BaseContext &
   twist_.z = direction * cxt.auv_z_speed_;
 
   // Drag force => thrust force => acceleration => feedforward
-  ff_.z = direction * force_to_accel(-drag_force_z(cxt.auv_z_speed_)) + HOVER_ACCEL_Z;
+  ff_.z += direction * force_to_accel(-drag_force_z(cxt.auv_z_speed_));
 
   RCLCPP_INFO(logger_, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
 }
@@ -152,7 +154,6 @@ RotateMotion::RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt,
 
   // Drag torque => thrust torque => acceleration => feedforward
   ff_.yaw = torque_to_accel_yaw(-drag_torque_yaw(twist_.yaw));
-  ff_.z = HOVER_ACCEL_Z;
 
   RCLCPP_INFO(logger_, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
 }
@@ -188,7 +189,6 @@ LineMotion::LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, con
 
   // Drag force => thrust force => acceleration => feedforward
   drag_force_to_accel_xy(goal.yaw, cxt.auv_xy_speed_ * cos(angle_to_goal), cxt.auv_xy_speed_ * sin(angle_to_goal), ff_.x, ff_.y);
-  ff_.z = HOVER_ACCEL_Z;
 
   RCLCPP_INFO(logger_, "line: start (%g, %g, %g), goal (%g, %g, %g), ff (%g, %g, %g)",
     start.x, start.y, start.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
