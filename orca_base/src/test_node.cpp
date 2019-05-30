@@ -17,7 +17,8 @@ public:
   TestNode() : Node("test_node")
   {
     sub_ = create_subscription<sensor_msgs::msg::Joy>("joy",
-      [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void { this->cb_.call(msg); });
+                                                      [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+                                                      { this->cb_.call(msg); });
   }
 
   void process_joy(const sensor_msgs::msg::Joy::SharedPtr msg, bool first)

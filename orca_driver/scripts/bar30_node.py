@@ -5,12 +5,11 @@
 
 import time
 
-import rclpy
-from rclpy.node import Node
-from builtin_interfaces.msg import Time
-
-from orca_msgs.msg import Barometer
 import ms5837
+import rclpy
+from builtin_interfaces.msg import Time
+from orca_msgs.msg import Barometer
+from rclpy.node import Node
 
 
 def now() -> Time:
@@ -45,8 +44,8 @@ class Bar30Node(Node):
             msg = Barometer()
             msg.header.stamp = now()
             msg.pressure = self._sensor.pressure() * 100.0  # Pascals
-            msg.temperature = self._sensor.temperature()    # Celsius
-            msg.depth = self._sensor.depth()                # meters
+            msg.temperature = self._sensor.temperature()  # Celsius
+            msg.depth = self._sensor.depth()  # meters
             self._baro_pub.publish(msg)
         else:
             self.get_logger().error("can't read Bar30")

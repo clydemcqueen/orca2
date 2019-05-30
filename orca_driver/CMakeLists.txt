@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_driver)
 
 # Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
+if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif()
+endif ()
 
 # Emulate colcon by providing paths to other projects in the workspace
-if($ENV{CLION_IDE})
+if ($ENV{CLION_IDE})
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
-endif()
+endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
@@ -21,8 +21,8 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-set (mraa_INCLUDE_DIRS "/usr/include")
-set (mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
+set(mraa_INCLUDE_DIRS "/usr/include")
+set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
 
 include_directories(
   include

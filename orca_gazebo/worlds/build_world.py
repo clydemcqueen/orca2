@@ -128,7 +128,7 @@ def gen_ring_of_markers(num_markers, radius, z):
     angle = 0
     inc = 2 * math.pi / num_markers
     while marker < num_markers:
-        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi/2, 0]
+        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi / 2, 0]
         marker += 1
         angle += inc
 

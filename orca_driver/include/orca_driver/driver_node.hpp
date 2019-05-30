@@ -15,62 +15,71 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
-namespace orca_driver {
-
-struct Thruster
+namespace orca_driver
 {
-  int channel_;
-  bool reverse_;
-};
+
+  struct Thruster
+  {
+    int channel_;
+    bool reverse_;
+  };
 
 // DriverNode provides the interface between the Orca hardware and ROS.
 
-class DriverNode: public rclcpp::Node
-{
-private:
+  class DriverNode : public rclcpp::Node
+  {
+  private:
 
-  // Parameters
-  DriverContext cxt_;
-  std::vector<Thruster> thrusters_;
+    // Parameters
+    DriverContext cxt_;
+    std::vector<Thruster> thrusters_;
 
-  // State
-  maestro::Maestro maestro_;
-  orca_msgs::msg::Battery battery_msg_;
-  orca_msgs::msg::Leak leak_msg_;
-  
-  // Subscriptions
-  rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
+    // State
+    maestro::Maestro maestro_;
+    orca_msgs::msg::Battery battery_msg_;
+    orca_msgs::msg::Leak leak_msg_;
 
-  // Timer
-  rclcpp::TimerBase::SharedPtr spin_timer_;
+    // Subscriptions
+    rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
 
-  // Callbacks
-  void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
-  
-  // Publications
-  rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
-  rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
+    // Timer
+    rclcpp::TimerBase::SharedPtr spin_timer_;
 
-  // LEDs on the UP board
-  // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
-  mraa::Led led_ready_{"green"};
-  mraa::Led led_mission_{"yellow"};
-  mraa::Led led_problem_{"red"};
+    // Callbacks
+    void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
 
-  bool read_battery();
-  bool read_leak();
-  void spin_once();
-  bool pre_dive();
-  void all_stop();
-  void abort();
+    // Publications
+    rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
+    rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
 
-public:
-  explicit DriverNode();
-  ~DriverNode() {}; // Suppress default copy and move constructors
+    // LEDs on the UP board
+    // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
+    mraa::Led led_ready_{"green"};
+    mraa::Led led_mission_{"yellow"};
+    mraa::Led led_problem_{"red"};
 
-  bool connect();
-  void disconnect();
-};
+    bool read_battery();
+
+    bool read_leak();
+
+    void spin_once();
+
+    bool pre_dive();
+
+    void all_stop();
+
+    void abort();
+
+  public:
+    explicit DriverNode();
+
+    ~DriverNode()
+    {}; // Suppress default copy and move constructors
+
+    bool connect();
+
+    void disconnect();
+  };
 
 } // namespace orca_driver
 

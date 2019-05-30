@@ -2,17 +2,17 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_gazebo)
 
 # Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
+if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif()
+endif ()
 
 # Emulate colcon by providing paths to other projects in the workspace
-if($ENV{CLION_IDE})
+if ($ENV{CLION_IDE})
   set(gazebo_dev_DIR "${PROJECT_SOURCE_DIR}/../../../install/gazebo_dev/share/gazebo_dev/cmake")
   set(gazebo_ros_DIR "${PROJECT_SOURCE_DIR}/../../../install/gazebo_ros/share/gazebo_ros/cmake")
   set(orca_base_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_base/share/orca_base/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
-endif()
+endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(gazebo REQUIRED)  # Note uppercase variables in /usr/lib/x86_64-linux-gnu/cmake/gazebo/gazebo-config.cmake

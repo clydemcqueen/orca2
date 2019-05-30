@@ -11,7 +11,7 @@ import numpy as np
 import transformations as xf
 
 pi = math.pi
-pi2 = math.pi/2
+pi2 = math.pi / 2
 
 
 # Pretty-print Euler [r, p, y]

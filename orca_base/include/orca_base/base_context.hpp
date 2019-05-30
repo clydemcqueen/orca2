@@ -7,12 +7,15 @@
 
 #include "orca_base/context_macros.hpp"
 
-namespace rclcpp {
-class Node;
-class Parameter;
+namespace rclcpp
+{
+  class Node;
+
+  class Parameter;
 }
 
-namespace orca_base {
+namespace orca_base
+{
 
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(use_sim_time, false, bool)                                   /* We're in a simulation  */ \
@@ -63,15 +66,16 @@ namespace orca_base {
   CXT_ELEM(keep_poses, 100, int)                                       /* Max # of poses on filtered_path  */ \
 /* End of list */
 
-struct BaseContext
-{
+  struct BaseContext
+  {
 #undef CXT_ELEM
 #define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-  CXT_MACRO_ALL_PARAMS
+    CXT_MACRO_ALL_PARAMS
 
-  void load_parameters(rclcpp::Node &node);
-  bool change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
-};
+    void load_parameters(rclcpp::Node &node);
+
+    bool change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
+  };
 
 } // namespace orca_base
 

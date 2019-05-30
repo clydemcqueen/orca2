@@ -6,11 +6,13 @@
 
 #include "orca_driver/context_macros.hpp"
 
-namespace rclcpp {
-class Node;
+namespace rclcpp
+{
+  class Node;
 }
 
-namespace orca_driver {
+namespace orca_driver
+{
 
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(num_thrusters, 6, int)                         /* Number of thrusters */ \
@@ -23,14 +25,14 @@ namespace orca_driver {
   CXT_ELEM(voltage_min, 12.0, double)                     /* Minimum voltage to run  */ \
 /* End of list */
 
-struct DriverContext
-{
+  struct DriverContext
+  {
 #undef CXT_ELEM
 #define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-  CXT_MACRO_ALL_PARAMS
+    CXT_MACRO_ALL_PARAMS
 
-  void load_parameters(rclcpp::Node &node);
-};
+    void load_parameters(rclcpp::Node &node);
+  };
 
 } // namespace orca_driver
 

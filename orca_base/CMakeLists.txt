@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_base)
 
 # Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
+if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif()
+endif ()
 
 # Emulate colcon by providing paths to other projects in the workspace
-if($ENV{CLION_IDE})
+if ($ENV{CLION_IDE})
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
-endif()
+endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
