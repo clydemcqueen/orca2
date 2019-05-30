@@ -24,7 +24,7 @@ namespace orca_driver
     bool reverse_;
   };
 
-// DriverNode provides the interface between the Orca hardware and ROS.
+  // DriverNode provides the interface between the Orca hardware and ROS.
 
   class DriverNode : public rclcpp::Node
   {

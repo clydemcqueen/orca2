@@ -3,9 +3,9 @@
 namespace orca_driver
 {
 
-//=============================================================================
-// DriverNode
-//=============================================================================
+  //=============================================================================
+  // DriverNode
+  //=============================================================================
 
   DriverNode::DriverNode() :
     Node{"orca_driver"}
@@ -41,7 +41,7 @@ namespace orca_driver
     // Subscribe to control messages
     using std::placeholders::_1;
     auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
-    control_sub_ = create_subscription<orca_msgs::msg::Control>("/orca_base/control", control_cb);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", control_cb);
 
     // Spin timer
     using namespace std::chrono_literals;
@@ -68,12 +68,10 @@ namespace orca_driver
 
         maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm);
       }
-    } else {
-      RCLCPP_ERROR(get_logger(), "maestro not ready, ignoring control message");
     }
   }
 
-// Read battery sensor, return true if successful
+  // Read battery sensor, return true if successful
   bool DriverNode::read_battery()
   {
     battery_msg_.header.stamp = now();
@@ -94,7 +92,7 @@ namespace orca_driver
     }
   }
 
-// Read leak sensor, return true if successful
+  // Read leak sensor, return true if successful
   bool DriverNode::read_leak()
   {
     leak_msg_.header.stamp = now();
@@ -113,7 +111,7 @@ namespace orca_driver
     }
   }
 
-// Read sensors and publish messages
+  // Read sensors and publish messages
   void DriverNode::spin_once()
   {
     if (!read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
@@ -124,7 +122,7 @@ namespace orca_driver
     leak_pub_->publish(leak_msg_);
   }
 
-// Run a bunch of pre-dive checks, return true if everything looks good
+  // Run a bunch of pre-dive checks, return true if everything looks good
   bool DriverNode::pre_dive()
   {
     RCLCPP_INFO(get_logger(), "running pre-dive checks...");
@@ -167,7 +165,7 @@ namespace orca_driver
     return true;
   }
 
-// Stop all motion
+  // Stop all motion
   void DriverNode::all_stop()
   {
     RCLCPP_INFO(get_logger(), "all stop");
@@ -178,7 +176,7 @@ namespace orca_driver
     }
   }
 
-// Abnormal exit
+  // Abnormal exit
   void DriverNode::abort()
   {
     RCLCPP_ERROR(get_logger(), "aborting dive");
@@ -187,7 +185,7 @@ namespace orca_driver
     led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
   }
 
-// Connect to Maestro and run pre-dive checks, return true if we're ready to dive
+  // Connect to Maestro and run pre-dive checks, return true if we're ready to dive
   bool DriverNode::connect()
   {
     led_ready_.setBrightness(0);
@@ -206,7 +204,7 @@ namespace orca_driver
     return pre_dive();
   }
 
-// Normal exit
+  // Normal exit
   void DriverNode::disconnect()
   {
     RCLCPP_INFO(get_logger(), "normal exit");

@@ -51,6 +51,20 @@ ament_target_dependencies(
 )
 
 #=============
+# Test node
+#=============
+
+add_executable(
+  test_node
+  src/test_node.cpp
+)
+ament_target_dependencies(
+  test_node
+  orca_msgs
+  rclcpp
+)
+
+#=============
 # OpenCV camera component
 #=============
 
