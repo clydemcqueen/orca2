@@ -51,10 +51,10 @@ namespace orca_base
   // Constants
   //=============================================================================
 
-  const rclcpp::Duration JOY_TIMEOUT{1000000000};   // ROV: disarm if we lose communication
-  const rclcpp::Duration ODOM_TIMEOUT{1000000000};  // AUV: disarm if we lose odometry
-  const rclcpp::Duration BARO_TIMEOUT{1000000000};  // Holding z: disarm if we lose barometer
-  const rclcpp::Duration IMU_TIMEOUT{1000000000};   // Holding yaw: disarm if we lose IMU
+  const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
+  const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
+  const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
+  const rclcpp::Duration IMU_TIMEOUT{RCL_S_TO_NS(1)};   // Holding yaw: disarm if we lose IMU
 
   //=============================================================================
   // BaseNode provides basic ROV and AUV functions, including joystick operation and waypoint navigation.

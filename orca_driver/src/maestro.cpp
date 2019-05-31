@@ -18,7 +18,7 @@ namespace maestro
     }
   }
 
-// Open the virtual serial port, return true if successful
+  // Open the virtual serial port, return true if successful
   bool Maestro::connect(std::string port)
   {
     fd_ = open(port.c_str(), O_RDWR | O_NOCTTY);
@@ -36,20 +36,20 @@ namespace maestro
     }
   }
 
-// Close the virtual serial port
+  // Close the virtual serial port
   void Maestro::disconnect()
   {
     close(fd_);
     fd_ = -1;
   }
 
-// Return true if the port is open
+  // Return true if the port is open
   bool Maestro::ready()
   {
     return fd_ != -1;
   }
 
-// Set the servo / ESC PWM signal, value is in microseconds, return true if successful
+  // Set the servo / ESC PWM signal, value is in microseconds, return true if successful
   bool Maestro::setPWM(uint8_t channel, uint16_t value)
   {
     if (ready()) {
@@ -61,7 +61,7 @@ namespace maestro
     }
   }
 
-// Get the value at a particular channel
+  // Get the value at a particular channel
   bool Maestro::getValue(uint8_t channel, uint16_t &value)
   {
     if (ready()) {
@@ -80,7 +80,7 @@ namespace maestro
     }
   }
 
-// Get the servo / ESC PWM signal, value is in microseconds, return true if successful
+  // Get the servo / ESC PWM signal, value is in microseconds, return true if successful
   bool Maestro::getPWM(uint8_t channel, uint16_t &value)
   {
     if (!getValue(channel, value)) {
@@ -92,7 +92,7 @@ namespace maestro
     return true;
   }
 
-// Get the value of an analog pin, 0-5.0V
+  // Get the value of an analog pin, 0-5.0V
   bool Maestro::getAnalog(uint8_t channel, double &value)
   {
     uint16_t temp;
@@ -105,7 +105,7 @@ namespace maestro
     return true;
   }
 
-// Get the value of a digital pin, true = high
+  // Get the value of a digital pin, true = high
   bool Maestro::getDigital(uint8_t channel, bool &value)
   {
     uint16_t temp;
@@ -118,13 +118,13 @@ namespace maestro
     return true;
   }
 
-// Write bytes to the serial port, return true if successful
+  // Write bytes to the serial port, return true if successful
   bool Maestro::writeBytes(const uint8_t *bytes, size_t size)
   {
     return ready() && write(fd_, bytes, size) == size;
   }
 
-// Read bytes from the serial port, return true if successful
+  // Read bytes from the serial port, return true if successful
   bool Maestro::readBytes(uint8_t *bytes, size_t size)
   {
     return ready() && read(fd_, bytes, size) == size;

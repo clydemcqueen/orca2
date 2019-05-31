@@ -3,6 +3,13 @@
 namespace orca_driver
 {
 
+  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(3)}; // All-stop if control messages stop
+
+  bool valid(const rclcpp::Time &t)
+  {
+    return t.nanoseconds() > 0;
+  }
+
   //=============================================================================
   // DriverNode
   //=============================================================================
@@ -45,12 +52,12 @@ namespace orca_driver
 
     // Spin timer
     using namespace std::chrono_literals;
-    spin_timer_ = create_wall_timer(20ms, std::bind(&DriverNode::spin_once, this));
+    spin_timer_ = create_wall_timer(20ms, std::bind(&DriverNode::timer_callback, this));
   }
 
   void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
   {
-    // TODO abort if no control messages received in 1s, requires changes to BaseNode
+    control_msg_time_ = now();
 
     led_mission_.setBrightness(msg->mode >= msg->KEEP_STATION ? led_mission_.readMaxBrightness() / 2 : 0);
 
@@ -69,6 +76,29 @@ namespace orca_driver
         maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm);
       }
     }
+  }
+
+  void DriverNode::timer_callback()
+  {
+    if (!maestro_.ready()) {
+      return;
+    }
+
+    if (!read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
+      // Huge problem, we're done
+      abort();
+      return;
+    }
+
+    if (valid(control_msg_time_) && now() - control_msg_time_ > CONTROL_TIMEOUT) {
+      // We were receiving control messages, but they stopped.
+      // This is normal, but it might also indicate that a node died.
+      control_msg_time_ = rclcpp::Time();
+      all_stop();
+    }
+
+    battery_pub_->publish(battery_msg_);
+    leak_pub_->publish(leak_msg_);
   }
 
   // Read battery sensor, return true if successful
@@ -109,17 +139,6 @@ namespace orca_driver
       leak_msg_.leak_detected = 1;
       return false;
     }
-  }
-
-  // Read sensors and publish messages
-  void DriverNode::spin_once()
-  {
-    if (!read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
-      abort();
-    }
-
-    battery_pub_->publish(battery_msg_);
-    leak_pub_->publish(leak_msg_);
   }
 
   // Run a bunch of pre-dive checks, return true if everything looks good
@@ -180,9 +199,9 @@ namespace orca_driver
   void DriverNode::abort()
   {
     RCLCPP_ERROR(get_logger(), "aborting dive");
+    led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
     all_stop();
     maestro_.disconnect();
-    led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
   }
 
   // Connect to Maestro and run pre-dive checks, return true if we're ready to dive

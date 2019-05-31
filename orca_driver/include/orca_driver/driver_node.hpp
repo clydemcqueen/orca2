@@ -39,14 +39,12 @@ namespace orca_driver
     orca_msgs::msg::Battery battery_msg_;
     orca_msgs::msg::Leak leak_msg_;
 
-    // Subscriptions
+    // Control message state
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
+    rclcpp::Time control_msg_time_;
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
-
-    // Callbacks
-    void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
@@ -58,11 +56,13 @@ namespace orca_driver
     mraa::Led led_mission_{"yellow"};
     mraa::Led led_problem_{"red"};
 
+    void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
+
+    void timer_callback();
+
     bool read_battery();
 
     bool read_leak();
-
-    void spin_once();
 
     bool pre_dive();
 
