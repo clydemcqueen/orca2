@@ -4,16 +4,16 @@
 namespace orca_base
 {
 
-//=============================================================================
-// Constants
-//=============================================================================
+  //=============================================================================
+  // Constants
+  //=============================================================================
 
   const double Z_HOLD_MAX = -0.05;  // Highest z hold
   const double Z_HOLD_MIN = -50;    // Lowest z hold
 
-//=============================================================================
-// Thrusters
-//=============================================================================
+  //=============================================================================
+  // Thrusters
+  //=============================================================================
 
   struct Thruster
   {
@@ -25,7 +25,7 @@ namespace orca_base
     double vertical_factor;
   };
 
-// Order must match the order of the <thruster> tags in the URDF
+  // Order must match the order of the <thruster> tags in the URDF
   const std::vector<Thruster> THRUSTERS = {
     {"t200_link_front_right",    false, 1.0, 1.0,  1.0,  0.0},
     {"t200_link_front_left",     false, 1.0, -1.0, -1.0, 0.0},
@@ -35,9 +35,9 @@ namespace orca_base
     {"t200_link_vertical_left",  true,  0.0, 0.0,  0.0,  -1.0},
   };
 
-//=============================================================================
-// BaseNode
-//=============================================================================
+  //=============================================================================
+  // BaseNode
+  //=============================================================================
 
   BaseNode::BaseNode() :
     Node{"base_node"},
@@ -93,24 +93,21 @@ namespace orca_base
     error_pub_ = create_publisher<orca_msgs::msg::PoseError>("error", 1);
 
     // Monotonic subscriptions
-    baro_sub_ = create_subscription<orca_msgs::msg::Barometer>("barometer",
-                                                               [this](
-                                                                 const orca_msgs::msg::Barometer::SharedPtr msg) -> void
-                                                               { this->baro_cb_.call(msg); });
-    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/imu/data",
-                                                          [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
-                                                          { this->imu_cb_.call(msg); });
-    joy_sub_ = create_subscription<sensor_msgs::msg::Joy>("joy",
-                                                          [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
-                                                          { this->joy_cb_.call(msg); });
-    map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>("fiducial_map",
-                                                                 [this](
-                                                                   const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
-                                                                 { this->map_cb_.call(msg); });
-    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>("filtered_odom",
-                                                             [this](
-                                                               const nav_msgs::msg::Odometry::SharedPtr msg) -> void
-                                                             { this->odom_cb_.call(msg); });
+    baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
+      "barometer", [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
+      { this->baro_cb_.call(msg); });
+    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+      "/imu/data", [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
+      { this->imu_cb_.call(msg); });
+    joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
+      "joy", [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+      { this->joy_cb_.call(msg); });
+    map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
+      "fiducial_map", [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
+      { this->map_cb_.call(msg); });
+    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
+      "filtered_odom", [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
+      { this->odom_cb_.call(msg); });
 
     // Other subscriptions
     using std::placeholders::_1;
@@ -126,7 +123,7 @@ namespace orca_base
     RCLCPP_INFO(get_logger(), "base_node ready");
   }
 
-// New barometer reading
+  // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
     if (first) {
@@ -138,7 +135,7 @@ namespace orca_base
     }
   }
 
-// New battery reading
+  // New battery reading
   void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
   {
     if (msg->low_battery) {
@@ -147,7 +144,7 @@ namespace orca_base
     }
   }
 
-// New IMU reading
+  // New IMU reading
   void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   {
     // Get yaw
@@ -166,7 +163,7 @@ namespace orca_base
     stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
   }
 
-// New input from the gamepad
+  // New input from the gamepad
   void BaseNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first)
   {
     if (!first) {
@@ -209,7 +206,7 @@ namespace orca_base
         }
       } else if (button_down(msg, joy_msg_, joy_button_random_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::RANDOM_PATH);
+          set_mode(orca_msgs::msg::Control::MISSION_6);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start random path");
         }
@@ -260,7 +257,7 @@ namespace orca_base
     joy_msg_ = *msg;
   }
 
-// Leak detector
+  // Leak detector
   void BaseNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
   {
     if (msg->leak_detected) {
@@ -269,13 +266,13 @@ namespace orca_base
     }
   }
 
-// New map available
+  // New map available
   void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
     map_ = *msg;
   }
 
-// New pose estimate available
+  // New pose estimate available
   void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
   {
     filtered_pose_.from_msg(*msg);
@@ -320,6 +317,7 @@ namespace orca_base
     }
   }
 
+  // TODO refactor: controller iface, see flock2
   void BaseNode::rov_advance(float forward, float strafe, float yaw, float vertical)
   {
     double dt = joy_cb_.dt();
@@ -350,7 +348,7 @@ namespace orca_base
     publish_control(now());
   }
 
-// TODO always send control message, this will allow DriverNode to abort if BaseNode crashes
+  // TODO always send control message, this will allow DriverNode to abort if BaseNode crashes
   void BaseNode::publish_control(const rclcpp::Time &msg_time)
   {
     // Combine joystick efforts to get thruster efforts.
@@ -417,7 +415,7 @@ namespace orca_base
     }
   }
 
-// Change operation mode
+  // Change operation mode
   void BaseNode::set_mode(uint8_t new_mode)
   {
     // Stop all thrusters when we change modes
@@ -439,10 +437,25 @@ namespace orca_base
 
     if (is_auv_mode(new_mode)) {
       std::shared_ptr<BasePlanner> planner;
-      if (new_mode == orca_msgs::msg::Control::KEEP_STATION) {
-        planner = std::make_shared<KeepStationPlanner>();
-      } else {
-        planner = std::make_shared<ForwardRandomPlanner>();
+      switch (new_mode) {
+        case orca_msgs::msg::Control::MISSION_6:
+          planner = std::make_shared<ForwardRandomPlanner>();
+          break;
+        case orca_msgs::msg::Control::MISSION_7:
+          planner = std::make_shared<BodyXPlanner>();
+          break;
+        case orca_msgs::msg::Control::MISSION_8:
+          planner = std::make_shared<BodyYPlanner>();
+          break;
+        case orca_msgs::msg::Control::MISSION_9:
+          planner = std::make_shared<BodyZPlanner>();
+          break;
+        case orca_msgs::msg::Control::MISSION_10:
+          planner = std::make_shared<BodyYawPlanner>();
+          break;
+        default:
+          planner = std::make_shared<KeepStationPlanner>();
+          break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
 

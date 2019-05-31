@@ -11,6 +11,8 @@ namespace orca_driver
 
   class TestNode : public rclcpp::Node
   {
+    const int THRUST_DIFF = 50;
+
     rclcpp::TimerBase::SharedPtr spin_timer_;
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
 
@@ -21,8 +23,8 @@ namespace orca_driver
       msg.stability = 1.0;
       msg.odom_lag = 0.0;
       msg.mode = msg.MANUAL;
-      msg.camera_tilt_pwm = 1500;
-      msg.brightness_pwm = 1100;
+      msg.camera_tilt_pwm = msg.TILT_0;
+      msg.brightness_pwm = msg.LIGHTS_OFF;
 
       // Rotate through all 6 thrusters, and send fwd and rev signals
       // Each thruster gets 5s, so a cycle is 30s
@@ -31,18 +33,18 @@ namespace orca_driver
       int pwm;
       switch (cycle % 5) {
         case 1:
-          pwm = 1600;
+          pwm = msg.THRUST_STOP + THRUST_DIFF;
           break;
         case 3:
-          pwm = 1400;
+          pwm = msg.THRUST_STOP - THRUST_DIFF;
           break;
         default:
-          pwm = 1500;
+          pwm = msg.THRUST_STOP;
           break;
       }
 
       for (int i = 0; i < 6; ++i) {
-        msg.thruster_pwm.push_back(i == thruster ? pwm : 1500);
+        msg.thruster_pwm.push_back(i == thruster ? pwm : msg.THRUST_STOP);
       }
 
       control_pub_->publish(msg);

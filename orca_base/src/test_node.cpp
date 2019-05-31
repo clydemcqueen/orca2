@@ -3,10 +3,6 @@
 
 #include "orca_base/monotonic.hpp"
 
-// Test Monotonic
-// TODO support lambdas
-// TODO pass Monotonic object to callback to reduce risk that callback grabs the wrong .dt() function
-
 class TestNode : public rclcpp::Node
 {
   orca_base::Monotonic<TestNode *, const sensor_msgs::msg::Joy::SharedPtr> cb_{this, &TestNode::process_joy};
@@ -16,9 +12,10 @@ public:
 
   TestNode() : Node("test_node")
   {
-    sub_ = create_subscription<sensor_msgs::msg::Joy>("joy",
-                                                      [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
-                                                      { this->cb_.call(msg); });
+    sub_ = create_subscription<sensor_msgs::msg::Joy>(
+      "joy",
+      [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+      { this->cb_.call(msg); });
   }
 
   void process_joy(const sensor_msgs::msg::Joy::SharedPtr msg, bool first)

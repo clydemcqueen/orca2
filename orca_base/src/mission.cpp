@@ -7,14 +7,9 @@ namespace orca_base
 
   const rclcpp::Duration MIN_TIME{100000000}; // 0.1s
 
-// TODO reconcile time (mission) vs. progress (motion)
-// TODO combine line segments
-// TODO build 3D odommap showing quality of odometry
-// TODO build optimal path through odommap
-
-//=====================================================================================
-// Utilities
-//=====================================================================================
+  //=====================================================================================
+  // Utilities
+  //=====================================================================================
 
   bool set_time_xy(const orca_base::BaseContext &cxt, const PoseStamped &p1, PoseStamped &p2)
   {
@@ -54,9 +49,9 @@ namespace orca_base
     return marker_f_world;
   }
 
-//=====================================================================================
-// KeepStationPlanner
-//=====================================================================================
+  //=====================================================================================
+  // KeepStationPlanner
+  //=====================================================================================
 
   void KeepStationPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
                                 const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
@@ -72,11 +67,11 @@ namespace orca_base
     planned_path_.poses.push_back(pose_msg);
   }
 
-//=====================================================================================
-// RandomPlanner
-//
-// Generate a random path between waypoints.
-//=====================================================================================
+  //=====================================================================================
+  // RandomPlanner
+  //
+  // Generate a path between waypoints.
+  //=====================================================================================
 
   void RandomPlanner::plan_from_waypoints(rclcpp::Logger &logger, const BaseContext &cxt, std::vector<Pose> &waypoints,
                                           const PoseStamped &start)
@@ -104,9 +99,9 @@ namespace orca_base
     }
     prev = curr;
 
-    // Travel to each marker
+    // Travel to each waypoint
     for (auto i = waypoints.begin(); i != waypoints.end(); i++) {
-      // Point in the direction fo travel
+      // Point in the direction of travel
       curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
       if (set_time_yaw(cxt, prev, curr)) {
         path.push_back(curr);
@@ -141,9 +136,9 @@ namespace orca_base
     }
   }
 
-//=====================================================================================
-// DownRandomPlanner
-//=====================================================================================
+  //=====================================================================================
+  // DownRandomPlanner
+  //=====================================================================================
 
   void DownRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
                                const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
@@ -160,9 +155,9 @@ namespace orca_base
     plan_from_waypoints(logger, cxt, waypoints, start);
   }
 
-//=====================================================================================
-// ForwardRandomPlanner
-//=====================================================================================
+  //=====================================================================================
+  // ForwardRandomPlanner
+  //=====================================================================================
 
   void ForwardRandomPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
                                   const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
@@ -182,9 +177,64 @@ namespace orca_base
     plan_from_waypoints(logger, cxt, waypoints, start);
   }
 
-//=====================================================================================
-// Mission
-//=====================================================================================
+  //=====================================================================================
+  // Body planners
+  //=====================================================================================
+
+  // Move forward and back
+  void BodyXPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+                          const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  {
+    // First waypoint is at target z
+    PoseStamped wp1 = start;
+    wp1.pose.z = cxt.auv_z_target_;
+
+    // Second waypoint is a few m ahead
+    PoseStamped wp2 = wp1;
+    wp2.pose.x += cos(wp2.pose.yaw) * cxt.auv_xy_distance_;
+    wp2.pose.y += sin(wp2.pose.yaw) * cxt.auv_xy_distance_;
+
+    // Trajectory segments
+    segments_.push_back(std::make_shared<VerticalMotion>(logger, cxt, start.pose, wp1.pose));
+    segments_.push_back(std::make_shared<LineMotion>(logger, cxt, wp1.pose, wp2.pose));
+    segments_.push_back(std::make_shared<LineMotion>(logger, cxt, wp2.pose, wp1.pose));
+
+    // Planned path
+    planned_path_.header.stamp = start.t;
+    planned_path_.header.frame_id = cxt.map_frame_;
+    geometry_msgs::msg::PoseStamped pose_msg;
+    start.to_msg(pose_msg);
+    planned_path_.poses.push_back(pose_msg);
+    wp1.to_msg(pose_msg);
+    planned_path_.poses.push_back(pose_msg);
+    wp2.to_msg(pose_msg);
+    planned_path_.poses.push_back(pose_msg);
+  }
+
+  // Move left and right
+  void BodyYPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+                          const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  {
+    // TODO
+  }
+
+  // Move up and down
+  void BodyZPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+                          const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  {
+    // TODO
+  }
+
+  // Move ccw and cw
+  void BodyYawPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+                            const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  {
+    // TODO
+  }
+
+  //=====================================================================================
+  // Mission
+  //=====================================================================================
 
   Mission::Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, const BaseContext &cxt,
                    const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) :

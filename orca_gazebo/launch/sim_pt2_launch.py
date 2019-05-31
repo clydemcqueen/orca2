@@ -55,9 +55,9 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'auto_start': 6,  # Auto-start: 5 for keep station, 6 for random pattern
-                'auv_z_target': -0.5,  # Waypoint z value
-                'auv_xy_distance': 0.7  # Distance from waypoint to marker
+                'auto_start': 7,  # Auto-start mission >= 5
+                'auv_z_target': -0.5,
+                'auv_xy_distance': 2.0
             }], remappings=[
                 ('filtered_odom', '/' + camera_name + '/odom')
             ]),

@@ -29,7 +29,7 @@ namespace orca_base
                  b_max);
   }
 
-// Move an angle to the region [-M_PI, M_PI]
+  // Move an angle to the region [-M_PI, M_PI]
   constexpr double norm_angle(double a)
   {
     while (a < -M_PI) {
@@ -42,13 +42,13 @@ namespace orca_base
     return a;
   }
 
-// Compute a 2d point in a rotated frame (v' = R_transpose * v)
+  // Compute a 2d point in a rotated frame (v' = R_transpose * v)
   void rotate_frame(const double x, const double y, const double theta, double &x_r, double &y_r);
 
-// Get yaw from a quaternion
+  // Get yaw from a quaternion
   double get_yaw(const geometry_msgs::msg::Quaternion &q);
 
-// Sense a button down event
+  // Sense a button down event
   bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button);
 
   bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis);

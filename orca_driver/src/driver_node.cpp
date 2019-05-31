@@ -153,7 +153,7 @@ namespace orca_driver
       uint16_t value = 0;
       maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
       RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
-      if (value != 1500) {
+      if (value != orca_msgs::msg::Control::THRUST_STOP) {
         RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
         maestro_.disconnect();
         return false;
@@ -171,7 +171,7 @@ namespace orca_driver
     RCLCPP_INFO(get_logger(), "all stop");
     if (maestro_.ready()) {
       for (int i = 0; i < thrusters_.size(); ++i) {
-        maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), 1500);
+        maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), orca_msgs::msg::Control::THRUST_STOP);
       }
     }
   }
