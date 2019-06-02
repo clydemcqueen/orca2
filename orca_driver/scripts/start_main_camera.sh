@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO not used in pt2
+
 # Start orca video stream
 
 # To install:           sudo cp orca_video.service /lib/systemd/system

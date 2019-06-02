@@ -11,4 +11,8 @@
 # TODO add ~/ms5837-python to PYTHONPATH
 # TODO scrub ref to /home/clyde
 
-bash -c "source /opt/ros/crystal/setup.bash && source /home/clyde/ros2/orca_ws/install/local_setup.bash && stdbuf -o L ros2 launch orca_driver gscam_launch.py"
+#bash -c "source /opt/ros/crystal/setup.bash && source /home/clyde/ros2/orca_ws/install/local_setup.bash && stdbuf -o L ros2 launch orca_driver gscam_launch.py"
+
+source /opt/ros/crystal/setup.bash
+source /home/clyde/ros2/orca_ws/install/local_setup.bash
+stdbuf -o L ros2 launch orca_driver pt2_launch.py

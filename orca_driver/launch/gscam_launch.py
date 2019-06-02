@@ -4,6 +4,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+# TODO not used in pt2
+
 # GSCam launch, useful for testing the image processing pipeline
 #
 # Setup:

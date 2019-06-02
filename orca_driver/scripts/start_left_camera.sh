@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO not used in pt2
+
 # Start video stream for left down-facing camera
 
 # To install:           sudo cp orca_left_camera.service /lib/systemd/system
