@@ -35,7 +35,7 @@ def generate_launch_description():
                 'voltage_multiplier': 5.05,
                 'thruster_4_reverse': True,  # Thruster 4 ESC is programmed incorrectly
                 'tilt_channel': 6,
-                'voltage_min': 12.0
+                'voltage_min': 0.0  # TODO
             }]),
 
         # AUV controller
@@ -52,7 +52,16 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
              node_name='vmap_node', parameters=[{
                 'publish_tfs': 1,
-                'marker_length': 0.1778
+                'marker_length': 0.1778,
+                'make_not_use_map': 1,
+                'map_init_style': 1,  # Init style 1: marker id and location is specified below:
+                'map_init_id': 0,
+                'map_init_pose_x': 0.0,
+                'map_init_pose_y': 0.0,
+                'map_init_pose_z': -0.5,
+                'map_init_pose_roll': math.pi / 2,
+                'map_init_pose_pitch': 0.0,
+                'map_init_pose_yaw': -math.pi / 2
             }]),
 
         # Localizer
@@ -63,6 +72,7 @@ def generate_launch_description():
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
                 'publish_base_odom': 1,
+                'publish_image_marked': 0,
                 'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
                 'camera_frame_id': camera_frame,
                 't_camera_base_x': 0.,

@@ -111,7 +111,7 @@ ament_target_dependencies(
 
 ## Install C++ targets
 install(
-  TARGETS driver_node opencv_camera_node opencv_camera
+  TARGETS driver_node opencv_camera_node opencv_camera test_node
   EXPORT opencv_camera
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
   RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2

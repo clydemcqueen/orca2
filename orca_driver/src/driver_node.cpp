@@ -52,7 +52,7 @@ namespace orca_driver
 
     // Spin timer
     using namespace std::chrono_literals;
-    spin_timer_ = create_wall_timer(20ms, std::bind(&DriverNode::timer_callback, this));
+    spin_timer_ = create_wall_timer(500ms, std::bind(&DriverNode::timer_callback, this));
   }
 
   void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
@@ -93,6 +93,7 @@ namespace orca_driver
     if (valid(control_msg_time_) && now() - control_msg_time_ > CONTROL_TIMEOUT) {
       // We were receiving control messages, but they stopped.
       // This is normal, but it might also indicate that a node died.
+      RCLCPP_INFO(get_logger(), "control timeout");
       control_msg_time_ = rclcpp::Time();
       all_stop();
     }
