@@ -121,6 +121,7 @@ install(
 install(
   PROGRAMS  # PROGRAMS sets execute bits, FILES clears them
   scripts/bar30_node.py
+  scripts/start_driver.sh
   DESTINATION lib/${PROJECT_NAME}
 )
 
