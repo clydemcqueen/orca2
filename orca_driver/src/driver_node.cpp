@@ -62,8 +62,12 @@ namespace orca_driver
     led_mission_.setBrightness(msg->mode >= msg->KEEP_STATION ? led_mission_.readMaxBrightness() / 2 : 0);
 
     if (maestro_.ready()) {
-      maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm);
-      maestro_.setPWM(static_cast<uint8_t>(cxt_.lights_channel_), msg->brightness_pwm);
+      if (!maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm)) {
+        RCLCPP_ERROR(get_logger(), "failed to set camera tilt");
+      }
+      if (!maestro_.setPWM(static_cast<uint8_t>(cxt_.lights_channel_), msg->brightness_pwm)) {
+        RCLCPP_ERROR(get_logger(), "failed to set brightness");
+      }
 
       for (int i = 0; i < thrusters_.size(); ++i) {
         uint16_t pwm = msg->thruster_pwm[i];
@@ -73,7 +77,9 @@ namespace orca_driver
           pwm = static_cast<uint16_t>(3000 - pwm);
         }
 
-        maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm);
+        if (!maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm)) {
+          RCLCPP_ERROR(get_logger(), "failed to set thruster %d", i);
+        }
       }
     }
   }
