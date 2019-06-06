@@ -216,7 +216,7 @@ namespace orca_driver
     RCLCPP_INFO(get_logger(), "opening port %s...", port.c_str());
     maestro_.connect(port);
     if (!maestro_.ready()) {
-      RCLCPP_ERROR(get_logger(), "can't open port %s, are you root?", port.c_str());
+      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", port.c_str());
       return false;
     }
     RCLCPP_INFO(get_logger(), "port %s open", port.c_str());
