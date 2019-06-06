@@ -35,7 +35,7 @@ def generate_launch_description():
                 'voltage_multiplier': 5.05,
                 'thruster_4_reverse': True,  # Thruster 4 ESC is programmed incorrectly
                 'tilt_channel': 6,
-                'voltage_min': 0.0  # TODO
+                'voltage_min': 12.0
             }]),
 
         # AUV controller
@@ -45,7 +45,7 @@ def generate_launch_description():
                 'auv_z_target': -0.5,
                 'auv_xy_distance': 2.0
             }], remappings=[
-                ('filtered_odom', '/' + camera_name + '/odom')
+                ('filtered_odom', '/' + camera_name + '/base_odom')
             ]),
 
         # Mapper
