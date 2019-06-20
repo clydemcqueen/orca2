@@ -55,8 +55,7 @@ def build_world(name, markers):
 
 def build_map(name, markers):
     map_file = open(name, 'w')
-    map_file.write("""# Map for orca.world
-# All marker locations are fixed (f: 1)
+    map_file.write("""# All marker locations are fixed (f: 1)
 
 marker_length: 0.1778
 markers:
@@ -136,10 +135,16 @@ def gen_ring_of_markers(num_markers, radius, z):
 # Pool test #2: 4m diameter x 1m deep, markers on walls
 pt2 = list(gen_ring_of_markers(num_markers=16, radius=2, z=-0.5))
 
+# Even simpler pool test #2: 1 marker on the wall
+small_simple = [
+    [0, 2, 0, -0.5, 0, -math.pi / 2, 0]
+]
+
 worlds = [
     ['large.world', 'large_map.yaml', large_pool],
     ['small.world', 'small_map.yaml', small_pool],
     ['pt2.world', 'pt2_map.yaml', pt2],
+    ['simple.world', 'simple_map.yaml', small_simple],
 ]
 
 for world in worlds:
