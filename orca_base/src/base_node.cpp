@@ -340,13 +340,13 @@ namespace orca_base
     publish_control(joy_cb_.curr());
   }
 
-  void BaseNode::all_stop()
-  {
-    brightness_ = 0;
-    tilt_ = 0;
-    efforts_.all_stop();
-    publish_control(now());
-  }
+//  void BaseNode::all_stop()
+//  {
+//    brightness_ = 0;
+//    tilt_ = 0;
+//    efforts_.all_stop();
+//    publish_control(now());
+//  }
 
   void BaseNode::publish_control(const rclcpp::Time &msg_time)
   {
@@ -430,9 +430,9 @@ namespace orca_base
       RCLCPP_INFO(get_logger(), "hold yaw at %g", rov_yaw_pid_->target());
     }
 
-    if (new_mode == orca_msgs::msg::Control::DISARMED) {
-      all_stop();
-    }
+//    if (new_mode == orca_msgs::msg::Control::DISARMED) {
+//      all_stop();
+//    }
 
     if (is_auv_mode(new_mode)) {
       std::shared_ptr<BasePlanner> planner;
@@ -473,6 +473,9 @@ namespace orca_base
 
     // Set the new mode
     mode_ = new_mode;
+
+    // Publish a control message
+    publish_control(now());
   }
 
   void BaseNode::spin_once()

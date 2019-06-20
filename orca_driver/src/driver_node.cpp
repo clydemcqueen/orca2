@@ -55,6 +55,31 @@ namespace orca_driver
     spin_timer_ = create_wall_timer(500ms, std::bind(&DriverNode::timer_callback, this));
   }
 
+  void DriverNode::set_status(Status status)
+  {
+    if (status != status_) {
+      status_ = status;
+
+      led_ready_.setBrightness(0);
+      led_mission_.setBrightness(0);
+      led_problem_.setBrightness(0);
+
+      switch (status_) {
+        case Status::ready:
+          led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
+          break;
+        case Status::mission:
+          led_mission_.setBrightness(led_mission_.readMaxBrightness() / 2);
+          break;
+        case Status::problem:
+          led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
   void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
   {
     if (!valid(control_msg_time_)) {
@@ -63,7 +88,7 @@ namespace orca_driver
 
     control_msg_time_ = now();
 
-    led_mission_.setBrightness(msg->mode >= msg->KEEP_STATION ? led_mission_.readMaxBrightness() / 2 : 0);
+    set_status(msg->mode >= msg->KEEP_STATION ? Status::mission : Status::ready);
 
     if (maestro_.ready()) {
       if (!maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm)) {
@@ -191,7 +216,7 @@ namespace orca_driver
     }
 
     RCLCPP_INFO(get_logger(), "pre-dive checks passed");
-    led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
+    set_status(Status::ready);
     return true;
   }
 
@@ -210,7 +235,7 @@ namespace orca_driver
   void DriverNode::abort()
   {
     RCLCPP_ERROR(get_logger(), "aborting dive");
-    led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
+    set_status(Status::problem);
     all_stop();
     maestro_.disconnect();
   }
@@ -218,10 +243,7 @@ namespace orca_driver
   // Connect to Maestro and run pre-dive checks, return true if we're ready to dive
   bool DriverNode::connect()
   {
-    led_ready_.setBrightness(0);
-    led_mission_.setBrightness(0);
-    led_problem_.setBrightness(0);
-
+    set_status(Status::none);
     std::string port = cxt_.maestro_port_;
     RCLCPP_INFO(get_logger(), "opening port %s...", port.c_str());
     maestro_.connect(port);
@@ -238,9 +260,7 @@ namespace orca_driver
   void DriverNode::disconnect()
   {
     RCLCPP_INFO(get_logger(), "normal exit");
-    led_ready_.setBrightness(0);
-    led_mission_.setBrightness(0);
-    led_problem_.setBrightness(0);
+    set_status(Status::none);
     all_stop();
     maestro_.disconnect();
   }

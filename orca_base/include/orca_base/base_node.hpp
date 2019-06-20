@@ -161,7 +161,7 @@ namespace orca_base
     rclcpp::Publisher<orca_msgs::msg::PoseError>::SharedPtr error_pub_;
 
     // Helpers
-    void all_stop();
+//    void all_stop();
 
     void rov_advance(float forward, float strafe, float yaw, float vertical);
 
