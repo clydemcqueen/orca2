@@ -57,6 +57,10 @@ namespace orca_driver
 
   void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
   {
+    if (!valid(control_msg_time_)) {
+      RCLCPP_INFO(get_logger(), "receiving control messages");
+    }
+
     control_msg_time_ = now();
 
     led_mission_.setBrightness(msg->mode >= msg->KEEP_STATION ? led_mission_.readMaxBrightness() / 2 : 0);

@@ -127,7 +127,7 @@ install(
 
 ## Install various directories
 install(
-  DIRECTORY launch cfg
+  DIRECTORY launch cfg maps
   DESTINATION share/${PROJECT_NAME}
 )
 

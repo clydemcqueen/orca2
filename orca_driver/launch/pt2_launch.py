@@ -17,6 +17,9 @@ def generate_launch_description():
     orca_description_path = get_package_share_directory('orca_description')
     urdf_path = os.path.join(orca_description_path, 'urdf', 'pt2.urdf')
 
+    orca_driver_path = get_package_share_directory('orca_driver')
+    map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
+
     return LaunchDescription([
         # Publish static joints
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
@@ -41,9 +44,21 @@ def generate_launch_description():
         # AUV controller
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
-                'auto_start': 0,  # Auto-start mission >= 5 TODO
+                'auto_start': 5,  # Auto-start mission >= 5
                 'auv_z_target': -0.5,
-                'auv_xy_distance': 2.0
+                'auv_xy_distance': 2.0,
+		'auv_x_pid_kp': 0.1,
+		'auv_x_pid_ki': 0.0,
+		'auv_x_pid_kd': 0.0,
+		'auv_y_pid_kp': 0.1,
+		'auv_y_pid_ki': 0.0,
+		'auv_y_pid_kd': 0.0,
+		'auv_z_pid_kp': 0.1,
+		'auv_z_pid_ki': 0.0,
+		'auv_z_pid_kd': 0.0,
+		'auv_yaw_pid_kp': 0.1,
+		'auv_yaw_pid_ki': 0.0,
+		'auv_yaw_pid_kd': 0.0,
             }], remappings=[
                 ('filtered_odom', '/' + camera_name + '/base_odom')
             ]),
@@ -53,15 +68,16 @@ def generate_launch_description():
              node_name='vmap_node', parameters=[{
                 'publish_tfs': 1,
                 'marker_length': 0.1778,
-                'make_not_use_map': 1,
-                'map_init_style': 1,  # Init style 1: marker id and location is specified below:
-                'map_init_id': 0,
-                'map_init_pose_x': 0.0,
-                'map_init_pose_y': 0.0,
-                'map_init_pose_z': -0.5,
-                'map_init_pose_roll': math.pi / 2,
-                'map_init_pose_pitch': 0.0,
-                'map_init_pose_yaw': -math.pi / 2
+                'marker_map_load_full_filename': map_path,
+                'make_not_use_map': 0,
+                #'map_init_style': 1,  # Init style 1: marker id and location is specified below:
+                #'map_init_id': 0,
+                #'map_init_pose_x': 0.0,
+                #'map_init_pose_y': 0.0,
+                #'map_init_pose_z': -0.5,
+                #'map_init_pose_roll': math.pi / 2,
+                #'map_init_pose_pitch': 0.0,
+                #'map_init_pose_yaw': -math.pi / 2,
             }]),
 
         # Localizer

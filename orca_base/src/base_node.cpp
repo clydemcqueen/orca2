@@ -454,6 +454,8 @@ namespace orca_base
           break;
         default:
           planner = std::make_shared<KeepStationPlanner>();
+          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g",
+                      filtered_pose_.pose.x, filtered_pose_.pose.y, filtered_pose_.pose.z, filtered_pose_.pose.yaw);
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
