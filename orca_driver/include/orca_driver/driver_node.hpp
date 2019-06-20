@@ -52,9 +52,17 @@ namespace orca_driver
 
     // LEDs on the UP board
     // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
-    mraa::Led led_ready_{"green"};
-    mraa::Led led_mission_{"yellow"};
+    mraa::Led led_ready_{"yellow"};
+    mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};
+
+    enum class Status
+    {
+      none, ready, mission, problem
+    };
+    Status status_;
+
+    void set_status(Status status);
 
     void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
 
