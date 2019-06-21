@@ -340,14 +340,6 @@ namespace orca_base
     publish_control(joy_cb_.curr());
   }
 
-//  void BaseNode::all_stop()
-//  {
-//    brightness_ = 0;
-//    tilt_ = 0;
-//    efforts_.all_stop();
-//    publish_control(now());
-//  }
-
   void BaseNode::publish_control(const rclcpp::Time &msg_time)
   {
     // Combine joystick efforts to get thruster efforts.

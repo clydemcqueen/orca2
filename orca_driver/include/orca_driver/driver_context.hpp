@@ -22,7 +22,7 @@ namespace orca_driver
   CXT_ELEM(leak_channel, 12, int)                         /* Digital leak channel */ \
   CXT_ELEM(maestro_port, "/dev/ttyACM0", std::string)     /* Default Maestro port */ \
   CXT_ELEM(voltage_multiplier, 4.7, double)               /* Voltage multiplier */ \
-  CXT_ELEM(voltage_min, 12.0, double)                     /* Minimum voltage to run  */ \
+  CXT_ELEM(voltage_min, 14.0, double)                     /* Minimum voltage to run  */ \
 /* End of list */
 
   struct DriverContext

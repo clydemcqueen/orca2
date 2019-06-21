@@ -21,8 +21,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'pt2.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'simple.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'simple_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'pt2.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'pt2_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world

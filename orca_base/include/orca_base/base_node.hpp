@@ -160,9 +160,6 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
     rclcpp::Publisher<orca_msgs::msg::PoseError>::SharedPtr error_pub_;
 
-    // Helpers
-//    void all_stop();
-
     void rov_advance(float forward, float strafe, float yaw, float vertical);
 
     void publish_control(const rclcpp::Time &msg_time);

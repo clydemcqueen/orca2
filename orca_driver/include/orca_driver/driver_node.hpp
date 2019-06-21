@@ -28,7 +28,10 @@ namespace orca_driver
 
   class DriverNode : public rclcpp::Node
   {
-  private:
+    enum class Status
+    {
+      none, ready, mission, problem
+    };
 
     // Parameters
     DriverContext cxt_;
@@ -38,6 +41,7 @@ namespace orca_driver
     maestro::Maestro maestro_;
     orca_msgs::msg::Battery battery_msg_;
     orca_msgs::msg::Leak leak_msg_;
+    Status status_;
 
     // Control message state
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
@@ -55,12 +59,6 @@ namespace orca_driver
     mraa::Led led_ready_{"yellow"};
     mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};
-
-    enum class Status
-    {
-      none, ready, mission, problem
-    };
-    Status status_;
 
     void set_status(Status status);
 
