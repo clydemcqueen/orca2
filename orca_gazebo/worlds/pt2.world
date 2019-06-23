@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+
+<sdf version="1.6">
+  <world name="default">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="marker0">
+      <include>
+        <static>true</static>
+        <uri>model://marker_0</uri>
+      </include>
+      <pose>1.755 0.0 -0.5 0 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker1">
+      <include>
+        <static>true</static>
+        <uri>model://marker_1</uri>
+      </include>
+      <pose>1.5198745836416898 -0.8774999999999998 -0.5 -0.5235987755982988 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker2">
+      <include>
+        <static>true</static>
+        <uri>model://marker_2</uri>
+      </include>
+      <pose>0.8775000000000002 -1.5198745836416896 -0.5 -1.0471975511965976 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker3">
+      <include>
+        <static>true</static>
+        <uri>model://marker_3</uri>
+      </include>
+      <pose>1.0746275662518023e-16 -1.755 -0.5 -1.5707963267948966 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker4">
+      <include>
+        <static>true</static>
+        <uri>model://marker_4</uri>
+      </include>
+      <pose>-0.8774999999999995 -1.5198745836416898 -0.5 -2.0943951023931953 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker5">
+      <include>
+        <static>true</static>
+        <uri>model://marker_5</uri>
+      </include>
+      <pose>-1.5198745836416894 -0.8775000000000005 -0.5 -2.617993877991494 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker6">
+      <include>
+        <static>true</static>
+        <uri>model://marker_6</uri>
+      </include>
+      <pose>-1.755 -9.943020765372203e-16 -0.5 -3.1415926535897927 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker7">
+      <include>
+        <static>true</static>
+        <uri>model://marker_7</uri>
+      </include>
+      <pose>-1.5198745836416905 0.8774999999999988 -0.5 -3.6651914291880914 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker8">
+      <include>
+        <static>true</static>
+        <uri>model://marker_8</uri>
+      </include>
+      <pose>-0.8775000000000007 1.5198745836416891 -0.5 -4.1887902047863905 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker9">
+      <include>
+        <static>true</static>
+        <uri>model://marker_9</uri>
+      </include>
+      <pose>-3.223882698755407e-16 1.755 -0.5 -4.71238898038469 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker10">
+      <include>
+        <static>true</static>
+        <uri>model://marker_10</uri>
+      </include>
+      <pose>0.8775000000000002 1.5198745836416896 -0.5 -5.235987755982989 -1.5707963267948966 0</pose>
+    </model>
+    <model name="marker11">
+      <include>
+        <static>true</static>
+        <uri>model://marker_11</uri>
+      </include>
+      <pose>1.51987458364169 0.8774999999999994 -0.5 -5.759586531581288 -1.5707963267948966 0</pose>
+    </model>
+  </world>
+</sdf>

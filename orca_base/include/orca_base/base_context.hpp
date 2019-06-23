@@ -7,12 +7,15 @@
 
 #include "orca_base/context_macros.hpp"
 
-namespace rclcpp {
-class Node;
-class Parameter;
+namespace rclcpp
+{
+  class Node;
+
+  class Parameter;
 }
 
-namespace orca_base {
+namespace orca_base
+{
 
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(use_sim_time, false, bool)                                   /* We're in a simulation  */ \
@@ -30,45 +33,49 @@ namespace orca_base {
   CXT_ELEM(yaw_gain, 0.3, double)                                       /* Attenuate joystick inputs  */ \
   CXT_ELEM(vertical_gain, 0.5, double)                                  /* Attenuate joystick inputs  */ \
   \
-  CXT_ELEM(rov_z_pid_kp, 1, double)                                     /* ROV z pid Kp  */ \
-  CXT_ELEM(rov_z_pid_ki, 0, double)                                     /* ROV z pid Ki  */ \
-  CXT_ELEM(rov_z_pid_kd, 0, double)                                     /* ROV z pid Kd  */ \
+  CXT_ELEM(rov_z_pid_kp, 2.4, double)                                   /* ROV z pid Kp  */ \
+  CXT_ELEM(rov_z_pid_ki, 1.5, double)                                   /* ROV z pid Ki  */ \
+  CXT_ELEM(rov_z_pid_kd, 0.96, double)                                  /* ROV z pid Kd  */ \
   \
-  CXT_ELEM(rov_yaw_pid_kp, 2, double)                                   /* ROV yaw pid Kp  */ \
+  CXT_ELEM(rov_yaw_pid_kp, 5, double)                                   /* ROV yaw pid Kp  */ \
   CXT_ELEM(rov_yaw_pid_ki, 0, double)                                   /* ROV yaw pid Ki  */ \
   CXT_ELEM(rov_yaw_pid_kd, 0, double)                                   /* ROV yaw pid Kd  */ \
   \
-  CXT_ELEM(auv_x_pid_kp, 1, double)                                     /* AUV x pid Kp  */ \
-  CXT_ELEM(auv_x_pid_ki, 0, double)                                     /* AUV x pid Ki  */ \
-  CXT_ELEM(auv_x_pid_kd, 0, double)                                     /* AUV x pid Kd  */ \
+  CXT_ELEM(auv_x_pid_kp, 3, double)                                     /* AUV x pid Kp  */ \
+  CXT_ELEM(auv_x_pid_ki, 2, double)                                     /* AUV x pid Ki  */ \
+  CXT_ELEM(auv_x_pid_kd, 1.125, double)                                 /* AUV x pid Kd  */ \
   \
-  CXT_ELEM(auv_y_pid_kp, 1, double)                                     /* AUV y pid Kp  */ \
-  CXT_ELEM(auv_y_pid_ki, 0, double)                                     /* AUV y pid Ki  */ \
-  CXT_ELEM(auv_y_pid_kd, 0, double)                                     /* AUV y pid Kd  */ \
+  CXT_ELEM(auv_y_pid_kp, 3, double)                                     /* AUV y pid Kp  */ \
+  CXT_ELEM(auv_y_pid_ki, 2, double)                                     /* AUV y pid Ki  */ \
+  CXT_ELEM(auv_y_pid_kd, 1.125, double)                                 /* AUV y pid Kd  */ \
   \
-  CXT_ELEM(auv_z_pid_kp, 1, double)                                     /* AUV z pid Kp  */ \
-  CXT_ELEM(auv_z_pid_ki, 0, double)                                     /* AUV z pid Ki  */ \
-  CXT_ELEM(auv_z_pid_kd, 0, double)                                     /* AUV z pid Kd  */ \
+  CXT_ELEM(auv_z_pid_kp, 2.4, double)                                   /* AUV z pid Kp  */ \
+  CXT_ELEM(auv_z_pid_ki, 1.5, double)                                   /* AUV z pid Ki  */ \
+  CXT_ELEM(auv_z_pid_kd, 0.96, double)                                  /* AUV z pid Kd  */ \
   \
-  CXT_ELEM(auv_yaw_pid_kp, 2, double)                                   /* AUV yaw pid Kp  */ \
+  CXT_ELEM(auv_yaw_pid_kp, 5, double)                                   /* AUV yaw pid Kp  */ \
   CXT_ELEM(auv_yaw_pid_ki, 0, double)                                   /* AUV yaw pid Ki  */ \
   CXT_ELEM(auv_yaw_pid_kd, 0, double)                                   /* AUV yaw pid Kd  */ \
   \
   CXT_ELEM(auv_z_target, -0.25, double)                                 /* AUV path target z position  */ \
+  CXT_ELEM(auv_xy_distance, 1, double)                                  /* AUV distance in front of marker  */ \
   CXT_ELEM(auv_xy_speed, 0.5, double)                                   /* AUV speed in the xy plane  */ \
   CXT_ELEM(auv_z_speed, 0.3, double)                                    /* AUV vertical speed  */ \
   CXT_ELEM(auv_yaw_speed, M_PI_4 / 2, double)                           /* AUV rotation speed  */ \
+  \
+  CXT_ELEM(keep_poses, 100, int)                                       /* Max # of poses on filtered_path  */ \
 /* End of list */
 
-struct BaseContext
-{
+  struct BaseContext
+  {
 #undef CXT_ELEM
 #define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-  CXT_MACRO_ALL_PARAMS
+    CXT_MACRO_ALL_PARAMS
 
-  void load_parameters(rclcpp::Node &node);
-  void change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
-};
+    void load_parameters(rclcpp::Node &node);
+
+    bool change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
+  };
 
 } // namespace orca_base
 

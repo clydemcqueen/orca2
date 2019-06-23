@@ -4,6 +4,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+# TODO not used in pt2
+
 # GSCam launch, useful for testing the image processing pipeline
 #
 # Setup:
@@ -53,8 +55,8 @@ def generate_launch_description():
         # Mapper
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
              node_name='vmap_node', parameters=[{
-                'publish_tfs': 1,                           # Publish marker /tf
-                'marker_length': 0.1778                     # Marker length
+                'publish_tfs': 1,  # Publish marker /tf
+                'marker_length': 0.1778  # Marker length
             }]),
 
         # Localizer
@@ -65,11 +67,11 @@ def generate_launch_description():
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
                 'publish_base_odom': 1,
-                'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
+                'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
                 'map_frame_id': map_frame,
                 'camera_frame': camera_frame,
                 'base_frame_id': base_link_frame,
-                't_camera_base_x': 0.18,                    # base_link_frame=>camera_frame
+                't_camera_base_x': 0.18,  # base_link_frame=>camera_frame
                 't_camera_base_y': -0.15,
                 't_camera_base_z': -0.0675,
                 't_camera_base_roll': 0.,

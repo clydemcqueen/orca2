@@ -7,76 +7,116 @@
 #include "orca_base/base_context.hpp"
 #include "orca_base/motion.hpp"
 
-namespace orca_base {
-
-//=====================================================================================
-// BaseMission
-//=====================================================================================
-
-class BaseMission
+namespace orca_base
 {
-protected:
 
-  rclcpp::Logger logger_;                               // ROS logger
-  const BaseContext cxt_;                               // Parameters
-  const fiducial_vlam_msgs::msg::Map map_;              // Map
-  const PoseStamped start_;                             // Start point
+  //=====================================================================================
+  // BasePlanner
+  //=====================================================================================
 
-  std::vector<std::shared_ptr<BaseMotion>> segments_;   // Trajectory segments
-  int segment_idx_;                                     // Current segment
-  nav_msgs::msg::Path planned_path_;                    // Path for rviz
+  struct BasePlanner
+  {
+    std::vector<std::shared_ptr<BaseMotion>> segments_;   // Trajectory segments
+    nav_msgs::msg::Path planned_path_;                    // Path for rviz TODO refactor this class
 
-  // Build a plan
-  virtual void plan() = 0;
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) = 0;
+  };
 
-public:
+  //=====================================================================================
+  // KeepStationPlanner
+  //=====================================================================================
 
-  BaseMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-    const PoseStamped &start): logger_{logger}, cxt_{cxt}, map_{map}, start_{start} {}
+  struct KeepStationPlanner : BasePlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-  // Advance the controller, return true to continue
-  bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
+  //=====================================================================================
+  // RandomPlanner
+  //=====================================================================================
 
-  const nav_msgs::msg::Path &planned_path() const { return planned_path_; }
-};
+  struct RandomPlanner : BasePlanner
+  {
+    void plan_from_waypoints(rclcpp::Logger &logger, const BaseContext &cxt, std::vector<Pose> &waypoints,
+                             const PoseStamped &start);
+  };
 
-//=====================================================================================
-// KeepStationMission
-// -- hover in place forever
-//=====================================================================================
+  //=====================================================================================
+  // DownRandomPlanner -- markers are on the floor, and there's a down-facing camera
+  //=====================================================================================
 
-class KeepStationMission: public BaseMission
-{
-  void plan() override;
+  struct DownRandomPlanner : RandomPlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-public:
+  //=====================================================================================
+  // ForwardRandomPlanner -- markers are on the walls, and there's a forward-facing camera
+  //=====================================================================================
 
-  KeepStationMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-    const PoseStamped &start): BaseMission(logger, cxt, map, start) {}
-};
+  struct ForwardRandomPlanner : RandomPlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-//=====================================================================================
-// DownRandomMission
-// -- random zigzag mission for a down-facing camera
-//=====================================================================================
+  //=====================================================================================
+  // Body planners move back/forth along a body axis, for testing motion on that axis
+  // X = forward/back, Y = left/right, Z = up/down, Yaw = ccw/cw
+  //=====================================================================================
 
-class DownRandomMission: public BaseMission
-{
-  void plan() override;
+  struct BodyXPlanner : BasePlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-public:
+  struct BodyYPlanner : BasePlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-  DownRandomMission(const rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-    const PoseStamped &start): BaseMission(logger, cxt, map, start) {}
-};
+  struct BodyZPlanner : BasePlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-//=====================================================================================
-// ForwardRandomMission
-// -- random zigzag mission for a forward-facing camera
-//=====================================================================================
+  struct BodyYawPlanner : BasePlanner
+  {
+    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+                      const PoseStamped &start) override;
+  };
 
-// TODO
+  //=====================================================================================
+  // Mission
+  //=====================================================================================
 
+  class Mission
+  {
+    rclcpp::Logger logger_;                               // ROS logger
+    std::shared_ptr<BasePlanner> planner_;                // Path planner
+    int segment_idx_;                                     // Current segment
+    PoseError error_;                                     // Total error for this mission
+
+  public:
+
+    Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, const BaseContext &cxt,
+            const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
+
+    // Advance the controller, return true to continue
+    bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
+
+    const nav_msgs::msg::Path &planned_path() const
+    { return planner_->planned_path_; }
+
+    const PoseError &error() const
+    { return error_; }
+  };
 
 } // namespace orca_base
 

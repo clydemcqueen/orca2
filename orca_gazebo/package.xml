@@ -2,31 +2,31 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>orca_gazebo</name>
-  <version>0.2.0</version>
-  <description>Orca simulation environment</description>
+    <name>orca_gazebo</name>
+    <version>0.2.0</version>
+    <description>Orca simulation environment</description>
 
-  <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
-  <license>BSD</license>
-  
-  <url type="repository">https://github.com/clydemcqueen/orca.git</url>
-  <url type="bugtracker">https://github.com/clydemcqueen/orca/issues</url>
+    <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
+    <license>BSD</license>
 
-  <author>Clyde McQueen</author>
+    <url type="repository">https://github.com/clydemcqueen/orca.git</url>
+    <url type="bugtracker">https://github.com/clydemcqueen/orca/issues</url>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
+    <author>Clyde McQueen</author>
 
-  <depend>gazebo</depend>
-  <depend>gazebo_ros</depend>
-  <depend>geometry_msgs</depend>
-  <depend>orca_base</depend>
-  <depend>orca_msgs</depend>
-  <depend>rclcpp</depend>
-  <depend>rclpy</depend>
+    <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <export>
-    <build_type>ament_cmake</build_type>
-    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" />
-  </export>
+    <depend>gazebo</depend>
+    <depend>gazebo_ros</depend>
+    <depend>geometry_msgs</depend>
+    <depend>orca_base</depend>
+    <depend>orca_msgs</depend>
+    <depend>rclcpp</depend>
+    <depend>rclpy</depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+        <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}"/>
+    </export>
 
 </package>

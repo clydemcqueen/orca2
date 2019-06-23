@@ -6,30 +6,31 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
-namespace opencv_camera {
-
-class OpencvCameraNode: public rclcpp::Node
+namespace opencv_camera
 {
-  std::thread thread_;
-  std::atomic<bool> canceled_;
 
-  cv::VideoCapture camera_;
-  sensor_msgs::msg::CameraInfo camera_info_msg_;
-  std_msgs::msg::Header header_{};
+  class OpencvCameraNode : public rclcpp::Node
+  {
+    std::thread thread_;
+    std::atomic<bool> canceled_;
 
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
+    cv::VideoCapture camera_;
+    sensor_msgs::msg::CameraInfo camera_info_msg_;
+    std_msgs::msg::Header header_{};
 
-public:
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
 
-  explicit OpencvCameraNode();
+  public:
 
-  ~OpencvCameraNode();
+    explicit OpencvCameraNode();
 
-private:
+    ~OpencvCameraNode();
 
-  void loop();
-};
+  private:
+
+    void loop();
+  };
 
 } // namespace opencv_camera
 

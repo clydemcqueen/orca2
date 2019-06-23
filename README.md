@@ -28,12 +28,13 @@ Use your favorite Python package manager to install these Python packages:
 pip install numpy transformations
 ~~~
 
-Build Orca2 and fiducial_vlam:
+Build Orca2:
 ~~~
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
+git clone https://github.com/clydemcqueen/odom_filter.git
 source /opt/ros/crystal/setup.bash
 colcon build
 ~~~

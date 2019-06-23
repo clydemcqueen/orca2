@@ -14,22 +14,26 @@ uint8 HOLD_H=2        # ROV: hold heading
 uint8 HOLD_D=3        # ROV: hold depth
 uint8 HOLD_HD=4       # ROV: hold heading and depth
 uint8 KEEP_STATION=5  # AUV: hold position
-uint8 RANDOM_PATH=6   # AUV: random path
+uint8 MISSION_6=6     # AUV: mission #6
+uint8 MISSION_7=7     # AUV: mission #7
+uint8 MISSION_8=8     # AUV: mission #8
+uint8 MISSION_9=9     # AUV: mission #9
+uint8 MISSION_10=10   # AUV: mission #10
 uint8 mode
 
 # Camera tilt pwm, range [1100, 1900]
-# 1100 = tilt 45 degrees up
-# 1500 = straight ahead
-# 1900 = tilt 45 degrees down
+uint16 TILT_45_UP=1100
+uint16 TILT_0=1500
+uint16 TILT_45_DOWN=1900
 uint16 camera_tilt_pwm
 
 # Light brightness pwm, range [1100, 1900]
-# 1100 = lights off
-# 1900 = lights on full
+uint16 LIGHTS_OFF=1100
+uint16 LIGHTS_FULL=1900
 uint16 brightness_pwm
 
 # Thruster efforts, range [1100, 1900]
-# 1100 = full reverse
-# 1500 = stop
-# 1900 = full forward
+uint16 THRUST_FULL_REV=1100
+uint16 THRUST_STOP=1500
+uint16 THRUST_FULL_FWD=1900
 uint16[] thruster_pwm
