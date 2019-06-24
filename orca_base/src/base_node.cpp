@@ -66,6 +66,7 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
+#if 0
     if (cxt_.use_sim_time_) {
       // The simulated IMU is not rotated
       RCLCPP_INFO(get_logger(), "running in a simulation");
@@ -77,6 +78,7 @@ namespace orca_base
       imu_f_base.setRPY(-M_PI / 2, -M_PI / 2, 0);
       t_imu_base_ = imu_f_base.inverse();
     }
+#endif
 
     // ROV PID controllers
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
@@ -152,6 +154,7 @@ namespace orca_base
   // New IMU reading
   void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   {
+#if 0
     // Get yaw
     tf2::Quaternion imu_f_map;
     tf2::fromMsg(msg->orientation, imu_f_map);
@@ -159,13 +162,11 @@ namespace orca_base
     double roll = 0, pitch = 0;
     base_f_map.getRPY(roll, pitch, yaw_);
 
-#if 0
-    // NWU to ENU TODO still need this?
     yaw_ += M_PI_2;
-#endif
 
     // Compute a stability metric, used to throttle the pid controllers
     stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+#endif
   }
 
   // New input from the gamepad
