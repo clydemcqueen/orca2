@@ -9,6 +9,7 @@ endif ()
 # Emulate colcon by providing paths to other projects in the workspace
 if ($ENV{CLION_IDE})
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
+  set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
 endif ()
 
 find_package(ament_cmake REQUIRED)

@@ -94,27 +94,27 @@ namespace orca_base
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-      "barometer", [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
+      "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
     imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-      "/imu/data", [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
+      "/imu/data", 1, [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
       { this->imu_cb_.call(msg); });
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
-      "joy", [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+      "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
-      "fiducial_map", [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
+      "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "filtered_odom", [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
+      "filtered_odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
       { this->odom_cb_.call(msg); });
 
     // Other subscriptions
     using std::placeholders::_1;
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
-    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
+    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
     auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
-    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
+    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
 
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
     using namespace std::chrono_literals;

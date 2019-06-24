@@ -12,7 +12,9 @@ int main(int argc, char **argv)
   rclcpp::executors::SingleThreadedExecutor executor;
 
   // Create and add camera node
-  auto node = std::make_shared<opencv_camera::OpencvCameraNode>();
+  rclcpp::NodeOptions options{};
+  options.use_intra_process_comms(true);
+  auto node = std::make_shared<opencv_camera::OpencvCameraNode>(options);
   executor.add_node(node);
 
   // Spin until rclcpp::ok() returns false

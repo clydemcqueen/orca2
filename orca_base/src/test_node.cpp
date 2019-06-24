@@ -13,7 +13,7 @@ public:
   TestNode() : Node("test_node")
   {
     sub_ = create_subscription<sensor_msgs::msg::Joy>(
-      "joy",
+      "joy", 1,
       [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->cb_.call(msg); });
   }

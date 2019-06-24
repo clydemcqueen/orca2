@@ -48,7 +48,7 @@ namespace orca_driver
     // Subscribe to control messages
     using std::placeholders::_1;
     auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
-    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", control_cb);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", 1, control_cb);
 
     // Spin timer
     using namespace std::chrono_literals;
