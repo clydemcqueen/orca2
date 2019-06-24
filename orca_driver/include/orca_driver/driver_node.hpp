@@ -60,6 +60,8 @@ namespace orca_driver
     mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};
 
+    void validate_parameters();
+
     void set_status(Status status);
 
     void control_callback(const orca_msgs::msg::Control::SharedPtr msg);

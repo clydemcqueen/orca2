@@ -131,6 +131,9 @@ namespace orca_base
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
 
+    // Validate parameters
+    void validate_parameters();
+
     // Callbacks
     void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
 

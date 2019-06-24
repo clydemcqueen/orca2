@@ -57,16 +57,14 @@ namespace orca_base
     (void) spin_timer_;
 
     // Get parameters
-    cxt_.load_parameters(*this);
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(BASE_NODE_ALL_PARAMS, validate_parameters)
 
-    // Track changes to parameters
-    register_param_change_callback(
-      [this](std::vector<rclcpp::Parameter> parameters) -> rcl_interfaces::msg::SetParametersResult
-      {
-        auto result = rcl_interfaces::msg::SetParametersResult();
-        result.successful = cxt_.change_parameters(*this, parameters);
-        return result;
-      });
+    // Register parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
     if (cxt_.use_sim_time_) {
       // The simulated IMU is not rotated
@@ -121,6 +119,13 @@ namespace orca_base
     spin_timer_ = create_wall_timer(50ms, std::bind(&BaseNode::spin_once, this));
 
     RCLCPP_INFO(get_logger(), "base_node ready");
+  }
+
+  void BaseNode::validate_parameters()
+  {
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    BASE_NODE_ALL_PARAMS
   }
 
   // New barometer reading

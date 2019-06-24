@@ -7,74 +7,64 @@
 
 #include "orca_base/context_macros.hpp"
 
-namespace rclcpp
-{
-  class Node;
-
-  class Parameter;
-}
-
 namespace orca_base
 {
 
-#define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(use_sim_time, false, bool)                                   /* We're in a simulation  */ \
-  CXT_ELEM(auto_start, 0, int)                                          /* Auto-start AUV mission if > 0  */ \
-  CXT_ELEM(map_frame, "map", std::string)                               /* Map frame  */ \
-  CXT_ELEM(base_frame, "base_link", std::string)                        /* Base frame  */ \
+#define BASE_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(use_sim_time, bool, false)                 /* We're in a simulation  */ \
+  CXT_MACRO_MEMBER(auto_start, int, 0)                        /* Auto-start AUV mission if > 0  */ \
+  CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
+  CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
-  CXT_ELEM(inc_yaw, 0.2, double)                                        /* Yaw trim increment  */ \
-  CXT_ELEM(inc_z, 0.2, double)                                          /* Z trim increment  */ \
-  CXT_ELEM(inc_tilt, 5, int)                                            /* Tilt increment  */ \
-  CXT_ELEM(inc_lights, 20, int)                                         /* Lights increment  */ \
+  CXT_MACRO_MEMBER(inc_yaw, double, 0.2)                      /* Yaw trim increment  */ \
+  CXT_MACRO_MEMBER(inc_z, double, 0.2)                        /* Z trim increment  */ \
+  CXT_MACRO_MEMBER(inc_tilt, int, 5)                          /* Tilt increment  */ \
+  CXT_MACRO_MEMBER(inc_lights, int, 20)                       /* Lights increment  */ \
   \
-  CXT_ELEM(input_dead_band, 0.05f, float)                               /* Ignore small joystick inputs  */ \
-  CXT_ELEM(xy_gain, 0.5, double)                                        /* Attenuate joystick inputs  */ \
-  CXT_ELEM(yaw_gain, 0.3, double)                                       /* Attenuate joystick inputs  */ \
-  CXT_ELEM(vertical_gain, 0.5, double)                                  /* Attenuate joystick inputs  */ \
+  CXT_MACRO_MEMBER(input_dead_band, float, 0.05f)             /* Ignore small joystick inputs  */ \
+  CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Attenuate joystick inputs  */ \
+  CXT_MACRO_MEMBER(yaw_gain, double, 0.3)                     /* Attenuate joystick inputs  */ \
+  CXT_MACRO_MEMBER(vertical_gain, double, 0.5)                /* Attenuate joystick inputs  */ \
   \
-  CXT_ELEM(rov_z_pid_kp, 2.4, double)                                   /* ROV z pid Kp  */ \
-  CXT_ELEM(rov_z_pid_ki, 1.5, double)                                   /* ROV z pid Ki  */ \
-  CXT_ELEM(rov_z_pid_kd, 0.96, double)                                  /* ROV z pid Kd  */ \
+  CXT_MACRO_MEMBER(rov_z_pid_kp, double, 2.4)                 /* ROV z pid Kp  */ \
+  CXT_MACRO_MEMBER(rov_z_pid_ki, double, 1.5)                 /* ROV z pid Ki  */ \
+  CXT_MACRO_MEMBER(rov_z_pid_kd, double, 0.96)                /* ROV z pid Kd  */ \
   \
-  CXT_ELEM(rov_yaw_pid_kp, 5, double)                                   /* ROV yaw pid Kp  */ \
-  CXT_ELEM(rov_yaw_pid_ki, 0, double)                                   /* ROV yaw pid Ki  */ \
-  CXT_ELEM(rov_yaw_pid_kd, 0, double)                                   /* ROV yaw pid Kd  */ \
+  CXT_MACRO_MEMBER(rov_yaw_pid_kp, double, 5)                 /* ROV yaw pid Kp  */ \
+  CXT_MACRO_MEMBER(rov_yaw_pid_ki, double, 0)                 /* ROV yaw pid Ki  */ \
+  CXT_MACRO_MEMBER(rov_yaw_pid_kd, double, 0)                 /* ROV yaw pid Kd  */ \
   \
-  CXT_ELEM(auv_x_pid_kp, 3, double)                                     /* AUV x pid Kp  */ \
-  CXT_ELEM(auv_x_pid_ki, 2, double)                                     /* AUV x pid Ki  */ \
-  CXT_ELEM(auv_x_pid_kd, 1.125, double)                                 /* AUV x pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_kp, double, 3)                   /* AUV x pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_ki, double, 2)                   /* AUV x pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_kd, double, 1.125)               /* AUV x pid Kd  */ \
   \
-  CXT_ELEM(auv_y_pid_kp, 3, double)                                     /* AUV y pid Kp  */ \
-  CXT_ELEM(auv_y_pid_ki, 2, double)                                     /* AUV y pid Ki  */ \
-  CXT_ELEM(auv_y_pid_kd, 1.125, double)                                 /* AUV y pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_kp, double, 3)                   /* AUV y pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_ki, double, 2)                   /* AUV y pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_kd, double, 1.125)               /* AUV y pid Kd  */ \
   \
-  CXT_ELEM(auv_z_pid_kp, 2.4, double)                                   /* AUV z pid Kp  */ \
-  CXT_ELEM(auv_z_pid_ki, 1.5, double)                                   /* AUV z pid Ki  */ \
-  CXT_ELEM(auv_z_pid_kd, 0.96, double)                                  /* AUV z pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_kp, double, 2.4)                 /* AUV z pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_ki, double, 1.5)                 /* AUV z pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.96)                /* AUV z pid Kd  */ \
   \
-  CXT_ELEM(auv_yaw_pid_kp, 5, double)                                   /* AUV yaw pid Kp  */ \
-  CXT_ELEM(auv_yaw_pid_ki, 0, double)                                   /* AUV yaw pid Ki  */ \
-  CXT_ELEM(auv_yaw_pid_kd, 0, double)                                   /* AUV yaw pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 5)                 /* AUV yaw pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0)                 /* AUV yaw pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0)                 /* AUV yaw pid Kd  */ \
   \
-  CXT_ELEM(auv_z_target, -0.25, double)                                 /* AUV path target z position  */ \
-  CXT_ELEM(auv_xy_distance, 1, double)                                  /* AUV distance in front of marker  */ \
-  CXT_ELEM(auv_xy_speed, 0.5, double)                                   /* AUV speed in the xy plane  */ \
-  CXT_ELEM(auv_z_speed, 0.3, double)                                    /* AUV vertical speed  */ \
-  CXT_ELEM(auv_yaw_speed, M_PI_4 / 2, double)                           /* AUV rotation speed  */ \
+  CXT_MACRO_MEMBER(auv_z_target, double, -0.25)               /* AUV path target z position  */ \
+  CXT_MACRO_MEMBER(auv_xy_distance, double, 1)                /* AUV distance in front of marker  */ \
+  CXT_MACRO_MEMBER(auv_xy_speed, double, 0.5)                 /* AUV speed in the xy plane  */ \
+  CXT_MACRO_MEMBER(auv_z_speed, double, 0.3)                  /* AUV vertical speed  */ \
+  CXT_MACRO_MEMBER(auv_yaw_speed, double, M_PI_4 / 2)         /* AUV rotation speed  */ \
   \
-  CXT_ELEM(keep_poses, 100, int)                                       /* Max # of poses on filtered_path  */ \
+  CXT_MACRO_MEMBER(keep_poses, int, 100)                      /* Max # of poses on filtered_path  */ \
 /* End of list */
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
   struct BaseContext
   {
-#undef CXT_ELEM
-#define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_PARAMS
-
-    void load_parameters(rclcpp::Node &node);
-
-    bool change_parameters(rclcpp::Node &node, std::vector<rclcpp::Parameter> parameters);
+    BASE_NODE_ALL_PARAMS
   };
 
 } // namespace orca_base
