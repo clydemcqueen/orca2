@@ -1,7 +1,3 @@
-import os
-
-import math
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -17,6 +13,6 @@ def generate_launch_description():
                 'voltage_multiplier': 5.05,
                 'thruster_4_reverse': True,  # Thruster 4 ESC is programmed incorrectly
                 'tilt_channel': 6,
-                'voltage_min': 12.0
+                'voltage_min': 14.0
             }]),
     ])
