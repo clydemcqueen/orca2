@@ -36,3 +36,19 @@ sudo apt-get update
 sudo apt-get install mraa-tools mraa-examples libmraa1 libmraa-dev libupm-dev libupm1 upm-examples
 sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
 ~~~
+
+To record bags:
+~~~
+sudo apt install sqlite3 ros-dashing-rosbag2* ros-dashing-ros2bag
+ros2 bag record /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
+~~~
+
+To isolate ROS2 networks:
+~~~
+export ROS_DOMAIN_ID=42
+~~~
+
+To display timestamps on console messages:
+~~~
+export RCUTILS_CONSOLE_OUTPUT_FORMAT="[{severity}] [{name}] [{time}]: {message}"
+~~~

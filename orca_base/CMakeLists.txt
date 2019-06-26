@@ -8,8 +8,9 @@ endif ()
 
 # Emulate colcon by providing paths to other projects in the workspace
 if ($ENV{CLION_IDE})
-  set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
+  set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
+  set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
 endif ()
 
 find_package(ament_cmake REQUIRED)
@@ -19,6 +20,7 @@ find_package(nav_msgs REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -46,6 +48,7 @@ ament_target_dependencies(
   orca_msgs
   nav_msgs
   rclcpp
+  ros2_shared
   sensor_msgs
   tf2
   tf2_ros

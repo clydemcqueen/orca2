@@ -31,13 +31,6 @@ namespace orca_driver
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), DRIVER_NODE_ALL_PARAMS, validate_parameters)
 
-    RCLCPP_INFO(get_logger(), "expecting Maestro on port %s", cxt_.maestro_port_.c_str());
-    RCLCPP_INFO(get_logger(), "lights on channel %d", cxt_.lights_channel_);
-    RCLCPP_INFO(get_logger(), "camera servo on channel %d", cxt_.tilt_channel_);
-    RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", cxt_.leak_channel_);
-    RCLCPP_INFO(get_logger(), "voltage sensor on channel %d, multiplier is %g, minimum is %g", cxt_.voltage_channel_,
-                cxt_.voltage_multiplier_, cxt_.voltage_min_);
-
     // Get thruster parameters
     RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
     for (int i = 0; i < cxt_.num_thrusters_; ++i) {
