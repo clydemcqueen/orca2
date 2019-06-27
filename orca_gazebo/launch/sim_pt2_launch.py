@@ -90,12 +90,4 @@ def generate_launch_description():
                 't_camera_base_pitch': -math.pi / 2,
                 't_camera_base_yaw': math.pi / 2
             }]),
-
-        # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
-        # (Run w/o filter while PID tuning in pt2)
-        # Node(package='odom_filter', node_executable='filter_node', output='screen',
-        #      node_name='filter_node', node_namespace=camera_name, parameters=[{
-        #         'use_sim_time': True,                       # Use /clock if available
-        #         'sensor_frame': camera_frame,
-        #     }]),
     ])
