@@ -28,11 +28,11 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Publish static transforms
-        Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
+        Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='log',
              arguments=[urdf_path]),
 
         # GSCam node (provides video)
-        Node(package='gscam', node_executable='gscam_node', output='screen',
+        Node(package='gscam', node_executable='gscam_node', output='log',
              node_name='gscam_node', parameters=[{
                 'gscam_config': cfg,
                 'camera_name': 'wa1_dry',
@@ -44,23 +44,23 @@ def generate_launch_description():
             ]),
 
         # # Joystick driver, generates /namespace/joy messages
-        Node(package='joy', node_executable='joy_node', output='screen'),
+        Node(package='joy', node_executable='joy_node', output='log'),
 
         # AUV controller
-        Node(package='orca_base', node_executable='base_node', output='screen',
+        Node(package='orca_base', node_executable='base_node', output='log',
              node_name='base_node', remappings=[
                 ('filtered_odom', '/' + camera_name + '/base_odom')
             ]),
 
         # Mapper
-        Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
+        Node(package='fiducial_vlam', node_executable='vmap_node', output='log',
              node_name='vmap_node', parameters=[{
                 'publish_tfs': 1,  # Publish marker /tf
                 'marker_length': 0.1778  # Marker length
             }]),
 
         # Localizer
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+        Node(package='fiducial_vlam', node_executable='vloc_node', output='log',
              node_name='vloc_node', node_namespace=camera_name, parameters=[{
                 'publish_tfs': 1,
                 'publish_camera_pose': 0,
