@@ -57,17 +57,16 @@ namespace orca_base
     (void) spin_timer_;
 
     // Get parameters
-    cxt_.load_parameters(*this);
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(BASE_NODE_ALL_PARAMS, validate_parameters)
 
-    // Track changes to parameters
-    register_param_change_callback(
-      [this](std::vector<rclcpp::Parameter> parameters) -> rcl_interfaces::msg::SetParametersResult
-      {
-        auto result = rcl_interfaces::msg::SetParametersResult();
-        result.successful = cxt_.change_parameters(*this, parameters);
-        return result;
-      });
+    // Register parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
+#if 0
     if (cxt_.use_sim_time_) {
       // The simulated IMU is not rotated
       RCLCPP_INFO(get_logger(), "running in a simulation");
@@ -79,6 +78,7 @@ namespace orca_base
       imu_f_base.setRPY(-M_PI / 2, -M_PI / 2, 0);
       t_imu_base_ = imu_f_base.inverse();
     }
+#endif
 
     // ROV PID controllers
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
@@ -94,33 +94,40 @@ namespace orca_base
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-      "barometer", [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
+      "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
     imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-      "/imu/data", [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
+      "/imu/data", 1, [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
       { this->imu_cb_.call(msg); });
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
-      "joy", [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+      "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
-      "fiducial_map", [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
+      "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "filtered_odom", [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
+      "filtered_odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
       { this->odom_cb_.call(msg); });
 
     // Other subscriptions
     using std::placeholders::_1;
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
-    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", battery_cb);
+    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
     auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
-    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", leak_cb);
+    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
 
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
     using namespace std::chrono_literals;
     spin_timer_ = create_wall_timer(50ms, std::bind(&BaseNode::spin_once, this));
 
     RCLCPP_INFO(get_logger(), "base_node ready");
+  }
+
+  void BaseNode::validate_parameters()
+  {
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    BASE_NODE_ALL_PARAMS
   }
 
   // New barometer reading
@@ -147,6 +154,7 @@ namespace orca_base
   // New IMU reading
   void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   {
+#if 0
     // Get yaw
     tf2::Quaternion imu_f_map;
     tf2::fromMsg(msg->orientation, imu_f_map);
@@ -154,13 +162,11 @@ namespace orca_base
     double roll = 0, pitch = 0;
     base_f_map.getRPY(roll, pitch, yaw_);
 
-#if 0
-    // NWU to ENU TODO still need this?
     yaw_ += M_PI_2;
-#endif
 
     // Compute a stability metric, used to throttle the pid controllers
     stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+#endif
   }
 
   // New input from the gamepad

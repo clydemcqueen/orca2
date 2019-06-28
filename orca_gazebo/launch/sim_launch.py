@@ -2,6 +2,7 @@
 
 import os
 
+import math
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess
@@ -37,7 +38,7 @@ def generate_launch_description():
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
              arguments=[urdf_path, '0', '0', surface, '0']),
 
-        # Publish base_link=>left_camera_link
+        # Publish static joints
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
              node_name='robot_state_publisher', arguments=[urdf_path], parameters=[{
                 'use_sim_time': True,  # Use /clock if available
@@ -57,7 +58,7 @@ def generate_launch_description():
                 'auto_start': 6,  # Auto-start AUV mission
                 'auv_z_target': -2.0  # Mission runs 2m below the surface
             }], remappings=[
-                ('filtered_odom', '/' + left_camera_name + '/filtered_odom')
+                ('filtered_odom', '/' + left_camera_name + '/odom')
             ]),
 
         # Load and publish a known map
@@ -73,7 +74,7 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'publish_tfs': 0,  # Don't publish tf
+                'publish_tfs': 1,
                 'publish_camera_pose': 0,
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
@@ -85,14 +86,7 @@ def generate_launch_description():
                 't_camera_base_y': -0.15,
                 't_camera_base_z': -0.0675,
                 't_camera_base_roll': 0.,
-                't_camera_base_pitch': 3.14,
-                't_camera_base_yaw': 1.57
-            }]),
-
-        # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
-        Node(package='odom_filter', node_executable='filter_node', output='screen',
-             node_name='filter_node', node_namespace=left_camera_name, parameters=[{
-                'use_sim_time': True,  # Use /clock if available
-                'sensor_frame': left_camera_frame
+                't_camera_base_pitch': math.pi,
+                't_camera_base_yaw': math.pi / 2
             }]),
     ])

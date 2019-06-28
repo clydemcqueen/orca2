@@ -4,34 +4,28 @@
 #include <math.h>
 #include <string>
 
-#include "orca_driver/context_macros.hpp"
-
-namespace rclcpp
-{
-  class Node;
-}
+#include "ros2_shared/context_macros.hpp"
 
 namespace orca_driver
 {
 
-#define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(num_thrusters, 6, int)                         /* Number of thrusters */ \
-  CXT_ELEM(lights_channel, 8, int)                        /* PWM lights channel */ \
-  CXT_ELEM(tilt_channel, 9, int)                          /* PWM tilt channel */ \
-  CXT_ELEM(voltage_channel, 11, int)                      /* Analog voltage channel */ \
-  CXT_ELEM(leak_channel, 12, int)                         /* Digital leak channel */ \
-  CXT_ELEM(maestro_port, "/dev/ttyACM0", std::string)     /* Default Maestro port */ \
-  CXT_ELEM(voltage_multiplier, 4.7, double)               /* Voltage multiplier */ \
-  CXT_ELEM(voltage_min, 14.0, double)                     /* Minimum voltage to run  */ \
+#define DRIVER_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(num_thrusters, int, 6)                         /* Number of thrusters */ \
+  CXT_MACRO_MEMBER(lights_channel, int, 8)                        /* PWM lights channel */ \
+  CXT_MACRO_MEMBER(tilt_channel, int, 9)                          /* PWM tilt channel */ \
+  CXT_MACRO_MEMBER(voltage_channel, int, 11)                      /* Analog voltage channel */ \
+  CXT_MACRO_MEMBER(leak_channel, int, 12)                         /* Digital leak channel */ \
+  CXT_MACRO_MEMBER(maestro_port, std::string, "/dev/ttyACM0")     /* Default Maestro port */ \
+  CXT_MACRO_MEMBER(voltage_multiplier, double, 4.7)               /* Voltage multiplier */ \
+  CXT_MACRO_MEMBER(voltage_min, double, 14.0)                     /* Minimum voltage to run  */ \
 /* End of list */
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
   struct DriverContext
   {
-#undef CXT_ELEM
-#define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_PARAMS
-
-    void load_parameters(rclcpp::Node &node);
+    DRIVER_NODE_ALL_PARAMS
   };
 
 } // namespace orca_driver

@@ -22,14 +22,14 @@ namespace orca_driver
     (void) spin_timer_;
 
     // Get parameters
-    cxt_.load_parameters(*this);
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(DRIVER_NODE_ALL_PARAMS, validate_parameters)
 
-    RCLCPP_INFO(get_logger(), "expecting Maestro on port %s", cxt_.maestro_port_.c_str());
-    RCLCPP_INFO(get_logger(), "lights on channel %d", cxt_.lights_channel_);
-    RCLCPP_INFO(get_logger(), "camera servo on channel %d", cxt_.tilt_channel_);
-    RCLCPP_INFO(get_logger(), "Leak sensor on channel %d", cxt_.leak_channel_);
-    RCLCPP_INFO(get_logger(), "voltage sensor on channel %d, multiplier is %g, minimum is %g", cxt_.voltage_channel_,
-                cxt_.voltage_multiplier_, cxt_.voltage_min_);
+    // Register parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), DRIVER_NODE_ALL_PARAMS, validate_parameters)
 
     // Get thruster parameters
     RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
@@ -48,11 +48,18 @@ namespace orca_driver
     // Subscribe to control messages
     using std::placeholders::_1;
     auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
-    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", control_cb);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", 1, control_cb);
 
     // Spin timer
     using namespace std::chrono_literals;
     spin_timer_ = create_wall_timer(500ms, std::bind(&DriverNode::timer_callback, this));
+  }
+
+  void DriverNode::validate_parameters()
+  {
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    DRIVER_NODE_ALL_PARAMS
   }
 
   void DriverNode::set_status(Status status)

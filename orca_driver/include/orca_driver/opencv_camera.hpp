@@ -23,7 +23,7 @@ namespace opencv_camera
 
   public:
 
-    explicit OpencvCameraNode();
+    explicit OpencvCameraNode(rclcpp::NodeOptions &options);
 
     ~OpencvCameraNode();
 

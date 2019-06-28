@@ -94,7 +94,7 @@ namespace orca_base
     double z_;                                  // Z from barometer
 
     // IMU state
-    tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
+    //tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
     double yaw_;                                // Yaw from IMU
     double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
@@ -130,6 +130,9 @@ namespace orca_base
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
+
+    // Validate parameters
+    void validate_parameters();
 
     // Callbacks
     void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);

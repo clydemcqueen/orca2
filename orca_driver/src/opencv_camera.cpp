@@ -93,8 +93,8 @@ namespace opencv_camera
     }
   }
 
-  OpencvCameraNode::OpencvCameraNode() :
-    Node("opencv_camera", "", true),    // Set use_intra_process_comms = true
+  OpencvCameraNode::OpencvCameraNode(rclcpp::NodeOptions &options) :
+    Node("opencv_camera", options),
     camera_(0)                          // Attach to /dev/video0
   {
     camera_info_pub_ = create_publisher<sensor_msgs::msg::CameraInfo>("camera_info", 1);
@@ -142,18 +142,20 @@ namespace opencv_camera
       auto stamp = now();
 
       // Pass unique_ptr to publish() calls, these will not be copied
-      sensor_msgs::msg::CameraInfo::UniquePtr camera_info_msg(new sensor_msgs::msg::CameraInfo(camera_info_msg_));
-      sensor_msgs::msg::Image::UniquePtr image_msg(new sensor_msgs::msg::Image());
+      // TODO
+      //sensor_msgs::msg::CameraInfo::UniquePtr camera_info_msg(new sensor_msgs::msg::CameraInfo(camera_info_msg_));
+      //sensor_msgs::msg::Image::UniquePtr image_msg(new sensor_msgs::msg::Image());
 
       // Convert OpenCV Mat to ROS Image
-      image_msg->header.stamp = stamp;
-      image_msg->header.frame_id = "camera_frame";
-      image_msg->height = frame.rows;
-      image_msg->width = frame.cols;
-      image_msg->encoding = mat_type2encoding(frame.type());
-      image_msg->is_bigendian = false;
-      image_msg->step = static_cast<sensor_msgs::msg::Image::_step_type>(frame.step);
-      image_msg->data.assign(frame.datastart, frame.dataend);
+      sensor_msgs::msg::Image image_msg;
+      image_msg.header.stamp = stamp;
+      image_msg.header.frame_id = "camera_frame";
+      image_msg.height = frame.rows;
+      image_msg.width = frame.cols;
+      image_msg.encoding = mat_type2encoding(frame.type());
+      image_msg.is_bigendian = false;
+      image_msg.step = static_cast<sensor_msgs::msg::Image::_step_type>(frame.step);
+      image_msg.data.assign(frame.datastart, frame.dataend);
 
       // Publish
       image_pub_->publish(image_msg);
