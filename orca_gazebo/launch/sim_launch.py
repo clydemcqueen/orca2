@@ -75,6 +75,8 @@ def generate_launch_description():
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,  # Use /clock if available
                 'publish_tfs': 1,
+                'publish_tfs_per_marker': 1,
+                'sub_camera_info_best_effort_not_reliable': 1,
                 'publish_camera_pose': 0,
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
