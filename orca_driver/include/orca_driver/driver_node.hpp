@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-//#include "mraa/common.hpp"
-//#include "mraa/led.hpp"
+#include "mraa/common.hpp"
+#include "mraa/led.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -56,9 +56,9 @@ namespace orca_driver
 
     // LEDs on the UP board
     // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
-    //mraa::Led led_ready_{"yellow"};
-    //mraa::Led led_mission_{"green"};
-    //mraa::Led led_problem_{"red"};
+    mraa::Led led_ready_{"yellow"};
+    mraa::Led led_mission_{"green"};
+    mraa::Led led_problem_{"red"};
 
     void validate_parameters();
 

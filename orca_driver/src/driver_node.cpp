@@ -67,7 +67,6 @@ namespace orca_driver
     if (status != status_) {
       status_ = status;
 
-#if 0
       led_ready_.setBrightness(0);
       led_mission_.setBrightness(0);
       led_problem_.setBrightness(0);
@@ -85,7 +84,6 @@ namespace orca_driver
         default:
           break;
       }
-#endif
     }
   }
 

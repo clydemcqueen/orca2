@@ -12,15 +12,13 @@ touch ~/ros2/orca_ws/src/orca2/orca_gazebo/COLCON_IGNORE
 
 For the Raspberry Pi camera:
 ~~~
-sudo apt install ros-dashing-camera-calibration-parsers ros-dashing-camera-info-manager
-
 cd ~/ros2/orca2_ws/src
 git clone https://github.com/clydemcqueen/gscam.git -b ros2
 cd ~/ros2/orca2_ws
 colcon build
 ~~~
 
-For the Bar30:
+For the Bar30 TODO:
 ~~~
 pip install smbus future
 cd ~

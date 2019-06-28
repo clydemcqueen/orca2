@@ -23,13 +23,13 @@ find_package(rclpy REQUIRED)
 find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-#set(mraa_INCLUDE_DIRS "/usr/include")
-#set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
+set(mraa_INCLUDE_DIRS "/usr/include")
+set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
 
 include_directories(
   include
   ${cv_bridge_INCLUDE_DIRS}
-  #${mraa_INCLUDE_DIRS}
+  ${mraa_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
@@ -46,7 +46,7 @@ add_executable(
 )
 ament_target_dependencies(
   driver_node
-  #mraa
+  mraa
   orca_msgs
   rclcpp
   ros2_shared
