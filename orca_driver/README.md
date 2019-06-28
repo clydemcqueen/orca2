@@ -18,6 +18,12 @@ cd ~/ros2/orca2_ws
 colcon build
 ~~~
 
+For the USB camera:
+~~~
+sudo usermod -a -G video ${USER}
+# Log out and back in again
+~~~
+
 For the Bar30 TODO:
 ~~~
 pip install smbus future

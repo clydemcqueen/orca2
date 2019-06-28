@@ -47,18 +47,18 @@ def generate_launch_description():
                 'auto_start': 5,  # Auto-start mission >= 5
                 'auv_z_target': -0.5,
                 'auv_xy_distance': 2.0,
-		'auv_x_pid_kp': 0.1,
-		'auv_x_pid_ki': 0.0,
-		'auv_x_pid_kd': 0.0,
-		'auv_y_pid_kp': 0.1,
-		'auv_y_pid_ki': 0.0,
-		'auv_y_pid_kd': 0.0,
-		'auv_z_pid_kp': 0.1,
-		'auv_z_pid_ki': 0.0,
-		'auv_z_pid_kd': 0.0,
-		'auv_yaw_pid_kp': 0.1,
-		'auv_yaw_pid_ki': 0.0,
-		'auv_yaw_pid_kd': 0.0,
+                'auv_x_pid_kp': 0.0, # TODO
+                'auv_x_pid_ki': 0.0,
+                'auv_x_pid_kd': 0.0,
+                'auv_y_pid_kp': 0.0,
+                'auv_y_pid_ki': 0.0,
+                'auv_y_pid_kd': 0.0,
+                'auv_z_pid_kp': 0.0,
+                'auv_z_pid_ki': 0.0,
+                'auv_z_pid_kd': 0.0,
+                'auv_yaw_pid_kp': 0.0,
+                'auv_yaw_pid_ki': 0.0,
+                'auv_yaw_pid_kd': 0.0,
             }], remappings=[
                 ('filtered_odom', '/' + camera_name + '/base_odom')
             ]),
@@ -70,14 +70,14 @@ def generate_launch_description():
                 'marker_length': 0.1778,
                 'marker_map_load_full_filename': map_path,
                 'make_not_use_map': 0,
-                #'map_init_style': 1,  # Init style 1: marker id and location is specified below:
-                #'map_init_id': 0,
-                #'map_init_pose_x': 0.0,
-                #'map_init_pose_y': 0.0,
-                #'map_init_pose_z': -0.5,
-                #'map_init_pose_roll': math.pi / 2,
-                #'map_init_pose_pitch': 0.0,
-                #'map_init_pose_yaw': -math.pi / 2,
+                # 'map_init_style': 1,  # Init style 1: marker id and location is specified below:
+                # 'map_init_id': 0,
+                # 'map_init_pose_x': 0.0,
+                # 'map_init_pose_y': 0.0,
+                # 'map_init_pose_z': -0.5,
+                # 'map_init_pose_roll': math.pi / 2,
+                # 'map_init_pose_pitch': 0.0,
+                # 'map_init_pose_yaw': -math.pi / 2,
             }]),
 
         # Localizer
