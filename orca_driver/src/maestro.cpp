@@ -119,13 +119,13 @@ namespace maestro
   }
 
   // Write bytes to the serial port, return true if successful
-  bool Maestro::writeBytes(const uint8_t *bytes, size_t size)
+  bool Maestro::writeBytes(const uint8_t *bytes, ssize_t size)
   {
     return ready() && write(fd_, bytes, size) == size;
   }
 
   // Read bytes from the serial port, return true if successful
-  bool Maestro::readBytes(uint8_t *bytes, size_t size)
+  bool Maestro::readBytes(uint8_t *bytes, ssize_t size)
   {
     return ready() && read(fd_, bytes, size) == size;
   }

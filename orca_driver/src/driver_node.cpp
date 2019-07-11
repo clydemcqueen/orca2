@@ -105,7 +105,7 @@ namespace orca_driver
         RCLCPP_ERROR(get_logger(), "failed to set brightness");
       }
 
-      for (int i = 0; i < thrusters_.size(); ++i) {
+      for (size_t i = 0; i < thrusters_.size(); ++i) {
         uint16_t pwm = msg->thruster_pwm[i];
 
         // Compensate for ESC programming errors
@@ -211,7 +211,7 @@ namespace orca_driver
     all_stop();
 
     // Check to see that all thrusters are stopped.
-    for (int i = 0; i < thrusters_.size(); ++i) {
+    for (size_t i = 0; i < thrusters_.size(); ++i) {
       uint16_t value = 0;
       maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
       RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
@@ -232,7 +232,7 @@ namespace orca_driver
   {
     RCLCPP_INFO(get_logger(), "all stop");
     if (maestro_.ready()) {
-      for (int i = 0; i < thrusters_.size(); ++i) {
+      for (size_t i = 0; i < thrusters_.size(); ++i) {
         maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), orca_msgs::msg::Control::THRUST_STOP);
       }
     }

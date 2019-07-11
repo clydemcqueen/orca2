@@ -13,9 +13,9 @@ namespace maestro
   private:
     int fd_;
 
-    bool writeBytes(const uint8_t *bytes, size_t size);
+    bool writeBytes(const uint8_t *bytes, ssize_t size);
 
-    bool readBytes(uint8_t *bytes, size_t size);
+    bool readBytes(uint8_t *bytes, ssize_t size);
 
     bool getValue(uint8_t channel, uint16_t &value);
 
