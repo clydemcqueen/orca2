@@ -32,6 +32,7 @@ include_directories(
   ${mraa_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
+  ${ros2_shared_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
 )
 

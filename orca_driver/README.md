@@ -44,7 +44,8 @@ sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
 To record bags:
 ~~~
 sudo apt install sqlite3 ros-dashing-rosbag2* ros-dashing-ros2bag
-ros2 bag record /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
+ros2 bag record -a  # Everything, or just some things:
+ros2 bag record /rosout /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
 ~~~
 
 To isolate ROS2 networks:

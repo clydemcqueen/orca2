@@ -26,6 +26,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
+        # Could use additional_env to add model path, but we need to add to the path, not replace it
         ExecuteProcess(cmd=[
             'gazebo',
             '--verbose',
