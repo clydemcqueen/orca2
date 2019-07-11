@@ -22,6 +22,11 @@ For the USB camera:
 ~~~
 sudo usermod -a -G video ${USER}
 # Log out and back in again
+
+cd ~/ros2/orca2_ws/src
+git clone https://github.com/clydemcqueen/opencv_cam.git
+cd ~/ros2/orca2_ws
+colcon build
 ~~~
 
 For the Bar30 TODO:

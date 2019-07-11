@@ -18,6 +18,7 @@ def generate_launch_description():
     urdf_path = os.path.join(orca_description_path, 'urdf', 'pt2.urdf')
 
     orca_driver_path = get_package_share_directory('orca_driver')
+    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')
     map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
 
     return LaunchDescription([
@@ -26,11 +27,13 @@ def generate_launch_description():
              arguments=[urdf_path]),
 
         # Forward camera
-        Node(package='orca_driver', node_executable='opencv_camera_node', output='log',
-             node_name='opencv_camera_node', remappings=[
+        Node(package='opencv_cam', node_executable='opencv_cam_node', output='log',
+             node_name='opencv_cam_node', remappings=[
                 ('image_raw', '/' + camera_name + '/image_raw'),
                 ('camera_info', '/' + camera_name + '/camera_info'),
-            ]),
+            ], parameters=[{
+                'camera_info_path': camera_info_path,
+            }]),
 
         # Driver
         Node(package='orca_driver', node_executable='driver_node', output='log',
@@ -47,7 +50,7 @@ def generate_launch_description():
                 'auto_start': 5,  # Auto-start mission >= 5
                 'auv_z_target': -0.5,
                 'auv_xy_distance': 2.0,
-                'auv_x_pid_kp': 0.0, # TODO
+                'auv_x_pid_kp': 0.0,  # TODO
                 'auv_x_pid_ki': 0.0,
                 'auv_x_pid_kd': 0.0,
                 'auv_y_pid_kp': 0.0,

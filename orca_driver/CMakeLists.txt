@@ -14,7 +14,6 @@ if ($ENV{CLION_IDE})
 endif ()
 
 find_package(ament_cmake REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(orca_msgs REQUIRED)
 #find_package(phidgets_imu REQUIRED)
 #find_package(python-smbus REQUIRED)
@@ -28,7 +27,6 @@ set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
 
 include_directories(
   include
-  ${cv_bridge_INCLUDE_DIRS}
   ${mraa_INCLUDE_DIRS}
   ${orca_msgs_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
@@ -68,54 +66,12 @@ ament_target_dependencies(
 )
 
 #=============
-# OpenCV camera component
-#=============
-
-add_library(
-  opencv_camera SHARED
-  src/opencv_camera.cpp
-)
-ament_target_dependencies(
-  opencv_camera
-  cv_bridge
-  rclcpp
-  sensor_msgs
-)
-
-# Export incantations:
-# Call ament_export_interfaces()
-# Reference this in the install() with an EXPORT line
-# Source install/local_setup.bash after the build
-ament_export_interfaces(
-  opencv_camera
-  HAS_LIBRARY_TARGET
-)
-
-#=============
-# OpenCV camera node
-#=============
-
-add_executable(
-  opencv_camera_node
-  src/opencv_camera_node.cpp
-)
-target_link_libraries(
-  opencv_camera_node
-  opencv_camera
-)
-ament_target_dependencies(
-  opencv_camera_node
-  rclcpp
-)
-
-#=============
 # Install
 #=============
 
 ## Install C++ targets
 install(
-  TARGETS driver_node opencv_camera_node opencv_camera test_node
-  EXPORT opencv_camera
+  TARGETS driver_node test_node
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
   RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2
 )
