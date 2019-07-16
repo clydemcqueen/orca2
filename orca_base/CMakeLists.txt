@@ -26,6 +26,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
+# Package includes not needed for CMake >= 2.8.11
 include_directories(
   include
 )

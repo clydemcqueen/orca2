@@ -30,13 +30,10 @@ find_package(sensor_msgs REQUIRED)
 set(mraa_INCLUDE_DIRS "/usr/include")
 set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
 
+# Package includes not needed for CMake >= 2.8.11
 include_directories(
   include
   ${mraa_INCLUDE_DIRS}
-  ${orca_msgs_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS}
-  ${ros2_shared_INCLUDE_DIRS}
-  ${sensor_msgs_INCLUDE_DIRS}
 )
 
 #=============

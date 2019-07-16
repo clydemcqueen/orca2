@@ -101,9 +101,8 @@ namespace gazebo
 
       // Subscribe to the topic
       // Note the use of std::placeholders::_1 vs. the included _1 from Boost
-      thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(ros_topic, 1,
-                                                                          std::bind(&OrcaThrusterPlugin::OnRosMsg, this,
-                                                                                    std::placeholders::_1));
+      thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(
+        ros_topic, 1, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
 
       // Listen to the update event. This event is broadcast every simulation iteration.
       update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaThrusterPlugin::OnUpdate, this, _1));
