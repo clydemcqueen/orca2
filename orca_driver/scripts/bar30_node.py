@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This is a simple ROS wrapper for the BlueRobotics Bar30 sensor
 # https://github.com/bluerobotics/ms5837-python/blob/master/ms5837.py must be in the Python path

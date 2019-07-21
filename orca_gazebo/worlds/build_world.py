@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Build Gazebo world and fiducial_vlam map files from a list of markers and poses
