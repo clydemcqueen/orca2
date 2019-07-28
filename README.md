@@ -23,9 +23,17 @@ Install these ROS packages:
 sudo apt install ros-dashing-cv-bridge ros-dashing-camera-calibration-parsers ros-dashing-camera-info-manager ros-dashing-gazebo-ros-pkgs
 ~~~
 
+Install MRAA header:
+
+~~~
+sudo add-apt-repository ppa:mraa/mraa
+sudo apt-get update
+sudo apt-get install libmraa2 libmraa-dev libmraa-java python-mraa python3-mraa node-mraa mraa-tools
+~~~
+
 Use your favorite Python package manager to install these Python packages:
 ~~~
-pip install numpy transformations
+pip3 install numpy transformations
 ~~~
 
 Build Orca2:
