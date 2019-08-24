@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_MODEL_HPP
 #define ORCA_BASE_MODEL_HPP
 
-#include <math.h>
+#include <cmath>
 
 namespace orca_base
 {
@@ -26,35 +26,35 @@ namespace orca_base
   constexpr double ORCA_MASS = 10;
   constexpr double ORCA_VOLUME = 0.01;
 
-// Assume a uniform distribution of mass in the vehicle box
+  // Assume a uniform distribution of mass in the vehicle box
   constexpr double MOMENT_OF_INERTIA_YAW = ORCA_MASS / 12.0 * (ROV_DIM_X * ROV_DIM_X + ROV_DIM_Y * ROV_DIM_Y);
 
-// From BlueRobotics specs, all forces are in Newtons
+  // From BlueRobotics specs, all forces are in Newtons
   constexpr double BOLLARD_FORCE_XY = 137;
   constexpr double BOLLARD_FORCE_Z = 88;
   constexpr double T200_MAX_POS_FORCE = 50;
   constexpr double T200_MAX_NEG_FORCE = 40;
 
-// Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
+  // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
   constexpr double MAX_TORQUE_YAW = 0.18 * 2.0 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
   constexpr double DISPLACED_MASS = ORCA_VOLUME * FLUID_DENSITY;
   constexpr double WEIGHT_IN_WATER = GRAVITY * (ORCA_MASS - DISPLACED_MASS);
   constexpr double HOVER_ACCEL_Z = WEIGHT_IN_WATER / ORCA_MASS; // Z acceleration required to hover
 
-//=====================================================================================
-// Drag constants, in the body frame (x forward, y left, z up)
-//
-// drag = 0.5 * density * area * velocity^2 * coefficient
-//    the drag coefficient for a box is 1.0
-//    the drag coefficient for an unfaired tether is 1.2
-//
-// The ROV constants below capture all but velocity:
-//    constant = 0.5 * density * area * coefficient
-//
-// The tether constant below captures all but depth and velocity:
-//    constant = 0.5 * density * width * coefficient
-//=====================================================================================
+  //=====================================================================================
+  // Drag constants, in the body frame (x forward, y left, z up)
+  //
+  // drag = 0.5 * density * area * velocity^2 * coefficient
+  //    the drag coefficient for a box is 1.0
+  //    the drag coefficient for an unfaired tether is 1.2
+  //
+  // The ROV constants below capture all but velocity:
+  //    constant = 0.5 * density * area * coefficient
+  //
+  // The tether constant below captures all but depth and velocity:
+  //    constant = 0.5 * density * width * coefficient
+  //=====================================================================================
 
   constexpr double DRAG_COEFFICIENT_X = 0.8;    // Estimated
   constexpr double DRAG_COEFFICIENT_Y = 0.95;   // Estimated
@@ -69,12 +69,12 @@ namespace orca_base
   constexpr double TETHER_DRAG_COEFFICIENT = 1.1;   // Estimated
   constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
 
-//=====================================================================================
-// Dynamics, in the world frame (ENU)
-// 4 DoF, pitch and roll are 0
-//=====================================================================================
+  //=====================================================================================
+  // Dynamics, in the world frame (ENU)
+  // 4 DoF, pitch and roll are 0
+  //=====================================================================================
 
-// Velocity => drag force / torque
+  // Velocity => drag force / torque
   constexpr double drag_force_x(double velo_x)
   { return velo_x * std::abs(velo_x) * -LINEAR_DRAG_X; }
 
@@ -87,14 +87,14 @@ namespace orca_base
   constexpr double drag_torque_yaw(double velo_yaw)
   { return velo_yaw * std::abs(velo_yaw) * -ANGULAR_DRAG_YAW; }
 
-// Force / torque => acceleration
+  // Force / torque => acceleration
   constexpr double force_to_accel(double force)
   { return force / ORCA_MASS; }
 
   constexpr double torque_to_accel_yaw(double torque_yaw)
   { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
 
-// Force / torque => effort
+  // Force / torque => effort
   constexpr double force_to_effort_xy(double force_xy)
   { return force_xy / BOLLARD_FORCE_XY; }
 
@@ -104,7 +104,7 @@ namespace orca_base
   constexpr double torque_to_effort_yaw(double torque_yaw)
   { return torque_yaw / MAX_TORQUE_YAW; }
 
-// Acceleration => force / torque
+  // Acceleration => force / torque
   constexpr double accel_to_force_xy(double accel_xy)
   { return ORCA_MASS * accel_xy; }
 
@@ -114,7 +114,7 @@ namespace orca_base
   constexpr double accel_to_torque_yaw(double accel_yaw)
   { return MOMENT_OF_INERTIA_YAW * accel_yaw; }
 
-// Acceleration => effort
+  // Acceleration => effort
   constexpr double accel_to_effort_xy(double accel_xy)
   { return force_to_effort_xy(accel_to_force_xy(accel_xy)); }
 

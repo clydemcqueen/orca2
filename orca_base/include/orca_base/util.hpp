@@ -2,7 +2,7 @@
 #define ORCA_BASE_UTIL_HPP
 
 #include <cstdint>
-#include <math.h>
+#include <cmath>
 
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "sensor_msgs/msg/joy.hpp"
@@ -11,19 +11,19 @@ namespace orca_base
 {
 
   template<typename T>
-  constexpr const T clamp(const T v, const T min, const T max)
+  constexpr T clamp(const T v, const T min, const T max)
   {
     return v > max ? max : (v < min ? min : v);
   }
 
   template<typename T>
-  constexpr const T dead_band(const T v, const T d)
+  constexpr T dead_band(const T v, const T d)
   {
     return v < d && v > -d ? 0 : v;
   }
 
   template<typename A, typename B>
-  constexpr const B scale(const A a, const A a_min, const A a_max, const B b_min, const B b_max)
+  constexpr B scale(const A a, const A a_min, const A a_max, const B b_min, const B b_max)
   {
     return clamp(static_cast<B>(b_min + static_cast<double>(b_max - b_min) / (a_max - a_min) * (a - a_min)), b_min,
                  b_max);
@@ -43,7 +43,7 @@ namespace orca_base
   }
 
   // Compute a 2d point in a rotated frame (v' = R_transpose * v)
-  void rotate_frame(const double x, const double y, const double theta, double &x_r, double &y_r);
+  void rotate_frame(double x, double y, double theta, double &x_r, double &y_r);
 
   // Get yaw from a quaternion
   double get_yaw(const geometry_msgs::msg::Quaternion &q);

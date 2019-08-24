@@ -27,7 +27,7 @@ public:
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);

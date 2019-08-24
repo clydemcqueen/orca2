@@ -1,6 +1,7 @@
 #include "orca_base/mission.hpp"
 
 #include <random>
+#include <utility>
 
 namespace orca_base
 {
@@ -100,9 +101,9 @@ namespace orca_base
     prev = curr;
 
     // Travel to each waypoint
-    for (auto i = waypoints.begin(); i != waypoints.end(); i++) {
+    for (auto &waypoint : waypoints) {
       // Point in the direction of travel
-      curr.pose.yaw = atan2(i->y - curr.pose.y, i->x - curr.pose.x);
+      curr.pose.yaw = atan2(waypoint.y - curr.pose.y, waypoint.x - curr.pose.x);
       if (set_time_yaw(cxt, prev, curr)) {
         path.push_back(curr);
         segments_.push_back(std::make_shared<RotateMotion>(logger, cxt, prev.pose, curr.pose));
@@ -113,8 +114,8 @@ namespace orca_base
       prev = curr;
 
       // Run
-      curr.pose.x = i->x;
-      curr.pose.y = i->y;
+      curr.pose.x = waypoint.x;
+      curr.pose.y = waypoint.y;
       if (set_time_xy(cxt, prev, curr)) {
         path.push_back(curr);
         segments_.push_back(std::make_shared<LineMotion>(logger, cxt, prev.pose, curr.pose));
@@ -129,9 +130,9 @@ namespace orca_base
     planned_path_.header.stamp = start.t;
     planned_path_.header.frame_id = cxt.map_frame_;
 
-    for (auto i = path.begin(); i != path.end(); i++) {
+    for (auto &i : path) {
       geometry_msgs::msg::PoseStamped pose_msg;
-      i->to_msg(pose_msg);
+      i.to_msg(pose_msg);
       planned_path_.poses.push_back(pose_msg);
     }
   }
@@ -145,9 +146,9 @@ namespace orca_base
   {
     // Waypoints are directly above markers
     std::vector<Pose> waypoints;
-    for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
+    for (const auto &pose : map.poses) {
       Pose waypoint;
-      waypoint.from_msg(i->pose);
+      waypoint.from_msg(pose.pose);
       waypoint.z = cxt.auv_z_target_;
       waypoints.push_back(waypoint);
     }
@@ -164,8 +165,8 @@ namespace orca_base
   {
     // Waypoints are directly in front of markers
     std::vector<Pose> waypoints;
-    for (auto i = map.poses.begin(); i != map.poses.end(); i++) {
-      geometry_msgs::msg::Pose marker_f_world = map_to_world(i->pose);
+    for (const auto &pose : map.poses) {
+      geometry_msgs::msg::Pose marker_f_world = map_to_world(pose.pose);
       Pose waypoint;
       waypoint.from_msg(marker_f_world);
       waypoint.x += cos(waypoint.yaw) * cxt.auv_xy_distance_;
@@ -239,7 +240,7 @@ namespace orca_base
   Mission::Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, const BaseContext &cxt,
                    const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) :
     logger_{logger},
-    planner_{planner}
+    planner_{std::move(planner)}
   {
     RCLCPP_INFO(logger, "pid x=(%g, %g, %g), y=(%g, %g, %g), z=(%g, %g, %g), yaw=(%g, %g, %g)",
                 cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_,

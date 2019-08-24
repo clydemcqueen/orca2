@@ -21,12 +21,12 @@ namespace orca_base
   constexpr uint16_t TILT_MIN_PWM = 1100;
   constexpr uint16_t TILT_MAX_PWM = 1900;
 
-  constexpr const uint16_t tilt_to_pwm(const int tilt)
+  constexpr uint16_t tilt_to_pwm(const int tilt)
   {
     return scale(tilt, TILT_MIN, TILT_MAX, TILT_MIN_PWM, TILT_MAX_PWM);
   }
 
-  constexpr const int pwm_to_tilt(const uint16_t pwm)
+  constexpr int pwm_to_tilt(const uint16_t pwm)
   {
     return scale(pwm, TILT_MIN_PWM, TILT_MAX_PWM, TILT_MIN, TILT_MAX);
   }
@@ -43,12 +43,12 @@ namespace orca_base
   constexpr uint16_t BRIGHTNESS_MIN_PWM = 1100;
   constexpr uint16_t BRIGHTNESS_MAX_PWM = 1900;
 
-  constexpr const uint16_t brightness_to_pwm(const int brightness)
+  constexpr uint16_t brightness_to_pwm(const int brightness)
   {
     return scale(brightness, BRIGHTNESS_MIN, BRIGHTNESS_MAX, BRIGHTNESS_MIN_PWM, BRIGHTNESS_MAX_PWM);
   }
 
-  constexpr const int pwm_to_brightness(const uint16_t pwm)
+  constexpr int pwm_to_brightness(const uint16_t pwm)
   {
     return scale(pwm, BRIGHTNESS_MIN_PWM, BRIGHTNESS_MAX_PWM, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
   }
@@ -69,7 +69,7 @@ namespace orca_base
   constexpr uint16_t THRUST_DZ_PWM = 30;
   constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
 
-  const uint16_t effort_to_pwm(const double effort)
+  uint16_t effort_to_pwm(const double effort)
   {
     return clamp(static_cast<uint16_t>(
                    THRUST_STOP_PWM +
@@ -78,7 +78,7 @@ namespace orca_base
                  ), THRUST_FULL_REV_PWM, THRUST_FULL_FWD_PWM);
   }
 
-  constexpr const double pwm_to_effort(const uint16_t pwm)
+  constexpr double pwm_to_effort(const uint16_t pwm)
   {
     return static_cast<double>(
              pwm - THRUST_STOP_PWM +

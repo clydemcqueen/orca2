@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_PID_HPP
 #define ORCA_BASE_PID_HPP
 
-#include <math.h>
+#include <cmath>
 
 namespace pid
 {
