@@ -42,13 +42,18 @@ namespace orca_base
   }
 
   //=============================================================================
-  // Constants
+  // Thrusters
   //=============================================================================
 
-  const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
-  const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
-  const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
-  const rclcpp::Duration IMU_TIMEOUT{RCL_S_TO_NS(1)};   // Holding yaw: disarm if we lose IMU
+  struct Thruster
+  {
+    std::string frame_id;   // URDF link frame id
+    bool ccw;               // True if counterclockwise
+    double forward_factor;
+    double strafe_factor;
+    double yaw_factor;
+    double vertical_factor;
+  };
 
   //=============================================================================
   // BaseNode provides basic ROV and AUV functions, including joystick operation and waypoint navigation.
@@ -57,6 +62,21 @@ namespace orca_base
   class BaseNode : public rclcpp::Node
   {
   private:
+    // Constants
+    const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
+    const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
+    const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
+
+    // Thrusters, order must match the order of the <thruster> tags in the URDF
+    const std::vector<Thruster> THRUSTERS = {
+      {"t200_link_front_right",    false, 1.0, 1.0,  1.0,  0.0},
+      {"t200_link_front_left",     false, 1.0, -1.0, -1.0, 0.0},
+      {"t200_link_rear_right",     true,  1.0, -1.0, 1.0,  0.0},
+      {"t200_link_rear_left",      true,  1.0, 1.0,  -1.0, 0.0},
+      {"t200_link_vertical_right", false, 0.0, 0.0,  0.0,  1.0},
+      {"t200_link_vertical_left",  true,  0.0, 0.0,  0.0,  -1.0},
+    };
+
     // Joystick assignments
     const int joy_axis_yaw_ = JOY_AXIS_LEFT_LR;
     const int joy_axis_forward_ = JOY_AXIS_LEFT_FB;
@@ -80,27 +100,26 @@ namespace orca_base
     // Parameters
     BaseContext cxt_;
 
-    // General state
-    uint8_t mode_;                              // Operating mode
+    // Mode
+    uint8_t mode_{orca_msgs::msg::Control::DISARMED};
 
     // Barometer state
-    double z_initial_;                          // First z value, used to adjust barometer
-    double z_;                                  // Z from barometer
+    double z_initial_{};                        // First z value, used to adjust barometer
+    double z_{};                                // Z from barometer
 
     // IMU state
     //tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
-    double yaw_;                                // Yaw from IMU
-    double stability_;                          // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
+    double yaw_{};                              // Yaw from IMU
+    double stability_{1.0};                     // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // Joystick state
     sensor_msgs::msg::Joy joy_msg_;             // Most recent message
 
     // Odometry state
     PoseStamped filtered_pose_;                 // Estimated pose
-    double odom_lag_;                           // Difference between header.stamp and now(), in seconds
+    double odom_lag_{};                         // Difference between header.stamp and now(), in seconds
 
     // ROV operation
-    std::shared_ptr<pid::Controller> rov_yaw_pid_;
     std::shared_ptr<pid::Controller> rov_z_pid_;
 
     // AUV operation
@@ -110,8 +129,8 @@ namespace orca_base
 
     // Outputs
     Efforts efforts_;                           // Thruster forces
-    int tilt_;                                  // Camera tilt
-    int brightness_;                            // Lights
+    int tilt_{};                                // Camera tilt
+    int brightness_{};                          // Lights
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
@@ -129,19 +148,19 @@ namespace orca_base
     void validate_parameters();
 
     // Callbacks
-    void baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first);
+    void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first);
 
-    void battery_callback(const orca_msgs::msg::Battery::SharedPtr msg);
+    void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
-    void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+    void imu_callback(sensor_msgs::msg::Imu::SharedPtr msg);
 
-    void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool first);
+    void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
 
-    void leak_callback(const orca_msgs::msg::Leak::SharedPtr msg);
+    void leak_callback(orca_msgs::msg::Leak::SharedPtr msg);
 
-    void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
+    void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
-    void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first);
+    void odom_callback(nav_msgs::msg::Odometry::SharedPtr msg, bool first);
 
     // Callback wrappers
     Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
@@ -175,9 +194,6 @@ namespace orca_base
     bool baro_ok(const rclcpp::Time &t)
     { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
 
-    bool imu_ok(const rclcpp::Time &t)
-    { return imu_cb_.receiving() && t - imu_cb_.prev() < IMU_TIMEOUT; }
-
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
 
@@ -187,8 +203,7 @@ namespace orca_base
   public:
     explicit BaseNode();
 
-    ~BaseNode()
-    {}; // Suppress default copy and move constructors
+    ~BaseNode() override = default;
 
     void spin_once();
   };

@@ -12,39 +12,10 @@ namespace orca_base
   const double Z_HOLD_MIN = -50;    // Lowest z hold
 
   //=============================================================================
-  // Thrusters
-  //=============================================================================
-
-  struct Thruster
-  {
-    std::string frame_id;   // URDF link frame id
-    bool ccw;               // True if counterclockwise
-    double forward_factor;
-    double strafe_factor;
-    double yaw_factor;
-    double vertical_factor;
-  };
-
-  // Order must match the order of the <thruster> tags in the URDF
-  const std::vector<Thruster> THRUSTERS = {
-    {"t200_link_front_right",    false, 1.0, 1.0,  1.0,  0.0},
-    {"t200_link_front_left",     false, 1.0, -1.0, -1.0, 0.0},
-    {"t200_link_rear_right",     true,  1.0, -1.0, 1.0,  0.0},
-    {"t200_link_rear_left",      true,  1.0, 1.0,  -1.0, 0.0},
-    {"t200_link_vertical_right", false, 0.0, 0.0,  0.0,  1.0},
-    {"t200_link_vertical_left",  true,  0.0, 0.0,  0.0,  -1.0},
-  };
-
-  //=============================================================================
   // BaseNode
   //=============================================================================
 
-  BaseNode::BaseNode() :
-    Node{"base_node"},
-    mode_{orca_msgs::msg::Control::DISARMED},
-    tilt_{0},
-    brightness_{0},
-    stability_{1.0}  // Default to stable (might not have an IMU)
+  BaseNode::BaseNode() : Node{"base_node"}
   {
     // Suppress IDE warnings
     (void) baro_sub_;
@@ -82,8 +53,6 @@ namespace orca_base
 
     // ROV PID controllers
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
-    rov_yaw_pid_ = std::make_shared<pid::Controller>(true, cxt_.rov_yaw_pid_kp_, cxt_.rov_yaw_pid_ki_,
-                                                     cxt_.rov_yaw_pid_kd_);
 
     // Publications
     control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
@@ -339,15 +308,15 @@ namespace orca_base
   {
     // Combine joystick efforts to get thruster efforts.
     std::vector<double> thruster_efforts = {};
-    for (int i = 0; i < THRUSTERS.size(); ++i) {
+    for (const auto &i : THRUSTERS) {
       // Clamp forward + strafe to xy_gain_
       double xy_effort = clamp(
-        efforts_.forward() * THRUSTERS[i].forward_factor + efforts_.strafe() * THRUSTERS[i].strafe_factor,
+        efforts_.forward() * i.forward_factor + efforts_.strafe() * i.strafe_factor,
         -cxt_.xy_gain_, cxt_.xy_gain_);
 
       // Clamp total thrust
       thruster_efforts.push_back(
-        clamp(xy_effort + efforts_.yaw() * THRUSTERS[i].yaw_factor + efforts_.vertical() * THRUSTERS[i].vertical_factor,
+        clamp(xy_effort + efforts_.yaw() * i.yaw_factor + efforts_.vertical() * i.vertical_factor,
               THRUST_FULL_REV, THRUST_FULL_FWD));
     }
 
@@ -358,8 +327,8 @@ namespace orca_base
     control_msg.mode = mode_;
     control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
     control_msg.brightness_pwm = brightness_to_pwm(brightness_);
-    for (int i = 0; i < thruster_efforts.size(); ++i) {
-      control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_efforts[i]));
+    for (double thruster_effort : thruster_efforts) {
+      control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
     }
     control_msg.stability = stability_;
     control_msg.odom_lag = odom_lag_;
@@ -368,7 +337,7 @@ namespace orca_base
     // Publish rviz thrust markers
     if (count_subscribers(thrust_marker_pub_->get_topic_name()) > 0) {
       visualization_msgs::msg::MarkerArray markers_msg;
-      for (int i = 0; i < thruster_efforts.size(); ++i) {
+      for (unsigned long i = 0; i < thruster_efforts.size(); ++i) {
         int32_t action =
           thruster_efforts[i] == 0.0 ? visualization_msgs::msg::Marker::DELETE : visualization_msgs::msg::Marker::ADD;
         double scale = (THRUSTERS[i].ccw ? -thruster_efforts[i] : thruster_efforts[i]) / 5.0;
@@ -491,7 +460,7 @@ namespace orca_base
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);
