@@ -179,7 +179,7 @@ namespace orca_base
         set_mode(orca_msgs::msg::Control::DISARMED);
       } else if (button_down(msg, joy_msg_, joy_button_arm_)) {
         RCLCPP_INFO(get_logger(), "armed, manual");
-        set_mode(orca_msgs::msg::Control::MANUAL);
+        set_mode(orca_msgs::msg::Control::ROV);
       }
 
       // If we're disarmed, ignore everything else
@@ -189,40 +189,34 @@ namespace orca_base
       }
 
       // Mode
-      if (button_down(msg, joy_msg_, joy_button_manual_)) {
+      if (button_down(msg, joy_msg_, joy_button_rov_)) {
         RCLCPP_INFO(get_logger(), "manual");
-        set_mode(orca_msgs::msg::Control::MANUAL);
-      } else if (button_down(msg, joy_msg_, joy_button_hold_d_)) {
+        set_mode(orca_msgs::msg::Control::ROV);
+      } else if (button_down(msg, joy_msg_, joy_button_rov_hold_z_)) {
+        // TODO baro_ok or odom_ok
         if (baro_ok(msg->header.stamp)) {
-          set_mode(orca_msgs::msg::Control::HOLD_D);
+          set_mode(orca_msgs::msg::Control::ROV_HOLD_Z);
         } else {
           RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
         }
-      } else if (button_down(msg, joy_msg_, joy_button_hold_hd_)) {
-        if (imu_ok(msg->header.stamp) && baro_ok(msg->header.stamp)) {
-          set_mode(orca_msgs::msg::Control::HOLD_HD);
-        } else {
-          RCLCPP_ERROR(get_logger(), "barometer and/or IMU not ready, can't hold yaw and z");
-        }
-      } else if (button_down(msg, joy_msg_, joy_button_keep_station_)) {
+      } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::KEEP_STATION);
+          set_mode(orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't keep station");
         }
-      } else if (button_down(msg, joy_msg_, joy_button_random_)) {
+      } else if (button_down(msg, joy_msg_, joy_button_auv_mission_4_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::MISSION_6);
+          set_mode(orca_msgs::msg::Control::AUV_4);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start random path");
+          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start mission 4");
         }
-      }
-
-      // Yaw trim
-      if (holding_yaw() && trim_down(msg, joy_msg_, joy_axis_yaw_trim_)) {
-        rov_yaw_pid_->set_target(
-          rov_yaw_pid_->target() + msg->axes[joy_axis_yaw_trim_] > 0 ? cxt_.inc_yaw_ : -cxt_.inc_yaw_);
-        RCLCPP_INFO(get_logger(), "hold yaw at %g", rov_yaw_pid_->target());
+      } else if (button_down(msg, joy_msg_, joy_button_auv_mission_5_)) {
+        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+          set_mode(orca_msgs::msg::Control::AUV_5);
+        } else {
+          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start mission 5");
+        }
       }
 
       // Z trim
@@ -330,12 +324,7 @@ namespace orca_base
 
     efforts_.set_forward(dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_);
     efforts_.set_strafe(dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_);
-
-    if (holding_yaw()) {
-      efforts_.set_yaw(accel_to_effort_yaw(rov_yaw_pid_->calc(yaw_, dt, 0)) * stability_);
-    } else {
-      efforts_.set_yaw(dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_);
-    }
+    efforts_.set_yaw(dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_z()) {
       efforts_.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_);
@@ -423,32 +412,14 @@ namespace orca_base
       RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
     }
 
-    if (is_yaw_hold_mode(new_mode)) {
-      rov_yaw_pid_->set_target(yaw_);
-      RCLCPP_INFO(get_logger(), "hold yaw at %g", rov_yaw_pid_->target());
-    }
-
-//    if (new_mode == orca_msgs::msg::Control::DISARMED) {
-//      all_stop();
-//    }
-
     if (is_auv_mode(new_mode)) {
       std::shared_ptr<BasePlanner> planner;
       switch (new_mode) {
-        case orca_msgs::msg::Control::MISSION_6:
+        case orca_msgs::msg::Control::AUV_4:
           planner = std::make_shared<ForwardRandomPlanner>();
           break;
-        case orca_msgs::msg::Control::MISSION_7:
-          planner = std::make_shared<BodyXPlanner>();
-          break;
-        case orca_msgs::msg::Control::MISSION_8:
-          planner = std::make_shared<BodyYPlanner>();
-          break;
-        case orca_msgs::msg::Control::MISSION_9:
-          planner = std::make_shared<BodyZPlanner>();
-          break;
-        case orca_msgs::msg::Control::MISSION_10:
-          planner = std::make_shared<BodyYawPlanner>();
+        case orca_msgs::msg::Control::AUV_5:
+          planner = std::make_shared<DownRandomPlanner>();
           break;
         default:
           planner = std::make_shared<KeepStationPlanner>();
@@ -499,13 +470,9 @@ namespace orca_base
       set_mode(orca_msgs::msg::Control::DISARMED);
     }
 
+    // TODO check for baro_ok or odom_ok
     if (holding_z() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
-    }
-
-    if (holding_yaw() && !imu_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost IMU while holding yaw, disarming");
       set_mode(orca_msgs::msg::Control::DISARMED);
     }
 

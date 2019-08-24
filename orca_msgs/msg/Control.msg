@@ -8,17 +8,17 @@ float64 stability
 float64 odom_lag
 
 # Mode
-uint8 DISARMED=0      # Thrusters are off, all joystick buttons except "arm" are ignored
-uint8 MANUAL=1        # ROV: manual thruster control
-uint8 HOLD_H=2        # ROV: hold heading
-uint8 HOLD_D=3        # ROV: hold depth
-uint8 HOLD_HD=4       # ROV: hold heading and depth
-uint8 KEEP_STATION=5  # AUV: hold position
-uint8 MISSION_6=6     # AUV: mission #6
-uint8 MISSION_7=7     # AUV: mission #7
-uint8 MISSION_8=8     # AUV: mission #8
-uint8 MISSION_9=9     # AUV: mission #9
-uint8 MISSION_10=10   # AUV: mission #10
+uint8 DISARMED=0            # Thrusters are off, all joystick buttons except "arm" are ignored
+uint8 ROV=1                 # ROV: manual thruster control
+uint8 ROV_HOLD_Z=2          # ROV: hold z
+uint8 AUV_KEEP_STATION=3    # AUV: hold pose
+uint8 AUV_4=4               # AUV: mission #4
+uint8 AUV_5=5               # AUV: mission #5
+uint8 AUV_6=6               # AUV: mission #6
+uint8 AUV_7=7               # AUV: mission #7
+uint8 AUV_8=8               # AUV: mission #8
+uint8 AUV_9=9               # AUV: mission #9
+uint8 AUV_10=10             # AUV: mission #10
 uint8 mode
 
 # Camera tilt pwm, range [1100, 1900]

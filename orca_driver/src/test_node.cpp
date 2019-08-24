@@ -22,7 +22,7 @@ namespace orca_driver
       msg.header.stamp = now();
       msg.stability = 1.0;
       msg.odom_lag = 0.0;
-      msg.mode = msg.MANUAL;
+      msg.mode = msg.ROV;
       msg.camera_tilt_pwm = msg.TILT_0;
       msg.brightness_pwm = msg.LIGHTS_OFF;
 

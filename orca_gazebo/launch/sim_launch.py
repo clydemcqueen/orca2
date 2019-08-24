@@ -56,7 +56,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'auto_start': 6,  # Auto-start AUV mission
+                'auto_start': 5,  # Auto-start AUV mission
                 'auv_z_target': -2.0  # Mission runs 2m below the surface
             }], remappings=[
                 ('filtered_odom', '/' + left_camera_name + '/odom')
@@ -76,7 +76,7 @@ def generate_launch_description():
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': True,  # Use /clock if available
                 'publish_tfs': 1,
-                'publish_tfs_per_marker': 1,
+                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
                 'sub_camera_info_best_effort_not_reliable': 1,
                 'publish_camera_pose': 0,
                 'publish_base_pose': 0,

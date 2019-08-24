@@ -23,28 +23,22 @@ namespace orca_base
   // Utils
   //=============================================================================
 
-  constexpr bool is_yaw_hold_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode == Control::HOLD_H || mode == Control::HOLD_HD;
-  }
-
   constexpr bool is_z_hold_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode == Control::HOLD_D || mode == Control::HOLD_HD;
+    return mode == Control::ROV_HOLD_Z;
   }
 
   constexpr bool is_rov_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode == Control::MANUAL || mode == Control::HOLD_H || mode == Control::HOLD_D || mode == Control::HOLD_HD;
+    return mode == Control::ROV || mode == Control::ROV_HOLD_Z;
   }
 
   constexpr bool is_auv_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode >= Control::KEEP_STATION;
+    return mode >= Control::AUV_KEEP_STATION;
   }
 
   //=============================================================================
@@ -68,16 +62,16 @@ namespace orca_base
     const int joy_axis_forward_ = JOY_AXIS_LEFT_FB;
     const int joy_axis_strafe_ = JOY_AXIS_RIGHT_LR;
     const int joy_axis_vertical_ = JOY_AXIS_RIGHT_FB;
-    const int joy_axis_yaw_trim_ = JOY_AXIS_TRIM_LR;
     const int joy_axis_z_trim_ = JOY_AXIS_TRIM_FB;
 
     const int joy_button_disarm_ = JOY_BUTTON_VIEW;
     const int joy_button_arm_ = JOY_BUTTON_MENU;
-    const int joy_button_manual_ = JOY_BUTTON_A;
-    const int joy_button_hold_hd_ = JOY_BUTTON_X;
-    const int joy_button_hold_d_ = JOY_BUTTON_B;
-    const int joy_button_keep_station_ = JOY_BUTTON_Y;
-    const int joy_button_random_ = JOY_BUTTON_LOGO;
+    const int joy_button_rov_ = JOY_BUTTON_A;
+    const int joy_button_rov_hold_z_ = JOY_BUTTON_B;
+    const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
+    const int joy_button_auv_mission_4_ = JOY_BUTTON_Y;
+    const int joy_button_auv_mission_5_ = JOY_BUTTON_LOGO;
+
     const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
     const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
     const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
@@ -168,9 +162,6 @@ namespace orca_base
     void publish_control(const rclcpp::Time &msg_time);
 
     void set_mode(uint8_t new_mode);
-
-    bool holding_yaw()
-    { return is_yaw_hold_mode(mode_); }
 
     bool holding_z()
     { return is_z_hold_mode(mode_); }

@@ -55,7 +55,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'auto_start': 6,  # Auto-start mission >= 5
+                'auto_start': 4,  # Auto-start AUV mission
                 'auv_z_target': -0.5,
                 'auv_xy_distance': 1.0
             }], remappings=[

@@ -95,7 +95,7 @@ namespace orca_driver
 
     control_msg_time_ = now();
 
-    set_status(msg->mode >= msg->KEEP_STATION ? Status::mission : Status::ready);
+    set_status(msg->mode >= msg->AUV_KEEP_STATION ? Status::mission : Status::ready);
 
     if (maestro_.ready()) {
       if (!maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm)) {
