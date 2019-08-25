@@ -40,6 +40,7 @@ namespace orca_base
     BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
     // Advance the motion plan, return true to continue, false if we're done
+    // TODO use std::chrono::milliseconds instead of double
     virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error);
   };
 

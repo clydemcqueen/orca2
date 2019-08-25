@@ -29,7 +29,7 @@ namespace orca_base
 
   struct KeepStationPlanner : BasePlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
@@ -49,7 +49,7 @@ namespace orca_base
 
   struct DownRandomPlanner : RandomPlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
@@ -59,7 +59,7 @@ namespace orca_base
 
   struct ForwardRandomPlanner : RandomPlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
@@ -70,25 +70,25 @@ namespace orca_base
 
   struct BodyXPlanner : BasePlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
   struct BodyYPlanner : BasePlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
   struct BodyZPlanner : BasePlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
   struct BodyYawPlanner : BasePlanner
   {
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) override;
   };
 
@@ -109,7 +109,7 @@ namespace orca_base
             const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
     // Advance the controller, return true to continue
-    bool advance(const double dt, const PoseStamped &curr, Acceleration &u_bar);
+    bool advance(std::chrono::milliseconds dt, const PoseStamped &curr, Acceleration &u_bar);
 
     const nav_msgs::msg::Path &planned_path() const
     { return planner_->planned_path_; }

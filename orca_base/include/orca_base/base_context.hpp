@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_BASE_CONTEXT_HPP
 #define ORCA_BASE_BASE_CONTEXT_HPP
 
-#include <math.h>
+#include <cmath>
 #include <string>
 #include <vector>
 

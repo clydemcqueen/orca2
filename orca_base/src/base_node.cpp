@@ -86,8 +86,7 @@ namespace orca_base
     leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
 
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
-    using namespace std::chrono_literals;
-    spin_timer_ = create_wall_timer(50ms, std::bind(&BaseNode::spin_once, this));
+    spin_timer_ = create_wall_timer(SPIN_PERIOD, std::bind(&BaseNode::spin_once, this));
 
     RCLCPP_INFO(get_logger(), "base_node ready");
   }
@@ -162,7 +161,6 @@ namespace orca_base
         RCLCPP_INFO(get_logger(), "manual");
         set_mode(orca_msgs::msg::Control::ROV);
       } else if (button_down(msg, joy_msg_, joy_button_rov_hold_z_)) {
-        // TODO baro_ok or odom_ok
         if (baro_ok(msg->header.stamp)) {
           set_mode(orca_msgs::msg::Control::ROV_HOLD_Z);
         } else {
@@ -213,14 +211,6 @@ namespace orca_base
         brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
         RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
       }
-
-      // Thrusters
-      if (rov_mode()) {
-        rov_advance(msg->axes[joy_axis_forward_],
-                    msg->axes[joy_axis_strafe_],
-                    msg->axes[joy_axis_yaw_],
-                    msg->axes[joy_axis_vertical_]);
-      }
     }
 
     joy_msg_ = *msg;
@@ -246,77 +236,91 @@ namespace orca_base
   {
     filtered_pose_.from_msg(*msg);
     odom_lag_ = (now() - odom_cb_.curr()).seconds();
-
-    if (!first && auv_mode()) {
-      // Publish path for rviz
-      if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
-        if (filtered_path_.poses.size() > cxt_.keep_poses_) {
-          filtered_path_.poses.clear();
-        }
-        filtered_pose_.add_to_path(filtered_path_);
-        filtered_path_pub_->publish(filtered_path_);
-      }
-
-      Acceleration u_bar;
-      double dt = odom_cb_.dt();
-      if (mission_->advance(dt, filtered_pose_, u_bar)) {
-        // Acceleration => effort
-        efforts_.from_acceleration(u_bar, filtered_pose_.pose.yaw);
-
-        // Throttle back if AUV is unstable
-        efforts_.set_forward(efforts_.forward() * stability_);
-        efforts_.set_strafe(efforts_.strafe() * stability_);
-        efforts_.set_vertical(efforts_.vertical() * stability_);
-        efforts_.set_yaw(efforts_.yaw() * stability_);
-
-        publish_control(odom_cb_.curr());
-
-        // Publish error
-        if (count_subscribers(error_pub_->get_topic_name()) > 0) {
-          orca_msgs::msg::PoseError error_msg;
-          error_msg.header.stamp = msg->header.stamp;
-          error_msg.header.frame_id = cxt_.map_frame_; // Error is expressed in the map frame
-          mission_->error().to_msg(error_msg);
-          error_pub_->publish(error_msg);
-        }
-      } else {
-        // Stop mission
-        set_mode(orca_msgs::msg::Control::DISARMED);
-      }
-    }
   }
 
-  // TODO refactor: controller iface, see flock2
-  void BaseNode::rov_advance(float forward, float strafe, float yaw, float vertical)
+  void BaseNode::rov_advance(const rclcpp::Time &stamp)
   {
-    double dt = joy_cb_.dt();
+    // TODO use std::chrono::milliseconds instead of double
+    double dt = SPIN_PERIOD.count() / 1000.0;
 
-    efforts_.set_forward(dead_band(forward, cxt_.input_dead_band_) * cxt_.xy_gain_);
-    efforts_.set_strafe(dead_band(strafe, cxt_.input_dead_band_) * cxt_.xy_gain_);
-    efforts_.set_yaw(dead_band(yaw, cxt_.input_dead_band_) * cxt_.yaw_gain_);
+    Efforts efforts;
+    efforts.set_forward(dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_);
+    efforts.set_strafe(dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_);
+    efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_z()) {
-      efforts_.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_);
+      efforts.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_);
     } else {
-      efforts_.set_vertical(dead_band(vertical, cxt_.input_dead_band_) * cxt_.vertical_gain_);
+      efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
 
-    publish_control(joy_cb_.curr());
+    publish_control(stamp, efforts);
+  }
+
+  void BaseNode::auv_advance(const rclcpp::Time &msg_time)
+  {
+    // Publish path for rviz
+    if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
+      if (filtered_path_.poses.size() > cxt_.keep_poses_) {
+        filtered_path_.poses.clear();
+      }
+      filtered_pose_.add_to_path(filtered_path_);
+      filtered_path_pub_->publish(filtered_path_);
+    }
+
+    // Publish control
+    Acceleration u_bar;
+    if (mission_->advance(SPIN_PERIOD, filtered_pose_, u_bar)) {
+      // Acceleration => effort
+      Efforts efforts;
+      efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
+
+      // Throttle back if AUV is unstable
+      efforts.set_forward(efforts.forward() * stability_);
+      efforts.set_strafe(efforts.strafe() * stability_);
+      efforts.set_vertical(efforts.vertical() * stability_);
+      efforts.set_yaw(efforts.yaw() * stability_);
+
+      // Limit deltas
+      // TODO
+
+      publish_control(msg_time, efforts);
+
+      // Publish error
+      if (count_subscribers(error_pub_->get_topic_name()) > 0) {
+        orca_msgs::msg::PoseError error_msg;
+        error_msg.header.stamp = msg_time;
+        error_msg.header.frame_id = cxt_.map_frame_; // Error is expressed in the map frame
+        mission_->error().to_msg(error_msg);
+        error_pub_->publish(error_msg);
+      }
+    } else {
+      // Stop mission
+      set_mode(orca_msgs::msg::Control::DISARMED);
+      publish_control(msg_time);
+    }
   }
 
   void BaseNode::publish_control(const rclcpp::Time &msg_time)
+  {
+    // "All stop"
+    Efforts efforts;
+    publish_control(msg_time, efforts);
+  }
+
+  void BaseNode::publish_control(const rclcpp::Time &msg_time, const Efforts &efforts)
   {
     // Combine joystick efforts to get thruster efforts.
     std::vector<double> thruster_efforts = {};
     for (const auto &i : THRUSTERS) {
       // Clamp forward + strafe to xy_gain_
       double xy_effort = clamp(
-        efforts_.forward() * i.forward_factor + efforts_.strafe() * i.strafe_factor,
+        efforts.forward() * i.forward_factor + efforts.strafe() * i.strafe_factor,
         -cxt_.xy_gain_, cxt_.xy_gain_);
 
       // Clamp total thrust
       thruster_efforts.push_back(
-        clamp(xy_effort + efforts_.yaw() * i.yaw_factor + efforts_.vertical() * i.vertical_factor,
+        clamp(xy_effort + efforts.yaw() * i.yaw_factor + efforts.vertical() * i.vertical_factor,
               THRUST_FULL_REV, THRUST_FULL_FWD));
     }
 
@@ -373,9 +377,6 @@ namespace orca_base
   // Change operation mode
   void BaseNode::set_mode(uint8_t new_mode)
   {
-    // Stop all thrusters when we change modes
-    efforts_.all_stop();
-
     if (is_z_hold_mode(new_mode)) {
       rov_z_pid_->set_target(z_);
       RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
@@ -385,15 +386,17 @@ namespace orca_base
       std::shared_ptr<BasePlanner> planner;
       switch (new_mode) {
         case orca_msgs::msg::Control::AUV_4:
+          RCLCPP_INFO(get_logger(), "creating a random plan for a forward-facing camera...");
           planner = std::make_shared<ForwardRandomPlanner>();
           break;
         case orca_msgs::msg::Control::AUV_5:
+          RCLCPP_INFO(get_logger(), "creating a random plan for a down-facing camera...");
           planner = std::make_shared<DownRandomPlanner>();
           break;
         default:
-          planner = std::make_shared<KeepStationPlanner>();
-          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g",
+          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g...",
                       filtered_pose_.pose.x, filtered_pose_.pose.y, filtered_pose_.pose.z, filtered_pose_.pose.yaw);
+          planner = std::make_shared<KeepStationPlanner>();
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
@@ -411,9 +414,6 @@ namespace orca_base
 
     // Set the new mode
     mode_ = new_mode;
-
-    // Publish a control message
-    publish_control(now());
   }
 
   void BaseNode::spin_once()
@@ -424,6 +424,7 @@ namespace orca_base
       return;
     }
 
+    // Various timeouts
     if (rov_mode() && !joy_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost joystick during ROV operation, disarming");
       set_mode(orca_msgs::msg::Control::DISARMED);
@@ -439,15 +440,24 @@ namespace orca_base
       set_mode(orca_msgs::msg::Control::DISARMED);
     }
 
-    // TODO check for baro_ok or odom_ok
     if (holding_z() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
       set_mode(orca_msgs::msg::Control::DISARMED);
     }
 
+    // Auto-start mission
     if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
       RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
       set_mode(cxt_.auto_start_);
+    }
+
+    // Publish control message
+    if (rov_mode()) {
+      rov_advance(spin_time);
+    } else if (auv_mode()) {
+      auv_advance(spin_time);
+    } else {
+      publish_control(spin_time);
     }
   }
 

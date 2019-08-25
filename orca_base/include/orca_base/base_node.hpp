@@ -16,6 +16,8 @@
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"
 
+using namespace std::chrono_literals;
+
 namespace orca_base
 {
 
@@ -66,6 +68,7 @@ namespace orca_base
     const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
     const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
     const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
+    const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Publish messages at 10Hz
 
     // Thrusters, order must match the order of the <thruster> tags in the URDF
     const std::vector<Thruster> THRUSTERS = {
@@ -128,7 +131,6 @@ namespace orca_base
     nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
 
     // Outputs
-    Efforts efforts_;                           // Thruster forces
     int tilt_{};                                // Camera tilt
     int brightness_{};                          // Lights
 
@@ -176,9 +178,13 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
     rclcpp::Publisher<orca_msgs::msg::PoseError>::SharedPtr error_pub_;
 
-    void rov_advance(float forward, float strafe, float yaw, float vertical);
+    void rov_advance(const rclcpp::Time &stamp);
+
+    void auv_advance(const rclcpp::Time &msg_time);
 
     void publish_control(const rclcpp::Time &msg_time);
+
+    void publish_control(const rclcpp::Time &msg_time, const Efforts &efforts);
 
     void set_mode(uint8_t new_mode);
 

@@ -247,16 +247,16 @@ namespace orca_base
     Efforts() : forward_{0}, strafe_{0}, vertical_{0}, yaw_{0}
     {}
 
-    double forward()
+    double forward() const
     { return forward_; }
 
-    double strafe()
+    double strafe() const
     { return strafe_; }
 
-    double vertical()
+    double vertical() const
     { return vertical_; }
 
-    double yaw()
+    double yaw() const
     { return yaw_; }
 
     void set_forward(double forward)
