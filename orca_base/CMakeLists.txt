@@ -71,9 +71,21 @@ ament_target_dependencies(
   sensor_msgs
 )
 
+#=============
+# Install
+#=============
+
+# Export include directory
 ament_export_include_directories(include)
 
+# Install C++ targets
 install(TARGETS base_node DESTINATION lib/${PROJECT_NAME})
+
+# Install include directory
 install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
+
+# Install Python nodes
+# PROGRAMS sets execute bits, FILES clears them
+install(PROGRAMS scripts/plot_control.py DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
