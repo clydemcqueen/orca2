@@ -15,15 +15,15 @@ from rclpy.node import Node
 NUM_MESSAGES = 20
 
 
-def calc_usage(fwd_rev, off_on, on):
+def calc_usage(pos_neg, off_on, on):
     """
     Thruster usage function for a sequence of control messages, high usage is presumably bad
-    :param fwd_rev: count of fwd<->rev transitions, cost=10
+    :param pos_neg: count of forward<->reverse transitions, cost=10
     :param off_on: count of off->on transitions, cost=5
     :param on: count of on states, cost=1
     :return: goodness
     """
-    return 10 * fwd_rev + 5 * off_on + on
+    return 10 * pos_neg + 5 * off_on + on
 
 
 class PlotControlNode(Node):
@@ -47,46 +47,50 @@ class PlotControlNode(Node):
         fig, ((axf, axs), (axv, axy), (axt0, axt1), (axt2, axt3), (axt4, axt5)) = plt.subplots(5, 2)
 
         # Plot efforts
-        axf.set_title('forward')
-        axs.set_title('strafe')
-        axv.set_title('vertical')
-        axy.set_title('yaw')
-        axf.set_ylim(-0.1, 0.1)
-        axs.set_ylim(-0.1, 0.1)
-        axv.set_ylim(-0.1, 0.1)
-        axy.set_ylim(-0.1, 0.1)
-        axf.set_xticklabels([])
-        axs.set_xticklabels([])
-        axv.set_xticklabels([])
-        axy.set_xticklabels([])
-        axf.plot([msg.efforts.forward for msg in self._control_msgs])
-        axs.plot([msg.efforts.strafe for msg in self._control_msgs])
-        axv.plot([msg.efforts.vertical for msg in self._control_msgs])
-        axy.plot([msg.efforts.yaw for msg in self._control_msgs])
+        effort_axes = [axf, axs, axv, axy]
+        effort_names = ['forward', 'strafe', 'vertical', 'yaw']
+        effort_values = [[msg.efforts.forward for msg in self._control_msgs],
+                         [msg.efforts.strafe for msg in self._control_msgs],
+                         [msg.efforts.vertical for msg in self._control_msgs],
+                         [msg.efforts.yaw for msg in self._control_msgs]]
+        for ax, name, values in zip(effort_axes, effort_names, effort_values):
+            # Compute +/- transitions
+            pos_neg = 0
+            for c, n in zip(values, values[1:]):
+                if c > 0. > n:
+                    pos_neg += 1
+                elif c < 0. < n:
+                    pos_neg += 1
+
+            ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
+            ax.set_ylim(-0.1, 0.1)
+            ax.set_xticklabels([])
+            ax.plot(values)
 
         # Plot thruster PWM values
-        axt = [axt0, axt1, axt2, axt3, axt4, axt5]
+        pwm_axes = [axt0, axt1, axt2, axt3, axt4, axt5]
         total_usage = 0
-        for i in range(6):
+        for i, ax in zip(range(6), pwm_axes):
+            pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
+
             # Compute usage function
-            fwd_rev, off_on, on = 0, 0, 0
-            for c, n in zip(self._control_msgs, self._control_msgs[1:]):
-                if c.thruster_pwm[i] > 1500 > n.thruster_pwm[i]:
-                    fwd_rev += 1
-                elif c.thruster_pwm[i] < 1500 < n.thruster_pwm[i]:
-                    fwd_rev += 1
-                elif c.thruster_pwm[i] == 1500 and n.thruster_pwm[i] != 1500:
+            pos_neg, off_on, on = 0, 0, 0
+            for c, n in zip(pwm_values, pwm_values[1:]):
+                if c > 1500 > n:
+                    pos_neg += 1
+                elif c < 1500 < n:
+                    pos_neg += 1
+                elif c == 1500 and n != 1500:
                     off_on += 1
-                if c.thruster_pwm[i] != 1500:
+                if c != 1500:
                     on += 1
-            thruster_usage = calc_usage(fwd_rev, off_on, on)
+            thruster_usage = calc_usage(pos_neg, off_on, on)
             total_usage += thruster_usage
 
-            axt[i].set_title(
-                'T{}: fwd_rev={}, off_on={}, on={}, usage={}'.format(i, fwd_rev, off_on, on, thruster_usage))
-            axt[i].set_ylim(1400, 1600)
-            axt[i].set_xticklabels([])
-            axt[i].plot([msg.thruster_pwm[i] for msg in self._control_msgs])
+            ax.set_title('T{}: pos_neg={}, off_on={}, on={}, usage={}'.format(i, pos_neg, off_on, on, thruster_usage))
+            ax.set_ylim(1400, 1600)
+            ax.set_xticklabels([])
+            ax.plot(pwm_values)
 
         # Set figure title
         fig.suptitle('{} messages, total usage={}'.format(NUM_MESSAGES, total_usage))
