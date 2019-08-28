@@ -4,6 +4,7 @@
 #include "orca_base/model.hpp"
 #include "orca_base/util.hpp"
 
+#include "orca_msgs/msg/efforts.hpp"
 #include "orca_msgs/msg/pose.hpp"
 #include "orca_msgs/msg/pose_error.hpp"
 
@@ -291,6 +292,14 @@ namespace orca_base
       set_strafe(strafe);
       set_vertical(accel_to_effort_z(u_bar.z));
       set_yaw(accel_to_effort_yaw(u_bar.yaw));
+    }
+
+    void to_msg(orca_msgs::msg::Efforts &msg) const
+    {
+      msg.forward = forward_;
+      msg.strafe = strafe_;
+      msg.vertical = vertical_;
+      msg.yaw = yaw_;
     }
   };
 

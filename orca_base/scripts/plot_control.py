@@ -12,6 +12,8 @@ import rclpy
 from orca_msgs.msg import Control
 from rclpy.node import Node
 
+NUM_MESSAGES = 20
+
 
 def calc_usage(fwd_rev, off_on, on):
     """
@@ -34,23 +36,38 @@ class PlotControlNode(Node):
 
     def control_callback(self, msg: Control):
         self._control_msgs.append(msg)
-        if len(self._control_msgs) >= 100:
+        if len(self._control_msgs) >= NUM_MESSAGES:
             self.plot_msgs()
             self._control_msgs.clear()
 
     def plot_msgs(self):
         # Create a figure and 6 subplots, one for each thruster
-        fig, ((ax0, ax1), (ax2, ax3), (ax4, ax5)) = plt.subplots(3, 2)
+        # 4 efforts in the body frame: forward, strafe, vertical, yaw
+        # 6 thruster PWM values: ax0-5
+        fig, ((axf, axs), (axv, axy), (axt0, axt1), (axt2, axt3), (axt4, axt5)) = plt.subplots(5, 2)
 
-        ax = [ax0, ax1, ax2, ax3, ax4, ax5]
+        # Plot efforts
+        axf.set_title('forward')
+        axs.set_title('strafe')
+        axv.set_title('vertical')
+        axy.set_title('yaw')
+        axf.set_ylim(-0.1, 0.1)
+        axs.set_ylim(-0.1, 0.1)
+        axv.set_ylim(-0.1, 0.1)
+        axy.set_ylim(-0.1, 0.1)
+        axf.set_xticklabels([])
+        axs.set_xticklabels([])
+        axv.set_xticklabels([])
+        axy.set_xticklabels([])
+        axf.plot([msg.efforts.forward for msg in self._control_msgs])
+        axs.plot([msg.efforts.strafe for msg in self._control_msgs])
+        axv.plot([msg.efforts.vertical for msg in self._control_msgs])
+        axy.plot([msg.efforts.yaw for msg in self._control_msgs])
+
+        # Plot thruster PWM values
+        axt = [axt0, axt1, axt2, axt3, axt4, axt5]
         total_usage = 0
         for i in range(6):
-            # Full PWM range is [1100, 1900] but the AUV typically doesn't use the full range
-            ax[i].set_ylim(1400, 1600)
-
-            # Plot thruster PWM values
-            ax[i].plot([msg.thruster_pwm[i] for msg in self._control_msgs])
-
             # Compute usage function
             fwd_rev, off_on, on = 0, 0, 0
             for c, n in zip(self._control_msgs, self._control_msgs[1:]):
@@ -65,12 +82,14 @@ class PlotControlNode(Node):
             thruster_usage = calc_usage(fwd_rev, off_on, on)
             total_usage += thruster_usage
 
-            # Set subplot title
-            ax[i].set_title(
+            axt[i].set_title(
                 'T{}: fwd_rev={}, off_on={}, on={}, usage={}'.format(i, fwd_rev, off_on, on, thruster_usage))
+            axt[i].set_ylim(1400, 1600)
+            axt[i].set_xticklabels([])
+            axt[i].plot([msg.thruster_pwm[i] for msg in self._control_msgs])
 
         # Set figure title
-        fig.suptitle('total usage={}'.format(total_usage))
+        fig.suptitle('{} messages, total usage={}'.format(NUM_MESSAGES, total_usage))
         print(total_usage)
 
         # [Over]write PDF to disk
@@ -108,7 +127,7 @@ def main(args=None):
     print('backend is', plt.get_backend())
 
     # Set figure size (inches)
-    plt.rcParams['figure.figsize'] = [12., 12.]
+    plt.rcParams['figure.figsize'] = [12., 17.]
 
     rclpy.init(args=args)
     node = PlotControlNode()

@@ -1,4 +1,4 @@
-# 4 DoF Pose
+# 4 DoF Pose, in world frame
 
 float64 x
 float64 y

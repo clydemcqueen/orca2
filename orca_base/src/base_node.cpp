@@ -328,6 +328,7 @@ namespace orca_base
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
+    efforts.to_msg(control_msg.efforts);
     control_msg.mode = mode_;
     control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
     control_msg.brightness_pwm = brightness_to_pwm(brightness_);
