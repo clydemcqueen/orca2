@@ -32,7 +32,6 @@ class PlotControlNode(Node):
         super().__init__('plot_control')
         self._control_msgs: List[Control] = []
         self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
-        print('listening for /control messages')
 
     def control_callback(self, msg: Control):
         self._control_msgs.append(msg)

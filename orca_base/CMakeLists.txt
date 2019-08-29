@@ -40,6 +40,7 @@ add_executable(
   src/base_node.cpp
   src/mission.cpp
   src/motion.cpp
+  src/controller.cpp
   src/util.cpp
 )
 

@@ -268,21 +268,28 @@ namespace orca_base
       filtered_path_pub_->publish(filtered_path_);
     }
 
-    // Publish control
-    Acceleration u_bar;
-    if (mission_->advance(SPIN_PERIOD, filtered_pose_, u_bar)) {
+    // Advance plan and compute feedforward
+    Pose plan;
+    Acceleration ff;
+    if (mission_->advance(SPIN_PERIOD, plan, ff)) {
+      // Compute acceleration
+      Acceleration u_bar;
+      controller_->calc(SPIN_PERIOD.count() / 1000.0, plan, filtered_pose_.pose, ff, u_bar);
+
+      // Accumulate error TODO
+//      error.plan = plan;
+//      error.estimate = estimate;
+//      error.add_error();
+
       // Acceleration => effort
       Efforts efforts;
       efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
-      // Throttle back if AUV is unstable
+      // Throttle back if AUV is unstable TODO move to controller?
       efforts.set_forward(efforts.forward() * stability_);
       efforts.set_strafe(efforts.strafe() * stability_);
       efforts.set_vertical(efforts.vertical() * stability_);
       efforts.set_yaw(efforts.yaw() * stability_);
-
-      // Limit deltas
-      // TODO
 
       publish_control(msg_time, efforts);
 
@@ -291,7 +298,7 @@ namespace orca_base
         orca_msgs::msg::PoseError error_msg;
         error_msg.header.stamp = msg_time;
         error_msg.header.frame_id = cxt_.map_frame_; // Error is expressed in the map frame
-        mission_->error().to_msg(error_msg);
+//        mission_->error().to_msg(error_msg);
         error_pub_->publish(error_msg);
       }
     } else {
@@ -338,6 +345,10 @@ namespace orca_base
     control_msg.stability = stability_;
     control_msg.odom_lag = odom_lag_;
     control_pub_->publish(control_msg);
+
+    // Publish experiments on control_ex
+    // TODO
+    // control_ex_pub_->publish(control_msg);
 
     // Publish rviz thrust markers
     if (count_subscribers(thrust_marker_pub_->get_topic_name()) > 0) {
@@ -401,6 +412,7 @@ namespace orca_base
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
+      controller_ = std::make_shared<Controller>(cxt_);
 
       // Publish path for rviz
       if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {

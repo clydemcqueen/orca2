@@ -256,14 +256,18 @@ namespace orca_base
     RCLCPP_INFO(logger_, "mission has %d segment(s), segment 0", planner_->segments_.size());
   }
 
-  bool Mission::advance(const std::chrono::milliseconds dt, const PoseStamped &curr, Acceleration &u_bar)
+  bool Mission::advance(const std::chrono::milliseconds dt, Pose &plan, Acceleration &ff)
   {
-    if (planner_->segments_[segment_idx_]->advance(dt.count() / 1000.0, curr.pose, u_bar, error_)) {
+    if (planner_->segments_[segment_idx_]->advance(dt.count() / 1000.0)) {
+      plan = planner_->segments_[segment_idx_]->plan();
+      ff = planner_->segments_[segment_idx_]->ff();
       return true;
     }
 
     if (++segment_idx_ < planner_->segments_.size()) {
       RCLCPP_INFO(logger_, "mission segment %d", segment_idx_);
+      plan = planner_->segments_[segment_idx_]->plan();
+      ff = planner_->segments_[segment_idx_]->ff();
       return true;
     }
 

@@ -3,9 +3,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "orca_base/base_context.hpp"
-#include "orca_base/geometry.hpp"
-#include "orca_base/pid.hpp"
+#include "orca_base/controller.hpp"
 
 namespace orca_base
 {
@@ -27,21 +25,21 @@ namespace orca_base
     Twist twist_;     // Velocity
     Acceleration ff_; // Acceleration
 
-    // PID controllers
-    pid::Controller x_controller_;
-    pid::Controller y_controller_;
-    pid::Controller z_controller_;
-    pid::Controller yaw_controller_;
-
-    void finish(Acceleration &u_bar);
+    void finish();
 
   public:
 
     BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
+    const Pose &plan() const
+    { return plan_; }
+
+    const Acceleration &ff() const
+    { return ff_; }
+
     // Advance the motion plan, return true to continue, false if we're done
     // TODO use std::chrono::milliseconds instead of double
-    virtual bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error);
+    virtual bool advance(double dt);
   };
 
 //=====================================================================================
@@ -55,7 +53,7 @@ namespace orca_base
 
     VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-    bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
+    bool advance(double dt) override;
   };
 
 //=====================================================================================
@@ -69,7 +67,7 @@ namespace orca_base
 
     RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-    bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
+    bool advance(double dt) override;
   };
 
 //=====================================================================================
@@ -83,7 +81,7 @@ namespace orca_base
 
     LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
-    bool advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error) override;
+    bool advance(double dt) override;
   };
 
 } // namespace orca_base

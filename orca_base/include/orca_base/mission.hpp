@@ -17,7 +17,7 @@ namespace orca_base
   struct BasePlanner
   {
     std::vector<std::shared_ptr<BaseMotion>> segments_;   // Trajectory segments
-    nav_msgs::msg::Path planned_path_;                    // Path for rviz TODO refactor this class
+    nav_msgs::msg::Path planned_path_;                    // Path for rviz
 
     virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
                       const PoseStamped &start) = 0;
@@ -30,7 +30,7 @@ namespace orca_base
   struct KeepStationPlanner : BasePlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   //=====================================================================================
@@ -50,7 +50,7 @@ namespace orca_base
   struct DownRandomPlanner : RandomPlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   //=====================================================================================
@@ -60,7 +60,7 @@ namespace orca_base
   struct ForwardRandomPlanner : RandomPlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   //=====================================================================================
@@ -71,25 +71,25 @@ namespace orca_base
   struct BodyXPlanner : BasePlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   struct BodyYPlanner : BasePlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   struct BodyZPlanner : BasePlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   struct BodyYawPlanner : BasePlanner
   {
     void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) override;
+              const PoseStamped &start) override;
   };
 
   //=====================================================================================
@@ -101,21 +101,17 @@ namespace orca_base
     rclcpp::Logger logger_;                               // ROS logger
     std::shared_ptr<BasePlanner> planner_;                // Path planner
     int segment_idx_;                                     // Current segment
-    PoseError error_;                                     // Total error for this mission
 
   public:
 
     Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, const BaseContext &cxt,
             const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
-    // Advance the controller, return true to continue
-    bool advance(std::chrono::milliseconds dt, const PoseStamped &curr, Acceleration &u_bar);
+    // Advance the plan, return true to continue
+    bool advance(std::chrono::milliseconds dt, Pose &plan, Acceleration &ff);
 
     const nav_msgs::msg::Path &planned_path() const
     { return planner_->planned_path_; }
-
-    const PoseError &error() const
-    { return error_; }
   };
 
 } // namespace orca_base

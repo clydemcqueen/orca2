@@ -65,42 +65,23 @@ namespace orca_base
   BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
     logger_{logger},
     plan_{start},
-    goal_{goal},
-    x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
-    y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
-    z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
-    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
+    goal_{goal}
   {
     twist_ = Twist{};
 
     // Default ff includes acceleration to counteract buoyancy
     ff_ = Acceleration{0, 0, HOVER_ACCEL_Z, 0};
-
-    x_controller_.set_target(start.x);
-    y_controller_.set_target(start.y);
-    z_controller_.set_target(start.z);
-    yaw_controller_.set_target(start.yaw);
   }
 
-  bool BaseMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
+  bool BaseMotion::advance(double dt)
   {
-    // Accumulate error
-    error.plan = plan_;
-    error.estimate = estimate;
-    error.add_error();
-
-    u_bar.x = x_controller_.calc(estimate.x, dt, ff_.x);
-    u_bar.y = y_controller_.calc(estimate.y, dt, ff_.y);
-    u_bar.z = z_controller_.calc(estimate.z, dt, ff_.z);
-    u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt, ff_.yaw);
     return true;
   }
 
-  void BaseMotion::finish(Acceleration &u_bar)
+  void BaseMotion::finish()
   {
     plan_ = goal_;
     twist_ = Twist{};
-    u_bar = Acceleration{};
   }
 
   //=====================================================================================
@@ -125,19 +106,15 @@ namespace orca_base
     RCLCPP_INFO(logger_, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
   }
 
-  bool VerticalMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
+  bool VerticalMotion::advance(double dt)
   {
     if (goal_.distance_z(plan_) > EPSILON_PLAN_XYZ) {
       // Update plan
       plan_.z += twist_.z * dt;
 
-      // Set target
-      z_controller_.set_target(plan_.z);
-
-      // Compute u_bar
-      return BaseMotion::advance(dt, estimate, u_bar, error);
+      return true;
     } else {
-      finish(u_bar);
+      finish();
       return false;
     }
   }
@@ -161,19 +138,15 @@ namespace orca_base
     RCLCPP_INFO(logger_, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
   }
 
-  bool RotateMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
+  bool RotateMotion::advance(double dt)
   {
     if (goal_.distance_yaw(plan_) > EPSILON_PLAN_YAW) {
       // Update plan
       plan_.yaw = norm_angle(plan_.yaw + twist_.yaw * dt);
 
-      // Set target
-      yaw_controller_.set_target(plan_.yaw);
-
-      // Compute u_bar
-      return BaseMotion::advance(dt, estimate, u_bar, error);
+      return true;
     } else {
-      finish(u_bar);
+      finish();
       return false;
     }
   }
@@ -198,7 +171,7 @@ namespace orca_base
                 start.x, start.y, start.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
   }
 
-  bool LineMotion::advance(double dt, const Pose &estimate, Acceleration &u_bar, PoseError &error)
+  bool LineMotion::advance(double dt)
   {
     double distance_remaining = goal_.distance_xy(plan_);
     if (distance_remaining > EPSILON_PLAN_XYZ) {
@@ -219,14 +192,9 @@ namespace orca_base
       plan_.x += twist_.x * dt;
       plan_.y += twist_.y * dt;
 
-      // Set targets
-      x_controller_.set_target(plan_.x);
-      y_controller_.set_target(plan_.y);
-
-      // Compute u_bar
-      return BaseMotion::advance(dt, estimate, u_bar, error);
+      return true;
     } else {
-      finish(u_bar);
+      finish();
       return false;
     }
   }
