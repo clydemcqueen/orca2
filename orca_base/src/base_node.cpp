@@ -20,7 +20,6 @@ namespace orca_base
     // Suppress IDE warnings
     (void) baro_sub_;
     (void) battery_sub_;
-    (void) imu_sub_;
     (void) joy_sub_;
     (void) leak_sub_;
     (void) map_sub_;
@@ -37,20 +36,6 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
-#if 0
-    if (cxt_.use_sim_time_) {
-      // The simulated IMU is not rotated
-      RCLCPP_INFO(get_logger(), "running in a simulation");
-      t_imu_base_ = tf2::Matrix3x3::getIdentity();
-    } else {
-      // The actual IMU is rotated
-      RCLCPP_INFO(get_logger(), "running in real life");
-      tf2::Matrix3x3 imu_f_base;
-      imu_f_base.setRPY(-M_PI / 2, -M_PI / 2, 0);
-      t_imu_base_ = imu_f_base.inverse();
-    }
-#endif
-
     // ROV PID controllers
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
 
@@ -65,9 +50,6 @@ namespace orca_base
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
       "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
-    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-      "/imu/data", 1, [this](const sensor_msgs::msg::Imu::SharedPtr msg) -> void
-      { this->imu_cb_.call(msg); });
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
       "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
@@ -117,24 +99,6 @@ namespace orca_base
       RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
       set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
     }
-  }
-
-  // New IMU reading
-  void BaseNode::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
-  {
-#if 0
-    // Get yaw
-    tf2::Quaternion imu_f_map;
-    tf2::fromMsg(msg->orientation, imu_f_map);
-    tf2::Matrix3x3 base_f_map = tf2::Matrix3x3(imu_f_map) * t_imu_base_;
-    double roll = 0, pitch = 0;
-    base_f_map.getRPY(roll, pitch, yaw_);
-
-    yaw_ += M_PI_2;
-
-    // Compute a stability metric, used to throttle the pid controllers
-    stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
-#endif
   }
 
   // New input from the gamepad
@@ -242,7 +206,9 @@ namespace orca_base
     filtered_pose_.from_msg(*msg);
     odom_lag_ = (now() - odom_cb_.curr()).seconds();
 
-    // TODO stability_ from pose estimate
+    // Compute a stability metric
+    // TODO
+    // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 
     if (auv_mode()) {
       auv_advance(msg->header.stamp, odom_cb_.dt());

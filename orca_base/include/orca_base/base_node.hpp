@@ -2,7 +2,6 @@
 #define ORCA_BASE_BASE_NODE_HPP
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
-#include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
@@ -110,17 +109,13 @@ namespace orca_base
     double z_initial_{};                        // First z value, used to adjust barometer
     double z_{};                                // Z from barometer
 
-    // IMU state
-    //tf2::Matrix3x3 t_imu_base_;                 // Static transform from the base frame to the imu frame
-    double yaw_{};                              // Yaw from IMU
-    double stability_{1.0};                     // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
-
     // Joystick state
     sensor_msgs::msg::Joy joy_msg_;             // Most recent message
 
     // Odometry state
     PoseStamped filtered_pose_;                 // Estimated pose
     double odom_lag_{};                         // Difference between header.stamp and now(), in seconds
+    double stability_{1.0};                     // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // ROV operation
     std::shared_ptr<pid::Controller> rov_z_pid_;
@@ -138,7 +133,6 @@ namespace orca_base
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
@@ -155,8 +149,6 @@ namespace orca_base
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
-    void imu_callback(sensor_msgs::msg::Imu::SharedPtr msg);
-
     void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
 
     void leak_callback(orca_msgs::msg::Leak::SharedPtr msg);
@@ -167,7 +159,6 @@ namespace orca_base
 
     // Callback wrappers
     Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
-    Valid<BaseNode *, const sensor_msgs::msg::Imu::SharedPtr> imu_cb_{this, &BaseNode::imu_callback};
     Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
     Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
