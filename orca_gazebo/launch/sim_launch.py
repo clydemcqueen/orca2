@@ -42,20 +42,20 @@ def generate_launch_description():
         # Publish static joints
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
              node_name='robot_state_publisher', arguments=[urdf_path], parameters=[{
-                #'use_sim_time': True,  # Use /clock if available
+                'use_sim_time': True,  # Use /clock if available
             }]),
 
         # Joystick driver, generates /namespace/joy messages
         Node(package='joy', node_executable='joy_node', output='screen',
              node_name='joy_node', parameters=[{
-                #'use_sim_time': True,  # Use /clock if available
+                'use_sim_time': True,  # Use /clock if available
                 'dev': '/dev/input/js0'  # Update as required
             }]),
 
         # AUV controller
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
-                #'use_sim_time': True,  # Use /clock if available
+                'use_sim_time': True,  # Use /clock if available
                 'auto_start': 5,  # Auto-start AUV mission
                 'auv_z_target': -2.0  # Mission runs 2m below the surface
             }], remappings=[
@@ -65,7 +65,7 @@ def generate_launch_description():
         # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
              node_name='vmap_node', parameters=[{
-                #'use_sim_time': True,  # Use /clock if available
+                'use_sim_time': True,  # Use /clock if available
                 'publish_tfs': 1,  # Publish marker /tf
                 'marker_length': 0.1778,  # Marker length
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
@@ -74,7 +74,7 @@ def generate_launch_description():
         # Localizer
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
              node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
-                #'use_sim_time': True,  # Use /clock if available
+                'use_sim_time': True,  # Use /clock if available
                 'publish_tfs': 1,
                 'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
                 'sub_camera_info_best_effort_not_reliable': 1,
@@ -84,7 +84,6 @@ def generate_launch_description():
                 'publish_base_odom': 1,
                 'base_odometry_pub_topic': 'odom',
                 'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
-                #'stamp_msgs_with_current_time': 1,  # Stamp messages with now()
                 'camera_frame_id': left_camera_frame,
                 't_camera_base_x': 0.18,
                 't_camera_base_y': -0.15,
