@@ -54,6 +54,7 @@ namespace orca_base
 
     void from_msg(const geometry_msgs::msg::Pose &msg)
     {
+      // Convert ROS Pose to Orca2 Pose by dropping roll & pitch
       x = msg.position.x;
       y = msg.position.y;
       z = msg.position.z;

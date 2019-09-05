@@ -96,7 +96,7 @@ class PlotControlNode(Node):
         # Plot odom lag
         # These values depend on the node's estimate of "now" which isn't all that good during a simulation
         odom_lag_values = [msg.odom_lag for msg in self._control_msgs]
-        axol.set_title('odom lag, ave={0:.2f}'.format(sum(odom_lag_values) / len(odom_lag_values)))
+        axol.set_title('odom lag, ave={0:.3f}'.format(sum(odom_lag_values) / len(odom_lag_values)))
         axol.set_ylim(-0.1, 0.1)
         axol.set_xticklabels([])
         axol.plot(odom_lag_values)

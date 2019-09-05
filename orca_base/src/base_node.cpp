@@ -236,6 +236,8 @@ namespace orca_base
   {
     filtered_pose_.from_msg(*msg);
     odom_lag_ = (now() - odom_cb_.curr()).seconds();
+
+    // TODO stability_ from pose estimate
   }
 
   void BaseNode::rov_advance(const rclcpp::Time &stamp)
@@ -272,7 +274,7 @@ namespace orca_base
     Pose plan;
     Acceleration ff;
     if (mission_->advance(SPIN_PERIOD, plan, ff)) {
-      // Compute acceleration
+      // Compute acceleration due to error
       Acceleration u_bar;
       controller_->calc(SPIN_PERIOD.count() / 1000.0, plan, filtered_pose_.pose, ff, u_bar);
 
