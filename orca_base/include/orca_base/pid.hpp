@@ -56,7 +56,7 @@ namespace pid
       }
 
       if (std::abs(target - target_) > 0.001) { // TODO constant
-        std::cout << "set target, from " << target_ << " to " << target << std::endl;
+        // std::cout << "set target, from " << target_ << " to " << target << std::endl;
         target_ = target;
         prev_error_ = 0;
         integral_ = 0;
