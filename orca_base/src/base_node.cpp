@@ -115,7 +115,7 @@ namespace orca_base
   {
     if (msg->low_battery) {
       RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
     }
   }
 
@@ -144,10 +144,10 @@ namespace orca_base
       // Arm/disarm
       if (button_down(msg, joy_msg_, joy_button_disarm_)) {
         RCLCPP_INFO(get_logger(), "disarmed");
-        set_mode(orca_msgs::msg::Control::DISARMED);
+        set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
       } else if (button_down(msg, joy_msg_, joy_button_arm_)) {
         RCLCPP_INFO(get_logger(), "armed, manual");
-        set_mode(orca_msgs::msg::Control::ROV);
+        set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV);
       }
 
       // If we're disarmed, ignore everything else
@@ -159,30 +159,30 @@ namespace orca_base
       // Mode
       if (button_down(msg, joy_msg_, joy_button_rov_)) {
         RCLCPP_INFO(get_logger(), "manual");
-        set_mode(orca_msgs::msg::Control::ROV);
+        set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV);
       } else if (button_down(msg, joy_msg_, joy_button_rov_hold_z_)) {
         if (baro_ok(msg->header.stamp)) {
-          set_mode(orca_msgs::msg::Control::ROV_HOLD_Z);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV_HOLD_Z);
         } else {
-          RCLCPP_ERROR(get_logger(), "barometer not ready, can't hold z");
+          RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold z");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::AUV_KEEP_STATION);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't keep station");
+          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot keep station");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_4_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::AUV_4);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_4);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start mission 4");
+          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot start mission 4");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_5_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(orca_msgs::msg::Control::AUV_5);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_5);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, can't start mission 5");
+          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot start mission 5");
         }
       }
 
@@ -211,6 +211,11 @@ namespace orca_base
         brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
         RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
       }
+
+      // Thrusters
+      if (rov_mode()) {
+        rov_advance(msg->header.stamp);
+      }
     }
 
     joy_msg_ = *msg;
@@ -221,7 +226,7 @@ namespace orca_base
   {
     if (msg->leak_detected) {
       RCLCPP_ERROR(get_logger(), "leak detected, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
     }
   }
 
@@ -238,12 +243,15 @@ namespace orca_base
     odom_lag_ = (now() - odom_cb_.curr()).seconds();
 
     // TODO stability_ from pose estimate
+
+    if (auv_mode()) {
+      auv_advance(msg->header.stamp, odom_cb_.dt());
+    }
   }
 
   void BaseNode::rov_advance(const rclcpp::Time &stamp)
   {
-    // TODO use std::chrono::milliseconds instead of double
-    double dt = SPIN_PERIOD.count() / 1000.0;
+    double dt = joy_cb_.dt();
 
     Efforts efforts;
     efforts.set_forward(dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_);
@@ -259,7 +267,7 @@ namespace orca_base
     publish_control(stamp, efforts);
   }
 
-  void BaseNode::auv_advance(const rclcpp::Time &msg_time)
+  void BaseNode::auv_advance(const rclcpp::Time &msg_time, double dt)
   {
     // Publish path for rviz
     if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
@@ -273,10 +281,10 @@ namespace orca_base
     // Advance plan and compute feedforward
     Pose plan;
     Acceleration ff;
-    if (mission_->advance(SPIN_PERIOD, plan, ff)) {
+    if (mission_->advance(dt, plan, ff)) {
       // Compute acceleration due to error
       Acceleration u_bar;
-      controller_->calc(SPIN_PERIOD.count() / 1000.0, plan, filtered_pose_.pose, ff, u_bar);
+      controller_->calc(dt, plan, filtered_pose_.pose, ff, u_bar);
 
       // Accumulate error TODO
 //      error.plan = plan;
@@ -305,7 +313,7 @@ namespace orca_base
       }
     } else {
       // Stop mission
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(msg_time, orca_msgs::msg::Control::DISARMED);
       publish_control(msg_time);
     }
   }
@@ -389,8 +397,11 @@ namespace orca_base
   }
 
   // Change operation mode
-  void BaseNode::set_mode(uint8_t new_mode)
+  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode)
   {
+    // Stop all thrusters
+    publish_control(msg_time);
+
     if (is_z_hold_mode(new_mode)) {
       rov_z_pid_->set_target(z_);
       RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
@@ -442,37 +453,28 @@ namespace orca_base
     // Various timeouts
     if (rov_mode() && !joy_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost joystick during ROV operation, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 
     if (auv_mode() && !odom_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 
     if (auv_mode() && stability_ < 0.4) {
       RCLCPP_ERROR(get_logger(), "excessive tilt during AUV operation, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 
     if (holding_z() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
-      set_mode(orca_msgs::msg::Control::DISARMED);
+      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 
     // Auto-start mission
     if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
       RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
-      set_mode(cxt_.auto_start_);
-    }
-
-    // Publish control message
-    if (rov_mode()) {
-      rov_advance(spin_time);
-    } else if (auv_mode()) {
-      auv_advance(spin_time);
-    } else {
-      publish_control(spin_time);
+      set_mode(spin_time, cxt_.auto_start_);
     }
   }
 

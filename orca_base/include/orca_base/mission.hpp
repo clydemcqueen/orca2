@@ -108,7 +108,7 @@ namespace orca_base
             const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
     // Advance the plan, return true to continue
-    bool advance(std::chrono::milliseconds dt, Pose &plan, Acceleration &ff);
+    bool advance(double dt, Pose &plan, Acceleration &ff);
 
     const nav_msgs::msg::Path &planned_path() const
     { return planner_->planned_path_; }

@@ -181,13 +181,13 @@ namespace orca_base
 
     void rov_advance(const rclcpp::Time &stamp);
 
-    void auv_advance(const rclcpp::Time &msg_time);
+    void auv_advance(const rclcpp::Time &msg_time, double dt);
 
     void publish_control(const rclcpp::Time &msg_time);
 
     void publish_control(const rclcpp::Time &msg_time, const Efforts &efforts);
 
-    void set_mode(uint8_t new_mode);
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode);
 
     bool holding_z()
     { return is_z_hold_mode(mode_); }
