@@ -12,7 +12,7 @@ import rclpy
 from orca_msgs.msg import Control
 from rclpy.node import Node
 
-NUM_MESSAGES = 20
+NUM_MESSAGES = 100
 
 
 def calc_usage(pos_neg, off_on, on):
@@ -40,10 +40,12 @@ class PlotControlNode(Node):
             self._control_msgs.clear()
 
     def plot_msgs(self):
-        # Create a figure and 6 subplots, one for each thruster
-        # 4 efforts in the body frame: forward, strafe, vertical, yaw
-        # 6 thruster PWM values: ax0-5
-        fig, ((axf, axs), (axv, axy), (axt0, axt1), (axt2, axt3), (axt4, axt5)) = plt.subplots(5, 2)
+        # Create a figure and 12 subplots:
+        # 4 for efforts in the body frame
+        # 6 for thruster PMW values
+        # 1 for odom lag
+        # 1 blank
+        fig, ((axf, axs), (axv, axy), (axt0, axt1), (axt2, axt3), (axt4, axt5), (axol, blank)) = plt.subplots(6, 2)
 
         # Plot efforts
         effort_axes = [axf, axs, axv, axy]
@@ -91,9 +93,17 @@ class PlotControlNode(Node):
             ax.set_xticklabels([])
             ax.plot(pwm_values)
 
+        # Plot odom lag
+        # These values depend on the node's estimate of "now" which isn't all that good during a simulation
+        odom_lag_values = [msg.odom_lag for msg in self._control_msgs]
+        axol.set_title('odom lag, ave={0:.2f}'.format(sum(odom_lag_values) / len(odom_lag_values)))
+        axol.set_ylim(-0.1, 0.1)
+        axol.set_xticklabels([])
+        axol.plot(odom_lag_values)
+
         # Set figure title
         fig.suptitle('{} messages, total usage={}'.format(NUM_MESSAGES, total_usage))
-        print(total_usage)
+        # print(total_usage)
 
         # [Over]write PDF to disk
         plt.savefig('plot_control.pdf')
