@@ -93,7 +93,7 @@ namespace orca_driver
       RCLCPP_INFO(get_logger(), "receiving control messages");
     }
 
-    control_msg_time_ = now();
+    control_msg_time_ = msg->header.stamp;
 
     set_status(msg->mode >= msg->AUV_KEEP_STATION ? Status::mission : Status::ready);
 

@@ -45,6 +45,13 @@ namespace gazebo
   constexpr double T200_MAX_POS_FORCE = 50;
   constexpr double T200_MAX_NEG_FORCE = 40;
 
+  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(3)}; // All-stop if control messages stop
+
+  bool valid(const rclcpp::Time &t)
+  {
+    return t.nanoseconds() > 0;
+  }
+
   class OrcaThrusterPlugin : public ModelPlugin
   {
     // Pointer to our base_link
@@ -57,7 +64,8 @@ namespace gazebo
     gazebo_ros::Node::SharedPtr node_;
 
     // ROS subscriber
-    rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr thruster_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
+    rclcpp::Time control_msg_time_;
 
     // Model for each thruster
     struct Thruster
@@ -101,7 +109,7 @@ namespace gazebo
 
       // Subscribe to the topic
       // Note the use of std::placeholders::_1 vs. the included _1 from Boost
-      thruster_sub_ = node_->create_subscription<orca_msgs::msg::Control>(
+      control_sub_ = node_->create_subscription<orca_msgs::msg::Control>(
         ros_topic, 1, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
 
       // Listen to the update event. This event is broadcast every simulation iteration.
@@ -141,10 +149,18 @@ namespace gazebo
     // Handle an incoming message from ROS
     void OnRosMsg(const orca_msgs::msg::Control::SharedPtr msg)
     {
-      // TODO abort if no control messages received in 1s, requires changes to BaseNode
+      control_msg_time_ = msg->header.stamp;
 
       for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
         thrusters_[i].effort = orca_base::pwm_to_effort(msg->thruster_pwm[i]);
+      }
+    }
+
+    // Stop thrusters
+    void AllStop()
+    {
+      for (int i = 0; i < thrusters_.size(); ++i) {
+        thrusters_[i].effort = 0;
       }
     }
 
@@ -152,6 +168,15 @@ namespace gazebo
     // TODO don't apply thrust force if we're above the surface of the water
     void OnUpdate(const common::UpdateInfo & /*info*/)
     {
+      if (valid(control_msg_time_) && node_->now() - control_msg_time_ > CONTROL_TIMEOUT) {
+        // We were receiving control messages, but they stopped.
+        // This is normal, but it might also indicate that a node died.
+        // RCLCPP_INFO isn't flushed right away, so use iostream directly.
+        std::cout << "OrcaThrusterPlugin control timeout" << std::endl;
+        control_msg_time_ = rclcpp::Time();
+        AllStop();
+      }
+
       for (Thruster t : thrusters_) {
         // Default thruster force points directly up
         ignition::math::Vector3d force = {0.0, 0.0, t.effort * (t.effort < 0 ? t.neg_force : t.pos_force)};
