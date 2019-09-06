@@ -168,15 +168,14 @@ namespace orca_base
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
-    rclcpp::Publisher<orca_msgs::msg::PoseError>::SharedPtr error_pub_;
 
     void rov_advance(const rclcpp::Time &stamp);
 
     void auv_advance(const rclcpp::Time &msg_time, double dt);
 
-    void publish_control(const rclcpp::Time &msg_time);
+    void all_stop(const rclcpp::Time &msg_time);
 
-    void publish_control(const rclcpp::Time &msg_time, const Efforts &efforts);
+    void publish_control(const rclcpp::Time &msg_time, const Pose &error, const Efforts &efforts);
 
     void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode);
 

@@ -44,7 +44,6 @@ namespace orca_base
     thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
     planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
     filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
-    error_pub_ = create_publisher<orca_msgs::msg::PoseError>("error", 1);
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
@@ -230,7 +229,8 @@ namespace orca_base
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
 
-    publish_control(stamp, efforts);
+    Pose error;
+    publish_control(stamp, error, efforts);
   }
 
   void BaseNode::auv_advance(const rclcpp::Time &msg_time, double dt)
@@ -248,14 +248,12 @@ namespace orca_base
     Pose plan;
     Acceleration ff;
     if (mission_->advance(dt, plan, ff)) {
+      // Compute error
+      Pose error = plan.error(filtered_pose_.pose);
+
       // Compute acceleration due to error
       Acceleration u_bar;
       controller_->calc(dt, plan, filtered_pose_.pose, ff, u_bar);
-
-      // Accumulate error TODO
-//      error.plan = plan;
-//      error.estimate = estimate;
-//      error.add_error();
 
       // Acceleration => effort
       Efforts efforts;
@@ -267,31 +265,21 @@ namespace orca_base
       efforts.set_vertical(efforts.vertical() * stability_);
       efforts.set_yaw(efforts.yaw() * stability_);
 
-      publish_control(msg_time, efforts);
-
-      // Publish error
-      if (count_subscribers(error_pub_->get_topic_name()) > 0) {
-        orca_msgs::msg::PoseError error_msg;
-        error_msg.header.stamp = msg_time;
-        error_msg.header.frame_id = cxt_.map_frame_; // Error is expressed in the map frame
-//        mission_->error().to_msg(error_msg);
-        error_pub_->publish(error_msg);
-      }
+      publish_control(msg_time, error, efforts);
     } else {
       // Stop mission
       set_mode(msg_time, orca_msgs::msg::Control::DISARMED);
-      publish_control(msg_time);
     }
   }
 
-  void BaseNode::publish_control(const rclcpp::Time &msg_time)
+  void BaseNode::all_stop(const rclcpp::Time &msg_time)
   {
-    // "All stop"
+    Pose error;
     Efforts efforts;
-    publish_control(msg_time, efforts);
+    publish_control(msg_time, error, efforts);
   }
 
-  void BaseNode::publish_control(const rclcpp::Time &msg_time, const Efforts &efforts)
+  void BaseNode::publish_control(const rclcpp::Time &msg_time, const Pose &error, const Efforts &efforts)
   {
     // Combine joystick efforts to get thruster efforts.
     std::vector<double> thruster_efforts = {};
@@ -311,6 +299,7 @@ namespace orca_base
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
+    error.to_msg(control_msg.error);
     efforts.to_msg(control_msg.efforts);
     control_msg.mode = mode_;
     control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
@@ -366,7 +355,7 @@ namespace orca_base
   void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode)
   {
     // Stop all thrusters
-    publish_control(msg_time);
+    all_stop(msg_time);
 
     if (is_z_hold_mode(new_mode)) {
       rov_z_pid_->set_target(z_);

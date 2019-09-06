@@ -6,7 +6,6 @@
 
 #include "orca_msgs/msg/efforts.hpp"
 #include "orca_msgs/msg/pose.hpp"
-#include "orca_msgs/msg/pose_error.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -138,56 +137,6 @@ namespace orca_base
       to_msg(msg);
       msg.header.frame_id = path.header.frame_id;
       path.poses.push_back(msg);
-    }
-  };
-
-  //=====================================================================================
-  // PoseError
-  //=====================================================================================
-
-  struct PoseError
-  {
-    Pose plan;      // Planned pose -- where we hoped to be
-    Pose estimate;  // Estimated pose -- where we think we are
-    Pose error;     // Error
-
-    Pose sse;       // Sum of the squared errors
-    int64_t steps;  // Steps
-
-    constexpr PoseError() : steps{0}
-    {}
-
-    void add_error()
-    {
-      error = estimate.error(plan);
-      sse.x += error.x * error.x;
-      sse.y += error.y * error.y;
-      sse.z += error.z * error.z;
-      sse.yaw += error.yaw * error.yaw;
-      steps++;
-    }
-
-    Pose rms() const
-    {
-      Pose r;
-      if (steps > 0) {
-        r.x = sqrt(sse.x / steps);
-        r.y = sqrt(sse.y / steps);
-        r.z = sqrt(sse.z / steps);
-        r.yaw = sqrt(sse.yaw / steps);
-
-      }
-      return r;
-    }
-
-    void to_msg(orca_msgs::msg::PoseError &msg) const
-    {
-      plan.to_msg(msg.plan);
-      estimate.to_msg(msg.estimate);
-      error.to_msg(msg.error);
-      sse.to_msg(msg.sse);
-      msg.steps = steps;
-      rms().to_msg(msg.rms);
     }
   };
 
