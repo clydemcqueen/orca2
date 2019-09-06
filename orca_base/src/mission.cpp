@@ -58,7 +58,7 @@ namespace orca_base
                                 const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
   {
     // Keep station over the start pose
-    segments_.push_back(std::make_shared<BaseMotion>(logger, cxt, start.pose, start.pose));
+    segments_.push_back(std::make_shared<BaseSegment>(logger, cxt, start.pose, start.pose));
 
     // Trivial path message
     geometry_msgs::msg::PoseStamped pose_msg;
@@ -94,7 +94,7 @@ namespace orca_base
     curr.pose.z = cxt.auv_z_target_;
     if (set_time_z(cxt, prev, curr)) {
       path.push_back(curr);
-      segments_.push_back(std::make_shared<VerticalMotion>(logger, cxt, prev.pose, curr.pose));
+      segments_.push_back(std::make_shared<VerticalSegment>(logger, cxt, prev.pose, curr.pose));
     } else {
       RCLCPP_INFO(logger, "skip vertical");
     }
@@ -106,7 +106,7 @@ namespace orca_base
       curr.pose.yaw = atan2(waypoint.y - curr.pose.y, waypoint.x - curr.pose.x);
       if (set_time_yaw(cxt, prev, curr)) {
         path.push_back(curr);
-        segments_.push_back(std::make_shared<RotateMotion>(logger, cxt, prev.pose, curr.pose));
+        segments_.push_back(std::make_shared<RotateSegment>(logger, cxt, prev.pose, curr.pose));
 
       } else {
         RCLCPP_INFO(logger, "skip rotate");
@@ -118,7 +118,7 @@ namespace orca_base
       curr.pose.y = waypoint.y;
       if (set_time_xy(cxt, prev, curr)) {
         path.push_back(curr);
-        segments_.push_back(std::make_shared<LineMotion>(logger, cxt, prev.pose, curr.pose));
+        segments_.push_back(std::make_shared<LineSegment>(logger, cxt, prev.pose, curr.pose));
 
       } else {
         RCLCPP_INFO(logger, "skip line");
@@ -196,9 +196,9 @@ namespace orca_base
     wp2.pose.y += sin(wp2.pose.yaw) * cxt.auv_xy_distance_;
 
     // Trajectory segments
-    segments_.push_back(std::make_shared<VerticalMotion>(logger, cxt, start.pose, wp1.pose));
-    segments_.push_back(std::make_shared<LineMotion>(logger, cxt, wp1.pose, wp2.pose));
-    segments_.push_back(std::make_shared<LineMotion>(logger, cxt, wp2.pose, wp1.pose));
+    segments_.push_back(std::make_shared<VerticalSegment>(logger, cxt, start.pose, wp1.pose));
+    segments_.push_back(std::make_shared<LineSegment>(logger, cxt, wp1.pose, wp2.pose));
+    segments_.push_back(std::make_shared<LineSegment>(logger, cxt, wp2.pose, wp1.pose));
 
     // Planned path
     planned_path_.header.stamp = start.t;

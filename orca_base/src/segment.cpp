@@ -1,4 +1,4 @@
-#include "orca_base/motion.hpp"
+#include "orca_base/segment.hpp"
 
 namespace orca_base
 {
@@ -59,10 +59,10 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // BaseMotion
+  // BaseSegment
   //=====================================================================================
 
-  BaseMotion::BaseMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
+  BaseSegment::BaseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
     logger_{logger},
     plan_{start},
     goal_{goal}
@@ -73,24 +73,24 @@ namespace orca_base
     ff_ = Acceleration{0, 0, HOVER_ACCEL_Z, 0};
   }
 
-  bool BaseMotion::advance(double dt)
+  bool BaseSegment::advance(double dt)
   {
     return true;
   }
 
-  void BaseMotion::finish()
+  void BaseSegment::finish()
   {
     plan_ = goal_;
     twist_ = Twist{};
   }
 
   //=====================================================================================
-  // VerticalMotion
+  // VerticalSegment
   //=====================================================================================
 
-  VerticalMotion::VerticalMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start,
-                                 const Pose &goal) :
-    BaseMotion(logger, cxt, start, goal)
+  VerticalSegment::VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start,
+                                   const Pose &goal) :
+    BaseSegment(logger, cxt, start, goal)
   {
     assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
 
@@ -106,7 +106,7 @@ namespace orca_base
     RCLCPP_INFO(logger_, "vertical: start %g, goal %g, velocity %g, ff %g", start.z, goal.z, twist_.z, ff_.z);
   }
 
-  bool VerticalMotion::advance(double dt)
+  bool VerticalSegment::advance(double dt)
   {
     if (goal_.distance_z(plan_) > EPSILON_PLAN_XYZ) {
       // Update plan
@@ -120,12 +120,12 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // RotateMotion
+  // RotateSegment
   //=====================================================================================
 
-  RotateMotion::RotateMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal)
+  RotateSegment::RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal)
     :
-    BaseMotion(logger, cxt, start, goal)
+    BaseSegment(logger, cxt, start, goal)
   {
     assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ || start.distance_z(goal) < EPSILON_PLAN_XYZ);
 
@@ -138,7 +138,7 @@ namespace orca_base
     RCLCPP_INFO(logger_, "rotate: start %g, goal %g, velocity %g, accel %g", start.yaw, goal.yaw, twist_.yaw, ff_.yaw);
   }
 
-  bool RotateMotion::advance(double dt)
+  bool RotateSegment::advance(double dt)
   {
     if (goal_.distance_yaw(plan_) > EPSILON_PLAN_YAW) {
       // Update plan
@@ -152,11 +152,11 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // LineMotion
+  // LineSegment
   //=====================================================================================
 
-  LineMotion::LineMotion(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
-    BaseMotion(logger, cxt, start, goal)
+  LineSegment::LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
+    BaseSegment(logger, cxt, start, goal)
   {
     assert(start.distance_z(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
 
@@ -171,7 +171,7 @@ namespace orca_base
                 start.x, start.y, start.z, goal.x, goal.y, goal.z, ff_.x, ff_.y, ff_.z);
   }
 
-  bool LineMotion::advance(double dt)
+  bool LineSegment::advance(double dt)
   {
     double distance_remaining = goal_.distance_xy(plan_);
     if (distance_remaining > EPSILON_PLAN_XYZ) {

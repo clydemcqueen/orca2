@@ -5,7 +5,7 @@
 #include "nav_msgs/msg/path.hpp"
 
 #include "orca_base/base_context.hpp"
-#include "orca_base/motion.hpp"
+#include "orca_base/segment.hpp"
 
 namespace orca_base
 {
@@ -16,7 +16,7 @@ namespace orca_base
 
   struct BasePlanner
   {
-    std::vector<std::shared_ptr<BaseMotion>> segments_;   // Trajectory segments
+    std::vector<std::shared_ptr<BaseSegment>> segments_;  // Trajectory segments
     nav_msgs::msg::Path planned_path_;                    // Path for rviz
 
     virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,

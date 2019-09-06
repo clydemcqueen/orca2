@@ -39,7 +39,7 @@ add_executable(
   base_node
   src/base_node.cpp
   src/mission.cpp
-  src/motion.cpp
+  src/segment.cpp
   src/controller.cpp
   src/util.cpp
 )
