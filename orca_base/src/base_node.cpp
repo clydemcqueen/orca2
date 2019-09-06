@@ -36,7 +36,7 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
-    // ROV PID controllers
+    // ROV PID controller
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
 
     // Publications
@@ -259,11 +259,8 @@ namespace orca_base
       Efforts efforts;
       efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
-      // Throttle back if AUV is unstable TODO move to controller?
-      efforts.set_forward(efforts.forward() * stability_);
-      efforts.set_strafe(efforts.strafe() * stability_);
-      efforts.set_vertical(efforts.vertical() * stability_);
-      efforts.set_yaw(efforts.yaw() * stability_);
+      // Throttle back if AUV is unstable
+      efforts.scale(stability_);
 
       publish_control(msg_time, error, efforts);
     } else {
@@ -380,7 +377,14 @@ namespace orca_base
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
-      controller_ = std::make_shared<Controller>(cxt_);
+      switch (cxt_.controller_) {
+        case 1:
+          controller_ = std::make_shared<DeadzoneController>(cxt_);
+          break;
+        default:
+          controller_ = std::make_shared<Controller>(cxt_);
+          break;
+      }
 
       // Publish path for rviz
       if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {

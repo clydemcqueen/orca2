@@ -24,11 +24,34 @@ namespace orca_base
     u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt, ff.yaw);
   }
 
-  void
-  CalmController::calc(double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff, Acceleration &u_bar)
+  void DeadzoneController::calc(double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
+                                Acceleration &u_bar)
   {
-    // TODO be calm!
-    Controller::calc(dt, plan, estimate, ff, u_bar);
+    x_controller_.set_target(plan.x);
+    y_controller_.set_target(plan.y);
+    z_controller_.set_target(plan.z);
+    yaw_controller_.set_target(plan.yaw);
+
+    // Call PID controllers iff error is large enough
+    if (plan.distance_xy(estimate) > e_xy_) {
+      u_bar.x = x_controller_.calc(estimate.x, dt, ff.x);
+      u_bar.y = y_controller_.calc(estimate.y, dt, ff.y);
+    } else {
+      u_bar.x = ff.x;
+      u_bar.y = ff.y;
+    }
+
+    if (plan.distance_z(estimate) > e_z_) {
+      u_bar.z = z_controller_.calc(estimate.z, dt, ff.z);
+    } else {
+      u_bar.z = ff.z;
+    }
+
+    if (plan.distance_yaw(estimate) > e_yaw_) {
+      u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt, ff.yaw);
+    } else {
+      u_bar.yaw = ff.yaw;
+    }
   }
 
 }

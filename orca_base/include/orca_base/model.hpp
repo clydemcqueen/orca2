@@ -10,8 +10,8 @@ namespace orca_base
 // Vehicle specs, in the body frame (x forward, y left, z up)
 //=====================================================================================
 
-  constexpr double GRAVITY = 9.80665;
-  constexpr double FLUID_DENSITY = 1000;    // Fluid density of freshwater
+  constexpr double GRAVITY = 9.8;           // Gazebo default is 9.8
+  constexpr double FLUID_DENSITY = 1029;    // Fluid density of seawater TODO cxt should specify fresh vs. seawater
 
   constexpr double ROV_DIM_X = 0.457;       // Length
   constexpr double ROV_DIM_Y = 0.338;       // Width

@@ -12,7 +12,7 @@ import rclpy
 from orca_msgs.msg import Control
 from rclpy.node import Node
 
-NUM_MESSAGES = 100
+NUM_MESSAGES = 200
 
 
 def calc_usage(pos_neg, off_on, on):
@@ -58,7 +58,7 @@ class PlotControlNode(Node):
                         [msg.error.yaw for msg in self._control_msgs]]
         for ax, name, values in zip(error_axes, error_names, error_values):
             ax.set_title(name)
-            ax.set_ylim(-0.1, 0.1)
+            ax.set_ylim(-0.3, 0.3)
             ax.set_xticklabels([])
             ax.plot(values)
 
@@ -79,7 +79,7 @@ class PlotControlNode(Node):
                     pos_neg += 1
 
             ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
-            ax.set_ylim(-0.1, 0.1)
+            ax.set_ylim(-0.3, 0.3)
             ax.set_xticklabels([])
             ax.plot(values)
 

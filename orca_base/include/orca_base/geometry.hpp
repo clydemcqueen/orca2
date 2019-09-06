@@ -244,6 +244,15 @@ namespace orca_base
       set_yaw(accel_to_effort_yaw(u_bar.yaw));
     }
 
+    void scale(double factor)
+    {
+      // Scale efforts by a factor, useful for throttling
+      set_forward(forward_ * factor);
+      set_strafe(strafe_ * factor);
+      set_vertical(vertical_ * factor);
+      set_yaw(yaw_ * factor);
+    }
+
     void to_msg(orca_msgs::msg::Efforts &msg) const
     {
       msg.forward = forward_;

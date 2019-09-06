@@ -56,6 +56,11 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_speed, double, M_PI_4 / 2)         /* AUV rotation speed  */ \
   \
   CXT_MACRO_MEMBER(keep_poses, int, 100)                      /* Max # of poses on filtered_path  */ \
+  \
+  CXT_MACRO_MEMBER(controller, int, 0)                        /* Controller  */ \
+  CXT_MACRO_MEMBER(dz_e_xy, double, 0.1)                      /* Deadzone controller epison_xy  */ \
+  CXT_MACRO_MEMBER(dz_e_z, double, 0.1)                       /* Deadzone controller epison_z  */ \
+  CXT_MACRO_MEMBER(dz_e_yaw, double, 0.2)                     /* Deadzone controller epison_yaw  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

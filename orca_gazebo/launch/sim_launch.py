@@ -57,7 +57,11 @@ def generate_launch_description():
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
                 'auto_start': 5,  # Auto-start AUV mission
-                'auv_z_target': -2.0  # Mission runs 2m below the surface
+                'auv_z_target': -2.0,  # Mission runs 2m below the surface
+                'controller': 1,  # Deadzone controller
+                'dz_e_xy': 0.05,
+                'dz_e_z': 0.05,
+                'dz_e_yaw': 0.1,
             }], remappings=[
                 ('filtered_odom', '/' + left_camera_name + '/odom')
             ]),

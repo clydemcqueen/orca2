@@ -33,15 +33,20 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // CalmController tries to reduce the number of times the thrusters start, stop and
-  // flip directions.
+  // DeadzoneController turns off the PID controllers if the error is small
   //=====================================================================================
 
-  class CalmController : public Controller
+  class DeadzoneController : public Controller
   {
+  private:
+    double e_xy_;
+    double e_z_;
+    double e_yaw_;
+
   public:
 
-    explicit CalmController(const BaseContext &cxt, const Pose &plan) : Controller(cxt)
+    explicit DeadzoneController(const BaseContext &cxt) :
+      Controller{cxt}, e_xy_{cxt.dz_e_xy_}, e_z_{cxt.dz_e_z_}, e_yaw_{cxt.dz_e_yaw_}
     {}
 
     void calc(double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff, Acceleration &u_bar) override;
