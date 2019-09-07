@@ -66,7 +66,7 @@ namespace orca_base
   constexpr uint16_t THRUST_FULL_REV_PWM = 1100;
   constexpr uint16_t THRUST_STOP_PWM = 1500;
   constexpr uint16_t THRUST_FULL_FWD_PWM = 1900;
-  constexpr uint16_t THRUST_DZ_PWM = 30;
+  constexpr uint16_t THRUST_DZ_PWM = 0;  // ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
   constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
 
   uint16_t effort_to_pwm(const double effort)

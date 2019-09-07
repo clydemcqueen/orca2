@@ -1,5 +1,7 @@
 ROV and AUV functionality for [Orca2](https://github.com/clydemcqueen/orca2).
 
+***TODO update this***
+
 Modes:
 * disarmed: thrusters are off, all joystick buttons except "arm" are ignored
 * manual: thrusters are manually controlled
