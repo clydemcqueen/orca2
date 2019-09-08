@@ -64,7 +64,7 @@ namespace pid
     }
 
     // Run one calculation
-    double calc(double state, double dt, double bias)
+    double calc(double state, double dt)
     {
       double error = target_ - state;
 
@@ -76,7 +76,7 @@ namespace pid
       double derivative = (error - prev_error_) / dt;
       prev_error_ = error;
 
-      return Kp_ * error + Ki_ * integral_ + Kd_ * derivative + bias;
+      return Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
     }
 
     double target()

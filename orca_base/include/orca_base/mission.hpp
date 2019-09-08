@@ -34,6 +34,16 @@ namespace orca_base
   };
 
   //=====================================================================================
+  // OriginPlanner -- keep station directly below the origin
+  //=====================================================================================
+
+  struct OriginPlanner : BasePlanner
+  {
+    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
+              const PoseStamped &start) override;
+  };
+
+  //=====================================================================================
   // RandomPlanner
   //=====================================================================================
 

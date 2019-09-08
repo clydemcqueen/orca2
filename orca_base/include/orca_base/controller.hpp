@@ -29,7 +29,8 @@ namespace orca_base
 
     // Calc u_bar
     // TODO use std::chrono::milliseconds instead of double
-    virtual void calc(double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff, Acceleration &u_bar);
+    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
+                      Acceleration &u_bar);
   };
 
   //=====================================================================================
@@ -38,18 +39,51 @@ namespace orca_base
 
   class DeadzoneController : public Controller
   {
+  public:
+
+    explicit DeadzoneController(const BaseContext &cxt) : Controller{cxt}
+    {}
+
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
+              Acceleration &u_bar) override;
+  };
+
+  //=====================================================================================
+  // JerkController limits jerk
+  //=====================================================================================
+
+  class JerkController : public Controller
+  {
   private:
-    double e_xy_;
-    double e_z_;
-    double e_yaw_;
+    // Keep previous u_bar
+    Acceleration prev_u_bar_;
 
   public:
 
-    explicit DeadzoneController(const BaseContext &cxt) :
-      Controller{cxt}, e_xy_{cxt.dz_e_xy_}, e_z_{cxt.dz_e_z_}, e_yaw_{cxt.dz_e_yaw_}
+    explicit JerkController(const BaseContext &cxt) : Controller{cxt}
     {}
 
-    void calc(double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
+              Acceleration &u_bar) override;
+  };
+
+  //=====================================================================================
+  // BestController uses a deadzone and limits jerk
+  //=====================================================================================
+
+  class BestController : public Controller
+  {
+  private:
+    // Keep previous u_bar
+    Acceleration prev_u_bar_;
+
+  public:
+
+    explicit BestController(const BaseContext &cxt) : Controller{cxt}
+    {}
+
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
+              Acceleration &u_bar) override;
   };
 
 } // namespace pid

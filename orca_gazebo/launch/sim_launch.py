@@ -56,12 +56,16 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'auto_start': 5,  # Auto-start AUV mission
+                'auto_start': 3,  # Auto-start AUV mission
                 'auv_z_target': -2.0,  # Mission runs 2m below the surface
-                'controller': 1,  # Deadzone controller
-                'dz_e_xy': 0.05,
-                'dz_e_z': 0.05,
-                'dz_e_yaw': 0.1,
+                'auv_controller': 3,  # Slow controller
+                'auv_epsilon_xy': 0.05,
+                'auv_epsilon_z': 0.05,
+                'auv_epsilon_yaw': 0.1,
+                'auv_jerk_xy': 10.0,
+                'auv_jerk_z': 10.0,
+                'auv_jerk_yaw': 20.0,
+
             }], remappings=[
                 ('filtered_odom', '/' + left_camera_name + '/odom')
             ]),

@@ -224,7 +224,7 @@ namespace orca_base
     efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_z()) {
-      efforts.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt, HOVER_ACCEL_Z)) * stability_);
+      efforts.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt) + HOVER_ACCEL_Z) * stability_);
     } else {
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
@@ -253,7 +253,7 @@ namespace orca_base
 
       // Compute acceleration due to error
       Acceleration u_bar;
-      controller_->calc(dt, plan, filtered_pose_.pose, ff, u_bar);
+      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar);
 
       // Acceleration => effort
       Efforts efforts;
@@ -307,10 +307,6 @@ namespace orca_base
     control_msg.stability = stability_;
     control_msg.odom_lag = odom_lag_;
     control_pub_->publish(control_msg);
-
-    // Publish experiments on control_ex
-    // TODO
-    // control_ex_pub_->publish(control_msg);
 
     // Publish rviz thrust markers
     if (count_subscribers(thrust_marker_pub_->get_topic_name()) > 0) {
@@ -371,15 +367,23 @@ namespace orca_base
           planner = std::make_shared<DownRandomPlanner>();
           break;
         default:
-          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g...",
-                      filtered_pose_.pose.x, filtered_pose_.pose.y, filtered_pose_.pose.z, filtered_pose_.pose.yaw);
-          planner = std::make_shared<KeepStationPlanner>();
+//          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g...",
+//                      filtered_pose_.pose.x, filtered_pose_.pose.y, filtered_pose_.pose.z, filtered_pose_.pose.yaw);
+//          planner = std::make_shared<KeepStationPlanner>();
+          RCLCPP_INFO(get_logger(), "keeping station at (0, 0, %g), 0...", cxt_.auv_z_target_);
+          planner = std::make_shared<OriginPlanner>();
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
-      switch (cxt_.controller_) {
+      switch (cxt_.auv_controller_) {
         case 1:
           controller_ = std::make_shared<DeadzoneController>(cxt_);
+          break;
+        case 2:
+          controller_ = std::make_shared<JerkController>(cxt_);
+          break;
+        case 3:
+          controller_ = std::make_shared<BestController>(cxt_);
           break;
         default:
           controller_ = std::make_shared<Controller>(cxt_);

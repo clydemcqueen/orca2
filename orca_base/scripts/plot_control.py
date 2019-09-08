@@ -15,9 +15,9 @@ from rclpy.node import Node
 NUM_MESSAGES = 200
 
 
-def calc_usage(pos_neg, off_on, on):
+def calc_fitness(pos_neg, off_on, on):
     """
-    Thruster usage function for a sequence of control messages, high usage is presumably bad
+    Fitness function for a sequence of control messages, lower is better
     :param pos_neg: count of forward<->reverse transitions, cost=10
     :param off_on: count of off->on transitions, cost=5
     :param on: count of on states, cost=1
@@ -89,7 +89,9 @@ class PlotControlNode(Node):
         for i, ax in zip(range(6), pwm_axes):
             pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
 
-            # Compute usage function
+            # Measure fitness
+            # TODO consider error -- closer is better
+            # TODO consider jerk -- less is better
             pos_neg, off_on, on = 0, 0, 0
             for c, n in zip(pwm_values, pwm_values[1:]):
                 if c > 1500 > n:
@@ -100,7 +102,7 @@ class PlotControlNode(Node):
                     off_on += 1
                 if c != 1500:
                     on += 1
-            thruster_usage = calc_usage(pos_neg, off_on, on)
+            thruster_usage = calc_fitness(pos_neg, off_on, on)
             total_usage += thruster_usage
 
             ax.set_title('T{}: pos_neg={}, off_on={}, on={}, usage={}'.format(i, pos_neg, off_on, on, thruster_usage))

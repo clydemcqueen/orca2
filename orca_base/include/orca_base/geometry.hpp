@@ -93,10 +93,10 @@ namespace orca_base
     Pose error(const Pose &that) const
     {
       Pose e;
-      e.x = distance_x(that);
-      e.y = distance_y(that);
-      e.z = distance_z(that);
-      e.yaw = distance_yaw(that);
+      e.x = x - that.x;
+      e.y = y - that.y;
+      e.z = z - that.z;
+      e.yaw = norm_angle(yaw - that.yaw);
       return e;
     }
   };
@@ -179,6 +179,21 @@ namespace orca_base
 
     constexpr Acceleration(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
+
+    void add(const Acceleration &that)
+    {
+      x += that.x;
+      y += that.y;
+      z += that.z;
+      yaw += that.yaw;
+    }
+
+    std::string str()
+    {
+      std::stringstream ss;
+      ss << "(" << x << ", " << y << ", " << z << ", " << yaw << ")";
+      return ss.str();
+    }
   };
 
   //=====================================================================================

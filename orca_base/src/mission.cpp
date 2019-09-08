@@ -69,6 +69,27 @@ namespace orca_base
   }
 
   //=====================================================================================
+  // OriginPlanner
+  //=====================================================================================
+
+  void OriginPlanner::plan(rclcpp::Logger &logger, const BaseContext &cxt,
+                           const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  {
+    // Keep station below the origin
+    PoseStamped target;
+    target.t = start.t;
+    target.pose.z = cxt.auv_z_target_;
+    segments_.push_back(std::make_shared<BaseSegment>(logger, cxt, target.pose, target.pose));
+
+    // Trivial path message
+    geometry_msgs::msg::PoseStamped pose_msg;
+    target.to_msg(pose_msg);
+    planned_path_.header.stamp = start.t;
+    planned_path_.header.frame_id = cxt.map_frame_;
+    planned_path_.poses.push_back(pose_msg);
+  }
+
+  //=====================================================================================
   // RandomPlanner
   //
   // Generate a path between waypoints.
