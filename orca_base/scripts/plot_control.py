@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Analyze and plot orca_msg/Control messages
+Analyze and plot orca_msgs/msg/Control messages
 """
 
 from typing import List

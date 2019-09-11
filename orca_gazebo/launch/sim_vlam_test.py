@@ -1,4 +1,9 @@
-"""Launch a test harness for fiducial_vlam"""
+"""
+Launch a test harness for fiducial_vlam
+
+Inject a new camera on-the-fly:
+ros2 run orca_gazebo inject_entity.py install/orca_description/share/orca_description/urdf/fixed_camera.sdf 0 0 1 0
+"""
 
 import os
 
@@ -34,7 +39,7 @@ def generate_launch_description():
 
         # Add the camera to the simulation
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
-             arguments=[sdf_path, '0', '0', '1', '0']),
+             arguments=[sdf_path, '0', '0', '0', '0']),
 
         # # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
@@ -59,9 +64,9 @@ def generate_launch_description():
                 'base_odometry_pub_topic': 'odom',
                 'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
                 'camera_frame_id': camera_frame,
-                't_camera_base_x': 0.18,
-                't_camera_base_y': -0.15,
-                't_camera_base_z': -0.0675,
+                't_camera_base_x': 0.,
+                't_camera_base_y': 0.,
+                't_camera_base_z': 0.,
                 't_camera_base_roll': 0.,
                 't_camera_base_pitch': math.pi,
                 't_camera_base_yaw': math.pi / 2

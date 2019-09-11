@@ -87,6 +87,11 @@ install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 
 # Install Python nodes
 # PROGRAMS sets execute bits, FILES clears them
-install(PROGRAMS scripts/plot_control.py DESTINATION lib/${PROJECT_NAME})
+install(
+  PROGRAMS
+  scripts/plot_control.py
+  scripts/plot_odom.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

@@ -16,7 +16,7 @@
                 <static>true</static>
                 <uri>model://marker_0</uri>
             </include>
-            <pose>1.0 0.0 1.0 0 -1.5707963267948966 0</pose>
+            <pose>2.0 0.0 0.0 0 -1.5707963267948966 0</pose>
         </model>
 
     </world>
