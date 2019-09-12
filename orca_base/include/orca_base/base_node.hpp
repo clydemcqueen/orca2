@@ -106,29 +106,29 @@ namespace orca_base
     uint8_t mode_{orca_msgs::msg::Control::DISARMED};
 
     // Barometer state
-    double z_initial_{};                        // First z value, used to adjust barometer
-    double z_{};                                // Z from barometer
+    double z_initial_{};                          // First z value, used to adjust barometer
+    double z_{};                                  // Z from barometer
 
     // Joystick state
-    sensor_msgs::msg::Joy joy_msg_;             // Most recent message
+    sensor_msgs::msg::Joy joy_msg_;               // Most recent message
 
     // Odometry state
-    PoseStamped filtered_pose_;                 // Estimated pose
-    double odom_lag_{};                         // Difference between header.stamp and now(), in seconds
-    double stability_{1.0};                     // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
+    PoseStamped filtered_pose_;                   // Estimated pose
+    double odom_lag_{};                           // Difference between header.stamp and now(), in seconds
+    double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // ROV operation
     std::shared_ptr<pid::Controller> rov_z_pid_;
 
     // AUV operation
-    std::shared_ptr<Mission> mission_;          // The mission we're running
-    std::shared_ptr<Controller> controller_;    // Motion controller
-    fiducial_vlam_msgs::msg::Map map_;          // Map of fiducial markers
-    nav_msgs::msg::Path filtered_path_;         // Estimate of the actual path (from filtered_pose_)
+    std::shared_ptr<Mission> mission_;            // The mission we're running
+    std::shared_ptr<BaseController> controller_;  // Motion controller
+    fiducial_vlam_msgs::msg::Map map_;            // Map of fiducial markers
+    nav_msgs::msg::Path filtered_path_;           // Estimate of the actual path (from filtered_pose_)
 
     // Outputs
-    int tilt_{};                                // Camera tilt
-    int brightness_{};                          // Lights
+    int tilt_{};                                  // Camera tilt
+    int brightness_{};                            // Lights
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;

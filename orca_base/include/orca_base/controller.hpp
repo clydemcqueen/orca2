@@ -9,11 +9,11 @@ namespace orca_base
 {
 
   //=====================================================================================
-  // Controller takes a planned pose and an estimated pose and uses 4 pid controllers to
+  // BaseController takes a planned pose and an estimated pose and uses 4 pid controllers to
   // compute an acceleration.
   //=====================================================================================
 
-  class Controller
+  class BaseController
   {
   protected:
 
@@ -25,7 +25,7 @@ namespace orca_base
 
   public:
 
-    explicit Controller(const BaseContext &cxt);
+    explicit BaseController(const BaseContext &cxt);
 
     // Calc u_bar
     // TODO use std::chrono::milliseconds instead of double
@@ -37,11 +37,11 @@ namespace orca_base
   // DeadzoneController turns off the PID controllers if the error is small
   //=====================================================================================
 
-  class DeadzoneController : public Controller
+  class DeadzoneController : public BaseController
   {
   public:
 
-    explicit DeadzoneController(const BaseContext &cxt) : Controller{cxt}
+    explicit DeadzoneController(const BaseContext &cxt) : BaseController{cxt}
     {}
 
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
@@ -52,7 +52,7 @@ namespace orca_base
   // JerkController limits jerk
   //=====================================================================================
 
-  class JerkController : public Controller
+  class JerkController : public BaseController
   {
   private:
     // Keep previous u_bar
@@ -60,7 +60,7 @@ namespace orca_base
 
   public:
 
-    explicit JerkController(const BaseContext &cxt) : Controller{cxt}
+    explicit JerkController(const BaseContext &cxt) : BaseController{cxt}
     {}
 
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
@@ -71,7 +71,7 @@ namespace orca_base
   // BestController uses a deadzone and limits jerk
   //=====================================================================================
 
-  class BestController : public Controller
+  class BestController : public BaseController
   {
   private:
     // Keep previous u_bar
@@ -79,7 +79,7 @@ namespace orca_base
 
   public:
 
-    explicit BestController(const BaseContext &cxt) : Controller{cxt}
+    explicit BestController(const BaseContext &cxt) : BaseController{cxt}
     {}
 
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,

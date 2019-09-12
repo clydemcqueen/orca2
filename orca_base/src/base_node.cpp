@@ -386,7 +386,7 @@ namespace orca_base
           controller_ = std::make_shared<BestController>(cxt_);
           break;
         default:
-          controller_ = std::make_shared<Controller>(cxt_);
+          controller_ = std::make_shared<BaseController>(cxt_);
           break;
       }
 

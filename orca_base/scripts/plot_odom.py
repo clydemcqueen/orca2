@@ -28,7 +28,7 @@ class PlotOdomNode(Node):
     def __init__(self):
         super().__init__('plot_odom')
         self._odom_msgs: List[Odometry] = []
-        self._odom_sub = self.create_subscription(Odometry, '/forward_camera/odom', self.odom_callback, 10)
+        self._odom_sub = self.create_subscription(Odometry, '/left_camera/odom', self.odom_callback, 10) # TODO param
 
     def odom_callback(self, msg: Odometry):
         self._odom_msgs.append(msg)

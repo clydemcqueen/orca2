@@ -3,7 +3,7 @@
 namespace orca_base
 {
 
-  Controller::Controller(const BaseContext &cxt) :
+  BaseController::BaseController(const BaseContext &cxt) :
     x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
     y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
     z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
@@ -11,8 +11,8 @@ namespace orca_base
   {
   }
 
-  void Controller::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
-                        const Acceleration &ff, Acceleration &u_bar)
+  void BaseController::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+                            const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
     x_controller_.set_target(plan.x);

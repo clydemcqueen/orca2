@@ -461,12 +461,12 @@
   -->
   <gazebo reference="left_camera_link">
     <sensor name="left_camera" type="camera">
-      <update_rate>30.0</update_rate>
+      <update_rate>10.0</update_rate>
       <camera name="head">
         <horizontal_fov>1.4</horizontal_fov>
         <image>
-          <width>800</width>
-          <height>600</height>
+          <width>640</width>
+          <height>480</height>
           <format>R8G8B8</format>
         </image>
         <clip>

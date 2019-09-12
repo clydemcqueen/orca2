@@ -58,7 +58,7 @@ def generate_launch_description():
                 'use_sim_time': True,  # Use /clock if available
                 'auto_start': 3,  # Auto-start AUV mission
                 'auv_z_target': -2.0,  # Mission runs 2m below the surface
-                'auv_controller': 3,  # Slow controller
+                'auv_controller': 0,  # BaseController
                 'auv_epsilon_xy': 0.05,
                 'auv_epsilon_z': 0.05,
                 'auv_epsilon_yaw': 0.1,
