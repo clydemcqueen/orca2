@@ -16,6 +16,7 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
+    <depend>Eigen3</depend>
     <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
     <depend>nav_msgs</depend>
@@ -26,6 +27,7 @@
     <depend>sensor_msgs</depend>
     <depend>tf2</depend>
     <depend>tf2_ros</depend>
+    <depend>ukf</depend>
     <depend>visualization_msgs</depend>
 
     <export>

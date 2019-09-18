@@ -11,9 +11,11 @@ if ($ENV{CLION_IDE})
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
+  set(ukf_DIR "${PROJECT_SOURCE_DIR}/../../../install/ukf/share/ukf/cmake")
 endif ()
 
 find_package(ament_cmake REQUIRED)
+find_package(Eigen3)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -24,6 +26,7 @@ find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(ukf REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
@@ -38,6 +41,7 @@ include_directories(
 add_executable(
   base_node
   src/base_node.cpp
+  src/filter.cpp
   src/mission.cpp
   src/segment.cpp
   src/controller.cpp
@@ -54,6 +58,7 @@ ament_target_dependencies(
   sensor_msgs
   tf2
   tf2_ros
+  ukf
   visualization_msgs
 )
 
