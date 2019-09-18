@@ -2,6 +2,8 @@
 
 """
 Analyze and plot orca_msgs/msg/Control messages
+
+Usage: ros2 run orca_base plot_control.py
 """
 
 from typing import List

@@ -2,6 +2,8 @@
 
 """
 Analyze and plot nav_msgs/msg/Control messages
+
+Usage: ros2 run orca_base plot_odom.py /odom:=/forward_camera/odom
 """
 
 import statistics
@@ -28,7 +30,7 @@ class PlotOdomNode(Node):
     def __init__(self):
         super().__init__('plot_odom')
         self._odom_msgs: List[Odometry] = []
-        self._odom_sub = self.create_subscription(Odometry, '/left_camera/odom', self.odom_callback, 10) # TODO param
+        self._odom_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
 
     def odom_callback(self, msg: Odometry):
         self._odom_msgs.append(msg)
