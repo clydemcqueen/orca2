@@ -29,6 +29,25 @@ namespace orca_base
                  b_max);
   }
 
+#if 1
+// Move an angle to the region [-M_PI, M_PI)
+  constexpr double norm_angle(double a)
+  {
+    if (a < -M_PI || a > M_PI) {
+      // Force to [-2PI, 2PI)
+      a = fmod(a, 2 * M_PI);
+
+      // Move to [-PI, PI)
+      if (a < -M_PI) {
+        a += 2 * M_PI;
+      } else if (a > M_PI) {
+        a -= 2 * M_PI;
+      }
+    }
+
+    return a;
+  }
+#else
   // Move an angle to the region [-M_PI, M_PI]
   constexpr double norm_angle(double a)
   {
@@ -41,6 +60,7 @@ namespace orca_base
 
     return a;
   }
+#endif
 
   // Compute a 2d point in a rotated frame (v' = R_transpose * v)
   void rotate_frame(double x, double y, double theta, double &x_r, double &y_r);

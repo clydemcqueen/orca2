@@ -44,6 +44,7 @@ namespace orca_base
     thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
     planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
     filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
+    filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
@@ -56,7 +57,7 @@ namespace orca_base
       "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "filtered_odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
+      "fiducial_odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
       { this->odom_cb_.call(msg); });
 
     // Other subscriptions
@@ -199,18 +200,34 @@ namespace orca_base
     map_ = *msg;
   }
 
-  // New pose estimate available
+  // New odometry available
   void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
   {
-    filtered_pose_.from_msg(*msg);
-    odom_lag_ = (now() - odom_cb_.curr()).seconds();
+    if (!first) {
+      // Record lag for diagnostics
+      odom_lag_ = (now() - odom_cb_.curr()).seconds();
 
-    // Compute a stability metric
-    // TODO
-    // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+      // Filter the odometry, passing in the previous acceleration as the control
+      nav_msgs::msg::Odometry filtered_odom;
+      filter_.filter_odom(odom_cb_.dt(), u_bar_, *msg, filtered_odom);
 
-    if (auv_mode()) {
-      auv_advance(msg->header.stamp, odom_cb_.dt());
+      // Publish filtered odom
+      if (filtered_odom_pub_->get_subscription_count() > 0) {
+        filtered_odom_pub_->publish(filtered_odom);
+      }
+
+      // TODO keep covariance
+      filtered_pose_.from_msg(filtered_odom);
+//      filtered_pose_.from_msg(*msg);
+
+      // Compute a stability metric
+      // TODO
+      // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+
+      if (auv_mode()) {
+        // Run control loop
+        auv_advance(msg->header.stamp, odom_cb_.dt());
+      }
     }
   }
 
@@ -252,12 +269,11 @@ namespace orca_base
       Pose error = plan.error(filtered_pose_.pose);
 
       // Compute acceleration due to error
-      Acceleration u_bar;
-      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar);
+      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar_);
 
       // Acceleration => effort
       Efforts efforts;
-      efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
+      efforts.from_acceleration(u_bar_, filtered_pose_.pose.yaw);
 
       // Throttle back if AUV is unstable
       efforts.scale(stability_);

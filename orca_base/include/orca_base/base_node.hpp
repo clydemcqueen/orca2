@@ -11,6 +11,7 @@
 #include "orca_msgs/msg/leak.hpp"
 
 #include "orca_base/base_context.hpp"
+#include "orca_base/filter.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"
@@ -105,6 +106,10 @@ namespace orca_base
     // Mode
     uint8_t mode_{orca_msgs::msg::Control::DISARMED};
 
+    // UKF state
+    Filter filter_;
+    Acceleration u_bar_;
+
     // Barometer state
     double z_initial_{};                          // First z value, used to adjust barometer
     double z_{};                                  // Z from barometer
@@ -168,6 +173,7 @@ namespace orca_base
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
 
     void rov_advance(const rclcpp::Time &stamp);
 

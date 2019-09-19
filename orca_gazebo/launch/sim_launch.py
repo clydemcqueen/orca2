@@ -67,7 +67,7 @@ def generate_launch_description():
                 'auv_jerk_yaw': 20.0,
 
             }], remappings=[
-                ('filtered_odom', '/' + left_camera_name + '/odom')
+                ('fiducial_odom', '/' + left_camera_name + '/odom')
             ]),
 
         # Load and publish a known map

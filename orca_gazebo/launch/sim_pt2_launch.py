@@ -59,7 +59,7 @@ def generate_launch_description():
                 'auv_z_target': -0.5,
                 'auv_xy_distance': 1.0
             }], remappings=[
-                ('filtered_odom', '/' + camera_name + '/odom')
+                ('fiducial_odom', '/' + camera_name + '/odom')
             ]),
 
         # Load and publish a known map

@@ -3,9 +3,11 @@
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "orca_msgs/msg/barometer.hpp"
 
+#include "orca_msgs/msg/barometer.hpp"
 #include "ukf/ukf.hpp"
+
+#include "geometry.hpp"
 
 namespace orca_base
 {
@@ -16,11 +18,9 @@ namespace orca_base
   public:
     explicit Filter();
 
-    void filter_odom(nav_msgs::msg::Odometry::SharedPtr msg,
-                     geometry_msgs::msg::PoseWithCovarianceStamped &pose);
-
-    void filter_baro(orca_msgs::msg::Barometer::SharedPtr msg,
-                     geometry_msgs::msg::PoseWithCovarianceStamped &pose);
+    void filter_odom(double dt, const Acceleration &u_bar,
+                     const nav_msgs::msg::Odometry &fiducial_odom,
+                     nav_msgs::msg::Odometry &filtered_odom);
   };
 
 } // namespace orca_base

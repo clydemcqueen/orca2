@@ -8,6 +8,7 @@
 #include "orca_msgs/msg/pose.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -126,6 +127,12 @@ namespace orca_base
     }
 
     void from_msg(nav_msgs::msg::Odometry &msg)
+    {
+      t = msg.header.stamp;
+      pose.from_msg(msg.pose.pose);
+    }
+
+    void from_msg(geometry_msgs::msg::PoseWithCovarianceStamped &msg)
     {
       t = msg.header.stamp;
       pose.from_msg(msg.pose.pose);

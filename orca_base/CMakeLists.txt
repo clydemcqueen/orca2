@@ -95,6 +95,7 @@ install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 install(
   PROGRAMS
   scripts/plot_control.py
+  scripts/plot_filter.py
   scripts/plot_odom.py
   DESTINATION lib/${PROJECT_NAME}
 )

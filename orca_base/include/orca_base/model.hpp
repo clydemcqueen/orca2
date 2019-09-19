@@ -94,6 +94,19 @@ namespace orca_base
   constexpr double torque_to_accel_yaw(double torque_yaw)
   { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
 
+  // Velocity => acceleration due to drag
+  constexpr double drag_accel_x(double velo_x)
+  { return force_to_accel(drag_force_x(velo_x)); }
+
+  constexpr double drag_accel_y(double velo_y)
+  { return force_to_accel(drag_force_y(velo_y)); }
+
+  constexpr double drag_accel_z(double velo_z)
+  { return force_to_accel(drag_force_z(velo_z)); }
+
+  constexpr double drag_accel_yaw(double velo_yaw)
+  { return torque_to_accel_yaw(drag_torque_yaw(velo_yaw)); }
+
   // Force / torque => effort
   constexpr double force_to_effort_xy(double force_xy)
   { return force_xy / BOLLARD_FORCE_XY; }

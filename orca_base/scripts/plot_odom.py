@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Analyze and plot nav_msgs/msg/Control messages
+Analyze and plot nav_msgs/msg/Odometry messages
 
 Usage: ros2 run orca_base plot_odom.py /odom:=/forward_camera/odom
 """
@@ -56,8 +56,8 @@ class PlotOdomNode(Node):
                    [msg.pose.pose.orientation.x for msg in self._odom_msgs],
                    [msg.pose.pose.orientation.y for msg in self._odom_msgs],
                    [msg.pose.pose.orientation.z for msg in self._odom_msgs]]
-        lims = [(-2.5, -1.5), (-0.5, 0.5), (-0.5, 0.5),
-                (-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
+        lims = [(-2.0, 2.0), (-2.0, 2.0), (-4.0, 0.0),
+                (-1.1, 1.1), (-1.1, 1.1), (-1.1, 1.1), (-1.1, 1.1)]
         for ax, name, values, lim in zip(axes, names, valuess, lims):
             u = statistics.mean(values)
             s = statistics.stdev(values, u)

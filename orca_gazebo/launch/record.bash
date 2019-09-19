@@ -1,1 +1,1 @@
-ros2 bag record -o bags/bag2 clock control depth forward_camera/odom forward_camera/filtered_odom planned_path filtered_path tf tf_static
+ros2 bag record -o bags/bag2 clock control depth forward_camera/odom planned_path filtered_odom filtered_path tf tf_static
