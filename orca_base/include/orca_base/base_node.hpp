@@ -107,8 +107,9 @@ namespace orca_base
     uint8_t mode_{orca_msgs::msg::Control::DISARMED};
 
     // UKF state
-    Filter filter_;
-    Acceleration u_bar_;
+    std::shared_ptr<Filter> filter_;
+    bool filter_valid_{true};                     // True if the filter is valid
+    Acceleration u_bar_;                          // Last control, used for filter predict step
 
     // Barometer state
     double z_initial_{};                          // First z value, used to adjust barometer

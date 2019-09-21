@@ -26,6 +26,37 @@ def q_to_rpy(q):
     return rpy
 
 
+def diag_index(dim):
+    return dim * 7
+
+
+def plot_subplot(subplot, name, xs, pre_values, post_values, post_vars):
+    """Plot data in a single subplot"""
+
+    if pre_values:
+        subplot.plot(pre_values, marker='x', ls='', label='pre')
+
+    subplot.plot(post_values, label='post')
+
+    post_var_los = [value - var for value, var in zip(post_values, post_vars)]
+    post_var_his = [value + var for value, var in zip(post_values, post_vars)]
+    subplot.fill_between(xs, post_var_los, post_var_his, color='gray', alpha=0.2)
+
+    subplot.set_xticklabels([])
+    subplot.legend()
+
+    if pre_values:
+        pre_u = statistics.mean(pre_values)
+        pre_s = statistics.stdev(pre_values, pre_u)
+        post_u = statistics.mean(post_values)
+        post_s = statistics.stdev(post_values, post_u)
+        subplot.set_title('{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+    else:
+        post_u = statistics.mean(post_values)
+        post_s = statistics.stdev(post_values, post_u)
+        subplot.set_title('{}, post ({:.3f}, {:.3f})'.format(name, post_u, post_s))
+
+
 class PlotFilterNode(Node):
 
     def __init__(self):
@@ -36,8 +67,7 @@ class PlotFilterNode(Node):
         # Listen to synchronized pre- and post-filter messages
         self._time_sync = message_filters.TimeSynchronizer([
             message_filters.Subscriber(self, Odometry, '/pre_filter'),
-            message_filters.Subscriber(self, Odometry, '/post_filter')]
-            , 5)
+            message_filters.Subscriber(self, Odometry, '/post_filter')], 5)
         self._time_sync.registerCallback(self.odom_callback)
 
     def odom_callback(self, pre: Odometry, post: Odometry):
@@ -49,6 +79,8 @@ class PlotFilterNode(Node):
             self._post_msgs.clear()
 
     def plot_msgs(self):
+        """Plot queued messages"""
+
         # Convert quaternions to Euler angles
         pre_pose_rpys = [q_to_rpy(pre.pose.pose.orientation) for pre in self._pre_msgs]
         post_pose_rpys = [q_to_rpy(post.pose.pose.orientation) for post in self._post_msgs]
@@ -57,47 +89,57 @@ class PlotFilterNode(Node):
         fig, ((axpx, axpy, axpz), (axtx, axty, axtz),
               (axproll, axppitch, axpyaw), (axtroll, axtpitch, axtyaw)) = plt.subplots(4, 3)
 
-        # Plot pre-filter values
-        axes = [axpx, axpy, axpz, axproll, axppitch, axpyaw]
-        valuess = [[msg.pose.pose.position.x for msg in self._pre_msgs],
-                   [msg.pose.pose.position.y for msg in self._pre_msgs],
-                   [msg.pose.pose.position.z for msg in self._pre_msgs],
-                   [rpy[0] for rpy in pre_pose_rpys],
-                   [rpy[1] for rpy in pre_pose_rpys],
-                   [rpy[2] for rpy in pre_pose_rpys]]
-        for ax, values in zip(axes, valuess):
-            ax.plot(values, marker='x', ls='', label='pre')
-
-        # Plot post-filter values
-        axes = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
+        # Build lists of items to plot
+        xs = [float(x) for x in range(NUM_MESSAGES)]
+        subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
-        valuess = [[msg.pose.pose.position.x for msg in self._post_msgs],
-                   [msg.pose.pose.position.y for msg in self._post_msgs],
-                   [msg.pose.pose.position.z for msg in self._post_msgs],
-                   [msg.twist.twist.linear.x for msg in self._post_msgs],
-                   [msg.twist.twist.linear.y for msg in self._post_msgs],
-                   [msg.twist.twist.linear.z for msg in self._post_msgs],
-                   [rpy[0] for rpy in post_pose_rpys],
-                   [rpy[1] for rpy in post_pose_rpys],
-                   [rpy[2] for rpy in post_pose_rpys],
-                   [msg.twist.twist.angular.x for msg in self._post_msgs],
-                   [msg.twist.twist.angular.y for msg in self._post_msgs],
-                   [msg.twist.twist.angular.z for msg in self._post_msgs]]
-        lims = [(-1.0, 1.0), (-1.0, 1.0), (-3.0, -1.0),
-                (-0.5, 0.5), (-0.5, 0.5), (-0.5, 0.5),
-                (-4.0, 4.0), (-4.0, 4.0), (-4.0, 4.0),
-                (-4.0, 4.0), (-4.0, 4.0), (-4.0, 4.0)]
-        for ax, name, values, lim in zip(axes, names, valuess, lims):
-            u = statistics.mean(values)
-            s = statistics.stdev(values, u)
-            ax.set_title('{}, mean {:.3f}, stddev {:.3f}'.format(name, u, s))
-            ax.set_ylim(lim)
-            ax.set_xticklabels([])
-            ax.plot(values, label='post')
-            ax.legend()
+
+        pre_valuess = [[msg.pose.pose.position.x for msg in self._pre_msgs],
+                       [msg.pose.pose.position.y for msg in self._pre_msgs],
+                       [msg.pose.pose.position.z for msg in self._pre_msgs],
+                       None,
+                       None,
+                       None,
+                       [rpy[0] for rpy in pre_pose_rpys],
+                       [rpy[1] for rpy in pre_pose_rpys],
+                       [rpy[2] for rpy in pre_pose_rpys],
+                       None,
+                       None,
+                       None]
+
+        post_valuess = [[msg.pose.pose.position.x for msg in self._post_msgs],
+                        [msg.pose.pose.position.y for msg in self._post_msgs],
+                        [msg.pose.pose.position.z for msg in self._post_msgs],
+                        [msg.twist.twist.linear.x for msg in self._post_msgs],
+                        [msg.twist.twist.linear.y for msg in self._post_msgs],
+                        [msg.twist.twist.linear.z for msg in self._post_msgs],
+                        [rpy[0] for rpy in post_pose_rpys],
+                        [rpy[1] for rpy in post_pose_rpys],
+                        [rpy[2] for rpy in post_pose_rpys],
+                        [msg.twist.twist.angular.x for msg in self._post_msgs],
+                        [msg.twist.twist.angular.y for msg in self._post_msgs],
+                        [msg.twist.twist.angular.z for msg in self._post_msgs]]
+
+        post_varss = [[msg.pose.covariance[diag_index(0)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(1)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(2)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(3)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(4)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(5)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(0)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(1)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(2)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(3)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(4)] for msg in self._post_msgs],
+                      [msg.twist.covariance[diag_index(5)] for msg in self._post_msgs]]
+
+        # Plot everything
+        for subplot, name, pre_values, post_values, post_vars in \
+                zip(subplots, names, pre_valuess, post_valuess, post_varss):
+            plot_subplot(subplot, name, xs, pre_values, post_values, post_vars)
 
         # Set figure title
-        fig.suptitle('{} pre- and post-filter odometry messages'.format(NUM_MESSAGES))
+        fig.suptitle('{} pre- and post-filter odometry messages, with (mean, stddev)'.format(NUM_MESSAGES))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')

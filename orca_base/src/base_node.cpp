@@ -36,6 +36,9 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
+    // Odom filter
+    filter_ = std::make_shared<Filter>(cxt_);
+
     // ROV PID controller
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
 
@@ -209,16 +212,30 @@ namespace orca_base
 
       // Filter the odometry, passing in the previous acceleration as the control
       nav_msgs::msg::Odometry filtered_odom;
-      filter_.filter_odom(odom_cb_.dt(), u_bar_, *msg, filtered_odom);
+      if (filter_valid_) {
+        filter_valid_ = filter_->filter_odom(odom_cb_.dt(), u_bar_, *msg, filtered_odom);
 
-      // Publish filtered odom
-      if (filtered_odom_pub_->get_subscription_count() > 0) {
+        if (!filter_valid_) {
+          RCLCPP_ERROR(get_logger(), "filter is invalid, disabling");
+        }
+      }
+
+      // Publish filtered odometry
+      if (filter_valid_ && filtered_odom_pub_->get_subscription_count() > 0) {
         filtered_odom_pub_->publish(filtered_odom);
       }
 
-      // TODO keep covariance
-      filtered_pose_.from_msg(filtered_odom);
-//      filtered_pose_.from_msg(*msg);
+      // Save pose
+      if (cxt_.filter_use_output_) {
+        if (filter_valid_) {
+          filtered_pose_.from_msg(filtered_odom);
+        } else if (auv_mode()) {
+          RCLCPP_ERROR(get_logger(), "invalid filter during AUV operation, disarming");
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
+        }
+      } else {
+        filtered_pose_.from_msg(*msg);
+      }
 
       // Compute a stability metric
       // TODO

@@ -17,6 +17,12 @@ namespace orca_base
   }
 
   template<typename T>
+  constexpr T clamp(const T v, const T minmax)
+  {
+    return clamp(v, -minmax, minmax);
+  }
+
+  template<typename T>
   constexpr T dead_band(const T v, const T d)
   {
     return v < d && v > -d ? 0 : v;

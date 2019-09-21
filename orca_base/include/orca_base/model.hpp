@@ -64,7 +64,7 @@ namespace orca_base
   constexpr double LINEAR_DRAG_Y = 0.5 * FLUID_DENSITY * ROV_AREA_Y * DRAG_COEFFICIENT_Y;
   constexpr double LINEAR_DRAG_Z = 0.5 * FLUID_DENSITY * ROV_AREA_Z * DRAG_COEFFICIENT_Z;
 
-  constexpr double ANGULAR_DRAG_YAW = 0.5 * (LINEAR_DRAG_X + LINEAR_DRAG_Y);   // Estimated
+  constexpr double ANGULAR_DRAG_YAW = 0.02 * (LINEAR_DRAG_X + LINEAR_DRAG_Y);   // Estimated
 
   constexpr double TETHER_DRAG_COEFFICIENT = 1.1;   // Estimated
   constexpr double TETHER_DRAG = 0.5 * FLUID_DENSITY * TETHER_DIAM * TETHER_DRAG_COEFFICIENT;
@@ -93,6 +93,11 @@ namespace orca_base
 
   constexpr double torque_to_accel_yaw(double torque_yaw)
   { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
+
+  // Maximum acceleration due to thrust
+  constexpr double MAX_ACCEL_XY = force_to_accel(BOLLARD_FORCE_XY);
+  constexpr double MAX_ACCEL_Z = force_to_accel(BOLLARD_FORCE_Z);
+  constexpr double MAX_ACCEL_YAW = torque_to_accel_yaw(MAX_TORQUE_YAW);
 
   // Velocity => acceleration due to drag
   constexpr double drag_accel_x(double velo_x)

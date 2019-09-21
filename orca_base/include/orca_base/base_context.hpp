@@ -64,6 +64,11 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_jerk_xy, double, 0.1)                  /* Slow controller jerk xy  */ \
   CXT_MACRO_MEMBER(auv_jerk_z, double, 0.1)                   /* Slow controller jerk z  */ \
   CXT_MACRO_MEMBER(auv_jerk_yaw, double, 0.2)                 /* Slow controller jerk yaw  */ \
+  \
+  CXT_MACRO_MEMBER(filter_use_output, bool, true)             /* Use filtered_odom instead of raw odom  */ \
+  CXT_MACRO_MEMBER(filter_predict_accel, bool, true)          /* Predict acceleration  */ \
+  CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
+  CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

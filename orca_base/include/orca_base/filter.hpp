@@ -5,6 +5,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 
 #include "orca_msgs/msg/barometer.hpp"
+#include "orca_base/base_context.hpp"
 #include "ukf/ukf.hpp"
 
 #include "geometry.hpp"
@@ -16,9 +17,10 @@ namespace orca_base
     ukf::UnscentedKalmanFilter filter_;
 
   public:
-    explicit Filter();
+    explicit Filter(const BaseContext &cxt_);
 
-    void filter_odom(double dt, const Acceleration &u_bar,
+    // Return true if filter is in a valid state
+    bool filter_odom(double dt, const Acceleration &u_bar,
                      const nav_msgs::msg::Odometry &fiducial_odom,
                      nav_msgs::msg::Odometry &filtered_odom);
   };

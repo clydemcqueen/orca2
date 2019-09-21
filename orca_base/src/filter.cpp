@@ -8,9 +8,18 @@
 
 namespace orca_base
 {
-  constexpr int STATE_DIM = 12;       // [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw]T
+  constexpr int STATE_DIM = 18;       // [x, y, ..., vx, vy, ..., ax, ay, ...]T
   constexpr int MEASUREMENT_DIM = 6;  // [x, y, z, roll, pitch, yaw]T
   constexpr int CONTROL_DIM = 4;      // [ax, ay, az, ayaw]T
+
+  // Maximum predicted acceleration
+  // The AUV may be tossed around by waves or bump into something
+  constexpr double MAX_PREDICTED_ACCEL_XYZ = 100;
+  constexpr double MAX_PREDICTED_ACCEL_RPY = 100;
+
+  // Maximum predicted velocity in water
+  constexpr double MAX_PREDICTED_VELO_XYZ = 100;
+  constexpr double MAX_PREDICTED_VELO_RPY = 100;
 
   //==================================================================
   // Utility functions
@@ -95,45 +104,72 @@ namespace orca_base
     }
   }
 
-
   //==================================================================
   // Filter
   //==================================================================
 
-  Filter::Filter() :
+  Filter::Filter(const BaseContext &cxt_) :
     filter_{STATE_DIM, MEASUREMENT_DIM, 0.3, 2.0, 0}
   {
     filter_.set_x(Eigen::MatrixXd::Zero(STATE_DIM, 1));
     filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM));
-    filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.0001);
+    filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
 
     // State transition function
-    filter_.set_f_fn([](const double dt, const Eigen::MatrixXd &u, Eigen::Ref<Eigen::MatrixXd> x)
+    filter_.set_f_fn([&cxt_](const double dt, const Eigen::MatrixXd &u, Eigen::Ref<Eigen::MatrixXd> x)
                      {
-                       // Acceleration, e.g., ax = thrust_ax - vx * vx * drag_constant
-                       // The ROV is self-righting, so predict 0 acceleration for roll and pitch
-                       double ax = u(0, 0) - drag_accel_x(x(6, 0));
-                       double ay = u(1, 0) - drag_accel_y(x(7, 0));
-                       double az = u(2, 0) - drag_accel_z(x(8, 0));
-                       double aroll = 0;
-                       double apitch = 0;
-                       double ayaw = u(3, 0) - drag_accel_yaw(x(11, 0));
+                       if (cxt_.filter_predict_accel_) {
+                         // Assume 0 acceleration
+                         x(12, 0) = 0;
+                         x(13, 0) = 0;
+                         x(14, 0) = 0;
+                         x(15, 0) = 0;
+                         x(16, 0) = 0;
+                         x(17, 0) = 0;
 
-                       // The control input makes the filter unstable.
-                       // For now predict 0 acceleration.
-                       // TODO u(2, 0) includes acceleration due to gravity; remove this
-                       // TODO re-enable control input
-                       ax = ay = az = ayaw = 0;
+                         if (cxt_.filter_predict_control_) {
+                           // Add acceleration due to control
+                           // Back out acceleration due to gravity & buoyancy
+                           x(12, 0) += u(0, 0);
+                           x(13, 0) += u(1, 0);
+                           x(14, 0) += u(2, 0) - HOVER_ACCEL_Z;
+                           x(17, 0) += u(3, 0);
+                         }
 
-                       // Velocity, e.g., vx += ax * dt
-                       x(6, 0) += ax * dt;
-                       x(7, 0) += ay * dt;
-                       x(8, 0) += az * dt;
-                       x(9, 0) += aroll * dt;
-                       x(10, 0) += apitch * dt;
-                       x(11, 0) += ayaw * dt;
+                         if (cxt_.filter_predict_drag_) {
+                           // Add acceleration due to drag
+                           x(12, 0) += drag_accel_x(x(6, 0));
+                           x(13, 0) += drag_accel_y(x(7, 0));
+                           x(14, 0) += drag_accel_z(x(8, 0));
+                           x(17, 0) += drag_accel_yaw(x(11, 0));
+                         }
+                       }
 
-                       // Position, e.g., x += vx * dt
+                       // Clamp acceleration
+                       x(12, 0) = clamp(x(12, 0), MAX_PREDICTED_ACCEL_XYZ);
+                       x(13, 0) = clamp(x(13, 0), MAX_PREDICTED_ACCEL_XYZ);
+                       x(14, 0) = clamp(x(14, 0), MAX_PREDICTED_ACCEL_XYZ);
+                       x(15, 0) = clamp(x(15, 0), MAX_PREDICTED_ACCEL_RPY);
+                       x(16, 0) = clamp(x(16, 0), MAX_PREDICTED_ACCEL_RPY);
+                       x(17, 0) = clamp(x(17, 0), MAX_PREDICTED_ACCEL_RPY);
+
+                       // Velocity, vx += ax * dt
+                       x(6, 0) += x(12, 0) * dt;
+                       x(7, 0) += x(13, 0) * dt;
+                       x(8, 0) += x(14, 0) * dt;
+                       x(9, 0) += x(15, 0) * dt;
+                       x(10, 0) += x(16, 0) * dt;
+                       x(11, 0) += x(17, 0) * dt;
+
+                       // Clamp velocity
+                       x(6, 0) = clamp(x(6, 0), MAX_PREDICTED_VELO_XYZ);
+                       x(7, 0) = clamp(x(7, 0), MAX_PREDICTED_VELO_XYZ);
+                       x(8, 0) = clamp(x(8, 0), MAX_PREDICTED_VELO_XYZ);
+                       x(9, 0) = clamp(x(9, 0), MAX_PREDICTED_VELO_RPY);
+                       x(10, 0) = clamp(x(10, 0), MAX_PREDICTED_VELO_RPY);
+                       x(11, 0) = clamp(x(11, 0), MAX_PREDICTED_VELO_RPY);
+
+                       // Position, x += vx * dt
                        x(0, 0) += x(6, 0) * dt;
                        x(1, 0) += x(7, 0) * dt;
                        x(2, 0) += x(8, 0) * dt;
@@ -154,14 +190,16 @@ namespace orca_base
                      });
   }
 
-  void Filter::filter_odom(double dt, const Acceleration &u_bar,
+  bool Filter::filter_odom(double dt, const Acceleration &u_bar,
                            const nav_msgs::msg::Odometry &fiducial_odom,
                            nav_msgs::msg::Odometry &filtered_odom)
   {
     Eigen::MatrixXd u;
     to_u(u_bar, u);
 
-    filter_.predict(dt, u);
+    if (!filter_.predict(dt, u)) {
+      return false;
+    }
 
     Eigen::MatrixXd z;
     to_z(fiducial_odom.pose.pose, z);
@@ -169,13 +207,17 @@ namespace orca_base
     Eigen::MatrixXd R;
     to_R(fiducial_odom.pose.covariance, R);
 
-    filter_.update(z, R);
+    if (!filter_.update(z, R)) {
+      return false;
+    }
 
     filtered_odom.header = fiducial_odom.header;
     pose_from_x(filter_.x(), filtered_odom.pose.pose);
     twist_from_x(filter_.x(), filtered_odom.twist.twist);
     pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
     twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+
+    return true;
   }
 
 } // namespace orca_base
