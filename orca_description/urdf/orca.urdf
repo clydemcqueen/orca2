@@ -427,7 +427,7 @@
   -->
   <gazebo reference="base_link">
     <sensor name="barometer_sensor" type="altimeter">
-      <update_rate>50</update_rate>
+      <update_rate>10</update_rate>
       <!-- Match orca_driver rate -->
       <plugin filename="libOrcaBarometerPlugin.so" name="OrcaBarometerPlugin">
         <fluid_density>1029</fluid_density>
@@ -447,26 +447,17 @@
     </sensor>
   </gazebo>
   <!--
-    The OrcaGroundTruthPlugin publishes a ground truth pose.
-  -->
-  <gazebo>
-    <plugin filename="libOrcaGroundTruthPlugin.so" name="OrcaGroundTruthPlugin">
-      <link name="base_link"/>
-      <ros_topic>/ground_truth</ros_topic>
-    </plugin>
-  </gazebo>
-  <!--
     The camera_controller plugin (wraps a Gazebo camera sensor) simulates a camera driver.
     Left down-facing camera driver:
   -->
   <gazebo reference="left_camera_link">
     <sensor name="left_camera" type="camera">
-      <update_rate>10.0</update_rate>
+      <update_rate>30.0</update_rate>
       <camera name="head">
         <horizontal_fov>1.4</horizontal_fov>
         <image>
-          <width>640</width>
-          <height>480</height>
+          <width>800</width>
+          <height>600</height>
           <format>R8G8B8</format>
         </image>
         <clip>

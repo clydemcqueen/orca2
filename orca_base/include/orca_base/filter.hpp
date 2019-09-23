@@ -15,13 +15,29 @@ namespace orca_base
   class Filter
   {
     ukf::UnscentedKalmanFilter filter_;
+    rclcpp::Time filter_time_{};
+    orca_msgs::msg::Barometer baro_q_{};
+
+    double dt(const rclcpp::Time &stamp);
+
+    void process_baro(const Acceleration &u_bar, const orca_msgs::msg::Barometer &baro,
+                      nav_msgs::msg::Odometry &filtered_odom);
+
+    void process_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
+                      nav_msgs::msg::Odometry &filtered_odom);
 
   public:
+
     explicit Filter(const BaseContext &cxt_);
 
-    // Return true if filter is in a valid state
-    bool filter_odom(double dt, const Acceleration &u_bar,
-                     const nav_msgs::msg::Odometry &fiducial_odom,
+    bool filter_valid()
+    { return filter_.valid(); }
+
+    // Always succeeds
+    void queue_baro(rclcpp::Logger logger, const orca_msgs::msg::Barometer &baro);
+
+    // Return true if we have good results in filtered_odom
+    bool filter_odom(rclcpp::Logger logger, const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
                      nav_msgs::msg::Odometry &filtered_odom);
   };
 

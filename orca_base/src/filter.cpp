@@ -9,7 +9,8 @@
 namespace orca_base
 {
   constexpr int STATE_DIM = 18;       // [x, y, ..., vx, vy, ..., ax, ay, ...]T
-  constexpr int MEASUREMENT_DIM = 6;  // [x, y, z, roll, pitch, yaw]T
+  constexpr int BARO_DIM = 1;         // [z]T
+  constexpr int ODOM_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
   constexpr int CONTROL_DIM = 4;      // [ax, ay, az, ayaw]T
 
   // Maximum predicted acceleration
@@ -25,6 +26,11 @@ namespace orca_base
   // Utility functions
   //==================================================================
 
+  bool valid_stamp(const rclcpp::Time &stamp)
+  {
+    return stamp.nanoseconds() > 0;
+  }
+
   // Create control matrix u
   void to_u(const Acceleration &in, Eigen::MatrixXd &out)
   {
@@ -33,27 +39,39 @@ namespace orca_base
   }
 
   // Create measurement matrix z
-  void to_z(const geometry_msgs::msg::Pose &in, Eigen::MatrixXd &out)
+  void odom_to_z(const nav_msgs::msg::Odometry &odom, Eigen::MatrixXd &z)
   {
     tf2::Transform t_map_base;
-    tf2::fromMsg(in, t_map_base);
+    tf2::fromMsg(odom.pose.pose, t_map_base);
 
     tf2Scalar roll, pitch, yaw;
     t_map_base.getBasis().getRPY(roll, pitch, yaw);
 
-    out = Eigen::MatrixXd(MEASUREMENT_DIM, 1);
-    out << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
+    z = Eigen::MatrixXd(ODOM_DIM, 1);
+    z << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
+  }
+
+  void baro_to_z(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &z)
+  {
+    z = Eigen::MatrixXd(BARO_DIM, 1);
+    z << -baro.depth;
   }
 
   // Create measurement covariance matrix R
-  void to_R(const std::array<double, 36> &in, Eigen::MatrixXd &out)
+  void odom_to_R(const nav_msgs::msg::Odometry &odom, Eigen::MatrixXd &R)
   {
-    out = Eigen::MatrixXd(MEASUREMENT_DIM, MEASUREMENT_DIM);
-    for (int i = 0; i < MEASUREMENT_DIM; i++) {
-      for (int j = 0; j < MEASUREMENT_DIM; j++) {
-        out(i, j) = in[i * MEASUREMENT_DIM + j];
+    R = Eigen::MatrixXd(ODOM_DIM, ODOM_DIM);
+    for (int i = 0; i < ODOM_DIM; i++) {
+      for (int j = 0; j < ODOM_DIM; j++) {
+        R(i, j) = odom.pose.covariance[i * ODOM_DIM + j];
       }
     }
+  }
+
+  void baro_to_R(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &R)
+  {
+    R = Eigen::MatrixXd(BARO_DIM, BARO_DIM);
+    R << 0.01; // Same as orca_gazebo/barometer_plugin.cpp
   }
 
   // Extract pose from state
@@ -85,21 +103,21 @@ namespace orca_base
   }
 
   // Extract pose covariance
-  void pose_covar_from_P(const Eigen::MatrixXd &in, std::array<double, 36> &out)
+  void pose_covar_from_P(const Eigen::MatrixXd &P, std::array<double, 36> &pose_covar)
   {
-    for (int i = 0; i < MEASUREMENT_DIM; i++) {
-      for (int j = 0; j < MEASUREMENT_DIM; j++) {
-        out[i * MEASUREMENT_DIM + j] = in(i, j);  // [0:6, 0:6]
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 6; j++) {
+        pose_covar[i * 6 + j] = P(i, j);  // [0:6, 0:6]
       }
     }
   }
 
   // Extract twist covariance
-  void twist_covar_from_P(const Eigen::MatrixXd &in, std::array<double, 36> &out)
+  void twist_covar_from_P(const Eigen::MatrixXd &P, std::array<double, 36> &twist_covar)
   {
-    for (int i = 0; i < MEASUREMENT_DIM; i++) {
-      for (int j = 0; j < MEASUREMENT_DIM; j++) {
-        out[i * MEASUREMENT_DIM + j] = in(i + MEASUREMENT_DIM, j + MEASUREMENT_DIM);  // [6:12, 6:12]
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 6; j++) {
+        twist_covar[i * 6 + j] = P(i + 6, j + 6);  // [6:12, 6:12]
       }
     }
   }
@@ -109,7 +127,7 @@ namespace orca_base
   //==================================================================
 
   Filter::Filter(const BaseContext &cxt_) :
-    filter_{STATE_DIM, MEASUREMENT_DIM, 0.3, 2.0, 0}
+    filter_{STATE_DIM, 0.3, 2.0, 0}
   {
     filter_.set_x(Eigen::MatrixXd::Zero(STATE_DIM, 1));
     filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM));
@@ -178,6 +196,67 @@ namespace orca_base
                        x(5, 0) = norm_angle(x(5, 0) + x(11, 0) * dt);
                      });
 
+    // TODO set residual & mean functions for x
+  }
+
+  double Filter::dt(const rclcpp::Time &stamp)
+  {
+    // Compute delta from last message
+    // Use a small delta to bootstrap the filter
+    // TODO don't call predict() if dt < epsilon
+    double result = valid_stamp(filter_time_) ? (stamp - filter_time_).seconds() : 0.1;
+
+    // Move time forward
+    filter_time_ = stamp;
+
+    return result;
+  }
+
+  void Filter::process_baro(const Acceleration &u_bar, const orca_msgs::msg::Barometer &baro,
+                            nav_msgs::msg::Odometry &filtered_odom)
+  {
+    Eigen::MatrixXd u;
+    to_u(u_bar, u);
+
+    filter_.predict(dt(baro.header.stamp), u);
+
+    Eigen::MatrixXd z;
+    baro_to_z(baro, z);
+
+    Eigen::MatrixXd R;
+    baro_to_R(baro, R);
+
+    // Measurement function
+    filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
+                     {
+                       z(0, 0) = x(3, 0);
+                     });
+
+    // TODO set residual & mean functions for z
+
+    filter_.update(z, R);
+
+    filtered_odom.header = baro.header;
+    pose_from_x(filter_.x(), filtered_odom.pose.pose);
+    twist_from_x(filter_.x(), filtered_odom.twist.twist);
+    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
+    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+  }
+
+  void Filter::process_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
+                            nav_msgs::msg::Odometry &filtered_odom)
+  {
+    Eigen::MatrixXd u;
+    to_u(u_bar, u);
+
+    filter_.predict(dt(odom.header.stamp), u);
+
+    Eigen::MatrixXd z;
+    odom_to_z(odom, z);
+
+    Eigen::MatrixXd R;
+    odom_to_R(odom, R);
+
     // Measurement function
     filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
                      {
@@ -188,36 +267,67 @@ namespace orca_base
                        z(4, 0) = x(4, 0);
                        z(5, 0) = x(5, 0);
                      });
-  }
 
-  bool Filter::filter_odom(double dt, const Acceleration &u_bar,
-                           const nav_msgs::msg::Odometry &fiducial_odom,
-                           nav_msgs::msg::Odometry &filtered_odom)
-  {
-    Eigen::MatrixXd u;
-    to_u(u_bar, u);
+    // TODO set residual & mean functions for z
 
-    if (!filter_.predict(dt, u)) {
-      return false;
-    }
+    filter_.update(z, R);
 
-    Eigen::MatrixXd z;
-    to_z(fiducial_odom.pose.pose, z);
-
-    Eigen::MatrixXd R;
-    to_R(fiducial_odom.pose.covariance, R);
-
-    if (!filter_.update(z, R)) {
-      return false;
-    }
-
-    filtered_odom.header = fiducial_odom.header;
+    filtered_odom.header = odom.header;
     pose_from_x(filter_.x(), filtered_odom.pose.pose);
     twist_from_x(filter_.x(), filtered_odom.twist.twist);
     pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
     twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+  }
 
-    return true;
+  void Filter::queue_baro(rclcpp::Logger logger, const orca_msgs::msg::Barometer &baro)
+  {
+    rclcpp::Time baro_stamp{baro.header.stamp};
+
+    if (!valid_stamp(baro_stamp)) {
+      RCLCPP_WARN(logger, "barometer message has invalid time, dropping");
+    } else {
+      baro_q_ = baro;
+    }
+  }
+
+  bool Filter::filter_odom(rclcpp::Logger logger, const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
+                           nav_msgs::msg::Odometry &filtered_odom)
+  {
+    rclcpp::Time odom_stamp{odom.header.stamp};
+
+    if (!valid_stamp(odom_stamp)) {
+      RCLCPP_WARN(logger, "odometry message has invalid time, dropping");
+      return false;
+    }
+
+    if (valid_stamp(filter_time_) && valid_stamp(odom_stamp) && odom_stamp < filter_time_) {
+      RCLCPP_WARN(logger, "odometry message older than filter time, dropping");
+      return false;
+    }
+
+    rclcpp::Time baro_stamp{baro_q_.header.stamp};
+
+    if (valid_stamp(filter_time_) && valid_stamp(baro_stamp) && baro_stamp < filter_time_) {
+      RCLCPP_WARN(logger, "barometer message older than filter time, dropping");
+      baro_q_ = orca_msgs::msg::Barometer{};
+      baro_stamp = rclcpp::Time{baro_q_.header.stamp};
+    }
+
+    if (valid_stamp(baro_stamp)) {
+      if (baro_stamp < odom_stamp) {
+        process_baro(u_bar, baro_q_, filtered_odom);
+        process_odom(u_bar, odom, filtered_odom);
+      } else {
+        process_odom(u_bar, odom, filtered_odom);
+        process_baro(u_bar, baro_q_, filtered_odom);
+      }
+
+      baro_q_ = orca_msgs::msg::Barometer{};
+    } else {
+      process_odom(u_bar, odom, filtered_odom);
+    }
+
+    return filter_valid();
   }
 
 } // namespace orca_base

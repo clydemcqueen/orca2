@@ -96,6 +96,7 @@ namespace gazebo
           return;
         }
 
+        // TODO use find & use the equivalent of LastMeasurementTime(), see barometer plugin
         imu_msg_.header.stamp = node_->now();
 
         // Get accel and gyro readings in the sensor frame (base_link)

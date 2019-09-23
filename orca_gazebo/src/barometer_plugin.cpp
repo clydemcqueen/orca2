@@ -3,6 +3,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "gazebo_ros/node.hpp"
+#include "gazebo_ros/conversions/builtin_interfaces.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
 #include "orca_gazebo/orca_gazebo_util.hpp"
@@ -92,13 +93,13 @@ namespace gazebo
       altimeter_->SetActive(true);
     }
 
-    // The update event is broadcast at the sensor frequency, roughly 60Hz
+    // The update event is broadcast at the sensor frequency, see xacro/urdf/sdf file
     void OnUpdate()
     {
-      // Don't publish bogus time stamps
-      if (node_->now().nanoseconds() <= 0) {
-        return;
-      }
+      // Use measurement time from the parent sensor instead of node_->now()
+      // Follow examples in ros-simulation/gazebo_ros_pkgs
+      builtin_interfaces::msg::Time msg_time = gazebo_ros::Convert<builtin_interfaces::msg::Time>(
+        altimeter_->LastMeasurementTime());
 
       // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
       double depth = orca_gazebo::gaussianKernel(-altimeter_->Altitude(), DEPTH_STDDEV);
@@ -106,7 +107,7 @@ namespace gazebo
       if (node_->count_subscribers(baro_pub_->get_topic_name()) > 0) {
         orca_msgs::msg::Barometer baro_msg;
         baro_msg.header.frame_id = "map";
-        baro_msg.header.stamp = node_->now();
+        baro_msg.header.stamp = msg_time;
 
         if (depth >= 0.0) {
           baro_msg.depth = depth;
@@ -124,7 +125,7 @@ namespace gazebo
       if (node_->count_subscribers(pose_pub_->get_topic_name()) > 0) {
         geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
         pose_msg.header.frame_id = "map";
-        pose_msg.header.stamp = node_->now();
+        pose_msg.header.stamp = msg_time;
         pose_msg.pose.covariance[14] = DEPTH_STDDEV * DEPTH_STDDEV;
 
         if (depth >= 0.0) {

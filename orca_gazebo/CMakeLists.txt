@@ -72,16 +72,6 @@ ament_target_dependencies(
 )
 ament_export_libraries(OrcaThrusterPlugin)
 
-add_library(OrcaGroundTruthPlugin SHARED src/ground_truth_plugin.cpp)
-ament_target_dependencies(
-  OrcaGroundTruthPlugin
-  gazebo_dev
-  gazebo_ros
-  nav_msgs
-  rclcpp
-)
-ament_export_libraries(OrcaGroundTruthPlugin)
-
 add_library(OrcaIMUPlugin SHARED src/imu_plugin.cpp)
 ament_target_dependencies(
   OrcaIMUPlugin
@@ -117,7 +107,6 @@ install(
   OrcaBarometerPlugin
   OrcaBuoyancyPlugin
   OrcaIMUPlugin
-  OrcaGroundTruthPlugin
   orca_gazebo_test
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

@@ -92,6 +92,9 @@ namespace orca_base
       RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
     } else {
       z_ = -msg->depth - z_initial_;
+      if (cxt_.filter_baro_) {
+        filter_->queue_baro(get_logger(), *msg);
+      }
     }
   }
 
@@ -213,7 +216,7 @@ namespace orca_base
       // Filter the odometry, passing in the previous acceleration as the control
       nav_msgs::msg::Odometry filtered_odom;
       if (filter_valid_) {
-        filter_valid_ = filter_->filter_odom(odom_cb_.dt(), u_bar_, *msg, filtered_odom);
+        filter_valid_ = filter_->filter_odom(get_logger(), u_bar_, *msg, filtered_odom);
 
         if (!filter_valid_) {
           RCLCPP_ERROR(get_logger(), "filter is invalid, disabling");

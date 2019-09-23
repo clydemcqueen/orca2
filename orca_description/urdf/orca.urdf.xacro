@@ -283,7 +283,7 @@
   -->
   <gazebo reference="base_link">
     <sensor name="barometer_sensor" type="altimeter">
-      <update_rate>50</update_rate> <!-- Match orca_driver rate -->
+      <update_rate>10</update_rate> <!-- Match orca_driver rate -->
       <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
         <fluid_density>${FLUID_DENSITY}</fluid_density>
       </plugin>
@@ -300,16 +300,6 @@
       <plugin name="OrcaIMUPlugin" filename="libOrcaIMUPlugin.so" />
       <pose>0 0 0 0 0 0</pose>
     </sensor>
-  </gazebo>
-
-  <!--
-    The OrcaGroundTruthPlugin publishes a ground truth pose.
-  -->
-  <gazebo>
-    <plugin name="OrcaGroundTruthPlugin" filename="libOrcaGroundTruthPlugin.so">
-      <link name="base_link" />
-      <ros_topic>/ground_truth</ros_topic>
-    </plugin>
   </gazebo>
 
   <!--

@@ -69,6 +69,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(filter_predict_accel, bool, true)          /* Predict acceleration  */ \
   CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
   CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
+  CXT_MACRO_MEMBER(filter_baro, bool, true)                   /* Add barometer messages to the filter  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
