@@ -14,11 +14,16 @@ namespace orca_base
 {
   class Filter
   {
+    rclcpp::Logger logger_;
+
     ukf::UnscentedKalmanFilter filter_;
     rclcpp::Time filter_time_{};
     orca_msgs::msg::Barometer baro_q_{};
 
-    double dt(const rclcpp::Time &stamp);
+    void predict(const Acceleration &u_bar, const rclcpp::Time &stamp);
+
+    void update(const Eigen::MatrixXd &z, const Eigen::MatrixXd &R, const builtin_interfaces::msg::Time &stamp,
+                nav_msgs::msg::Odometry &filtered_odom);
 
     void process_baro(const Acceleration &u_bar, const orca_msgs::msg::Barometer &baro,
                       nav_msgs::msg::Odometry &filtered_odom);
@@ -28,16 +33,16 @@ namespace orca_base
 
   public:
 
-    explicit Filter(const BaseContext &cxt_);
+    explicit Filter(const rclcpp::Logger &logger, const BaseContext &cxt_);
 
     bool filter_valid()
     { return filter_.valid(); }
 
     // Always succeeds
-    void queue_baro(rclcpp::Logger logger, const orca_msgs::msg::Barometer &baro);
+    void queue_baro(const orca_msgs::msg::Barometer &baro);
 
     // Return true if we have good results in filtered_odom
-    bool filter_odom(rclcpp::Logger logger, const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
+    bool filter_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
                      nav_msgs::msg::Odometry &filtered_odom);
   };
 

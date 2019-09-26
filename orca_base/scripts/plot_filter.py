@@ -11,13 +11,14 @@ from typing import List
 
 import matplotlib
 import matplotlib.pyplot as plt
-import message_filters
 import rclpy
 import transformations as xf
+from builtin_interfaces.msg import Time
 from nav_msgs.msg import Odometry
+from orca_msgs.msg import Barometer
 from rclpy.node import Node
 
-NUM_MESSAGES = 30
+QUEUE_FOR = 1.0  # Seconds
 
 
 def q_to_rpy(q):
@@ -30,17 +31,23 @@ def diag_index(dim):
     return dim * 7
 
 
-def plot_subplot(subplot, name, xs, pre_values, post_values, post_vars):
+def plot_subplot(subplot, name,
+                 baro_xs, baro_values, baro_vars,
+                 pre_xs, pre_values, pre_vars,
+                 post_xs, post_values, post_vars):
     """Plot data in a single subplot"""
 
-    if pre_values:
-        subplot.plot(pre_values, marker='x', ls='', label='pre')
+    if pre_xs and pre_values and pre_vars:
+        subplot.errorbar(pre_xs, pre_values, yerr=pre_vars, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
 
-    subplot.plot(post_values, label='post')
+    subplot.plot(post_xs, post_values, label='post')
 
-    post_var_los = [value - var for value, var in zip(post_values, post_vars)]
-    post_var_his = [value + var for value, var in zip(post_values, post_vars)]
-    subplot.fill_between(xs, post_var_los, post_var_his, color='gray', alpha=0.2)
+    post_s_los = [value - var for value, var in zip(post_values, post_vars)]
+    post_s_his = [value + var for value, var in zip(post_values, post_vars)]
+    subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
+
+    if baro_xs and baro_values and baro_vars:
+        subplot.errorbar(baro_xs, baro_values, yerr=baro_vars, marker='o', ls='', label='baro')
 
     subplot.set_xticklabels([])
     subplot.legend()
@@ -57,26 +64,59 @@ def plot_subplot(subplot, name, xs, pre_values, post_values, post_vars):
         subplot.set_title('{}, post ({:.3f}, {:.3f})'.format(name, post_u, post_s))
 
 
+def seconds(stamp: Time) -> float:
+    return float(stamp.sec) + float(stamp.nanosec) / 1e9
+
+
 class PlotFilterNode(Node):
 
     def __init__(self):
         super().__init__('plot_odom')
+        self._first_time = None
+        self._last_time = None
+        self._baro_msgs: List[Barometer] = []
         self._pre_msgs: List[Odometry] = []
         self._post_msgs: List[Odometry] = []
 
-        # Listen to synchronized pre- and post-filter messages
-        self._time_sync = message_filters.TimeSynchronizer([
-            message_filters.Subscriber(self, Odometry, '/pre_filter'),
-            message_filters.Subscriber(self, Odometry, '/post_filter')], 5)
-        self._time_sync.registerCallback(self.odom_callback)
+        self._baro_sub = self.create_subscription(Barometer, '/barometer_adj', self.baro_callback, 5)
+        self._pre_sub = self.create_subscription(Odometry, '/odom', self.pre_callback, 5)
+        self._post_sub = self.create_subscription(Odometry, '/filtered_odom', self.post_callback, 5)
 
-    def odom_callback(self, pre: Odometry, post: Odometry):
-        self._pre_msgs.append(pre)
-        self._post_msgs.append(post)
-        if len(self._pre_msgs) >= NUM_MESSAGES:
-            self.plot_msgs()
-            self._pre_msgs.clear()
-            self._post_msgs.clear()
+    def baro_callback(self, msg: Barometer):
+        self._baro_msgs.append(msg)
+        self.process(msg)
+
+    def pre_callback(self, msg: Odometry):
+        self._pre_msgs.append(msg)
+        self.process(msg)
+
+    def post_callback(self, msg: Odometry):
+        self._post_msgs.append(msg)
+        self.process(msg)
+
+    def process(self, msg):
+        s = seconds(msg.header.stamp)
+
+        # Update 1st, last
+        if self._first_time is None or s < self._first_time:
+            self._first_time = s
+        if self._last_time is None or s > self._last_time:
+            self._last_time = s
+
+        # Plot messages?
+        if self._last_time - self._first_time > QUEUE_FOR:
+            # If _post_msgs is empty there isn't enough to plot
+            if len(self._post_msgs):
+                self.plot_msgs()
+            else:
+                print('dropping {} odom {} baro, filter disabled?'.format(len(self._pre_msgs), len(self._baro_msgs)))
+
+            # Reset
+            self._first_time = None
+            self._last_time = None
+            self._baro_msgs: List[Barometer] = []
+            self._pre_msgs: List[Odometry] = []
+            self._post_msgs: List[Odometry] = []
 
     def plot_msgs(self):
         """Plot queued messages"""
@@ -90,22 +130,39 @@ class PlotFilterNode(Node):
               (axproll, axppitch, axpyaw), (axtroll, axtpitch, axtyaw)) = plt.subplots(4, 3)
 
         # Build lists of items to plot
-        xs = [float(x) for x in range(NUM_MESSAGES)]
+        baro_xs = [seconds(msg.header.stamp) for msg in self._baro_msgs]
+        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]
+        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
+
+        baro_valuess = [None, None, [msg.z for msg in self._baro_msgs],
+                        None, None, None,
+                        None, None, None,
+                        None, None, None]
+
+        baro_varss = [None, None, [msg.z_variance for msg in self._baro_msgs],
+                      None, None, None,
+                      None, None, None,
+                      None, None, None]
 
         pre_valuess = [[msg.pose.pose.position.x for msg in self._pre_msgs],
                        [msg.pose.pose.position.y for msg in self._pre_msgs],
                        [msg.pose.pose.position.z for msg in self._pre_msgs],
-                       None,
-                       None,
-                       None,
+                       None, None, None,
                        [rpy[0] for rpy in pre_pose_rpys],
                        [rpy[1] for rpy in pre_pose_rpys],
                        [rpy[2] for rpy in pre_pose_rpys],
-                       None,
-                       None,
-                       None]
+                       None, None, None]
+
+        pre_varss = [[msg.pose.covariance[diag_index(0)] for msg in self._pre_msgs],
+                     [msg.pose.covariance[diag_index(1)] for msg in self._pre_msgs],
+                     [msg.pose.covariance[diag_index(2)] for msg in self._pre_msgs],
+                     None, None, None,
+                     [msg.pose.covariance[diag_index(3)] for msg in self._pre_msgs],
+                     [msg.pose.covariance[diag_index(4)] for msg in self._pre_msgs],
+                     [msg.pose.covariance[diag_index(5)] for msg in self._pre_msgs],
+                     None, None, None]
 
         post_valuess = [[msg.pose.pose.position.x for msg in self._post_msgs],
                         [msg.pose.pose.position.y for msg in self._post_msgs],
@@ -123,23 +180,26 @@ class PlotFilterNode(Node):
         post_varss = [[msg.pose.covariance[diag_index(0)] for msg in self._post_msgs],
                       [msg.pose.covariance[diag_index(1)] for msg in self._post_msgs],
                       [msg.pose.covariance[diag_index(2)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(3)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(4)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(5)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(0)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(1)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(2)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(3)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(4)] for msg in self._post_msgs],
+                      [msg.pose.covariance[diag_index(5)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(3)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(4)] for msg in self._post_msgs],
                       [msg.twist.covariance[diag_index(5)] for msg in self._post_msgs]]
 
         # Plot everything
-        for subplot, name, pre_values, post_values, post_vars in \
-                zip(subplots, names, pre_valuess, post_valuess, post_varss):
-            plot_subplot(subplot, name, xs, pre_values, post_values, post_vars)
+        for subplot, name, baro_values, baro_vars, pre_values, pre_vars, post_values, post_vars in \
+                zip(subplots, names, baro_valuess, baro_varss, pre_valuess, pre_varss, post_valuess, post_varss):
+            plot_subplot(subplot, name,
+                         baro_xs, baro_values, baro_vars,
+                         pre_xs, pre_values, pre_vars,
+                         post_xs, post_values, post_vars)
 
         # Set figure title
-        fig.suptitle('{} pre- and post-filter odometry messages, with (mean, stddev)'.format(NUM_MESSAGES))
+        fig.suptitle('pre- and post-filter odometry messages, with (mean, stddev)')
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')

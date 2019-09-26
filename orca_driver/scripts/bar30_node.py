@@ -11,6 +11,8 @@ from builtin_interfaces.msg import Time
 from orca_msgs.msg import Barometer
 from rclpy.node import Node
 
+DEPTH_STDDEV = 0.01
+
 
 def now() -> Time:
     """Return builtin_interfaces.msg.Time object with the current CPU time"""
@@ -45,7 +47,8 @@ class Bar30Node(Node):
             msg.header.stamp = now()
             msg.pressure = self._sensor.pressure() * 100.0  # Pascals
             msg.temperature = self._sensor.temperature()  # Celsius
-            msg.depth = self._sensor.depth()  # meters
+            msg.z = -self._sensor.depth()  # meters
+            msg.z_variance = DEPTH_STDDEV * DEPTH_STDDEV
             self._baro_pub.publish(msg)
         else:
             self.get_logger().error("can't read Bar30")

@@ -37,7 +37,7 @@ namespace orca_base
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
     // Odom filter
-    filter_ = std::make_shared<Filter>(cxt_);
+    filter_ = std::make_shared<Filter>(get_logger(), cxt_);
 
     // ROV PID controller
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
@@ -48,6 +48,7 @@ namespace orca_base
     planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
     filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
     filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
+    barometer_adj_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer_adj", 1);
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
@@ -87,13 +88,20 @@ namespace orca_base
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
     if (first) {
-      z_initial_ = -msg->depth;
+      z_initial_ = msg->z;
       z_ = 0;
       RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
     } else {
-      z_ = -msg->depth - z_initial_;
+      msg->z -= z_initial_;
+      z_ = msg->z;
+
+      // Publish adjusted barometer, useful for diagnostics
+      if (barometer_adj_pub_->get_subscription_count() > 0) {
+        barometer_adj_pub_->publish(*msg);
+      }
+
       if (cxt_.filter_baro_) {
-        filter_->queue_baro(get_logger(), *msg);
+        filter_->queue_baro(*msg);
       }
     }
   }
@@ -137,22 +145,22 @@ namespace orca_base
           RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold z");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot keep station");
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep station");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_4_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_4);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot start mission 4");
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 4");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_5_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_5);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry and/or no map, cannot start mission 5");
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 5");
         }
       }
 
@@ -216,7 +224,7 @@ namespace orca_base
       // Filter the odometry, passing in the previous acceleration as the control
       nav_msgs::msg::Odometry filtered_odom;
       if (filter_valid_) {
-        filter_valid_ = filter_->filter_odom(get_logger(), u_bar_, *msg, filtered_odom);
+        filter_valid_ = filter_->filter_odom(u_bar_, *msg, filtered_odom);
 
         if (!filter_valid_) {
           RCLCPP_ERROR(get_logger(), "filter is invalid, disabling");
@@ -471,7 +479,7 @@ namespace orca_base
     }
 
     // Auto-start mission
-    if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
+    if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time) && filter_valid_) {
       RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
       set_mode(spin_time, cxt_.auto_start_);
     }
@@ -493,6 +501,9 @@ int main(int argc, char **argv)
 
   // Init node
   auto node = std::make_shared<orca_base::BaseNode>();
+
+  // Set logger level
+  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
   // Spin node
   rclcpp::spin(node);

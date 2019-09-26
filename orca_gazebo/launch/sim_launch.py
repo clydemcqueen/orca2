@@ -65,6 +65,11 @@ def generate_launch_description():
                 'auv_jerk_xy': 10.0,
                 'auv_jerk_z': 10.0,
                 'auv_jerk_yaw': 20.0,
+                'filter_predict_accel': False,
+                'filter_predict_control': False,
+                'filter_predict_drag': False,
+                'filter_use_output': False,
+                'filter_baro': False,
             }], remappings=[
                 ('fiducial_odom', '/' + left_camera_name + '/odom')
             ]),

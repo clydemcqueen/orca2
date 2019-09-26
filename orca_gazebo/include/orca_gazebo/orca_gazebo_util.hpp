@@ -9,27 +9,16 @@
 
 namespace orca_gazebo
 {
+  std::default_random_engine k_generator;
 
-  double gaussianKernel(double mean, double stddev)
-  {
-    // Get 2 random numbers from a uniform distribution
-    static unsigned int seed = 0;
-    double uniform1 = static_cast<double>(rand_r(&seed)) / static_cast<double>(RAND_MAX);
-    double uniform2 = static_cast<double>(rand_r(&seed)) / static_cast<double>(RAND_MAX);
-
-    // Use a Box-Muller transform to generate a value from a Gaussian distribution with mean=0 stddev=1
-    double gaussian = sqrt(-2.0 * ::log(uniform1)) * cos(2.0 * M_PI * uniform2);
-
-    // Scale
-    return stddev * gaussian + mean;
-  }
-
-// Assume x, y and z are independent, e.g., MEMS accelerometers or gyros
+  // Assume x, y and z are independent, e.g., MEMS accelerometers or gyros
   void addNoise(const double stddev, ignition::math::Vector3d &v)
   {
-    v.X() = gaussianKernel(v.X(), stddev);
-    v.Y() = gaussianKernel(v.Y(), stddev);
-    v.Z() = gaussianKernel(v.Z(), stddev);
+    std::normal_distribution<double> distribution(0, stddev);
+
+    v.X() += distribution(k_generator);
+    v.Y() += distribution(k_generator);
+    v.Z() += distribution(k_generator);
   }
 
 // Assume r, p and y are independent, e.g., MEMS magnetometers

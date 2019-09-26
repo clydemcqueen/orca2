@@ -12,6 +12,8 @@ namespace orca_base
   constexpr int BARO_DIM = 1;         // [z]T
   constexpr int ODOM_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
   constexpr int CONTROL_DIM = 4;      // [ax, ay, az, ayaw]T
+  constexpr double MIN_DT = 0.001;
+  constexpr double MAX_DT = 1.0;
 
   // Maximum predicted acceleration
   // The AUV may be tossed around by waves or bump into something
@@ -54,7 +56,7 @@ namespace orca_base
   void baro_to_z(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &z)
   {
     z = Eigen::MatrixXd(BARO_DIM, 1);
-    z << -baro.depth;
+    z << baro.z;
   }
 
   // Create measurement covariance matrix R
@@ -71,7 +73,7 @@ namespace orca_base
   void baro_to_R(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &R)
   {
     R = Eigen::MatrixXd(BARO_DIM, BARO_DIM);
-    R << 0.01; // Same as orca_gazebo/barometer_plugin.cpp
+    R << baro.z_variance;
   }
 
   // Extract pose from state
@@ -123,14 +125,72 @@ namespace orca_base
   }
 
   //==================================================================
+  // Unscented residual and mean functions for state (x) and odom measurement (z)
+  //
+  // Because of the layout of the state and odom measurement matrices and the way that Eigen works
+  // these functions can serve double-duty.
+  //
+  // x:       [x, y, z, r, p, y, ...]
+  // odom z:  [x, y, z, r, p, y]
+  //
+  // The mean function needs to compute the mean of angles, which doesn't have a precise meaning.
+  // See https://en.wikipedia.org/wiki/Mean_of_circular_quantities for the method used here.
+  //==================================================================
+
+  Eigen::MatrixXd orca_state_residual(const Eigen::Ref<const Eigen::MatrixXd> &x, const Eigen::MatrixXd &mean)
+  {
+    // Residual for all fields
+    Eigen::MatrixXd residual = x - mean;
+
+    // Normalize roll, pitch and yaw
+    residual(3, 0) = norm_angle(residual(3, 0));
+    residual(4, 0) = norm_angle(residual(4, 0));
+    residual(5, 0) = norm_angle(residual(5, 0));
+
+    return residual;
+  }
+
+  Eigen::MatrixXd orca_state_mean(const Eigen::MatrixXd &sigma_points, const Eigen::MatrixXd &Wm)
+  {
+    Eigen::MatrixXd mean = Eigen::MatrixXd::Zero(sigma_points.rows(), 1);
+
+    // Standard mean for all fields
+    for (long i = 0; i < sigma_points.cols(); ++i) {
+      mean += Wm(0, i) * sigma_points.col(i);
+    }
+
+    // Sum the sines and cosines
+    double sum_r_sin = 0.0, sum_r_cos = 0.0;
+    double sum_p_sin = 0.0, sum_p_cos = 0.0;
+    double sum_y_sin = 0.0, sum_y_cos = 0.0;
+
+    for (long i = 0; i < sigma_points.cols(); ++i) {
+      sum_r_sin += Wm(0, i) * sin(sigma_points(3, i));
+      sum_r_cos += Wm(0, i) * cos(sigma_points(3, i));
+
+      sum_p_sin += Wm(0, i) * sin(sigma_points(4, i));
+      sum_p_cos += Wm(0, i) * cos(sigma_points(4, i));
+
+      sum_y_sin += Wm(0, i) * sin(sigma_points(5, i));
+      sum_y_cos += Wm(0, i) * cos(sigma_points(5, i));
+    }
+
+    // Mean is arctan2 of the sums
+    mean(3, 0) = atan2(sum_r_sin, sum_r_cos);
+    mean(4, 0) = atan2(sum_p_sin, sum_p_cos);
+    mean(5, 0) = atan2(sum_y_sin, sum_y_cos);
+
+    return mean;
+  }
+
+//==================================================================
   // Filter
   //==================================================================
 
-  Filter::Filter(const BaseContext &cxt_) :
+  Filter::Filter(const rclcpp::Logger &logger, const BaseContext &cxt_) :
+    logger_{logger},
     filter_{STATE_DIM, 0.3, 2.0, 0}
   {
-    filter_.set_x(Eigen::MatrixXd::Zero(STATE_DIM, 1));
-    filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM));
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
 
     // State transition function
@@ -196,29 +256,48 @@ namespace orca_base
                        x(5, 0) = norm_angle(x(5, 0) + x(11, 0) * dt);
                      });
 
-    // TODO set residual & mean functions for x
+    // State residual and mean functions
+    filter_.set_r_x_fn(orca_state_residual);
+    filter_.set_mean_x_fn(orca_state_mean);
   }
 
-  double Filter::dt(const rclcpp::Time &stamp)
+  void Filter::predict(const Acceleration &u_bar, const rclcpp::Time &stamp)
   {
     // Compute delta from last message
     // Use a small delta to bootstrap the filter
-    // TODO don't call predict() if dt < epsilon
-    double result = valid_stamp(filter_time_) ? (stamp - filter_time_).seconds() : 0.1;
+    double dt = valid_stamp(filter_time_) ? (stamp - filter_time_).seconds() : 0.1;
 
-    // Move time forward
-    filter_time_ = stamp;
+    if (dt < MIN_DT) {
+      RCLCPP_DEBUG(logger_, "dt %g is too small, skip predict", dt);
+    } else if (dt > MAX_DT) {
+      RCLCPP_WARN(logger_, "dt %g is too large, skip predict", dt);
 
-    return result;
+      // Catch up
+      filter_time_ = stamp;
+    } else {
+      Eigen::MatrixXd u;
+      to_u(u_bar, u);
+      filter_.predict(dt, u);
+      filter_time_ = stamp;
+    }
+  }
+
+  void Filter::update(const Eigen::MatrixXd &z, const Eigen::MatrixXd &R, const builtin_interfaces::msg::Time &stamp,
+                      nav_msgs::msg::Odometry &filtered_odom)
+  {
+    filter_.update(z, R);
+
+    filtered_odom.header.stamp = stamp;
+    pose_from_x(filter_.x(), filtered_odom.pose.pose);
+    twist_from_x(filter_.x(), filtered_odom.twist.twist);
+    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
+    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
   }
 
   void Filter::process_baro(const Acceleration &u_bar, const orca_msgs::msg::Barometer &baro,
                             nav_msgs::msg::Odometry &filtered_odom)
   {
-    Eigen::MatrixXd u;
-    to_u(u_bar, u);
-
-    filter_.predict(dt(baro.header.stamp), u);
+    predict(u_bar, baro.header.stamp);
 
     Eigen::MatrixXd z;
     baro_to_z(baro, z);
@@ -229,27 +308,20 @@ namespace orca_base
     // Measurement function
     filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
                      {
-                       z(0, 0) = x(3, 0);
+                       z(0, 0) = x(2, 0);
                      });
 
-    // TODO set residual & mean functions for z
+    // Use the standard residual and mean functions for barometer readings
+    filter_.set_r_z_fn(ukf::residual);
+    filter_.set_mean_z_fn(ukf::unscented_mean);
 
-    filter_.update(z, R);
-
-    filtered_odom.header = baro.header;
-    pose_from_x(filter_.x(), filtered_odom.pose.pose);
-    twist_from_x(filter_.x(), filtered_odom.twist.twist);
-    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
-    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+    update(z, R, baro.header.stamp, filtered_odom);
   }
 
   void Filter::process_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
                             nav_msgs::msg::Odometry &filtered_odom)
   {
-    Eigen::MatrixXd u;
-    to_u(u_bar, u);
-
-    filter_.predict(dt(odom.header.stamp), u);
+    predict(u_bar, odom.header.stamp);
 
     Eigen::MatrixXd z;
     odom_to_z(odom, z);
@@ -268,47 +340,43 @@ namespace orca_base
                        z(5, 0) = x(5, 0);
                      });
 
-    // TODO set residual & mean functions for z
+    // Use the custom state residual and mean functions for fiducial_vlam odometry
+    filter_.set_r_z_fn(orca_state_residual);
+    filter_.set_mean_z_fn(orca_state_mean);
 
-    filter_.update(z, R);
-
-    filtered_odom.header = odom.header;
-    pose_from_x(filter_.x(), filtered_odom.pose.pose);
-    twist_from_x(filter_.x(), filtered_odom.twist.twist);
-    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
-    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+    update(z, R, odom.header.stamp, filtered_odom);
   }
 
-  void Filter::queue_baro(rclcpp::Logger logger, const orca_msgs::msg::Barometer &baro)
+  void Filter::queue_baro(const orca_msgs::msg::Barometer &baro)
   {
     rclcpp::Time baro_stamp{baro.header.stamp};
 
     if (!valid_stamp(baro_stamp)) {
-      RCLCPP_WARN(logger, "barometer message has invalid time, dropping");
+      RCLCPP_WARN(logger_, "barometer message has invalid time, dropping");
     } else {
       baro_q_ = baro;
     }
   }
 
-  bool Filter::filter_odom(rclcpp::Logger logger, const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
+  bool Filter::filter_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
                            nav_msgs::msg::Odometry &filtered_odom)
   {
     rclcpp::Time odom_stamp{odom.header.stamp};
 
     if (!valid_stamp(odom_stamp)) {
-      RCLCPP_WARN(logger, "odometry message has invalid time, dropping");
-      return false;
+      RCLCPP_WARN(logger_, "odometry message has invalid time, dropping");
+      return true;
     }
 
     if (valid_stamp(filter_time_) && valid_stamp(odom_stamp) && odom_stamp < filter_time_) {
-      RCLCPP_WARN(logger, "odometry message older than filter time, dropping");
-      return false;
+      RCLCPP_WARN(logger_, "odometry message older than filter time, dropping");
+      return true;
     }
 
     rclcpp::Time baro_stamp{baro_q_.header.stamp};
 
     if (valid_stamp(filter_time_) && valid_stamp(baro_stamp) && baro_stamp < filter_time_) {
-      RCLCPP_WARN(logger, "barometer message older than filter time, dropping");
+      RCLCPP_WARN(logger_, "barometer message older than filter time, dropping");
       baro_q_ = orca_msgs::msg::Barometer{};
       baro_stamp = rclcpp::Time{baro_q_.header.stamp};
     }
@@ -321,7 +389,6 @@ namespace orca_base
         process_odom(u_bar, odom, filtered_odom);
         process_baro(u_bar, baro_q_, filtered_odom);
       }
-
       baro_q_ = orca_msgs::msg::Barometer{};
     } else {
       process_odom(u_bar, odom, filtered_odom);

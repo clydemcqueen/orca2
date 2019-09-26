@@ -83,13 +83,6 @@ ament_target_dependencies(
 )
 ament_export_libraries(OrcaIMUPlugin)
 
-add_executable(orca_gazebo_test src/test.cpp)
-ament_target_dependencies(
-  orca_gazebo_test
-  gazebo_dev
-  geometry_msgs
-)
-
 ## Export dependencies
 ament_export_dependencies(gazebo_dev)
 ament_export_dependencies(gazebo_ros)
@@ -107,7 +100,6 @@ install(
   OrcaBarometerPlugin
   OrcaBuoyancyPlugin
   OrcaIMUPlugin
-  orca_gazebo_test
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

@@ -175,6 +175,7 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
+    rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_adj_pub_;
 
     void rov_advance(const rclcpp::Time &stamp);
 
