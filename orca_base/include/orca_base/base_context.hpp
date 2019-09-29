@@ -70,6 +70,12 @@ namespace orca_base
   CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
   CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
   CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Add barometer messages to the filter  */ \
+  \
+  CXT_MACRO_MEMBER(baro_frame, std::string, "baro_link")      /* Barometer is attached to this URDF link  */ \
+  CXT_MACRO_MEMBER(baro_init_from_odom, bool, false)          /* True: initialize from map  */ \
+  \
+  CXT_MACRO_MEMBER(model_gravity, double, 9.8)                /* 9.8 is Gazebo default, 9.80665 is more accurate  */ \
+  CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

@@ -6,12 +6,28 @@
 namespace orca_base
 {
 
-//=====================================================================================
-// Vehicle specs, in the body frame (x forward, y left, z up)
-//=====================================================================================
+  // TODO move these to a struct so we can override physics and other constants from parameters
 
-  constexpr double GRAVITY = 9.8;           // Gazebo default is 9.8
-  constexpr double FLUID_DENSITY = 1029;    // Fluid density of seawater TODO cxt should specify fresh vs. seawater
+  //=====================================================================================
+  // Physics
+  //=====================================================================================
+
+  constexpr double GRAVITY = 9.8;                   // Gazebo default is 9.8, 9.80665 is a bit more accurate
+  constexpr double FLUID_DENSITY = 1029;            // Fluid density of seawater TODO cxt should specify fresh vs. seawater
+  constexpr double ATMOSPHERIC_PRESSURE = 101300;   // Air pressure at the surface
+
+  constexpr double depth_z(double pressure)
+  { return -(pressure - ATMOSPHERIC_PRESSURE) / (FLUID_DENSITY * GRAVITY); }
+
+  //=====================================================================================
+  // Sensor constants
+  //=====================================================================================
+
+  constexpr double DEPTH_STDDEV = 0.1;
+
+  //=====================================================================================
+  // Vehicle specs, in the body frame (x forward, y left, z up)
+  //=====================================================================================
 
   constexpr double ROV_DIM_X = 0.457;       // Length
   constexpr double ROV_DIM_Y = 0.338;       // Width

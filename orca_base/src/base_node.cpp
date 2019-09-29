@@ -48,7 +48,7 @@ namespace orca_base
     planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
     filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
     filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
-    barometer_adj_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer_adj", 1);
+    depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
@@ -87,21 +87,29 @@ namespace orca_base
   // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
+    // Calc depth from pressure
+    double z = depth_z(msg->pressure);
+
     if (first) {
-      z_initial_ = msg->z;
+      // First reading is assumed to be at the water's surface TODO init from map if available
+      z_initial_ = z;
       z_ = 0;
       RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
     } else {
-      msg->z -= z_initial_;
-      z_ = msg->z;
+      // Adjust reading
+      z_ = z - z_initial_;
 
-      // Publish adjusted barometer, useful for diagnostics
-      if (barometer_adj_pub_->get_subscription_count() > 0) {
-        barometer_adj_pub_->publish(*msg);
+      orca_msgs::msg::Depth depth_msg;
+      depth_msg.z = z_;
+      depth_msg.z_variance = DEPTH_STDDEV * DEPTH_STDDEV;
+
+      // Publish depth, useful for diagnostics
+      if (depth_pub_->get_subscription_count() > 0) {
+        depth_pub_->publish(depth_msg);
       }
 
       if (cxt_.filter_baro_) {
-        filter_->queue_baro(*msg);
+        filter_->queue_depth(depth_msg);
       }
     }
   }

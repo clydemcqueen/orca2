@@ -35,7 +35,7 @@ class Bar30Node(Node):
             self.get_logger().fatal("can't initialize Bar30")
             exit(1)
         self.get_logger().info("connected to Bar30")
-        self._sensor.setFluidDensity(ms5837.DENSITY_SALTWATER)
+        self._sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)  # TODO verify that this doesn't matter
 
         # Publish at 10Hz
         self._baro_pub = self.create_publisher(Barometer, '/barometer')
@@ -47,8 +47,6 @@ class Bar30Node(Node):
             msg.header.stamp = now()
             msg.pressure = self._sensor.pressure() * 100.0  # Pascals
             msg.temperature = self._sensor.temperature()  # Celsius
-            msg.z = -self._sensor.depth()  # meters
-            msg.z_variance = DEPTH_STDDEV * DEPTH_STDDEV
             self._baro_pub.publish(msg)
         else:
             self.get_logger().error("can't read Bar30")

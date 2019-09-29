@@ -8,6 +8,7 @@
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
+#include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
 #include "orca_base/base_context.hpp"
@@ -175,7 +176,7 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_adj_pub_;
+    rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
 
     void rov_advance(const rclcpp::Time &stamp);
 

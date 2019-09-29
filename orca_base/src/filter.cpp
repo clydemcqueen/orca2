@@ -53,10 +53,10 @@ namespace orca_base
     z << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
   }
 
-  void baro_to_z(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &z)
+  void depth_to_z(const orca_msgs::msg::Depth &depth, Eigen::MatrixXd &z)
   {
     z = Eigen::MatrixXd(BARO_DIM, 1);
-    z << baro.z;
+    z << depth.z;
   }
 
   // Create measurement covariance matrix R
@@ -70,10 +70,10 @@ namespace orca_base
     }
   }
 
-  void baro_to_R(const orca_msgs::msg::Barometer &baro, Eigen::MatrixXd &R)
+  void depth_to_R(const orca_msgs::msg::Depth &depth, Eigen::MatrixXd &R)
   {
     R = Eigen::MatrixXd(BARO_DIM, BARO_DIM);
-    R << baro.z_variance;
+    R << depth.z_variance;
   }
 
   // Extract pose from state
@@ -294,16 +294,16 @@ namespace orca_base
     twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
   }
 
-  void Filter::process_baro(const Acceleration &u_bar, const orca_msgs::msg::Barometer &baro,
-                            nav_msgs::msg::Odometry &filtered_odom)
+  void Filter::process_depth(const Acceleration &u_bar, const orca_msgs::msg::Depth &depth,
+                             nav_msgs::msg::Odometry &filtered_odom)
   {
-    predict(u_bar, baro.header.stamp);
+    predict(u_bar, depth.header.stamp);
 
     Eigen::MatrixXd z;
-    baro_to_z(baro, z);
+    depth_to_z(depth, z);
 
     Eigen::MatrixXd R;
-    baro_to_R(baro, R);
+    depth_to_R(depth, R);
 
     // Measurement function
     filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
@@ -311,11 +311,11 @@ namespace orca_base
                        z(0, 0) = x(2, 0);
                      });
 
-    // Use the standard residual and mean functions for barometer readings
+    // Use the standard residual and mean functions for depth readings
     filter_.set_r_z_fn(ukf::residual);
     filter_.set_mean_z_fn(ukf::unscented_mean);
 
-    update(z, R, baro.header.stamp, filtered_odom);
+    update(z, R, depth.header.stamp, filtered_odom);
   }
 
   void Filter::process_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
@@ -347,14 +347,14 @@ namespace orca_base
     update(z, R, odom.header.stamp, filtered_odom);
   }
 
-  void Filter::queue_baro(const orca_msgs::msg::Barometer &baro)
+  void Filter::queue_depth(const orca_msgs::msg::Depth &depth)
   {
-    rclcpp::Time baro_stamp{baro.header.stamp};
+    rclcpp::Time depth_stamp{depth.header.stamp};
 
-    if (!valid_stamp(baro_stamp)) {
-      RCLCPP_WARN(logger_, "barometer message has invalid time, dropping");
+    if (!valid_stamp(depth_stamp)) {
+      RCLCPP_WARN(logger_, "depth message has invalid time, dropping");
     } else {
-      baro_q_ = baro;
+      depth_q_ = depth;
     }
   }
 
@@ -373,23 +373,23 @@ namespace orca_base
       return true;
     }
 
-    rclcpp::Time baro_stamp{baro_q_.header.stamp};
+    rclcpp::Time depth_stamp{depth_q_.header.stamp};
 
-    if (valid_stamp(filter_time_) && valid_stamp(baro_stamp) && baro_stamp < filter_time_) {
-      RCLCPP_WARN(logger_, "barometer message older than filter time, dropping");
-      baro_q_ = orca_msgs::msg::Barometer{};
-      baro_stamp = rclcpp::Time{baro_q_.header.stamp};
+    if (valid_stamp(filter_time_) && valid_stamp(depth_stamp) && depth_stamp < filter_time_) {
+      RCLCPP_WARN(logger_, "depth message older than filter time, dropping");
+      depth_q_ = orca_msgs::msg::Depth{};
+      depth_stamp = rclcpp::Time{depth_q_.header.stamp};
     }
 
-    if (valid_stamp(baro_stamp)) {
-      if (baro_stamp < odom_stamp) {
-        process_baro(u_bar, baro_q_, filtered_odom);
+    if (valid_stamp(depth_stamp)) {
+      if (depth_stamp < odom_stamp) {
+        process_depth(u_bar, depth_q_, filtered_odom);
         process_odom(u_bar, odom, filtered_odom);
       } else {
         process_odom(u_bar, odom, filtered_odom);
-        process_baro(u_bar, baro_q_, filtered_odom);
+        process_depth(u_bar, depth_q_, filtered_odom);
       }
-      baro_q_ = orca_msgs::msg::Barometer{};
+      depth_q_ = orca_msgs::msg::Depth{};
     } else {
       process_odom(u_bar, odom, filtered_odom);
     }

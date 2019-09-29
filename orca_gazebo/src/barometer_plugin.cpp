@@ -6,10 +6,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "gazebo_ros/node.hpp"
 #include "gazebo_ros/conversions/builtin_interfaces.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
 #include "orca_gazebo/orca_gazebo_util.hpp"
 #include "orca_msgs/msg/barometer.hpp"
+
+// TODO include orca_base/model.hpp and instantiate it
 
 /* A very simple barometer sensor plugin for underwater robotics. Usage:
  *
@@ -24,15 +25,16 @@
  *    </gazebo>
  *
  *    <baro_topic> Topic for orca_msgs/Barometer messages. Default is /barometer.
- *    <fluid_density> Fluid density in kg/m^3. Default is 1029 (seawater), use 997 for freshwater.
+ *    <fluid_density> Fluid density in kg/m^3. Default is 997 (freshwater), use 1029 for seawater.
  */
 
 namespace gazebo
 {
 
+  constexpr double FRESHWATER_DENSITY = 997;
   constexpr double SEAWATER_DENSITY = 1029;
   constexpr double ATMOSPHERIC_PRESSURE = 101325;   // Pascals
-  constexpr double GRAVITY = 9.80665;               // m/s^2
+  constexpr double GRAVITY = 9.8;                   // m/s^2, Gazebo default is 9.8
   constexpr double DEPTH_STDDEV = 0.01;             // m
 
   class OrcaBarometerPlugin : public SensorPlugin
@@ -49,7 +51,7 @@ namespace gazebo
     // ROS publisher
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr baro_pub_;
 
-    double fluid_density_ = SEAWATER_DENSITY;   // Fluid density
+    double fluid_density_ = FRESHWATER_DENSITY;
 
     // Normal distribution
     std::default_random_engine generator_;
@@ -115,14 +117,11 @@ namespace gazebo
         orca_msgs::msg::Barometer baro_msg;
         baro_msg.header.frame_id = "map";
         baro_msg.header.stamp = msg_time;
-        baro_msg.z_variance = DEPTH_STDDEV * DEPTH_STDDEV;
 
         if (z < 0.0) {
-          baro_msg.z = z;
           baro_msg.pressure = fluid_density_ * GRAVITY * -z + ATMOSPHERIC_PRESSURE; // Pascals
           baro_msg.temperature = 10; // Celsius
         } else {
-          baro_msg.z = 0;
           baro_msg.pressure = ATMOSPHERIC_PRESSURE;
           baro_msg.temperature = 20;
         }

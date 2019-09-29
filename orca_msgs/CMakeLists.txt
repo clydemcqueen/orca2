@@ -35,6 +35,7 @@ rosidl_generate_interfaces(
   msg/Barometer.msg
   msg/Battery.msg
   msg/Control.msg
+  msg/Depth.msg
   msg/Efforts.msg
   msg/Leak.msg
   msg/Proc.msg
