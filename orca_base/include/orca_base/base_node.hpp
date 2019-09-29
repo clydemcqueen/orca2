@@ -101,7 +101,7 @@ namespace orca_base
     const int joy_button_bright_ = JOY_BUTTON_LEFT_STICK;
     const int joy_button_dim_ = JOY_BUTTON_RIGHT_STICK;
 
-    // Parameters
+    // Parameters and dynamics model
     BaseContext cxt_;
 
     // Mode

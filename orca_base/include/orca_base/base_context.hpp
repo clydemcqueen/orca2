@@ -7,6 +7,8 @@
 
 #include "ros2_shared/context_macros.hpp"
 
+#include "orca_base/model.hpp"
+
 namespace orca_base
 {
 
@@ -84,6 +86,9 @@ namespace orca_base
   struct BaseContext
   {
     BASE_NODE_ALL_PARAMS
+    
+    // Orca model
+    Model model_{};
   };
 
 } // namespace orca_base

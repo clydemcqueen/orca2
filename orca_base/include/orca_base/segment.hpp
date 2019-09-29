@@ -17,6 +17,7 @@ namespace orca_base
   protected:
 
     rclcpp::Logger logger_;
+    BaseContext cxt_;
 
     // State
     Pose goal_;       // Goal pose

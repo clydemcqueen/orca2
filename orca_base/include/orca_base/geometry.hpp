@@ -255,15 +255,15 @@ namespace orca_base
     void from_acceleration(const Acceleration &u_bar, const double current_yaw)
     {
       // Convert from world frame to body frame
-      double x_effort = accel_to_effort_xy(u_bar.x);
-      double y_effort = accel_to_effort_xy(u_bar.y);
+      double x_effort = Model::accel_to_effort_xy(u_bar.x);
+      double y_effort = Model::accel_to_effort_xy(u_bar.y);
       double forward, strafe;
       rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
 
       set_forward(forward);
       set_strafe(strafe);
-      set_vertical(accel_to_effort_z(u_bar.z));
-      set_yaw(accel_to_effort_yaw(u_bar.yaw));
+      set_vertical(Model::accel_to_effort_z(u_bar.z));
+      set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
     }
 
     void scale(double factor)

@@ -7,6 +7,7 @@
 #include "gazebo_ros/node.hpp"
 #include "gazebo_ros/conversions/builtin_interfaces.hpp"
 
+#include "orca_base/model.hpp"
 #include "orca_gazebo/orca_gazebo_util.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 
@@ -32,10 +33,6 @@ namespace gazebo
 {
 
   constexpr double FRESHWATER_DENSITY = 997;
-  constexpr double SEAWATER_DENSITY = 1029;
-  constexpr double ATMOSPHERIC_PRESSURE = 101325;   // Pascals
-  constexpr double GRAVITY = 9.8;                   // m/s^2, Gazebo default is 9.8
-  constexpr double DEPTH_STDDEV = 0.01;             // m
 
   class OrcaBarometerPlugin : public SensorPlugin
   {
@@ -51,11 +48,12 @@ namespace gazebo
     // ROS publisher
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr baro_pub_;
 
-    double fluid_density_ = FRESHWATER_DENSITY;
+    // Orca model
+    orca_base::Model orca_model_;
 
     // Normal distribution
     std::default_random_engine generator_;
-    std::normal_distribution<double> distribution_{0, DEPTH_STDDEV};
+    std::normal_distribution<double> distribution_{0, orca_base::Model::DEPTH_STDDEV};
 
   public:
 
@@ -68,7 +66,9 @@ namespace gazebo
       // Get the GazeboROS node
       node_ = gazebo_ros::Node::Get(sdf);
 
+      // Default parameters
       std::string baro_topic = "/barometer";
+      double fluid_density = FRESHWATER_DENSITY;
 
       if (sdf->HasElement("baro_topic")) {
         baro_topic = sdf->GetElement("baro_topic")->Get<std::string>();
@@ -77,9 +77,12 @@ namespace gazebo
       baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 1);
 
       if (sdf->HasElement("fluid_density")) {
-        fluid_density_ = sdf->GetElement("fluid_density")->Get<double>();
+        fluid_density = sdf->GetElement("fluid_density")->Get<double>();
       }
-      RCLCPP_INFO(node_->get_logger(), "fluid density: %g", fluid_density_);
+      RCLCPP_INFO(node_->get_logger(), "fluid density: %g", fluid_density);
+
+      // Initialize model from parameters
+      orca_model_.fluid_density_ = fluid_density;
 
       // Get the parent sensor
       altimeter_ = std::dynamic_pointer_cast<sensors::AltimeterSensor>(sensor);
@@ -119,10 +122,10 @@ namespace gazebo
         baro_msg.header.stamp = msg_time;
 
         if (z < 0.0) {
-          baro_msg.pressure = fluid_density_ * GRAVITY * -z + ATMOSPHERIC_PRESSURE; // Pascals
+          baro_msg.pressure = orca_model_.z_to_pressure(z); // Pascals
           baro_msg.temperature = 10; // Celsius
         } else {
-          baro_msg.pressure = ATMOSPHERIC_PRESSURE;
+          baro_msg.pressure = orca_base::Model::ATMOSPHERIC_PRESSURE;
           baro_msg.temperature = 20;
         }
 

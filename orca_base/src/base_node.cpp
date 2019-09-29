@@ -82,13 +82,16 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     BASE_NODE_ALL_PARAMS
+
+    // Update model from new parameters
+    cxt_.model_.fluid_density_ = cxt_.model_fluid_density_;
   }
 
   // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
     // Calc depth from pressure
-    double z = depth_z(msg->pressure);
+    double z = cxt_.model_.pressure_to_z(msg->pressure);
 
     if (first) {
       // First reading is assumed to be at the water's surface TODO init from map if available
@@ -101,7 +104,7 @@ namespace orca_base
 
       orca_msgs::msg::Depth depth_msg;
       depth_msg.z = z_;
-      depth_msg.z_variance = DEPTH_STDDEV * DEPTH_STDDEV;
+      depth_msg.z_variance = cxt_.model_.DEPTH_STDDEV * cxt_.model_.DEPTH_STDDEV;
 
       // Publish depth, useful for diagnostics
       if (depth_pub_->get_subscription_count() > 0) {
@@ -277,7 +280,8 @@ namespace orca_base
     efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_z()) {
-      efforts.set_vertical(accel_to_effort_z(rov_z_pid_->calc(z_, dt) + HOVER_ACCEL_Z) * stability_);
+      efforts.set_vertical(
+        Model::accel_to_effort_z(rov_z_pid_->calc(z_, dt) + cxt_.model_.hover_accel_z()) * stability_);
     } else {
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }

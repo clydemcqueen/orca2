@@ -37,6 +37,7 @@ ament_target_dependencies(
   gazebo_dev
   gazebo_ros
   geometry_msgs
+  orca_base
   orca_msgs
   rclcpp
 )

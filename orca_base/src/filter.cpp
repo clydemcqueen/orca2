@@ -210,16 +210,16 @@ namespace orca_base
                            // Back out acceleration due to gravity & buoyancy
                            x(12, 0) += u(0, 0);
                            x(13, 0) += u(1, 0);
-                           x(14, 0) += u(2, 0) - HOVER_ACCEL_Z;
+                           x(14, 0) += u(2, 0) - cxt_.model_.hover_accel_z();
                            x(17, 0) += u(3, 0);
                          }
 
                          if (cxt_.filter_predict_drag_) {
                            // Add acceleration due to drag
-                           x(12, 0) += drag_accel_x(x(6, 0));
-                           x(13, 0) += drag_accel_y(x(7, 0));
-                           x(14, 0) += drag_accel_z(x(8, 0));
-                           x(17, 0) += drag_accel_yaw(x(11, 0));
+                           x(12, 0) += cxt_.model_.drag_accel_x(x(6, 0));
+                           x(13, 0) += cxt_.model_.drag_accel_y(x(7, 0));
+                           x(14, 0) += cxt_.model_.drag_accel_z(x(8, 0));
+                           x(17, 0) += cxt_.model_.drag_accel_yaw(x(11, 0));
                          }
                        }
 
