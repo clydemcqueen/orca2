@@ -113,7 +113,8 @@ namespace orca_base
     Acceleration u_bar_;                          // Last control, used for filter predict step
 
     // Barometer state
-    double z_initial_{};                          // First z value, used to adjust barometer
+    bool z_valid_{false};                         // True if z_ is valid
+    double z_offset_{};                           // Z offset, see baro_callback()
     double z_{};                                  // Z from barometer
 
     // Joystick state

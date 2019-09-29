@@ -74,7 +74,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Add barometer messages to the filter  */ \
   \
   CXT_MACRO_MEMBER(baro_frame, std::string, "baro_link")      /* Barometer is attached to this URDF link  */ \
-  CXT_MACRO_MEMBER(baro_init_from_odom, bool, false)          /* True: initialize from map  */ \
+  CXT_MACRO_MEMBER(baro_init, int, 0)                         /* Barometer init method: 0 in air, 1 in water, 2 from map  */ \
   \
   CXT_MACRO_MEMBER(model_gravity, double, 9.8)                /* 9.8 is Gazebo default, 9.80665 is more accurate  */ \
   CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
@@ -86,7 +86,7 @@ namespace orca_base
   struct BaseContext
   {
     BASE_NODE_ALL_PARAMS
-    
+
     // Orca model
     Model model_{};
   };

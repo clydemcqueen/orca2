@@ -90,21 +90,35 @@ namespace orca_base
   // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
-    // Calc depth from pressure
+    // Calc depth from pressure, this assumes constant air pressure
     double z = cxt_.model_.pressure_to_z(msg->pressure);
 
-    if (first) {
-      // First reading is assumed to be at the water's surface TODO init from map if available
-      z_initial_ = z;
-      z_ = 0;
-      RCLCPP_INFO(get_logger(), "barometer adjustment %g", z_initial_);
-    } else {
+    // Three ways to initialize the barometer:
+    // cxt_.baro_init_ == 0:   Orca is in the air, so the first z reading is just air pressure
+    // cxt_.baro_init_ == 1:   Orca is floating at the surface in the water, the barometer is submerged ~5cm
+    // cxt_.baro_init_ == 2:   Wait for good odometry from fiducial_vlam and initialize barometer from the map
+
+    // TODO pull these from the URDF
+    static const double z_top_to_baro_link = -0.05;
+    static const double z_baro_link_to_base_link = -0.085;
+
+    if (!z_valid_ && cxt_.baro_init_ == 0) {
+      z_offset_ = -z + z_top_to_baro_link + z_baro_link_to_base_link;
+      z_valid_ = true;
+      RCLCPP_INFO(get_logger(), "barometer init mode 0 (in air): adjustment %g", z_offset_);
+    } else if (!z_valid_ && cxt_.baro_init_ == 1) {
+      z_offset_ = -z + z_baro_link_to_base_link;
+      z_valid_ = true;
+      RCLCPP_INFO(get_logger(), "barometer init mode 1 (in water): adjustment %g", z_offset_);
+    }
+
+    if (z_valid_) {
       // Adjust reading
-      z_ = z - z_initial_;
+      z_ = z + z_offset_;
 
       orca_msgs::msg::Depth depth_msg;
       depth_msg.z = z_;
-      depth_msg.z_variance = cxt_.model_.DEPTH_STDDEV * cxt_.model_.DEPTH_STDDEV;
+      depth_msg.z_variance = Model::DEPTH_STDDEV * Model::DEPTH_STDDEV;
 
       // Publish depth, useful for diagnostics
       if (depth_pub_->get_subscription_count() > 0) {

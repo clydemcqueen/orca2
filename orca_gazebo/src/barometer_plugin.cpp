@@ -11,8 +11,6 @@
 #include "orca_gazebo/orca_gazebo_util.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 
-// TODO include orca_base/model.hpp and instantiate it
-
 /* A very simple barometer sensor plugin for underwater robotics. Usage:
  *
  *    <gazebo reference="base_link">
@@ -36,6 +34,8 @@ namespace gazebo
 
   class OrcaBarometerPlugin : public SensorPlugin
   {
+    const rclcpp::Time IN_WATER{RCL_S_TO_NS(1), RCL_ROS_TIME};  // Simulate barometer "in air" for 1s
+
     // Our parent sensor is an altimeter
     sensors::AltimeterSensorPtr altimeter_;
 
@@ -111,17 +111,21 @@ namespace gazebo
 //        << ", measurement sec=" << measurement.sec << ", nsec=" << measurement.nanosec
 //        << std::endl;
 
-      builtin_interfaces::msg::Time msg_time = node_->now();
+      // TODO pull these from the URDF
+      static const double z_top_to_baro_link = -0.05;
+      static const double z_baro_link_to_base_link = -0.085;
 
-      // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
-      double z = altimeter_->Altitude() + distribution_(generator_);
+      rclcpp::Time msg_time = node_->now();
 
       if (node_->count_subscribers(baro_pub_->get_topic_name()) > 0) {
         orca_msgs::msg::Barometer baro_msg;
         baro_msg.header.frame_id = "map";
         baro_msg.header.stamp = msg_time;
 
-        if (z < 0.0) {
+        // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
+        double z = altimeter_->Altitude() + distribution_(generator_) - z_baro_link_to_base_link;
+
+        if (msg_time > IN_WATER && z < 0.0) {
           baro_msg.pressure = orca_model_.z_to_pressure(z); // Pascals
           baro_msg.temperature = 10; // Celsius
         } else {
