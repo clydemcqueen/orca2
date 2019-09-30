@@ -36,9 +36,6 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
-    // Odom filter
-    filter_ = std::make_shared<Filter>(get_logger(), cxt_);
-
     // ROV PID controller
     rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
 
@@ -47,8 +44,6 @@ namespace orca_base
     thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
     planned_path_pub_ = create_publisher<nav_msgs::msg::Path>("planned_path", 1);
     filtered_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
-    filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
-    depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
@@ -90,45 +85,7 @@ namespace orca_base
   // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
-    // Calc depth from pressure, this assumes constant air pressure
-    double z = cxt_.model_.pressure_to_z(msg->pressure);
-
-    // Three ways to initialize the barometer:
-    // cxt_.baro_init_ == 0:   Orca is in the air, so the first z reading is just air pressure
-    // cxt_.baro_init_ == 1:   Orca is floating at the surface in the water, the barometer is submerged ~5cm
-    // cxt_.baro_init_ == 2:   Wait for good odometry from fiducial_vlam and initialize barometer from the map
-
-    // TODO pull these from the URDF
-    static const double z_top_to_baro_link = -0.05;
-    static const double z_baro_link_to_base_link = -0.085;
-
-    if (!z_valid_ && cxt_.baro_init_ == 0) {
-      z_offset_ = -z + z_top_to_baro_link + z_baro_link_to_base_link;
-      z_valid_ = true;
-      RCLCPP_INFO(get_logger(), "barometer init mode 0 (in air): adjustment %g", z_offset_);
-    } else if (!z_valid_ && cxt_.baro_init_ == 1) {
-      z_offset_ = -z + z_baro_link_to_base_link;
-      z_valid_ = true;
-      RCLCPP_INFO(get_logger(), "barometer init mode 1 (in water): adjustment %g", z_offset_);
-    }
-
-    if (z_valid_) {
-      // Adjust reading
-      z_ = z + z_offset_;
-
-      orca_msgs::msg::Depth depth_msg;
-      depth_msg.z = z_;
-      depth_msg.z_variance = Model::DEPTH_STDDEV * Model::DEPTH_STDDEV;
-
-      // Publish depth, useful for diagnostics
-      if (depth_pub_->get_subscription_count() > 0) {
-        depth_pub_->publish(depth_msg);
-      }
-
-      if (cxt_.filter_baro_) {
-        filter_->queue_depth(depth_msg);
-      }
-    }
+    pressure_ = msg->pressure;
   }
 
   // New battery reading
@@ -170,19 +127,19 @@ namespace orca_base
           RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold z");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
-        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep station");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_4_)) {
-        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_4);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 4");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_mission_5_)) {
-        if (odom_ok(msg->header.stamp) && filter_valid_ && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_5);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 5");
@@ -242,45 +199,17 @@ namespace orca_base
   // New odometry available
   void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
   {
-    if (!first) {
-      // Record lag for diagnostics
-      odom_lag_ = (now() - odom_cb_.curr()).seconds();
+    // Record lag for diagnostics
+//    odom_lag_ = (now() - odom_cb_.curr()).seconds();
 
-      // Filter the odometry, passing in the previous acceleration as the control
-      nav_msgs::msg::Odometry filtered_odom;
-      if (filter_valid_) {
-        filter_valid_ = filter_->filter_odom(u_bar_, *msg, filtered_odom);
+    // Compute a stability metric
+    // TODO
+    // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 
-        if (!filter_valid_) {
-          RCLCPP_ERROR(get_logger(), "filter is invalid, disabling");
-        }
-      }
+    filtered_pose_.from_msg(*msg);
 
-      // Publish filtered odometry
-      if (filter_valid_ && filtered_odom_pub_->get_subscription_count() > 0) {
-        filtered_odom_pub_->publish(filtered_odom);
-      }
-
-      // Save pose
-      if (cxt_.filter_use_output_) {
-        if (filter_valid_) {
-          filtered_pose_.from_msg(filtered_odom);
-        } else if (auv_mode()) {
-          RCLCPP_ERROR(get_logger(), "invalid filter during AUV operation, disarming");
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
-        }
-      } else {
-        filtered_pose_.from_msg(*msg);
-      }
-
-      // Compute a stability metric
-      // TODO
-      // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
-
-      if (auv_mode()) {
-        // Run control loop
-        auv_advance(msg->header.stamp, odom_cb_.dt());
-      }
+    if (auv_mode()) {
+      auv_advance(msg->header.stamp, odom_cb_.dt());
     }
   }
 
@@ -295,7 +224,7 @@ namespace orca_base
 
     if (holding_z()) {
       efforts.set_vertical(
-        Model::accel_to_effort_z(rov_z_pid_->calc(z_, dt) + cxt_.model_.hover_accel_z()) * stability_);
+        Model::accel_to_effort_z(rov_z_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()) * stability_);
     } else {
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
@@ -323,11 +252,12 @@ namespace orca_base
       Pose error = plan.error(filtered_pose_.pose);
 
       // Compute acceleration due to error
-      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar_);
+      Acceleration u_bar;
+      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar);
 
       // Acceleration => effort
       Efforts efforts;
-      efforts.from_acceleration(u_bar_, filtered_pose_.pose.yaw);
+      efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
 
       // Throttle back if AUV is unstable
       efforts.scale(stability_);
@@ -421,7 +351,7 @@ namespace orca_base
     all_stop(msg_time);
 
     if (is_z_hold_mode(new_mode)) {
-      rov_z_pid_->set_target(z_);
+      rov_z_pid_->set_target(pressure_);
       RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
     }
 
@@ -505,7 +435,7 @@ namespace orca_base
     }
 
     // Auto-start mission
-    if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time) && filter_valid_) {
+    if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
       RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
       set_mode(spin_time, cxt_.auto_start_);
     }

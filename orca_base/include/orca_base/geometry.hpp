@@ -138,7 +138,7 @@ namespace orca_base
       pose.from_msg(msg.pose.pose);
     }
 
-    void add_to_path(nav_msgs::msg::Path &path)
+    void add_to_path(nav_msgs::msg::Path &path) const
     {
       geometry_msgs::msg::PoseStamped msg;
       to_msg(msg);
@@ -266,6 +266,11 @@ namespace orca_base
       set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
     }
 
+    void to_acceleration(Acceleration &u_bar, const double current_yaw)
+    {
+      // TODO
+    }
+
     void scale(double factor)
     {
       // Scale efforts by a factor, useful for throttling
@@ -281,6 +286,15 @@ namespace orca_base
       msg.strafe = strafe_;
       msg.vertical = vertical_;
       msg.yaw = yaw_;
+    }
+
+    void from_msg(const orca_msgs::msg::Efforts &msg)
+    {
+      forward_ = msg.forward;
+      strafe_ = msg.strafe;
+      vertical_ = msg.vertical;
+      yaw_ = msg.yaw;
+
     }
   };
 

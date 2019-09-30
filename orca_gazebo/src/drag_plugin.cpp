@@ -8,7 +8,7 @@
  *    <gazebo>
  *      <plugin name="OrcaDragPlugin" filename="libOrcaDragPlugin.so">
  *        <link name="base_link">
- *          <fluid_density>1029</fluid_density>
+ *          <fluid_density>997</fluid_density>
  *          <center_of_mass>0 0 -0.2</center_of_mass>
  *          <tether_attach>-0.5, -0.4, 0</tether_attach>
  *          <linear_drag>10 20 30</linear_drag>

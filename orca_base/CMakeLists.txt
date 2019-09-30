@@ -41,7 +41,6 @@ include_directories(
 add_executable(
   base_node
   src/base_node.cpp
-  src/filter.cpp
   src/mission.cpp
   src/segment.cpp
   src/controller.cpp
@@ -58,8 +57,28 @@ ament_target_dependencies(
   sensor_msgs
   tf2
   tf2_ros
-  ukf
   visualization_msgs
+)
+
+#=============
+# Filter node
+#=============
+
+add_executable(
+  filter_node
+  src/filter_node.cpp
+  src/filter.cpp
+)
+
+ament_target_dependencies(
+  filter_node
+  orca_msgs
+  nav_msgs
+  rclcpp
+  ros2_shared
+  tf2
+  tf2_ros
+  ukf
 )
 
 #=============
@@ -85,7 +104,7 @@ ament_target_dependencies(
 ament_export_include_directories(include)
 
 # Install C++ targets
-install(TARGETS base_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS base_node filter_node DESTINATION lib/${PROJECT_NAME})
 
 # Install include directory
 install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)

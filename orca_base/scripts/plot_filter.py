@@ -52,16 +52,19 @@ def plot_subplot(subplot, name,
     subplot.set_xticklabels([])
     subplot.legend()
 
-    if pre_values:
-        pre_u = statistics.mean(pre_values)
-        pre_s = statistics.stdev(pre_values, pre_u)
-        post_u = statistics.mean(post_values)
-        post_s = statistics.stdev(post_values, post_u)
-        subplot.set_title('{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+    if post_values and len(post_values) > 1:
+        if pre_values and len(pre_values) > 1:
+            pre_u = statistics.mean(pre_values)
+            pre_s = statistics.stdev(pre_values, pre_u)
+            post_u = statistics.mean(post_values)
+            post_s = statistics.stdev(post_values, post_u)
+            subplot.set_title('{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+        else:
+            post_u = statistics.mean(post_values)
+            post_s = statistics.stdev(post_values, post_u)
+            subplot.set_title('{}, post ({:.3f}, {:.3f})'.format(name, post_u, post_s))
     else:
-        post_u = statistics.mean(post_values)
-        post_s = statistics.stdev(post_values, post_u)
-        subplot.set_title('{}, post ({:.3f}, {:.3f})'.format(name, post_u, post_s))
+        subplot.set_title('{}, no stats'.format(name))
 
 
 def seconds(stamp: Time) -> float:
@@ -105,11 +108,7 @@ class PlotFilterNode(Node):
 
         # Plot messages?
         if self._last_time - self._first_time > QUEUE_FOR:
-            # If _post_msgs is empty there isn't enough to plot
-            if len(self._post_msgs):
-                self.plot_msgs()
-            else:
-                print('dropping {} odom {} baro, filter disabled?'.format(len(self._pre_msgs), len(self._baro_msgs)))
+            self.plot_msgs()
 
             # Reset
             self._first_time = None
@@ -199,7 +198,7 @@ class PlotFilterNode(Node):
                          post_xs, post_values, post_vars)
 
         # Set figure title
-        fig.suptitle('pre- and post-filter odometry messages, with (mean, stddev)')
+        fig.suptitle('pre- and post-filter odometry messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')

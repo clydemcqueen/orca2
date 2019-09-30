@@ -30,7 +30,7 @@
   <xacro:property name="SURFACE" default="0"/>
 
   <!-- Physics properties -->
-  <xacro:property name="FLUID_DENSITY" value="1029"/>
+  <xacro:property name="FLUID_DENSITY" value="997"/>
   <xacro:property name="DISPLACED_MASS" value="${TOTAL_VOLUME*FLUID_DENSITY}"/>
 
   <!-- General constants -->

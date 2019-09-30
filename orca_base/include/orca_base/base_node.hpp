@@ -8,11 +8,9 @@
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
-#include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
 #include "orca_base/base_context.hpp"
-#include "orca_base/filter.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"
@@ -59,7 +57,7 @@ namespace orca_base
   };
 
   //=============================================================================
-  // BaseNode provides basic ROV and AUV functions, including joystick operation and waypoint navigation.
+  // BaseNode
   //=============================================================================
 
   class BaseNode : public rclcpp::Node
@@ -69,7 +67,7 @@ namespace orca_base
     const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(5)};   // ROV: disarm if we lose communication
     const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(5)};  // AUV: disarm if we lose odometry
     const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(5)};  // Holding z: disarm if we lose barometer
-    const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Publish messages at 10Hz
+    const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Check timeouts at 10Hz
 
     // Thrusters, order must match the order of the <thruster> tags in the URDF
     const std::vector<Thruster> THRUSTERS = {
@@ -107,15 +105,8 @@ namespace orca_base
     // Mode
     uint8_t mode_{orca_msgs::msg::Control::DISARMED};
 
-    // UKF state
-    std::shared_ptr<Filter> filter_;
-    bool filter_valid_{true};                     // True if the filter is valid
-    Acceleration u_bar_;                          // Last control, used for filter predict step
-
     // Barometer state
-    bool z_valid_{false};                         // True if z_ is valid
-    double z_offset_{};                           // Z offset, see baro_callback()
-    double z_{};                                  // Z from barometer
+    double pressure_{};
 
     // Joystick state
     sensor_msgs::msg::Joy joy_msg_;               // Most recent message
@@ -176,8 +167,6 @@ namespace orca_base
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
 
     void rov_advance(const rclcpp::Time &stamp);
 

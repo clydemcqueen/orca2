@@ -5,7 +5,7 @@
  *
  *    <gazebo>
  *      <plugin name="OrcaBuoyancyPlugin" filename="libOrcaBuoyancyPlugin.so">
- *        <fluid_density>1029</fluid_density>
+ *        <fluid_density>997</fluid_density>
  *        <link name="base_link">
  *          <volume>0.01</volume>
  *          <center_of_volume>0 0 0.06</center_of_volume>
@@ -35,7 +35,7 @@ namespace gazebo
     ignition::math::Vector3d gravity_;                      // Gravity vector in world frame
     physics::LinkPtr base_link_;                            // Pointer to the base link
 
-    double fluid_density_{1029};                            // Fluid density of seawater
+    double fluid_density_{997};                             // Fluid density of freshwater
     double volume_{0.01};                                   // base_link_ volume
     ignition::math::Vector3d center_of_volume_{0, 0, 0};    // base_link_ center of volume
     double height_{0.254};                                  // base_link_ height

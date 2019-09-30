@@ -18,7 +18,7 @@
  *        <update_rate>60</update_rate>
  *        <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
  *          <baro_topic>/barometer</baro_topic>
- *          <fluid_density>1029</fluid_density>
+ *          <fluid_density>997</fluid_density>
  *        </plugin>
  *      </sensor>
  *    </gazebo>

@@ -8,6 +8,11 @@
 
 namespace orca_base
 {
+
+  //=============================================================================
+  // Constants
+  //=============================================================================
+
   constexpr int STATE_DIM = 18;       // [x, y, ..., vx, vy, ..., ax, ay, ...]T
   constexpr int BARO_DIM = 1;         // [z]T
   constexpr int ODOM_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
@@ -183,12 +188,14 @@ namespace orca_base
     return mean;
   }
 
-//==================================================================
+  //==================================================================
   // Filter
   //==================================================================
 
-  Filter::Filter(const rclcpp::Logger &logger, const BaseContext &cxt_) :
+  Filter::Filter(const rclcpp::Logger &logger, const FilterContext &cxt_) :
     logger_{logger},
+    depth_q_{logger},
+    odom_q_{logger},
     filter_{STATE_DIM, 0.3, 2.0, 0}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
@@ -261,7 +268,7 @@ namespace orca_base
     filter_.set_mean_x_fn(orca_state_mean);
   }
 
-  void Filter::predict(const Acceleration &u_bar, const rclcpp::Time &stamp)
+  void Filter::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
   {
     // Compute delta from last message
     // Use a small delta to bootstrap the filter
@@ -282,22 +289,10 @@ namespace orca_base
     }
   }
 
-  void Filter::update(const Eigen::MatrixXd &z, const Eigen::MatrixXd &R, const builtin_interfaces::msg::Time &stamp,
-                      nav_msgs::msg::Odometry &filtered_odom)
+  void Filter::process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    filter_.update(z, R);
-
-    filtered_odom.header.stamp = stamp;
-    pose_from_x(filter_.x(), filtered_odom.pose.pose);
-    twist_from_x(filter_.x(), filtered_odom.twist.twist);
-    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
-    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
-  }
-
-  void Filter::process_depth(const Acceleration &u_bar, const orca_msgs::msg::Depth &depth,
-                             nav_msgs::msg::Odometry &filtered_odom)
-  {
-    predict(u_bar, depth.header.stamp);
+    orca_msgs::msg::Depth depth = depth_q_.pop_msg();
+    predict(depth.header.stamp, u_bar);
 
     Eigen::MatrixXd z;
     depth_to_z(depth, z);
@@ -315,13 +310,13 @@ namespace orca_base
     filter_.set_r_z_fn(ukf::residual);
     filter_.set_mean_z_fn(ukf::unscented_mean);
 
-    update(z, R, depth.header.stamp, filtered_odom);
+    filter_.update(z, R);
   }
 
-  void Filter::process_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
-                            nav_msgs::msg::Odometry &filtered_odom)
+  void Filter::process_odom(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    predict(u_bar, odom.header.stamp);
+    nav_msgs::msg::Odometry odom = odom_q_.pop_msg();
+    predict(odom.header.stamp, u_bar);
 
     Eigen::MatrixXd z;
     odom_to_z(odom, z);
@@ -344,7 +339,7 @@ namespace orca_base
     filter_.set_r_z_fn(orca_state_residual);
     filter_.set_mean_z_fn(orca_state_mean);
 
-    update(z, R, odom.header.stamp, filtered_odom);
+    filter_.update(z, R);
   }
 
   void Filter::queue_depth(const orca_msgs::msg::Depth &depth)
@@ -354,47 +349,61 @@ namespace orca_base
     if (!valid_stamp(depth_stamp)) {
       RCLCPP_WARN(logger_, "depth message has invalid time, dropping");
     } else {
-      depth_q_ = depth;
+      depth_q_.push(depth);
     }
   }
 
-  bool Filter::filter_odom(const Acceleration &u_bar, const nav_msgs::msg::Odometry &odom,
-                           nav_msgs::msg::Odometry &filtered_odom)
+  void Filter::queue_odom(const nav_msgs::msg::Odometry &odom)
   {
     rclcpp::Time odom_stamp{odom.header.stamp};
 
     if (!valid_stamp(odom_stamp)) {
       RCLCPP_WARN(logger_, "odometry message has invalid time, dropping");
-      return true;
-    }
-
-    if (valid_stamp(filter_time_) && valid_stamp(odom_stamp) && odom_stamp < filter_time_) {
-      RCLCPP_WARN(logger_, "odometry message older than filter time, dropping");
-      return true;
-    }
-
-    rclcpp::Time depth_stamp{depth_q_.header.stamp};
-
-    if (valid_stamp(filter_time_) && valid_stamp(depth_stamp) && depth_stamp < filter_time_) {
-      RCLCPP_WARN(logger_, "depth message older than filter time, dropping");
-      depth_q_ = orca_msgs::msg::Depth{};
-      depth_stamp = rclcpp::Time{depth_q_.header.stamp};
-    }
-
-    if (valid_stamp(depth_stamp)) {
-      if (depth_stamp < odom_stamp) {
-        process_depth(u_bar, depth_q_, filtered_odom);
-        process_odom(u_bar, odom, filtered_odom);
-      } else {
-        process_odom(u_bar, odom, filtered_odom);
-        process_depth(u_bar, depth_q_, filtered_odom);
-      }
-      depth_q_ = orca_msgs::msg::Depth{};
     } else {
-      process_odom(u_bar, odom, filtered_odom);
+      odom_q_.push(odom);
+    }
+  }
+
+  bool Filter::process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+  {
+    rclcpp::Time start = t - TOO_OLD;
+    rclcpp::Time end = t - LAG;
+
+    rclcpp::Time depth_stamp, odom_stamp;
+    bool depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
+    bool odom_msg_ready = odom_q_.msg_ready(start, end, odom_stamp);
+
+    if (!depth_msg_ready && !odom_msg_ready) {
+      // No measurements, just predict
+      predict(end, u_bar);
+    } else {
+      // Process all measurements in order
+      while (depth_msg_ready || odom_msg_ready) {
+        if (depth_msg_ready && odom_msg_ready) {
+          if (depth_stamp < odom_stamp) {
+            process_depth(u_bar, filtered_odom);
+          } else {
+            process_odom(u_bar, filtered_odom);
+          }
+        } else if (depth_msg_ready) {
+          process_depth(u_bar, filtered_odom);
+        } else {
+          process_odom(u_bar, filtered_odom);
+        }
+
+        depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
+        odom_msg_ready = odom_q_.msg_ready(start, end, odom_stamp);
+      }
     }
 
-    return filter_valid();
+    // Return the best estimate
+    filtered_odom.header.stamp = filter_time_;
+    pose_from_x(filter_.x(), filtered_odom.pose.pose);
+    twist_from_x(filter_.x(), filtered_odom.twist.twist);
+    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
+    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+
+    return filter_.valid();
   }
 
 } // namespace orca_base

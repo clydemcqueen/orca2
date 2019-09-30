@@ -13,6 +13,8 @@ namespace orca_base
 {
 
 #define BASE_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  \
   CXT_MACRO_MEMBER(auto_start, int, 0)                        /* Auto-start AUV mission if > 0  */ \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
@@ -66,18 +68,6 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_jerk_xy, double, 0.1)                  /* Slow controller jerk xy  */ \
   CXT_MACRO_MEMBER(auv_jerk_z, double, 0.1)                   /* Slow controller jerk z  */ \
   CXT_MACRO_MEMBER(auv_jerk_yaw, double, 0.2)                 /* Slow controller jerk yaw  */ \
-  \
-  CXT_MACRO_MEMBER(filter_use_output, bool, true)             /* Use filtered_odom instead of raw odom  */ \
-  CXT_MACRO_MEMBER(filter_predict_accel, bool, true)          /* Predict acceleration  */ \
-  CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
-  CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
-  CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Add barometer messages to the filter  */ \
-  \
-  CXT_MACRO_MEMBER(baro_frame, std::string, "baro_link")      /* Barometer is attached to this URDF link  */ \
-  CXT_MACRO_MEMBER(baro_init, int, 0)                         /* Barometer init method: 0 in air, 1 in water, 2 from map  */ \
-  \
-  CXT_MACRO_MEMBER(model_gravity, double, 9.8)                /* 9.8 is Gazebo default, 9.80665 is more accurate  */ \
-  CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
