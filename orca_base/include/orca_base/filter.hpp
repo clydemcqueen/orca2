@@ -23,7 +23,7 @@ namespace orca_base
 
     // Messages queues
     MessageQueue<orca_msgs::msg::Depth> depth_q_;
-    MessageQueue<nav_msgs::msg::Odometry> odom_q_;
+    MessageQueue<geometry_msgs::msg::PoseWithCovarianceStamped> pose_q_;
 
     // Filter
     ukf::UnscentedKalmanFilter filter_;
@@ -33,7 +33,7 @@ namespace orca_base
 
     void process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
 
-    void process_odom(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
+    void process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
 
   public:
 
@@ -44,7 +44,7 @@ namespace orca_base
 
     void queue_depth(const orca_msgs::msg::Depth &depth);
 
-    void queue_odom(const nav_msgs::msg::Odometry &odom);
+    void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose);
 
     // Run the filter forward to time t, return true if the filter is valid
     bool process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);

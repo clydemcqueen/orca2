@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 import rclpy
 import transformations as xf
 from builtin_interfaces.msg import Time
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
-from orca_msgs.msg import Barometer
+from orca_msgs.msg import Depth
 from rclpy.node import Node
 
 QUEUE_FOR = 1.0  # Seconds
@@ -32,7 +33,7 @@ def diag_index(dim):
 
 
 def plot_subplot(subplot, name,
-                 baro_xs, baro_values, baro_vars,
+                 depth_xs, depth_values, depth_vars,
                  pre_xs, pre_values, pre_vars,
                  post_xs, post_values, post_vars):
     """Plot data in a single subplot"""
@@ -46,8 +47,8 @@ def plot_subplot(subplot, name,
     post_s_his = [value + var for value, var in zip(post_values, post_vars)]
     subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
 
-    if baro_xs and baro_values and baro_vars:
-        subplot.errorbar(baro_xs, baro_values, yerr=baro_vars, marker='o', ls='', label='baro')
+    if depth_xs and depth_values and depth_vars:
+        subplot.errorbar(depth_xs, depth_values, yerr=depth_vars, marker='o', ls='', label='depth')
 
     subplot.set_xticklabels([])
     subplot.legend()
@@ -77,19 +78,21 @@ class PlotFilterNode(Node):
         super().__init__('plot_odom')
         self._first_time = None
         self._last_time = None
-        self._baro_msgs: List[Barometer] = []
-        self._pre_msgs: List[Odometry] = []
+        self._depth_msgs: List[Depth] = []
+        self._pre_msgs: List[PoseWithCovarianceStamped] = []
         self._post_msgs: List[Odometry] = []
 
-        self._baro_sub = self.create_subscription(Barometer, '/barometer_adj', self.baro_callback, 5)
-        self._pre_sub = self.create_subscription(Odometry, '/odom', self.pre_callback, 5)
+        self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
+        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/fcam_f_base', self.pre_callback, 5)
+        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
+        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)
         self._post_sub = self.create_subscription(Odometry, '/filtered_odom', self.post_callback, 5)
 
-    def baro_callback(self, msg: Barometer):
-        self._baro_msgs.append(msg)
+    def depth_callback(self, msg: Depth):
+        self._depth_msgs.append(msg)
         self.process(msg)
 
-    def pre_callback(self, msg: Odometry):
+    def pre_callback(self, msg: PoseWithCovarianceStamped):
         self._pre_msgs.append(msg)
         self.process(msg)
 
@@ -113,8 +116,8 @@ class PlotFilterNode(Node):
             # Reset
             self._first_time = None
             self._last_time = None
-            self._baro_msgs: List[Barometer] = []
-            self._pre_msgs: List[Odometry] = []
+            self._depth_msgs: List[Depth] = []
+            self._pre_msgs: List[PoseWithCovarianceStamped] = []
             self._post_msgs: List[Odometry] = []
 
     def plot_msgs(self):
@@ -129,18 +132,18 @@ class PlotFilterNode(Node):
               (axproll, axppitch, axpyaw), (axtroll, axtpitch, axtyaw)) = plt.subplots(4, 3)
 
         # Build lists of items to plot
-        baro_xs = [seconds(msg.header.stamp) for msg in self._baro_msgs]
+        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]
         pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]
         post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
 
-        baro_valuess = [None, None, [msg.z for msg in self._baro_msgs],
+        depth_valuess = [None, None, [msg.z for msg in self._depth_msgs],
                         None, None, None,
                         None, None, None,
                         None, None, None]
 
-        baro_varss = [None, None, [msg.z_variance for msg in self._baro_msgs],
+        depth_varss = [None, None, [msg.z_variance for msg in self._depth_msgs],
                       None, None, None,
                       None, None, None,
                       None, None, None]
@@ -190,15 +193,15 @@ class PlotFilterNode(Node):
                       [msg.twist.covariance[diag_index(5)] for msg in self._post_msgs]]
 
         # Plot everything
-        for subplot, name, baro_values, baro_vars, pre_values, pre_vars, post_values, post_vars in \
-                zip(subplots, names, baro_valuess, baro_varss, pre_valuess, pre_varss, post_valuess, post_varss):
+        for subplot, name, depth_values, depth_vars, pre_values, pre_vars, post_values, post_vars in \
+                zip(subplots, names, depth_valuess, depth_varss, pre_valuess, pre_varss, post_valuess, post_varss):
             plot_subplot(subplot, name,
-                         baro_xs, baro_values, baro_vars,
+                         depth_xs, depth_values, depth_vars,
                          pre_xs, pre_values, pre_vars,
                          post_xs, post_values, post_vars)
 
         # Set figure title
-        fig.suptitle('pre- and post-filter odometry messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))
+        fig.suptitle('pre- and post-filter messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')

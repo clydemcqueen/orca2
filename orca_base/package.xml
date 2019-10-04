@@ -28,6 +28,7 @@
     <depend>tf2</depend>
     <depend>tf2_ros</depend>
     <depend>ukf</depend>
+    <depend>urdf</depend>
     <depend>visualization_msgs</depend>
 
     <export>

@@ -19,8 +19,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
-  CXT_MACRO_MEMBER(inc_yaw, double, 0.2)                      /* Yaw trim increment  */ \
-  CXT_MACRO_MEMBER(inc_z, double, 0.2)                        /* Z trim increment  */ \
+  CXT_MACRO_MEMBER(inc_pressure, double, 2000)                /* Pressure trim increment  */ \
   CXT_MACRO_MEMBER(inc_tilt, int, 5)                          /* Tilt increment  */ \
   CXT_MACRO_MEMBER(inc_lights, int, 20)                       /* Lights increment  */ \
   \
@@ -29,13 +28,9 @@ namespace orca_base
   CXT_MACRO_MEMBER(yaw_gain, double, 0.3)                     /* Attenuate joystick inputs  */ \
   CXT_MACRO_MEMBER(vertical_gain, double, 0.5)                /* Attenuate joystick inputs  */ \
   \
-  CXT_MACRO_MEMBER(rov_z_pid_kp, double, 2.4)                 /* ROV z pid Kp  */ \
-  CXT_MACRO_MEMBER(rov_z_pid_ki, double, 1.5)                 /* ROV z pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_z_pid_kd, double, 0.96)                /* ROV z pid Kd  */ \
-  \
-  CXT_MACRO_MEMBER(rov_yaw_pid_kp, double, 5)                 /* ROV yaw pid Kp  */ \
-  CXT_MACRO_MEMBER(rov_yaw_pid_ki, double, 0)                 /* ROV yaw pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_yaw_pid_kd, double, 0)                 /* ROV yaw pid Kd  */ \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024)      /* ROV hold pressure pid Kp  */ \
+  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015)      /* ROV hold pressure pid Ki  */ \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000096)     /* ROV hold pressure pid Kd  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 3)                   /* AUV x pid Kp  */ \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 2)                   /* AUV x pid Ki  */ \

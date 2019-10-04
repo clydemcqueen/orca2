@@ -15,12 +15,24 @@ namespace orca_base
 #define FILTER_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
+  CXT_MACRO_MEMBER(urdf_file, std::string, "install/orca_description/share/orca_description/urdf/orca.urdf") \
+  CXT_MACRO_MEMBER(urdf_barometer_joint, std::string, "baro_joint")  /* Joint between baro_link and base_link */ \
+  CXT_MACRO_MEMBER(urdf_forward_camera_joint, std::string, "forward_camera_frame_joint") \
+  CXT_MACRO_MEMBER(urdf_left_camera_joint, std::string, "left_camera_frame_joint") \
+  CXT_MACRO_MEMBER(urdf_right_camera_joint, std::string, "right_camera_frame_joint") \
+  \
+  CXT_MACRO_MEMBER(frame_id_map, std::string, "map") \
+  CXT_MACRO_MEMBER(frame_id_base_link, std::string, "base_link") \
+  \
+  CXT_MACRO_MEMBER(publish_filtered_tf, bool, "true") \
+  CXT_MACRO_MEMBER(publish_measurement_tf, bool, "true") \
+  \
   CXT_MACRO_MEMBER(baro_init, int, 0)                         /* Barometer init method: 0 in air, 1 in water, 2 from map  */ \
   \
   CXT_MACRO_MEMBER(filter_predict_accel, bool, true)          /* Predict acceleration  */ \
   CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
   CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
-  CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Add barometer messages to the filter  */ \
+  CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Filter barometer messages  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

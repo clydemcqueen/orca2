@@ -15,7 +15,7 @@ namespace orca_base
 
   constexpr int STATE_DIM = 18;       // [x, y, ..., vx, vy, ..., ax, ay, ...]T
   constexpr int BARO_DIM = 1;         // [z]T
-  constexpr int ODOM_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
+  constexpr int POSE_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
   constexpr int CONTROL_DIM = 4;      // [ax, ay, az, ayaw]T
   constexpr double MIN_DT = 0.001;
   constexpr double MAX_DT = 1.0;
@@ -46,15 +46,15 @@ namespace orca_base
   }
 
   // Create measurement matrix z
-  void odom_to_z(const nav_msgs::msg::Odometry &odom, Eigen::MatrixXd &z)
+  void pose_to_z(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, Eigen::MatrixXd &z)
   {
     tf2::Transform t_map_base;
-    tf2::fromMsg(odom.pose.pose, t_map_base);
+    tf2::fromMsg(pose.pose.pose, t_map_base);
 
     tf2Scalar roll, pitch, yaw;
     t_map_base.getBasis().getRPY(roll, pitch, yaw);
 
-    z = Eigen::MatrixXd(ODOM_DIM, 1);
+    z = Eigen::MatrixXd(POSE_DIM, 1);
     z << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
   }
 
@@ -65,12 +65,12 @@ namespace orca_base
   }
 
   // Create measurement covariance matrix R
-  void odom_to_R(const nav_msgs::msg::Odometry &odom, Eigen::MatrixXd &R)
+  void pose_to_R(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, Eigen::MatrixXd &R)
   {
-    R = Eigen::MatrixXd(ODOM_DIM, ODOM_DIM);
-    for (int i = 0; i < ODOM_DIM; i++) {
-      for (int j = 0; j < ODOM_DIM; j++) {
-        R(i, j) = odom.pose.covariance[i * ODOM_DIM + j];
+    R = Eigen::MatrixXd(POSE_DIM, POSE_DIM);
+    for (int i = 0; i < POSE_DIM; i++) {
+      for (int j = 0; j < POSE_DIM; j++) {
+        R(i, j) = pose.pose.covariance[i * POSE_DIM + j];
       }
     }
   }
@@ -195,7 +195,7 @@ namespace orca_base
   Filter::Filter(const rclcpp::Logger &logger, const FilterContext &cxt_) :
     logger_{logger},
     depth_q_{logger},
-    odom_q_{logger},
+    pose_q_{logger},
     filter_{STATE_DIM, 0.3, 2.0, 0}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
@@ -274,7 +274,9 @@ namespace orca_base
     // Use a small delta to bootstrap the filter
     double dt = valid_stamp(filter_time_) ? (stamp - filter_time_).seconds() : 0.1;
 
-    if (dt < MIN_DT) {
+    if (dt < 0) {
+      RCLCPP_WARN(logger_, "dt %g is less than 0, skip predict", dt);
+    } else if (dt < MIN_DT) {
       RCLCPP_DEBUG(logger_, "dt %g is too small, skip predict", dt);
     } else if (dt > MAX_DT) {
       RCLCPP_WARN(logger_, "dt %g is too large, skip predict", dt);
@@ -313,16 +315,16 @@ namespace orca_base
     filter_.update(z, R);
   }
 
-  void Filter::process_odom(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+  void Filter::process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    nav_msgs::msg::Odometry odom = odom_q_.pop_msg();
-    predict(odom.header.stamp, u_bar);
+    geometry_msgs::msg::PoseWithCovarianceStamped pose = pose_q_.pop_msg();
+    predict(pose.header.stamp, u_bar);
 
     Eigen::MatrixXd z;
-    odom_to_z(odom, z);
+    pose_to_z(pose, z);
 
     Eigen::MatrixXd R;
-    odom_to_R(odom, R);
+    pose_to_R(pose, R);
 
     // Measurement function
     filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
@@ -353,14 +355,14 @@ namespace orca_base
     }
   }
 
-  void Filter::queue_odom(const nav_msgs::msg::Odometry &odom)
+  void Filter::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
   {
-    rclcpp::Time odom_stamp{odom.header.stamp};
+    rclcpp::Time pose_stamp{pose.header.stamp};
 
-    if (!valid_stamp(odom_stamp)) {
-      RCLCPP_WARN(logger_, "odometry message has invalid time, dropping");
+    if (!valid_stamp(pose_stamp)) {
+      RCLCPP_WARN(logger_, "pose message has invalid time, dropping");
     } else {
-      odom_q_.push(odom);
+      pose_q_.push(pose);
     }
   }
 
@@ -369,30 +371,30 @@ namespace orca_base
     rclcpp::Time start = t - TOO_OLD;
     rclcpp::Time end = t - LAG;
 
-    rclcpp::Time depth_stamp, odom_stamp;
+    rclcpp::Time depth_stamp, pose_stamp;
     bool depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
-    bool odom_msg_ready = odom_q_.msg_ready(start, end, odom_stamp);
+    bool pose_msg_ready = pose_q_.msg_ready(start, end, pose_stamp);
 
-    if (!depth_msg_ready && !odom_msg_ready) {
+    if (!depth_msg_ready && !pose_msg_ready) {
       // No measurements, just predict
       predict(end, u_bar);
     } else {
       // Process all measurements in order
-      while (depth_msg_ready || odom_msg_ready) {
-        if (depth_msg_ready && odom_msg_ready) {
-          if (depth_stamp < odom_stamp) {
+      while (depth_msg_ready || pose_msg_ready) {
+        if (depth_msg_ready && pose_msg_ready) {
+          if (depth_stamp < pose_stamp) {
             process_depth(u_bar, filtered_odom);
           } else {
-            process_odom(u_bar, filtered_odom);
+            process_pose(u_bar, filtered_odom);
           }
         } else if (depth_msg_ready) {
           process_depth(u_bar, filtered_odom);
         } else {
-          process_odom(u_bar, filtered_odom);
+          process_pose(u_bar, filtered_odom);
         }
 
         depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
-        odom_msg_ready = odom_q_.msg_ready(start, end, odom_stamp);
+        pose_msg_ready = pose_q_.msg_ready(start, end, pose_stamp);
       }
     }
 

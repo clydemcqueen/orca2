@@ -1,4 +1,4 @@
-"""Launch a generic simulation, with all the bells and whistles"""
+"""Launch a simulation"""
 
 import os
 
@@ -11,8 +11,12 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Must match camera name in URDF file
+    forward_camera_name = 'forward_camera'
+    forward_camera_frame = 'forward_camera_frame'
     left_camera_name = 'left_camera'
     left_camera_frame = 'left_camera_frame'
+    right_camera_name = 'right_camera'
+    right_camera_frame = 'right_camera_frame'
 
     # The AUV must be injected at the surface to calibrate the barometer
     surface = '0'
@@ -21,8 +25,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'small.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'simple.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'simple_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -56,7 +60,8 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'auto_start': 5,  # Auto-start AUV mission
+                'model_fluid_density': 997.0,
+                'auto_start': 0,  # Auto-start AUV mission
                 'auv_z_target': -1.0,  # Mission runs 1m below the surface
                 'auv_controller': 0,  # BaseController
                 'auv_epsilon_xy': 0.05,
@@ -65,13 +70,30 @@ def generate_launch_description():
                 'auv_jerk_xy': 10.0,
                 'auv_jerk_z': 10.0,
                 'auv_jerk_yaw': 20.0,
+            }], remappings=[
+                # ('fiducial_odom', '/' + left_camera_name + '/odom'),
+                ('fiducial_odom', '/filtered_odom'),
+            ]),
+
+        # Filter
+        Node(package='orca_base', node_executable='filter_node', output='screen',
+             node_name='filter_node', parameters=[{
+                'use_sim_time': True,  # Use /clock if available
+                'model_fluid_density': 997.0,
+                'baro_init': 0,  # Init in-air
                 'filter_predict_accel': False,
                 'filter_predict_control': False,
                 'filter_predict_drag': False,
-                'filter_use_output': False,
-                'filter_baro': False,
+                'filter_baro': True,
+                'urdf_file': urdf_path,
+                'urdf_barometer_joint': 'baro_joint',
+                'urdf_forward_camera_joint': 'forward_camera_frame_joint',
+                'urdf_left_camera_joint': 'left_camera_frame_joint',
+                'urdf_right_camera_joint': 'right_camera_frame_joint',
             }], remappings=[
-                ('fiducial_odom', '/' + left_camera_name + '/odom')
+                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+                ('lcam_f_map', '/' + left_camera_name + '/camera_pose'),
+                ('rcam_f_map', '/' + right_camera_name + '/camera_pose'),
             ]),
 
         # Load and publish a known map
@@ -83,25 +105,48 @@ def generate_launch_description():
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
                 'make_not_use_map': 0}]),  # Don't modify the map
 
-        # Localizer
+        # Localize against the map -- forward camera
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_node', node_namespace=left_camera_name, parameters=[{
+             node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'publish_tfs': 1,
+                'publish_tfs': 0,
                 'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
                 'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 0,
+                'publish_camera_pose': 1,
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
-                'publish_base_odom': 1,
-                'base_odometry_pub_topic': 'odom',
+                'publish_base_odom': 0,
+                'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
+                'camera_frame_id': forward_camera_frame,
+            }]),
+
+        # Localize against the map -- left camera
+        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+             node_name='vloc_left', node_namespace=left_camera_name, parameters=[{
+                'use_sim_time': True,  # Use /clock if available
+                'publish_tfs': 0,
+                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
+                'sub_camera_info_best_effort_not_reliable': 1,
+                'publish_camera_pose': 1,
+                'publish_base_pose': 0,
+                'publish_camera_odom': 0,
+                'publish_base_odom': 0,
                 'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
                 'camera_frame_id': left_camera_frame,
-                't_camera_base_x': 0.18,
-                't_camera_base_y': -0.15,
-                't_camera_base_z': -0.0675,
-                't_camera_base_roll': 0.,
-                't_camera_base_pitch': math.pi,
-                't_camera_base_yaw': math.pi / 2
+            }]),
+
+        # Localize against the map -- right camera
+        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+             node_name='vloc_right', node_namespace=right_camera_name, parameters=[{
+                'use_sim_time': True,  # Use /clock if available
+                'publish_tfs': 0,
+                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
+                'sub_camera_info_best_effort_not_reliable': 1,
+                'publish_camera_pose': 1,
+                'publish_base_pose': 0,
+                'publish_camera_odom': 0,
+                'publish_base_odom': 0,
+                'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
+                'camera_frame_id': right_camera_frame,
             }]),
     ])

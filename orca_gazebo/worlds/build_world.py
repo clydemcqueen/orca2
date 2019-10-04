@@ -135,9 +135,10 @@ def gen_ring_of_markers(num_markers, radius, z):
 # Pool test #2: 4m diameter x 1m deep, markers on walls
 pt2 = list(gen_ring_of_markers(num_markers=12, radius=3.51/2, z=-0.5))
 
-# Even simpler pool test #2: 1 marker on the wall
+# Even simpler pool test #2: 1 marker on the wall and 1 on the floor
 small_simple = [
-    [0, 2, 0, -0.5, 0, -math.pi / 2, 0]
+    [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
+    [1, 1, 1, -3, 0, 0, 0],
 ]
 
 worlds = [

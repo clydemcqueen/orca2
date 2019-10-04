@@ -18,7 +18,7 @@ namespace orca_base
     // Sensor constants
     //=====================================================================================
 
-    static constexpr double DEPTH_STDDEV = 0.1;
+    static constexpr double DEPTH_STDDEV = 0.01;
 
     //=====================================================================================
     // Vehicle constants, in the body frame (x forward, y left, z up)
@@ -34,7 +34,7 @@ namespace orca_base
     static constexpr double ROV_AREA_Y = ROV_DIM_X * ROV_DIM_Z;  // Area of top and bottom
     static constexpr double ROV_AREA_Z = ROV_DIM_X * ROV_DIM_Y;  // Area of left (port) and right (starboard) sides
 
-    static constexpr double ORCA_MASS = 10;
+    static constexpr double ORCA_MASS = 9.75;
     static constexpr double ORCA_VOLUME = 0.01;
 
     // Assume a uniform distribution of mass in the vehicle box

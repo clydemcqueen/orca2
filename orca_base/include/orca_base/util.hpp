@@ -6,6 +6,7 @@
 
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "sensor_msgs/msg/joy.hpp"
+#include "tf2/LinearMath/Transform.h"
 
 namespace orca_base
 {
@@ -71,8 +72,13 @@ namespace orca_base
   // Compute a 2d point in a rotated frame (v' = R_transpose * v)
   void rotate_frame(double x, double y, double theta, double &x_r, double &y_r);
 
+  // Get roll, pitch and yaw from a quaternion
+  void get_rpy(const geometry_msgs::msg::Quaternion &q, double &roll, double &pitch, double &yaw);
+
   // Get yaw from a quaternion
   double get_yaw(const geometry_msgs::msg::Quaternion &q);
+
+  std::string to_str(const tf2::Transform &t);
 
   // Sense a button down event
   bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button);

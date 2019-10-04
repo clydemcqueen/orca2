@@ -5,13 +5,6 @@ namespace orca_base
 {
 
   //=============================================================================
-  // Constants
-  //=============================================================================
-
-  const double Z_HOLD_MAX = -0.05;  // Highest z hold
-  const double Z_HOLD_MIN = -50;    // Lowest z hold
-
-  //=============================================================================
   // BaseNode
   //=============================================================================
 
@@ -37,7 +30,8 @@ namespace orca_base
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BASE_NODE_ALL_PARAMS, validate_parameters)
 
     // ROV PID controller
-    rov_z_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_z_pid_kp_, cxt_.rov_z_pid_ki_, cxt_.rov_z_pid_kd_);
+    pressure_hold_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
+                                                           cxt_.rov_pressure_pid_kd_);
 
     // Publications
     control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
@@ -120,11 +114,11 @@ namespace orca_base
       if (button_down(msg, joy_msg_, joy_button_rov_)) {
         RCLCPP_INFO(get_logger(), "manual");
         set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV);
-      } else if (button_down(msg, joy_msg_, joy_button_rov_hold_z_)) {
+      } else if (button_down(msg, joy_msg_, joy_button_rov_hold_pressure_)) {
         if (baro_ok(msg->header.stamp)) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV_HOLD_Z);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV_HOLD_PRESSURE);
         } else {
-          RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold z");
+          RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold pressure");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
@@ -147,11 +141,11 @@ namespace orca_base
       }
 
       // Z trim
-      if (holding_z() && trim_down(msg, joy_msg_, joy_axis_z_trim_)) {
-        rov_z_pid_->set_target(clamp(
-          msg->axes[joy_axis_z_trim_] > 0 ? rov_z_pid_->target() + cxt_.inc_z_ : rov_z_pid_->target() - cxt_.inc_z_,
-          Z_HOLD_MIN, Z_HOLD_MAX));
-        RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
+      if (holding_pressure() && trim_down(msg, joy_msg_, joy_axis_z_trim_)) {
+        pressure_hold_pid_->set_target(msg->axes[joy_axis_z_trim_] > 0 ?
+                                       pressure_hold_pid_->target() - cxt_.inc_pressure_ :
+                                       pressure_hold_pid_->target() + cxt_.inc_pressure_);
+        RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
       }
 
       // Camera tilt
@@ -199,15 +193,15 @@ namespace orca_base
   // New odometry available
   void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
   {
-    // Record lag for diagnostics
-//    odom_lag_ = (now() - odom_cb_.curr()).seconds();
-
-    // Compute a stability metric
-    // TODO
-    // stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
-
+    // Save the pose
     filtered_pose_.from_msg(*msg);
 
+    // Compute a stability metric
+    double roll, pitch, yaw;
+    get_rpy(msg->pose.pose.orientation, roll, pitch, yaw);
+    stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
+
+    // Continue the mission
     if (auv_mode()) {
       auv_advance(msg->header.stamp, odom_cb_.dt());
     }
@@ -222,9 +216,9 @@ namespace orca_base
     efforts.set_strafe(dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_);
     efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
-    if (holding_z()) {
+    if (holding_pressure()) {
       efforts.set_vertical(
-        Model::accel_to_effort_z(rov_z_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()) * stability_);
+        Model::accel_to_effort_z(-pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()) * stability_);
     } else {
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
@@ -305,7 +299,7 @@ namespace orca_base
       control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
     }
     control_msg.stability = stability_;
-    control_msg.odom_lag = odom_lag_;
+    control_msg.odom_lag = (now() - odom_cb_.curr()).seconds();
     control_pub_->publish(control_msg);
 
     // Publish rviz thrust markers
@@ -350,9 +344,9 @@ namespace orca_base
     // Stop all thrusters
     all_stop(msg_time);
 
-    if (is_z_hold_mode(new_mode)) {
-      rov_z_pid_->set_target(pressure_);
-      RCLCPP_INFO(get_logger(), "hold z at %g", rov_z_pid_->target());
+    if (is_hold_pressure_mode(new_mode)) {
+      pressure_hold_pid_->set_target(pressure_);
+      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
     }
 
     if (is_auv_mode(new_mode)) {
@@ -429,8 +423,8 @@ namespace orca_base
       set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 
-    if (holding_z() && !baro_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost barometer while holding z, disarming");
+    if (holding_pressure() && !baro_ok(spin_time)) {
+      RCLCPP_ERROR(get_logger(), "lost barometer while holding pressure, disarming");
       set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
     }
 

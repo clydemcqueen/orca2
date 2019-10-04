@@ -24,16 +24,16 @@ namespace orca_base
   // Utils
   //=============================================================================
 
-  constexpr bool is_z_hold_mode(uint8_t mode)
+  constexpr bool is_hold_pressure_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode == Control::ROV_HOLD_Z;
+    return mode == Control::ROV_HOLD_PRESSURE;
   }
 
   constexpr bool is_rov_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode == Control::ROV || mode == Control::ROV_HOLD_Z;
+    return mode == Control::ROV || mode == Control::ROV_HOLD_PRESSURE;
   }
 
   constexpr bool is_auv_mode(uint8_t mode)
@@ -89,7 +89,7 @@ namespace orca_base
     const int joy_button_disarm_ = JOY_BUTTON_VIEW;
     const int joy_button_arm_ = JOY_BUTTON_MENU;
     const int joy_button_rov_ = JOY_BUTTON_A;
-    const int joy_button_rov_hold_z_ = JOY_BUTTON_B;
+    const int joy_button_rov_hold_pressure_ = JOY_BUTTON_B;
     const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
     const int joy_button_auv_mission_4_ = JOY_BUTTON_Y;
     const int joy_button_auv_mission_5_ = JOY_BUTTON_LOGO;
@@ -113,11 +113,10 @@ namespace orca_base
 
     // Odometry state
     PoseStamped filtered_pose_;                   // Estimated pose
-    double odom_lag_{};                           // Difference between header.stamp and now(), in seconds
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // ROV operation
-    std::shared_ptr<pid::Controller> rov_z_pid_;
+    std::shared_ptr<pid::Controller> pressure_hold_pid_;
 
     // AUV operation
     std::shared_ptr<Mission> mission_;            // The mission we're running
@@ -178,8 +177,8 @@ namespace orca_base
 
     void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode);
 
-    bool holding_z()
-    { return is_z_hold_mode(mode_); }
+    bool holding_pressure()
+    { return is_hold_pressure_mode(mode_); }
 
     bool rov_mode()
     { return is_rov_mode(mode_); }
