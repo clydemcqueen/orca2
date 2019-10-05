@@ -16,7 +16,15 @@
                 <static>true</static>
                 <uri>model://marker_0</uri>
             </include>
-            <pose>2.0 0.0 0.0 0 -1.5707963267948966 0</pose>
+            <pose>2 0 0 0 -1.5707963267948966 0</pose>
+        </model>
+
+        <model name="marker1">
+            <include>
+                <static>true</static>
+                <uri>model://marker_1</uri>
+            </include>
+            <pose>0 0 -2 0 0 0</pose>
         </model>
 
     </world>

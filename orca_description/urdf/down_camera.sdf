@@ -1,11 +1,11 @@
 <!--
-  Fixed camera for testing
+  Down camera for testing
 
   The URDF to SDF converter (`gz sdf -p foo.urdf`) gave odd results, including 2 gravity tags.
   So... just hand-edit this SDF file.
 -->
 <sdf version='1.6'>
-    <model name='fixed_camera'>
+    <model name='down_camera'>
         <link name='base_link'>
             <pose frame=''>0 0 0 0 -0 0</pose>
             <inertial> <!-- inertial tag is REQUIRED for Gazebo -->
@@ -50,7 +50,7 @@
                     </script>
                 </material>
             </visual>
-            <sensor type="camera" name="forward_camera">
+            <sensor type="camera" name="down_camera">
                 <update_rate>30.0</update_rate>
                 <camera name="head">
                     <horizontal_fov>1.4</horizontal_fov>
@@ -72,10 +72,10 @@
                         <stddev>0.007</stddev>
                     </noise>
                 </camera>
-                <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <plugin name="down_camera_controller" filename="libgazebo_ros_camera.so">
                     <alwaysOn>true</alwaysOn>
                     <updateRate>0.0</updateRate>
-                    <cameraName>orca/forward_camera</cameraName>
+                    <cameraName>orca/down_camera</cameraName>
                     <imageTopicName>image_raw</imageTopicName>
                     <cameraInfoTopicName>camera_info</cameraInfoTopicName>
                     <frameName>base_link</frameName>

@@ -25,19 +25,6 @@ namespace orca_base
     return yaw;
   }
 
-  std::string to_str(const tf2::Transform &t)
-  {
-    double roll, pitch, yaw;
-    t.getBasis().getRPY(roll, pitch, yaw);
-    std::stringstream s;
-    s <<
-      "xyz(" << t.getOrigin().x() << ", " << t.getOrigin().y() << ", " << t.getOrigin().z() << ") " <<
-      "rpy(" << roll << ", " << pitch << ", " << yaw << ") " <<
-      "q(" << t.getRotation().x() << ", " << t.getRotation().y() << ", " << t.getRotation().z() << ", " <<
-      t.getRotation().w() << ")";
-    return s.str();
-  }
-
   bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button)
   {
     return curr->buttons[button] && !prev.buttons[button];
@@ -46,6 +33,41 @@ namespace orca_base
   bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
   {
     return curr->axes[axis] && !prev.axes[axis];
+  }
+
+  std::string to_str_rpy(const tf2::Transform &t)
+  {
+    double roll, pitch, yaw;
+    t.getBasis().getRPY(roll, pitch, yaw);
+    std::stringstream s;
+    s <<
+      "xyz(" << t.getOrigin().x() << ", " << t.getOrigin().y() << ", " << t.getOrigin().z() << ") " <<
+      "rpy(" << roll << ", " << pitch << ", " << yaw << ") ";
+    return s.str();
+  }
+
+  std::string to_str_q(const tf2::Transform &t)
+  {
+    std::stringstream s;
+    s <<
+      "xyz(" << t.getOrigin().x() << ", " << t.getOrigin().y() << ", " << t.getOrigin().z() << ") " <<
+      "q(" << t.getRotation().x() << ", " << t.getRotation().y() << ", " << t.getRotation().z() << ", " <<
+      t.getRotation().w() << ")";
+    return s.str();
+  }
+
+  std::string to_str(const rclcpp::Time &t)
+  {
+    std::stringstream s;
+    s << "{" << t.seconds() << "s _or_ " << t.nanoseconds() << "ns}";
+    return s.str();
+  }
+
+  std::string to_str(const builtin_interfaces::msg::Time &t)
+  {
+    std::stringstream s;
+    s << "{" << t.sec << "s _plus_ " << t.nanosec << "ns}";
+    return s.str();
   }
 
 } // namespace orca_base

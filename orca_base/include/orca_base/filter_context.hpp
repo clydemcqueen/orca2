@@ -13,7 +13,7 @@ namespace orca_base
 {
 
 #define FILTER_NODE_ALL_PARAMS \
-  CXT_MACRO_MEMBER(model_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
   CXT_MACRO_MEMBER(urdf_file, std::string, "install/orca_description/share/orca_description/urdf/orca.urdf") \
   CXT_MACRO_MEMBER(urdf_barometer_joint, std::string, "baro_joint")  /* Joint between baro_link and base_link */ \
@@ -29,9 +29,11 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(baro_init, int, 0)                         /* Barometer init method: 0 in air, 1 in water, 2 from map  */ \
   \
-  CXT_MACRO_MEMBER(filter_predict_accel, bool, true)          /* Predict acceleration  */ \
-  CXT_MACRO_MEMBER(filter_predict_control, bool, true)        /* Add u_bar to predicted acceleration  */ \
-  CXT_MACRO_MEMBER(filter_predict_drag, bool, true)           /* Add drag to predicted acceleration  */ \
+  CXT_MACRO_MEMBER(predict_accel, bool, true)                 /* Predict acceleration  */ \
+  CXT_MACRO_MEMBER(predict_accel_control, bool, true)         /* Add u_bar to predicted acceleration  */ \
+  CXT_MACRO_MEMBER(predict_accel_drag, bool, true)            /* Add drag to predicted acceleration  */ \
+  CXT_MACRO_MEMBER(predict_accel_buoyancy, bool, true)        /* Add gravity and buoyancy to predicted acceleration  */ \
+  \
   CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Filter barometer messages  */ \
 /* End of list */
 

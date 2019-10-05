@@ -442,7 +442,7 @@
     </xacro:macro>
 
     <!-- Forward-facing camera: -->
-    <xacro:camera_plugin prefix="forward"/>
+<!--    <xacro:camera_plugin prefix="forward"/>-->
 
     <!-- Left down-facing camera: -->
     <xacro:camera_plugin prefix="left"/>

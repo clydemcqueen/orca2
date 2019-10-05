@@ -73,7 +73,7 @@ namespace orca_base
     BASE_NODE_ALL_PARAMS
 
     // Update model from new parameters
-    cxt_.model_.fluid_density_ = cxt_.model_fluid_density_;
+    cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
   }
 
   // New barometer reading

@@ -2,7 +2,7 @@
 Launch a test harness for fiducial_vlam
 
 Inject a new camera on-the-fly:
-ros2 run orca_gazebo inject_entity.py install/orca_description/share/orca_description/urdf/fixed_camera.sdf 0 0 0 0
+ros2 run orca_gazebo inject_entity.py install/orca_description/share/orca_description/urdf/fixed_camera.sdf 0 0 0 0 0 0
 
 (But deleting a model from Gazebo might delete the ROS node before the ROS subscriptions, causing a memory leak.)
 """
@@ -18,13 +18,16 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Must match camera name in URDF file
-    camera_name = 'forward_camera'
-    camera_frame = 'forward_camera_frame'
+    forward_camera_name = 'forward_camera'
+    forward_camera_frame = 'forward_camera_frame'
+    down_camera_name = 'down_camera'
+    down_camera_frame = 'down_camera_frame'
 
     orca_description_path = get_package_share_directory('orca_description')
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
-    sdf_path = os.path.join(orca_description_path, 'urdf', 'fixed_camera.sdf')
+    forward_sdf_path = os.path.join(orca_description_path, 'urdf', 'forward_camera.sdf')
+    down_sdf_path = os.path.join(orca_description_path, 'urdf', 'down_camera.sdf')
     world_path = os.path.join(orca_gazebo_path, 'worlds', 'vlam_test.world')
     map_path = os.path.join(orca_gazebo_path, 'worlds', 'vlam_test_map.yaml')
 
@@ -39,9 +42,13 @@ def generate_launch_description():
             world_path
         ], output='screen'),
 
-        # Add the camera to the simulation
+        # Add forward-facing camera to the simulation
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
-             arguments=[sdf_path, '0', '0', '0', '0']),
+             arguments=[forward_sdf_path, '0', '0', '0', '0', '0', '0']),
+
+        # Add down-facing camera to the simulation
+        Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
+             arguments=[down_sdf_path, '-0.2', '0', '0', '0', '1.570796', '0']),
 
         # # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
@@ -52,25 +59,35 @@ def generate_launch_description():
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
                 'make_not_use_map': 0}]),  # Don't modify the map
 
-        # Localizer
+        # Forward vloc
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_node', node_namespace=camera_name, parameters=[{
+             node_name='vloc_node', node_namespace=forward_camera_name, parameters=[{
                 'use_sim_time': True,  # Use /clock if available
                 'publish_tfs': 1,
+                'base_frame_id': '',  # Suppress publication of base_link tf
                 'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
                 'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 0,
+                'publish_camera_pose': 1,
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
-                'publish_base_odom': 1,
-                'base_odometry_pub_topic': 'odom',
+                'publish_base_odom': 0,
                 'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
-                'camera_frame_id': camera_frame,
-                't_camera_base_x': 0.,
-                't_camera_base_y': 0.,
-                't_camera_base_z': 0.,
-                't_camera_base_roll': 0.,
-                't_camera_base_pitch': math.pi,
-                't_camera_base_yaw': math.pi / 2
+                'camera_frame_id': forward_camera_frame,
+            }]),
+
+        # Down vloc
+        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+             node_name='vloc_node', node_namespace=down_camera_name, parameters=[{
+                'use_sim_time': True,  # Use /clock if available
+                'publish_tfs': 1,
+                'base_frame_id': '',  # Suppress publication of base_link tf
+                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
+                'sub_camera_info_best_effort_not_reliable': 1,
+                'publish_camera_pose': 1,
+                'publish_base_pose': 0,
+                'publish_camera_odom': 0,
+                'publish_base_odom': 0,
+                'stamp_msgs_with_current_time': 0,  # Use incoming message time, not now()
+                'camera_frame_id': down_camera_frame,
             }]),
     ])

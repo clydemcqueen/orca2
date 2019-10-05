@@ -34,11 +34,11 @@ namespace orca_base
     static constexpr double ROV_AREA_Y = ROV_DIM_X * ROV_DIM_Z;  // Area of top and bottom
     static constexpr double ROV_AREA_Z = ROV_DIM_X * ROV_DIM_Y;  // Area of left (port) and right (starboard) sides
 
-    static constexpr double ORCA_MASS = 9.75;
-    static constexpr double ORCA_VOLUME = 0.01;
+    static constexpr double MASS = 9.75;
+    static constexpr double VOLUME = 0.01;
 
     // Assume a uniform distribution of mass in the vehicle box
-    static constexpr double MOMENT_OF_INERTIA_YAW = ORCA_MASS / 12.0 * (ROV_DIM_X * ROV_DIM_X + ROV_DIM_Y * ROV_DIM_Y);
+    static constexpr double MOMENT_OF_INERTIA_YAW = MASS / 12.0 * (ROV_DIM_X * ROV_DIM_X + ROV_DIM_Y * ROV_DIM_Y);
 
     // From BlueRobotics specs, all forces are in Newtons
     static constexpr double BOLLARD_FORCE_XY = 137;
@@ -74,7 +74,7 @@ namespace orca_base
 
     // Force / torque => acceleration
     static constexpr double force_to_accel(double force)
-    { return force / ORCA_MASS; }
+    { return force / MASS; }
 
     static constexpr double torque_to_accel_yaw(double torque_yaw)
     { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
@@ -91,10 +91,10 @@ namespace orca_base
 
     // Acceleration => force / torque
     static constexpr double accel_to_force_xy(double accel_xy)
-    { return ORCA_MASS * accel_xy; }
+    { return MASS * accel_xy; }
 
     static constexpr double accel_to_force_z(double accel_z)
-    { return ORCA_MASS * accel_z; }
+    { return MASS * accel_z; }
 
     static constexpr double accel_to_torque_yaw(double accel_yaw)
     { return MOMENT_OF_INERTIA_YAW * accel_yaw; }
@@ -127,14 +127,14 @@ namespace orca_base
     { return fluid_density_ * GRAVITY * -z + ATMOSPHERIC_PRESSURE; }
 
     double displaced_mass() const
-    { return ORCA_VOLUME * fluid_density_; }
+    { return VOLUME * fluid_density_; }
 
     double weight_in_water() const
-    { return GRAVITY * (ORCA_MASS - displaced_mass()); }
+    { return GRAVITY * (MASS - displaced_mass()); }
 
     // Z acceleration required to hover
     double hover_accel_z() const
-    { return weight_in_water() / ORCA_MASS; }
+    { return weight_in_water() / MASS; }
 
     double linear_drag_x() const
     { return 0.5 * fluid_density_ * ROV_AREA_X * DRAG_COEFFICIENT_X; }

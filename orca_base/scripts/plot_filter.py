@@ -5,7 +5,7 @@ Analyze and plot the output of a Kalman filter by subscribing to 2 Odometry mess
 
 Usage: ros2 run orca_base plot_filter.py /pre_filter:=/left_camera/odom /post_filter:=/filtered_odom
 """
-
+import math
 import statistics
 from typing import List
 
@@ -33,22 +33,22 @@ def diag_index(dim):
 
 
 def plot_subplot(subplot, name,
-                 depth_xs, depth_values, depth_vars,
-                 pre_xs, pre_values, pre_vars,
-                 post_xs, post_values, post_vars):
+                 depth_xs, depth_values, depth_sds,
+                 pre_xs, pre_values, pre_sds,
+                 post_xs, post_values, post_sds):
     """Plot data in a single subplot"""
 
-    if pre_xs and pre_values and pre_vars:
-        subplot.errorbar(pre_xs, pre_values, yerr=pre_vars, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
+    if pre_xs and pre_values and pre_sds:
+        subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
 
     subplot.plot(post_xs, post_values, label='post')
 
-    post_s_los = [value - var for value, var in zip(post_values, post_vars)]
-    post_s_his = [value + var for value, var in zip(post_values, post_vars)]
+    post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
+    post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
     subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
 
-    if depth_xs and depth_values and depth_vars:
-        subplot.errorbar(depth_xs, depth_values, yerr=depth_vars, marker='o', ls='', label='depth')
+    if depth_xs and depth_values and depth_sds:
+        subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1, label='depth')
 
     subplot.set_xticklabels([])
     subplot.legend()
@@ -59,7 +59,8 @@ def plot_subplot(subplot, name,
             pre_s = statistics.stdev(pre_values, pre_u)
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
-            subplot.set_title('{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+            subplot.set_title(
+                '{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
         else:
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
@@ -139,11 +140,11 @@ class PlotFilterNode(Node):
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
 
         depth_valuess = [None, None, [msg.z for msg in self._depth_msgs],
-                        None, None, None,
-                        None, None, None,
-                        None, None, None]
+                         None, None, None,
+                         None, None, None,
+                         None, None, None]
 
-        depth_varss = [None, None, [msg.z_variance for msg in self._depth_msgs],
+        depth_sdss = [None, None, [math.sqrt(msg.z_variance) for msg in self._depth_msgs],
                       None, None, None,
                       None, None, None,
                       None, None, None]
@@ -157,14 +158,14 @@ class PlotFilterNode(Node):
                        [rpy[2] for rpy in pre_pose_rpys],
                        None, None, None]
 
-        pre_varss = [[msg.pose.covariance[diag_index(0)] for msg in self._pre_msgs],
-                     [msg.pose.covariance[diag_index(1)] for msg in self._pre_msgs],
-                     [msg.pose.covariance[diag_index(2)] for msg in self._pre_msgs],
-                     None, None, None,
-                     [msg.pose.covariance[diag_index(3)] for msg in self._pre_msgs],
-                     [msg.pose.covariance[diag_index(4)] for msg in self._pre_msgs],
-                     [msg.pose.covariance[diag_index(5)] for msg in self._pre_msgs],
-                     None, None, None]
+        pre_sdss = [[math.sqrt(msg.pose.covariance[diag_index(0)]) for msg in self._pre_msgs],
+                    [math.sqrt(msg.pose.covariance[diag_index(1)]) for msg in self._pre_msgs],
+                    [math.sqrt(msg.pose.covariance[diag_index(2)]) for msg in self._pre_msgs],
+                    None, None, None,
+                    [math.sqrt(msg.pose.covariance[diag_index(3)]) for msg in self._pre_msgs],
+                    [math.sqrt(msg.pose.covariance[diag_index(4)]) for msg in self._pre_msgs],
+                    [math.sqrt(msg.pose.covariance[diag_index(5)]) for msg in self._pre_msgs],
+                    None, None, None]
 
         post_valuess = [[msg.pose.pose.position.x for msg in self._post_msgs],
                         [msg.pose.pose.position.y for msg in self._post_msgs],
@@ -179,26 +180,26 @@ class PlotFilterNode(Node):
                         [msg.twist.twist.angular.y for msg in self._post_msgs],
                         [msg.twist.twist.angular.z for msg in self._post_msgs]]
 
-        post_varss = [[msg.pose.covariance[diag_index(0)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(1)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(2)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(0)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(1)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(2)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(3)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(4)] for msg in self._post_msgs],
-                      [msg.pose.covariance[diag_index(5)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(3)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(4)] for msg in self._post_msgs],
-                      [msg.twist.covariance[diag_index(5)] for msg in self._post_msgs]]
+        post_sdss = [[math.sqrt(msg.pose.covariance[diag_index(0)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.pose.covariance[diag_index(1)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.pose.covariance[diag_index(2)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(0)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(1)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(2)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.pose.covariance[diag_index(3)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.pose.covariance[diag_index(4)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.pose.covariance[diag_index(5)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(3)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(4)]) for msg in self._post_msgs],
+                     [math.sqrt(msg.twist.covariance[diag_index(5)]) for msg in self._post_msgs]]
 
         # Plot everything
-        for subplot, name, depth_values, depth_vars, pre_values, pre_vars, post_values, post_vars in \
-                zip(subplots, names, depth_valuess, depth_varss, pre_valuess, pre_varss, post_valuess, post_varss):
+        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds in \
+                zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss, post_valuess, post_sdss):
             plot_subplot(subplot, name,
-                         depth_xs, depth_values, depth_vars,
-                         pre_xs, pre_values, pre_vars,
-                         post_xs, post_values, post_vars)
+                         depth_xs, depth_values, depth_sds,
+                         pre_xs, pre_values, pre_sds,
+                         post_xs, post_values, post_sds)
 
         # Set figure title
         fig.suptitle('pre- and post-filter messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))

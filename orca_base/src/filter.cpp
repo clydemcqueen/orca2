@@ -17,7 +17,9 @@ namespace orca_base
   constexpr int BARO_DIM = 1;         // [z]T
   constexpr int POSE_DIM = 6;         // [x, y, z, roll, pitch, yaw]T
   constexpr int CONTROL_DIM = 4;      // [ax, ay, az, ayaw]T
+
   constexpr double MIN_DT = 0.001;
+  constexpr double DEFAULT_DT = 0.1;
   constexpr double MAX_DT = 1.0;
 
   // Maximum predicted acceleration
@@ -203,7 +205,7 @@ namespace orca_base
     // State transition function
     filter_.set_f_fn([&cxt_](const double dt, const Eigen::MatrixXd &u, Eigen::Ref<Eigen::MatrixXd> x)
                      {
-                       if (cxt_.filter_predict_accel_) {
+                       if (cxt_.predict_accel_) {
                          // Assume 0 acceleration
                          x(12, 0) = 0;
                          x(13, 0) = 0;
@@ -212,21 +214,29 @@ namespace orca_base
                          x(16, 0) = 0;
                          x(17, 0) = 0;
 
-                         if (cxt_.filter_predict_control_) {
+                         if (cxt_.predict_accel_control_) {
                            // Add acceleration due to control
-                           // Back out acceleration due to gravity & buoyancy
                            x(12, 0) += u(0, 0);
                            x(13, 0) += u(1, 0);
-                           x(14, 0) += u(2, 0) - cxt_.model_.hover_accel_z();
+                           x(14, 0) += u(2, 0);
                            x(17, 0) += u(3, 0);
                          }
 
-                         if (cxt_.filter_predict_drag_) {
+                         if (cxt_.predict_accel_drag_) {
                            // Add acceleration due to drag
+                           // TODO create & use AddLinkForce(drag_force, c_of_mass) and AddRelativeTorque(drag_torque)
+                           // Simple approximation:
                            x(12, 0) += cxt_.model_.drag_accel_x(x(6, 0));
                            x(13, 0) += cxt_.model_.drag_accel_y(x(7, 0));
                            x(14, 0) += cxt_.model_.drag_accel_z(x(8, 0));
                            x(17, 0) += cxt_.model_.drag_accel_yaw(x(11, 0));
+                         }
+
+                         if (cxt_.predict_accel_buoyancy_) {
+                           // Add acceleration due to gravity and buoyancy
+                           // TODO create & use AddLinkForce(buoyancy_force, c_of_volume)
+                           // Simple approximation:
+                           x(14, 0) -= cxt_.model_.hover_accel_z();
                          }
                        }
 
@@ -270,30 +280,38 @@ namespace orca_base
 
   void Filter::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
   {
-    // Compute delta from last message
-    // Use a small delta to bootstrap the filter
-    double dt = valid_stamp(filter_time_) ? (stamp - filter_time_).seconds() : 0.1;
+    // Filter time starts at 0, test for this
+    if (valid_stamp(filter_time_)) {
+      // Compute delta from last message, must be zero or positive
+      double dt = (stamp - filter_time_).seconds();
+      assert(dt >= 0);
 
-    if (dt < 0) {
-      RCLCPP_WARN(logger_, "dt %g is less than 0, skip predict", dt);
-    } else if (dt < MIN_DT) {
-      RCLCPP_DEBUG(logger_, "dt %g is too small, skip predict", dt);
-    } else if (dt > MAX_DT) {
-      RCLCPP_WARN(logger_, "dt %g is too large, skip predict", dt);
+      if (dt > MAX_DT) {
+        // Delta is too large for some reason, use a smaller delta to avoid screwing up the filter
+        RCLCPP_WARN(logger_, "dt %g is too large, use default %g", dt, DEFAULT_DT);
+        dt = DEFAULT_DT;
+      }
 
-      // Catch up
-      filter_time_ = stamp;
-    } else {
-      Eigen::MatrixXd u;
-      to_u(u_bar, u);
-      filter_.predict(dt, u);
-      filter_time_ = stamp;
+      if (dt < MIN_DT) {
+        // Delta is quite small, possibly 0
+        RCLCPP_DEBUG(logger_, "skip predict: msg=%s filter=%s", to_str(stamp).c_str(), to_str(filter_time_).c_str());
+      } else {
+        // Run the prediction
+        RCLCPP_DEBUG(logger_, "predict: msg=%s filter=%s", to_str(stamp).c_str(), to_str(filter_time_).c_str());
+        Eigen::MatrixXd u;
+        to_u(u_bar, u);
+        filter_.predict(dt, u);
+      }
     }
+
+    // Always advance filter_time_
+    filter_time_ = stamp;
   }
 
   void Filter::process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    orca_msgs::msg::Depth depth = depth_q_.pop_msg();
+    orca_msgs::msg::Depth depth = depth_q_.pop();
+    RCLCPP_DEBUG(logger_, "process pose: %s", to_str(depth.header.stamp).c_str());
     predict(depth.header.stamp, u_bar);
 
     Eigen::MatrixXd z;
@@ -317,7 +335,8 @@ namespace orca_base
 
   void Filter::process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    geometry_msgs::msg::PoseWithCovarianceStamped pose = pose_q_.pop_msg();
+    geometry_msgs::msg::PoseWithCovarianceStamped pose = pose_q_.pop();
+    RCLCPP_DEBUG(logger_, "process pose: %s", to_str(pose.header.stamp).c_str());
     predict(pose.header.stamp, u_bar);
 
     Eigen::MatrixXd z;
@@ -346,29 +365,34 @@ namespace orca_base
 
   void Filter::queue_depth(const orca_msgs::msg::Depth &depth)
   {
-    rclcpp::Time depth_stamp{depth.header.stamp};
+    rclcpp::Time stamp{depth.header.stamp};
 
-    if (!valid_stamp(depth_stamp)) {
-      RCLCPP_WARN(logger_, "depth message has invalid time, dropping");
-    } else {
+    if (stamp >= filter_time_) {
+      RCLCPP_DEBUG(logger_, "queue depth message %s", to_str(stamp).c_str());
       depth_q_.push(depth);
+    } else {
+      RCLCPP_WARN(logger_, "depth message %s is older than filter time %s, dropping", to_str(stamp).c_str(),
+                  to_str(filter_time_).c_str());
     }
   }
 
   void Filter::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
   {
-    rclcpp::Time pose_stamp{pose.header.stamp};
+    rclcpp::Time stamp{pose.header.stamp};
 
-    if (!valid_stamp(pose_stamp)) {
-      RCLCPP_WARN(logger_, "pose message has invalid time, dropping");
-    } else {
+    if (stamp > filter_time_) {
+      RCLCPP_DEBUG(logger_, "queue pose message %s", to_str(stamp).c_str());
       pose_q_.push(pose);
+    } else {
+      RCLCPP_WARN(logger_, "pose message %s is older than filter time %s, dropping", to_str(stamp).c_str(),
+                  to_str(filter_time_).c_str());
     }
   }
 
   bool Filter::process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    rclcpp::Time start = t - TOO_OLD;
+    rclcpp::Time too_old = t - TOO_OLD;
+    rclcpp::Time start = filter_time_ > too_old ? filter_time_ : too_old;
     rclcpp::Time end = t - LAG;
 
     rclcpp::Time depth_stamp, pose_stamp;
@@ -377,6 +401,7 @@ namespace orca_base
 
     if (!depth_msg_ready && !pose_msg_ready) {
       // No measurements, just predict
+      RCLCPP_DEBUG(logger_, "just predict: %s", to_str(t).c_str());
       predict(end, u_bar);
     } else {
       // Process all measurements in order

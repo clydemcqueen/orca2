@@ -27,7 +27,7 @@ namespace orca_base
 
     // Filter
     ukf::UnscentedKalmanFilter filter_;
-    rclcpp::Time filter_time_{};
+    rclcpp::Time filter_time_{0, 0, RCL_ROS_TIME};
 
     void predict(const rclcpp::Time &stamp, const Acceleration &u_bar);
 

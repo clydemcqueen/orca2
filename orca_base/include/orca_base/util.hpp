@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "geometry_msgs/msg/quaternion.hpp"
+#include "rclcpp/time.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "tf2/LinearMath/Transform.h"
 
@@ -37,6 +38,7 @@ namespace orca_base
   }
 
 #if 1
+
 // Move an angle to the region [-M_PI, M_PI)
   constexpr double norm_angle(double a)
   {
@@ -54,6 +56,7 @@ namespace orca_base
 
     return a;
   }
+
 #else
   // Move an angle to the region [-M_PI, M_PI]
   constexpr double norm_angle(double a)
@@ -78,12 +81,19 @@ namespace orca_base
   // Get yaw from a quaternion
   double get_yaw(const geometry_msgs::msg::Quaternion &q);
 
-  std::string to_str(const tf2::Transform &t);
-
   // Sense a button down event
   bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button);
 
   bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis);
+
+  // Various to_str functions
+  std::string to_str_rpy(const tf2::Transform &t);
+
+  std::string to_str_q(const tf2::Transform &t);
+
+  std::string to_str(const rclcpp::Time &t);
+
+  std::string to_str(const builtin_interfaces::msg::Time &t);
 
 } // namespace orca_base
 

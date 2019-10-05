@@ -25,8 +25,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'simple.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'simple_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'large.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -41,7 +41,7 @@ def generate_launch_description():
 
         # Add the AUV to the simulation
         Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
-             arguments=[urdf_path, '0', '0', surface, '0']),
+             arguments=[urdf_path, '0', '0', surface, '0', '0', '0']),
 
         # Publish static joints
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
@@ -60,7 +60,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='base_node', output='screen',
              node_name='base_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'model_fluid_density': 997.0,
+                'param_fluid_density': 997.0,
                 'auto_start': 0,  # Auto-start AUV mission
                 'auv_z_target': -1.0,  # Mission runs 1m below the surface
                 'auv_controller': 0,  # BaseController
@@ -79,12 +79,13 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='filter_node', output='screen',
              node_name='filter_node', parameters=[{
                 'use_sim_time': True,  # Use /clock if available
-                'model_fluid_density': 997.0,
+                'param_fluid_density': 997.0,
                 'baro_init': 0,  # Init in-air
-                'filter_predict_accel': False,
-                'filter_predict_control': False,
-                'filter_predict_drag': False,
-                'filter_baro': True,
+                'predict_accel': True,
+                'predict_accel_control': True,
+                'predict_accel_drag': True,
+                'predict_accel_buoyancy': True,
+                'filter_baro': False,
                 'urdf_file': urdf_path,
                 'urdf_barometer_joint': 'baro_joint',
                 'urdf_forward_camera_joint': 'forward_camera_frame_joint',

@@ -67,7 +67,7 @@ namespace orca_base
     FILTER_NODE_ALL_PARAMS
 
     // Update model from new parameters
-    cxt_.model_.fluid_density_ = cxt_.model_fluid_density_;
+    cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
 
     // Parse URDF
     parse_urdf();
@@ -102,12 +102,12 @@ namespace orca_base
         tf2::Vector3{pose.position.x, pose.position.y, pose.position.z}};
 
       RCLCPP_INFO(get_logger(), "%s: parent(%s), child(%s), %s", name.c_str(),
-                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str(t2).c_str());
+                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t2).c_str());
 
       // Invert
       t = t2.inverse();
       RCLCPP_INFO(get_logger(), "inverted %s: parent(%s), child(%s), %s", name.c_str(),
-                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str(t).c_str());
+                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t).c_str());
 
     } else {
       RCLCPP_ERROR(get_logger(), "joint %s missing", name.c_str());
@@ -146,7 +146,7 @@ namespace orca_base
       orca_msgs::msg::Depth depth_msg;
       depth_msg.header = msg->header;
       depth_msg.z = z_;
-      depth_msg.z_variance = Model::DEPTH_STDDEV * Model::DEPTH_STDDEV;
+      depth_msg.z_variance = Model::DEPTH_STDDEV * Model::DEPTH_STDDEV * 10; // Boost measurement uncertainty
 
       // Publish depth, useful for diagnostics
       if (depth_pub_->get_subscription_count() > 0) {
