@@ -35,6 +35,9 @@ namespace orca_base
   CXT_MACRO_MEMBER(predict_accel_buoyancy, bool, true)        /* Add gravity and buoyancy to predicted acceleration  */ \
   \
   CXT_MACRO_MEMBER(filter_baro, bool, false)                  /* Filter barometer messages  */ \
+  CXT_MACRO_MEMBER(filter_fcam, bool, true)                   /* Filter forward camera messages  */ \
+  CXT_MACRO_MEMBER(filter_lcam, bool, true)                   /* Filter left camera messages  */ \
+  CXT_MACRO_MEMBER(filter_rcam, bool, true)                   /* Filter right camera messages  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

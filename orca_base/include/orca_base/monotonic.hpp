@@ -59,8 +59,8 @@ namespace orca_base
   {
     N node_;
     std::function<void(N, M, bool)> process_;   // Process good messages
-    rclcpp::Time curr_;                         // Stamp of current message
-    rclcpp::Time prev_;                         // Stamp of previous message
+    rclcpp::Time curr_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time prev_{0, 0, RCL_ROS_TIME};
 
     static bool valid(const rclcpp::Time &t)
     {

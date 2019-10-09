@@ -50,7 +50,7 @@ namespace orca_base
       "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "fiducial_odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
+      "odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
       { this->odom_cb_.call(msg); });
 
     // Other subscriptions

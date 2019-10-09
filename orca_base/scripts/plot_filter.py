@@ -50,6 +50,7 @@ def plot_subplot(subplot, name,
     if depth_xs and depth_values and depth_sds:
         subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1, label='depth')
 
+    subplot.set_ylim(-4, 4)
     subplot.set_xticklabels([])
     subplot.legend()
 

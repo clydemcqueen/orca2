@@ -31,24 +31,24 @@ namespace orca_base
   constexpr double MAX_PREDICTED_VELO_XYZ = 100;
   constexpr double MAX_PREDICTED_VELO_RPY = 100;
 
-#define x_x x(0, 0)
-#define x_y x(1, 0)
-#define x_z x(2, 0)
-#define x_roll x(3, 0)
-#define x_pitch x(4, 0)
-#define x_yaw x(5, 0)
-#define x_vx x(6, 0)
-#define x_vy x(7, 0)
-#define x_vz x(8, 0)
-#define x_vroll x(9, 0)
-#define x_vpitch x(10, 0)
-#define x_vyaw x(11, 0)
-#define x_ax x(12, 0)
-#define x_ay x(13, 0)
-#define x_az x(14, 0)
-#define x_aroll x(15, 0)
-#define x_apitch x(16, 0)
-#define x_ayaw x(17, 0)
+#define x_x x(0)
+#define x_y x(1)
+#define x_z x(2)
+#define x_roll x(3)
+#define x_pitch x(4)
+#define x_yaw x(5)
+#define x_vx x(6)
+#define x_vy x(7)
+#define x_vz x(8)
+#define x_vroll x(9)
+#define x_vpitch x(10)
+#define x_vyaw x(11)
+#define x_ax x(12)
+#define x_ay x(13)
+#define x_az x(14)
+#define x_aroll x(15)
+#define x_apitch x(16)
+#define x_ayaw x(17)
 
   //==================================================================
   // Utility functions
@@ -60,14 +60,14 @@ namespace orca_base
   }
 
   // Create control matrix u
-  void to_u(const Acceleration &in, Eigen::MatrixXd &out)
+  void to_u(const Acceleration &in, Eigen::VectorXd &out)
   {
-    out = Eigen::MatrixXd(CONTROL_DIM, 1);
+    out = Eigen::VectorXd(CONTROL_DIM);
     out << in.x, in.y, in.z, in.yaw;
   }
 
   // Create measurement matrix z
-  void pose_to_z(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, Eigen::MatrixXd &z)
+  void pose_to_z(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, Eigen::VectorXd &z)
   {
     tf2::Transform t_map_base;
     tf2::fromMsg(pose.pose.pose, t_map_base);
@@ -75,13 +75,13 @@ namespace orca_base
     tf2Scalar roll, pitch, yaw;
     t_map_base.getBasis().getRPY(roll, pitch, yaw);
 
-    z = Eigen::MatrixXd(POSE_DIM, 1);
+    z = Eigen::VectorXd(POSE_DIM);
     z << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
   }
 
-  void depth_to_z(const orca_msgs::msg::Depth &depth, Eigen::MatrixXd &z)
+  void depth_to_z(const orca_msgs::msg::Depth &depth, Eigen::VectorXd &z)
   {
-    z = Eigen::MatrixXd(BARO_DIM, 1);
+    z = Eigen::VectorXd(BARO_DIM);
     z << depth.z;
   }
 
@@ -103,7 +103,7 @@ namespace orca_base
   }
 
   // Extract pose from state
-  void pose_from_x(const Eigen::MatrixXd &x, geometry_msgs::msg::Pose &out)
+  void pose_from_x(const Eigen::VectorXd &x, geometry_msgs::msg::Pose &out)
   {
     out.position.x = x_x;
     out.position.y = x_y;
@@ -119,7 +119,7 @@ namespace orca_base
   }
 
   // Extract twist from state
-  void twist_from_x(const Eigen::MatrixXd &x, geometry_msgs::msg::Twist &out)
+  void twist_from_x(const Eigen::VectorXd &x, geometry_msgs::msg::Twist &out)
   {
     out.linear.x = x_vx;
     out.linear.y = x_vy;
@@ -151,38 +151,38 @@ namespace orca_base
   }
 
   //==================================================================
-  // Unscented residual and mean functions for state (x) and odom measurement (z)
+  // Unscented residual and mean functions for state (x) and pose measurement (z)
   //
-  // Because of the layout of the state and odom measurement matrices and the way that Eigen works
+  // Because of the layout of the state and pose measurement matrices and the way that Eigen works
   // these functions can serve double-duty.
   //
   // x:       [x, y, z, r, p, y, ...]
-  // odom z:  [x, y, z, r, p, y]
+  // pose z:  [x, y, z, r, p, y]
   //
   // The mean function needs to compute the mean of angles, which doesn't have a precise meaning.
   // See https://en.wikipedia.org/wiki/Mean_of_circular_quantities for the method used here.
   //==================================================================
 
-  Eigen::MatrixXd orca_state_residual(const Eigen::Ref<const Eigen::MatrixXd> &x, const Eigen::MatrixXd &mean)
+  Eigen::VectorXd orca_state_residual(const Eigen::Ref<const Eigen::VectorXd> &x, const Eigen::VectorXd &mean)
   {
     // Residual for all fields
-    Eigen::MatrixXd residual = x - mean;
+    Eigen::VectorXd residual = x - mean;
 
     // Normalize roll, pitch and yaw
-    residual(3, 0) = norm_angle(residual(3, 0));
-    residual(4, 0) = norm_angle(residual(4, 0));
-    residual(5, 0) = norm_angle(residual(5, 0));
+    residual(3) = norm_angle(residual(3));
+    residual(4) = norm_angle(residual(4));
+    residual(5) = norm_angle(residual(5));
 
     return residual;
   }
 
-  Eigen::MatrixXd orca_state_mean(const Eigen::MatrixXd &sigma_points, const Eigen::MatrixXd &Wm)
+  Eigen::VectorXd orca_state_mean(const Eigen::MatrixXd &sigma_points, const Eigen::RowVectorXd &Wm)
   {
-    Eigen::MatrixXd mean = Eigen::MatrixXd::Zero(sigma_points.rows(), 1);
+    Eigen::VectorXd mean = Eigen::VectorXd::Zero(sigma_points.rows());
 
     // Standard mean for all fields
     for (long i = 0; i < sigma_points.cols(); ++i) {
-      mean += Wm(0, i) * sigma_points.col(i);
+      mean += Wm(i) * sigma_points.col(i);
     }
 
     // Sum the sines and cosines
@@ -191,20 +191,20 @@ namespace orca_base
     double sum_y_sin = 0.0, sum_y_cos = 0.0;
 
     for (long i = 0; i < sigma_points.cols(); ++i) {
-      sum_r_sin += Wm(0, i) * sin(sigma_points(3, i));
-      sum_r_cos += Wm(0, i) * cos(sigma_points(3, i));
+      sum_r_sin += Wm(i) * sin(sigma_points(3, i));
+      sum_r_cos += Wm(i) * cos(sigma_points(3, i));
 
-      sum_p_sin += Wm(0, i) * sin(sigma_points(4, i));
-      sum_p_cos += Wm(0, i) * cos(sigma_points(4, i));
+      sum_p_sin += Wm(i) * sin(sigma_points(4, i));
+      sum_p_cos += Wm(i) * cos(sigma_points(4, i));
 
-      sum_y_sin += Wm(0, i) * sin(sigma_points(5, i));
-      sum_y_cos += Wm(0, i) * cos(sigma_points(5, i));
+      sum_y_sin += Wm(i) * sin(sigma_points(5, i));
+      sum_y_cos += Wm(i) * cos(sigma_points(5, i));
     }
 
     // Mean is arctan2 of the sums
-    mean(3, 0) = atan2(sum_r_sin, sum_r_cos);
-    mean(4, 0) = atan2(sum_p_sin, sum_p_cos);
-    mean(5, 0) = atan2(sum_y_sin, sum_y_cos);
+    mean(3) = atan2(sum_r_sin, sum_r_cos);
+    mean(4) = atan2(sum_p_sin, sum_p_cos);
+    mean(5) = atan2(sum_y_sin, sum_y_cos);
 
     return mean;
   }
@@ -222,7 +222,7 @@ namespace orca_base
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
 
     // State transition function
-    filter_.set_f_fn([&cxt](const double dt, const Eigen::MatrixXd &u, Eigen::Ref<Eigen::MatrixXd> x)
+    filter_.set_f_fn([&cxt](const double dt, const Eigen::VectorXd &u, Eigen::Ref<Eigen::VectorXd> x)
                      {
                        if (cxt.predict_accel_) {
                          // Assume 0 acceleration
@@ -304,7 +304,9 @@ namespace orca_base
   void Filter::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
   {
     // Filter time starts at 0, test for this
-    if (valid_stamp(filter_time_)) {
+    if (!valid_stamp(filter_time_)) {
+      RCLCPP_INFO(logger_, "start filter, stamp %s", to_str(stamp).c_str());
+    } else {
       // Compute delta from last message, must be zero or positive
       double dt = (stamp - filter_time_).seconds();
       assert(dt >= 0);
@@ -317,11 +319,13 @@ namespace orca_base
 
       if (dt < MIN_DT) {
         // Delta is quite small, possibly 0
-        RCLCPP_DEBUG(logger_, "skip predict: msg=%s filter=%s", to_str(stamp).c_str(), to_str(filter_time_).c_str());
+        RCLCPP_DEBUG(logger_, "skip predict, stamp %s, filter %s",
+                     to_str(stamp).c_str(), to_str(filter_time_).c_str());
       } else {
         // Run the prediction
-        RCLCPP_DEBUG(logger_, "predict: msg=%s filter=%s", to_str(stamp).c_str(), to_str(filter_time_).c_str());
-        Eigen::MatrixXd u;
+        RCLCPP_DEBUG(logger_, "predict, stamp %s, filter %s",
+                     to_str(stamp).c_str(), to_str(filter_time_).c_str());
+        Eigen::VectorXd u;
         to_u(u_bar, u);
         filter_.predict(dt, u);
       }
@@ -334,19 +338,19 @@ namespace orca_base
   void Filter::process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
     orca_msgs::msg::Depth depth = depth_q_.pop();
-    RCLCPP_DEBUG(logger_, "process pose: %s", to_str(depth.header.stamp).c_str());
+    RCLCPP_DEBUG(logger_, "process depth, stamp %s", to_str(depth.header.stamp).c_str());
     predict(depth.header.stamp, u_bar);
 
-    Eigen::MatrixXd z;
+    Eigen::VectorXd z;
     depth_to_z(depth, z);
 
     Eigen::MatrixXd R;
     depth_to_R(depth, R);
 
     // Measurement function
-    filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
+    filter_.set_h_fn([](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
                      {
-                       z(0, 0) = x_z;
+                       z(0) = x_z;
                      });
 
     // Use the standard residual and mean functions for depth readings
@@ -359,24 +363,24 @@ namespace orca_base
   void Filter::process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
     geometry_msgs::msg::PoseWithCovarianceStamped pose = pose_q_.pop();
-    RCLCPP_DEBUG(logger_, "process pose: %s", to_str(pose.header.stamp).c_str());
+    RCLCPP_DEBUG(logger_, "process pose, stamp %s", to_str(pose.header.stamp).c_str());
     predict(pose.header.stamp, u_bar);
 
-    Eigen::MatrixXd z;
+    Eigen::VectorXd z;
     pose_to_z(pose, z);
 
     Eigen::MatrixXd R;
     pose_to_R(pose, R);
 
     // Measurement function
-    filter_.set_h_fn([](const Eigen::Ref<const Eigen::MatrixXd> &x, Eigen::Ref<Eigen::MatrixXd> z)
+    filter_.set_h_fn([](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
                      {
-                       z(0, 0) = x_x;
-                       z(1, 0) = x_y;
-                       z(2, 0) = x_z;
-                       z(3, 0) = x_roll;
-                       z(4, 0) = x_pitch;
-                       z(5, 0) = x_yaw;
+                       z(0) = x_x;
+                       z(1) = x_y;
+                       z(2) = x_z;
+                       z(3) = x_roll;
+                       z(4) = x_pitch;
+                       z(5) = x_yaw;
                      });
 
     // Use the custom state residual and mean functions for fiducial_vlam odometry
@@ -391,10 +395,10 @@ namespace orca_base
     rclcpp::Time stamp{depth.header.stamp};
 
     if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue depth message %s", to_str(stamp).c_str());
+      RCLCPP_DEBUG(logger_, "queue depth, stamp %s", to_str(stamp).c_str());
       depth_q_.push(depth);
     } else {
-      RCLCPP_WARN(logger_, "depth message %s is older than filter time %s, dropping", to_str(stamp).c_str(),
+      RCLCPP_WARN(logger_, "depth stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
                   to_str(filter_time_).c_str());
     }
   }
@@ -404,10 +408,10 @@ namespace orca_base
     rclcpp::Time stamp{pose.header.stamp};
 
     if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue pose message %s", to_str(stamp).c_str());
+      RCLCPP_DEBUG(logger_, "queue pose, stamp %s", to_str(stamp).c_str());
       pose_q_.push(pose);
     } else {
-      RCLCPP_WARN(logger_, "pose message %s is older than filter time %s, dropping", to_str(stamp).c_str(),
+      RCLCPP_WARN(logger_, "pose stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
                   to_str(filter_time_).c_str());
     }
   }
@@ -424,7 +428,7 @@ namespace orca_base
 
     if (!depth_msg_ready && !pose_msg_ready) {
       // No measurements, just predict
-      RCLCPP_DEBUG(logger_, "just predict: %s", to_str(t).c_str());
+      RCLCPP_DEBUG(logger_, "just predict, stamp %s", to_str(end).c_str());
       predict(end, u_bar);
     } else {
       // Process all measurements in order
@@ -446,14 +450,6 @@ namespace orca_base
       }
     }
 
-    bool valid = filter_.valid();
-    if (!valid) {
-      // Crude restart, useful for debugging the filter
-      RCLCPP_ERROR(logger_, "Restart filter");
-      filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM));
-      valid = true;
-    }
-
     // Return the best estimate
     filtered_odom.header.stamp = filter_time_;
     pose_from_x(filter_.x(), filtered_odom.pose.pose);
@@ -461,7 +457,7 @@ namespace orca_base
     pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
     twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
 
-    return valid;
+    return filter_.valid();
   }
 
 } // namespace orca_base

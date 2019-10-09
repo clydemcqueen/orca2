@@ -33,7 +33,7 @@ namespace orca_base
     filter_ = std::make_shared<Filter>(get_logger(), cxt_);
 
     // Publications
-    filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("filtered_odom", 1);
+    filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
     fcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("fcam_f_base", 1);
     lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("lcam_f_base", 1);
@@ -169,17 +169,23 @@ namespace orca_base
 
   void FilterNode::fcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
-    queue_pose(msg, t_fcam_base_, "fcam_measurement", fcam_pub_);
+    if (cxt_.filter_fcam_) {
+      queue_pose(msg, t_fcam_base_, "fcam_measurement", fcam_pub_);
+    }
   }
 
   void FilterNode::lcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
-    queue_pose(msg, t_lcam_base_, "lcam_measurement", lcam_pub_);
+    if (cxt_.filter_lcam_) {
+      queue_pose(msg, t_lcam_base_, "lcam_measurement", lcam_pub_);
+    }
   }
 
   void FilterNode::rcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
-    queue_pose(msg, t_rcam_base_, "rcam_measurement", rcam_pub_);
+    if (cxt_.filter_rcam_) {
+      queue_pose(msg, t_rcam_base_, "rcam_measurement", rcam_pub_);
+    }
   }
 
   void FilterNode::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
@@ -221,16 +227,25 @@ namespace orca_base
     filter_->queue_pose(base_f_map);
   }
 
+  // Timers run on wall time, but now() returns either wall or simulated time -- watch for invalid or duplicate stamps
   void FilterNode::spin_once()
   {
     if (!filter_valid_) {
       return;
     }
 
+    // Ignore invalid timestamps
     auto spin_time = now();
     if (spin_time.nanoseconds() <= 0) {
       return;
     }
+
+    // Ignore duplicate timestamps
+    static rclcpp::Time last_time{0, 0, RCL_ROS_TIME};
+    if (last_time == spin_time) {
+      return;
+    }
+    last_time = spin_time;
 
     // Filter the odometry, passing in the previous acceleration as the control
     nav_msgs::msg::Odometry filtered_odom;
@@ -284,7 +299,7 @@ int main(int argc, char **argv)
   auto node = std::make_shared<orca_base::FilterNode>();
 
   // Set logger level
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
   // Spin node
   rclcpp::spin(node);
