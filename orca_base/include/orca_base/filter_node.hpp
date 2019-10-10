@@ -28,7 +28,6 @@ namespace orca_base
 
     // UKF state
     std::shared_ptr<Filter> filter_;
-    bool filter_valid_{true};                     // True if the filter is valid
 
     // Control state
     Acceleration u_bar_;                          // Last control, used for filter predict step

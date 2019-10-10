@@ -71,8 +71,8 @@ def generate_launch_description():
                 'auv_jerk_z': 10.0,
                 'auv_jerk_yaw': 20.0,
             }], remappings=[
-                # ('fiducial_odom', '/' + left_camera_name + '/odom'),
-                ('fiducial_odom', '/filtered_odom'),
+                # ('odom', '/' + left_camera_name + '/odom'),
+                # ('odom', '/filtered_odom'),
             ]),
 
         # Filter
@@ -81,11 +81,14 @@ def generate_launch_description():
                 'use_sim_time': True,  # Use /clock if available
                 'param_fluid_density': 997.0,
                 'baro_init': 0,  # Init in-air
-                'predict_accel': True,
-                'predict_accel_control': True,
-                'predict_accel_drag': True,
-                'predict_accel_buoyancy': True,
+                'predict_accel': False,
+                'predict_accel_control': False,
+                'predict_accel_drag': False,
+                'predict_accel_buoyancy': False,
                 'filter_baro': False,
+                'filter_fcam': False,
+                'filter_lcam': True,
+                'filter_rcam': True,
                 'urdf_file': urdf_path,
                 'urdf_barometer_joint': 'baro_joint',
                 'urdf_forward_camera_joint': 'forward_camera_frame_joint',

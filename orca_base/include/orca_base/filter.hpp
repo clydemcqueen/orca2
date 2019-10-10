@@ -1,6 +1,8 @@
 #ifndef ORCA_BASE_FILTER_H
 #define ORCA_BASE_FILTER_H
 
+#include <queue>
+
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "ukf/ukf.hpp"
@@ -9,10 +11,32 @@
 
 #include "orca_base/filter_context.hpp"
 #include "orca_base/geometry.hpp"
-#include "orca_base/message_queue.hpp"
 
 namespace orca_base
 {
+
+  struct Measurement
+  {
+    rclcpp::Time stamp_;
+    Eigen::VectorXd z_;
+    Eigen::MatrixXd R_;
+    ukf::MeasurementFn h_fn_;
+    ukf::ResidualFn r_z_fn_;
+    ukf::UnscentedMeanFn mean_z_fn_;
+
+    // Must be default constructible
+    Measurement() = default;
+
+    explicit Measurement(const orca_msgs::msg::Depth &depth);
+
+    explicit Measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose);
+
+    // Sort by time
+    bool operator()(const Measurement &a, const Measurement &b)
+    {
+      return a.stamp_ > b.stamp_;
+    }
+  };
 
   class Filter
   {
@@ -21,19 +45,14 @@ namespace orca_base
 
     rclcpp::Logger logger_;
 
-    // Messages queues
-    MessageQueue<orca_msgs::msg::Depth> depth_q_;
-    MessageQueue<geometry_msgs::msg::PoseWithCovarianceStamped> pose_q_;
+    // Measurement queue
+    std::priority_queue<Measurement, std::vector<Measurement>, Measurement> q_;
 
     // Filter
     ukf::UnscentedKalmanFilter filter_;
     rclcpp::Time filter_time_{0, 0, RCL_ROS_TIME};
 
     void predict(const rclcpp::Time &stamp, const Acceleration &u_bar);
-
-    void process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
-
-    void process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
 
   public:
 
@@ -46,7 +65,7 @@ namespace orca_base
 
     void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose);
 
-    // Run the filter forward to time t, return true if the filter is valid
+    // Run the filter, return true if there's a odometry message to publish
     bool process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
   };
 

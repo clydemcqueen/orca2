@@ -88,7 +88,7 @@ class PlotFilterNode(Node):
         self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/fcam_f_base', self.pre_callback, 5)
         self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
         self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)
-        self._post_sub = self.create_subscription(Odometry, '/filtered_odom', self.post_callback, 5)
+        self._post_sub = self.create_subscription(Odometry, '/odom', self.post_callback, 5)
 
     def depth_callback(self, msg: Depth):
         self._depth_msgs.append(msg)

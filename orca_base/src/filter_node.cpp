@@ -230,10 +230,6 @@ namespace orca_base
   // Timers run on wall time, but now() returns either wall or simulated time -- watch for invalid or duplicate stamps
   void FilterNode::spin_once()
   {
-    if (!filter_valid_) {
-      return;
-    }
-
     // Ignore invalid timestamps
     auto spin_time = now();
     if (spin_time.nanoseconds() <= 0) {
@@ -249,35 +245,32 @@ namespace orca_base
 
     // Filter the odometry, passing in the previous acceleration as the control
     nav_msgs::msg::Odometry filtered_odom;
-    filter_valid_ = filter_->process(spin_time, u_bar_, filtered_odom);
-    if (!filter_valid_) {
-      RCLCPP_ERROR(get_logger(), "filter is invalid");
-      return;
-    }
-    filtered_odom.header.frame_id = cxt_.frame_id_map_;
-    filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
+    if (filter_->process(spin_time, u_bar_, filtered_odom)) {
+      filtered_odom.header.frame_id = cxt_.frame_id_map_;
+      filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
 
-    // Publish filtered odometry
-    if (filtered_odom_pub_->get_subscription_count() > 0) {
-      filtered_odom_pub_->publish(filtered_odom);
-    }
+      // Publish filtered odometry
+      if (filtered_odom_pub_->get_subscription_count() > 0) {
+        filtered_odom_pub_->publish(filtered_odom);
+      }
 
-    // Publish tf
-    if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
-      geometry_msgs::msg::TransformStamped geo_tf;
-      geo_tf.header = filtered_odom.header;
-      geo_tf.child_frame_id = cxt_.frame_id_base_link_;
+      // Publish tf
+      if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
+        geometry_msgs::msg::TransformStamped geo_tf;
+        geo_tf.header = filtered_odom.header;
+        geo_tf.child_frame_id = cxt_.frame_id_base_link_;
 
-      // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
-      tf2::Transform t_map_base;
-      fromMsg(filtered_odom.pose.pose, t_map_base);
-      geo_tf.transform = toMsg(t_map_base);
+        // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
+        tf2::Transform t_map_base;
+        fromMsg(filtered_odom.pose.pose, t_map_base);
+        geo_tf.transform = toMsg(t_map_base);
 
-      // One transform in this tf message
-      tf2_msgs::msg::TFMessage tf_message;
-      tf_message.transforms.emplace_back(geo_tf);
+        // One transform in this tf message
+        tf2_msgs::msg::TFMessage tf_message;
+        tf_message.transforms.emplace_back(geo_tf);
 
-      tf_pub_->publish(tf_message);
+        tf_pub_->publish(tf_message);
+      }
     }
   }
 
@@ -299,7 +292,7 @@ int main(int argc, char **argv)
   auto node = std::make_shared<orca_base::FilterNode>();
 
   // Set logger level
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin node
   rclcpp::spin(node);

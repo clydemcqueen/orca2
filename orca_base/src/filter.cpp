@@ -210,15 +210,55 @@ namespace orca_base
   }
 
   //==================================================================
+  // Measurement
+  //==================================================================
+
+  Measurement::Measurement(const orca_msgs::msg::Depth &depth)
+  {
+    stamp_ = depth.header.stamp;
+    depth_to_z(depth, z_);
+    depth_to_R(depth, R_);
+
+    h_fn_ = [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = x_z;
+    };
+
+    // Use the standard residual and mean functions for depth measurements
+    r_z_fn_ = ukf::residual;
+    mean_z_fn_ = ukf::unscented_mean;
+  }
+
+  Measurement::Measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
+  {
+    stamp_ = pose.header.stamp;
+    pose_to_z(pose, z_);
+    pose_to_R(pose, R_);
+
+    h_fn_ = [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = x_x;
+      z(1) = x_y;
+      z(2) = x_z;
+      z(3) = x_roll;
+      z(4) = x_pitch;
+      z(5) = x_yaw;
+    };
+
+    // Use the custom residual and mean functions for pose measurements
+    r_z_fn_ = orca_state_residual;
+    mean_z_fn_ = orca_state_mean;
+  }
+
+  //==================================================================
   // Filter
   //==================================================================
 
   Filter::Filter(const rclcpp::Logger &logger, const FilterContext &cxt) :
     logger_{logger},
-    depth_q_{logger},
-    pose_q_{logger},
-    filter_{STATE_DIM, 0.3, 2.0, 0}
+    filter_{STATE_DIM, 0.001, 2.0, 0}
   {
+    filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
 
     // State transition function
@@ -335,68 +375,13 @@ namespace orca_base
     filter_time_ = stamp;
   }
 
-  void Filter::process_depth(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
-  {
-    orca_msgs::msg::Depth depth = depth_q_.pop();
-    RCLCPP_DEBUG(logger_, "process depth, stamp %s", to_str(depth.header.stamp).c_str());
-    predict(depth.header.stamp, u_bar);
-
-    Eigen::VectorXd z;
-    depth_to_z(depth, z);
-
-    Eigen::MatrixXd R;
-    depth_to_R(depth, R);
-
-    // Measurement function
-    filter_.set_h_fn([](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-                     {
-                       z(0) = x_z;
-                     });
-
-    // Use the standard residual and mean functions for depth readings
-    filter_.set_r_z_fn(ukf::residual);
-    filter_.set_mean_z_fn(ukf::unscented_mean);
-
-    filter_.update(z, R);
-  }
-
-  void Filter::process_pose(const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
-  {
-    geometry_msgs::msg::PoseWithCovarianceStamped pose = pose_q_.pop();
-    RCLCPP_DEBUG(logger_, "process pose, stamp %s", to_str(pose.header.stamp).c_str());
-    predict(pose.header.stamp, u_bar);
-
-    Eigen::VectorXd z;
-    pose_to_z(pose, z);
-
-    Eigen::MatrixXd R;
-    pose_to_R(pose, R);
-
-    // Measurement function
-    filter_.set_h_fn([](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-                     {
-                       z(0) = x_x;
-                       z(1) = x_y;
-                       z(2) = x_z;
-                       z(3) = x_roll;
-                       z(4) = x_pitch;
-                       z(5) = x_yaw;
-                     });
-
-    // Use the custom state residual and mean functions for fiducial_vlam odometry
-    filter_.set_r_z_fn(orca_state_residual);
-    filter_.set_mean_z_fn(orca_state_mean);
-
-    filter_.update(z, R);
-  }
-
   void Filter::queue_depth(const orca_msgs::msg::Depth &depth)
   {
     rclcpp::Time stamp{depth.header.stamp};
 
     if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue depth, stamp %s", to_str(stamp).c_str());
-      depth_q_.push(depth);
+      RCLCPP_DEBUG(logger_, "queue depth %s", to_str(stamp).c_str());
+      q_.push(Measurement{depth});
     } else {
       RCLCPP_WARN(logger_, "depth stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
                   to_str(filter_time_).c_str());
@@ -408,8 +393,8 @@ namespace orca_base
     rclcpp::Time stamp{pose.header.stamp};
 
     if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue pose, stamp %s", to_str(stamp).c_str());
-      pose_q_.push(pose);
+      RCLCPP_DEBUG(logger_, "queue pose %s", to_str(stamp).c_str());
+      q_.push(Measurement{pose});
     } else {
       RCLCPP_WARN(logger_, "pose stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
                   to_str(filter_time_).c_str());
@@ -422,32 +407,35 @@ namespace orca_base
     rclcpp::Time start = filter_time_ > too_old ? filter_time_ : too_old;
     rclcpp::Time end = t - LAG;
 
-    rclcpp::Time depth_stamp, pose_stamp;
-    bool depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
-    bool pose_msg_ready = pose_q_.msg_ready(start, end, pose_stamp);
+    // Pop measurements older than start
+    while (!q_.empty() && q_.top().stamp_ < start) {
+      RCLCPP_WARN(logger_, "measurement %s is older than %s, dropping",
+                  to_str(q_.top().stamp_).c_str(), to_str(start).c_str());
 
-    if (!depth_msg_ready && !pose_msg_ready) {
-      // No measurements, just predict
-      RCLCPP_DEBUG(logger_, "just predict, stamp %s", to_str(end).c_str());
-      predict(end, u_bar);
-    } else {
-      // Process all measurements in order
-      while (depth_msg_ready || pose_msg_ready) {
-        if (depth_msg_ready && pose_msg_ready) {
-          if (depth_stamp < pose_stamp) {
-            process_depth(u_bar, filtered_odom);
-          } else {
-            process_pose(u_bar, filtered_odom);
-          }
-        } else if (depth_msg_ready) {
-          process_depth(u_bar, filtered_odom);
-        } else {
-          process_pose(u_bar, filtered_odom);
-        }
+      q_.pop();
+    }
 
-        depth_msg_ready = depth_q_.msg_ready(start, end, depth_stamp);
-        pose_msg_ready = pose_q_.msg_ready(start, end, pose_stamp);
-      }
+    // If there are no measurements return false
+    if (q_.empty()) {
+      RCLCPP_DEBUG(logger_, "no measurements to process");
+      return false;
+    }
+
+    // Get measurements between start and end
+    while (!q_.empty() && q_.top().stamp_ < end) {
+      RCLCPP_DEBUG(logger_, "measurement %s is older than %s, processing",
+                   to_str(q_.top().stamp_).c_str(), to_str(end).c_str());
+
+      Measurement m = q_.top();
+      q_.pop();
+
+      predict(m.stamp_, u_bar);
+
+      filter_.set_h_fn(m.h_fn_);
+      filter_.set_r_z_fn(m.r_z_fn_);
+      filter_.set_mean_z_fn(m.mean_z_fn_);
+
+      filter_.update(m.z_, m.R_);
     }
 
     // Return the best estimate
