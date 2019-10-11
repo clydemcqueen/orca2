@@ -68,7 +68,10 @@ ament_target_dependencies(
 add_executable(
   filter_node
   src/filter_node.cpp
-  src/filter.cpp
+  src/filter_base.cpp
+  src/depth_filter.cpp
+  src/four_filter.cpp
+  src/pose_filter.cpp
   src/util.cpp
 )
 

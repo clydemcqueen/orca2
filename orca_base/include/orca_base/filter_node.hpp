@@ -9,7 +9,7 @@
 #include "orca_msgs/msg/depth.hpp"
 
 #include "orca_base/filter_context.hpp"
-#include "orca_base/filter.hpp"
+#include "orca_base/filter_base.hpp"
 #include "orca_base/monotonic.hpp"
 
 using namespace std::chrono_literals;
@@ -28,7 +28,7 @@ namespace orca_base
     FilterContext cxt_;
 
     // UKF state
-    std::shared_ptr<Filter> filter_;
+    std::shared_ptr<FilterBase> filter_;
     rclcpp::Time queue_time_{0, 0, RCL_ROS_TIME};
     rclcpp::Time publish_time_{0, 0, RCL_ROS_TIME};
 

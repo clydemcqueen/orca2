@@ -29,9 +29,6 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), FILTER_NODE_ALL_PARAMS, validate_parameters)
 
-    // Odom filter
-    filter_ = std::make_shared<Filter>(get_logger(), cxt_);
-
     // Publications
     filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
     depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
@@ -71,6 +68,16 @@ namespace orca_base
 
     // Parse URDF
     parse_urdf();
+
+    // Create filter
+    if (cxt_.four_dof_) {
+      RCLCPP_INFO(get_logger(), "using 4dof filter");
+      filter_ = std::make_shared<FourFilter>(get_logger(), cxt_);
+
+    } else {
+      RCLCPP_INFO(get_logger(), "using 6dof filter");
+      filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_);
+    }
   }
 
   void FilterNode::parse_urdf()
