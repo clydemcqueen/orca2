@@ -38,19 +38,25 @@ def plot_subplot(subplot, name,
                  post_xs, post_values, post_sds):
     """Plot data in a single subplot"""
 
+    plot_post_points = True  # TODO parameter
+    if plot_post_points:
+        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0, elinewidth=1, label='post')
+    else:
+        subplot.plot(post_xs, post_values, label='post')
+        post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
+        post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
+        subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
+
     if pre_xs and pre_values and pre_sds:
         subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
-
-    subplot.plot(post_xs, post_values, label='post')
-
-    post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
-    post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
-    subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
 
     if depth_xs and depth_values and depth_sds:
         subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1, label='depth')
 
-    subplot.set_ylim(-4, 4)
+    ylim = False  # TODO parameter
+    if ylim:
+        subplot.set_ylim(-4, 4)
+
     subplot.set_xticklabels([])
     subplot.legend()
 
@@ -84,7 +90,10 @@ class PlotFilterNode(Node):
         self._pre_msgs: List[PoseWithCovarianceStamped] = []
         self._post_msgs: List[Odometry] = []
 
-        self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
+        plot_baro = True  # TODO parameter
+
+        if plot_baro:
+            self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
         self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/fcam_f_base', self.pre_callback, 5)
         self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
         self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)

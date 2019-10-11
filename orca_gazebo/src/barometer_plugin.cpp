@@ -111,11 +111,17 @@ namespace gazebo
 //        << ", measurement sec=" << measurement.sec << ", nsec=" << measurement.nanosec
 //        << std::endl;
 
+      // ROS sim time is only updated at 10Hz, and the camera sensor seems to publish frames
+      // with timestamps aligned to this 10Hz clock rate. More investigation needed. TODO
+      // In the meanwhile, run everything on the wall clock.
+
+//      rclcpp::Time msg_time = node_->now();
+      auto t = std::chrono::high_resolution_clock::now();
+      rclcpp::Time msg_time{t.time_since_epoch().count(), RCL_ROS_TIME};
+
       // TODO pull these from the URDF
       static const double z_top_to_baro_link = -0.05;
       static const double z_baro_link_to_base_link = -0.085;
-
-      rclcpp::Time msg_time = node_->now();
 
       if (node_->count_subscribers(baro_pub_->get_topic_name()) > 0) {
         orca_msgs::msg::Barometer baro_msg;

@@ -256,89 +256,99 @@ namespace orca_base
 
   Filter::Filter(const rclcpp::Logger &logger, const FilterContext &cxt) :
     logger_{logger},
+    cxt_{cxt},
     filter_{STATE_DIM, 0.001, 2.0, 0}
   {
-    filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
     filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * 0.01);
 
     // State transition function
-    filter_.set_f_fn([&cxt](const double dt, const Eigen::VectorXd &u, Eigen::Ref<Eigen::VectorXd> x)
-                     {
-                       if (cxt.predict_accel_) {
-                         // Assume 0 acceleration
-                         x_ax = 0;
-                         x_ay = 0;
-                         x_az = 0;
-                         x_aroll = 0;
-                         x_apitch = 0;
-                         x_ayaw = 0;
+    filter_.set_f_fn(
+      [&cxt](const double dt, const Eigen::VectorXd &u, Eigen::Ref<Eigen::VectorXd> x)
+      {
+        if (cxt.predict_accel_) {
+          // Assume 0 acceleration
+          x_ax = 0;
+          x_ay = 0;
+          x_az = 0;
+          x_aroll = 0;
+          x_apitch = 0;
+          x_ayaw = 0;
 
-                         if (cxt.predict_accel_control_) {
-                           // Add acceleration due to control
-                           x_ax += u(0, 0);
-                           x_ay += u(1, 0);
-                           x_az += u(2, 0);
-                           x_ayaw += u(3, 0);
-                         }
+          if (cxt.predict_accel_control_) {
+            // Add acceleration due to control
+            x_ax += u(0, 0);
+            x_ay += u(1, 0);
+            x_az += u(2, 0);
+            x_ayaw += u(3, 0);
+          }
 
-                         if (cxt.predict_accel_drag_) {
-                           // Add acceleration due to drag
-                           // TODO create & use AddLinkForce(drag_force, c_of_mass) and AddRelativeTorque(drag_torque)
-                           // Simple approximation:
-                           x_ax += cxt.model_.drag_accel_x(x_vx);
-                           x_ay += cxt.model_.drag_accel_y(x_vy);
-                           x_az += cxt.model_.drag_accel_z(x_vz);
-                           x_aroll += cxt.model_.drag_accel_yaw(x_vroll);
-                           x_apitch += cxt.model_.drag_accel_yaw(x_vpitch);
-                           x_ayaw += cxt.model_.drag_accel_yaw(x_vyaw);
-                         }
+          if (cxt.predict_accel_drag_) {
+            // Add acceleration due to drag
+            // TODO create & use AddLinkForce(drag_force, c_of_mass) and AddRelativeTorque(drag_torque)
+            // Simple approximation:
+            x_ax += cxt.model_.drag_accel_x(x_vx);
+            x_ay += cxt.model_.drag_accel_y(x_vy);
+            x_az += cxt.model_.drag_accel_z(x_vz);
+            x_aroll += cxt.model_.drag_accel_yaw(x_vroll);
+            x_apitch += cxt.model_.drag_accel_yaw(x_vpitch);
+            x_ayaw += cxt.model_.drag_accel_yaw(x_vyaw);
+          }
 
-                         if (cxt.predict_accel_buoyancy_) {
-                           // Add acceleration due to gravity and buoyancy
-                           // TODO create & use AddLinkForce(buoyancy_force, c_of_volume)
-                           // Simple approximation:
-                           x_roll = 0;
-                           x_pitch = 0;
-                           x_az -= cxt.model_.hover_accel_z();
-                         }
-                       }
+          if (cxt.predict_accel_buoyancy_) {
+            // Add acceleration due to gravity and buoyancy
+            // TODO create & use AddLinkForce(buoyancy_force, c_of_volume)
+            // Simple approximation:
+            x_roll = 0;
+            x_pitch = 0;
+            x_az -= cxt.model_.hover_accel_z();
+          }
+        }
 
-                       // Clamp acceleration
-                       x_ax = clamp(x_ax, MAX_PREDICTED_ACCEL_XYZ);
-                       x_ay = clamp(x_ay, MAX_PREDICTED_ACCEL_XYZ);
-                       x_az = clamp(x_az, MAX_PREDICTED_ACCEL_XYZ);
-                       x_aroll = clamp(x_aroll, MAX_PREDICTED_ACCEL_RPY);
-                       x_apitch = clamp(x_apitch, MAX_PREDICTED_ACCEL_RPY);
-                       x_ayaw = clamp(x_ayaw, MAX_PREDICTED_ACCEL_RPY);
+        // Clamp acceleration
+        x_ax = clamp(x_ax, MAX_PREDICTED_ACCEL_XYZ);
+        x_ay = clamp(x_ay, MAX_PREDICTED_ACCEL_XYZ);
+        x_az = clamp(x_az, MAX_PREDICTED_ACCEL_XYZ);
+        x_aroll = clamp(x_aroll, MAX_PREDICTED_ACCEL_RPY);
+        x_apitch = clamp(x_apitch, MAX_PREDICTED_ACCEL_RPY);
+        x_ayaw = clamp(x_ayaw, MAX_PREDICTED_ACCEL_RPY);
 
-                       // Velocity, vx += ax * dt
-                       x_vx += x_ax * dt;
-                       x_vy += x_ay * dt;
-                       x_vz += x_az * dt;
-                       x_vroll += x_aroll * dt;
-                       x_vpitch += x_apitch * dt;
-                       x_vyaw += x_ayaw * dt;
+        // Velocity, vx += ax * dt
+        x_vx += x_ax * dt;
+        x_vy += x_ay * dt;
+        x_vz += x_az * dt;
+        x_vroll += x_aroll * dt;
+        x_vpitch += x_apitch * dt;
+        x_vyaw += x_ayaw * dt;
 
-                       // Clamp velocity
-                       x_vx = clamp(x_vx, MAX_PREDICTED_VELO_XYZ);
-                       x_vy = clamp(x_vy, MAX_PREDICTED_VELO_XYZ);
-                       x_vz = clamp(x_vz, MAX_PREDICTED_VELO_XYZ);
-                       x_vroll = clamp(x_vroll, MAX_PREDICTED_VELO_RPY);
-                       x_vpitch = clamp(x_vpitch, MAX_PREDICTED_VELO_RPY);
-                       x_vyaw = clamp(x_vyaw, MAX_PREDICTED_VELO_RPY);
+        // Clamp velocity
+        x_vx = clamp(x_vx, MAX_PREDICTED_VELO_XYZ);
+        x_vy = clamp(x_vy, MAX_PREDICTED_VELO_XYZ);
+        x_vz = clamp(x_vz, MAX_PREDICTED_VELO_XYZ);
+        x_vroll = clamp(x_vroll, MAX_PREDICTED_VELO_RPY);
+        x_vpitch = clamp(x_vpitch, MAX_PREDICTED_VELO_RPY);
+        x_vyaw = clamp(x_vyaw, MAX_PREDICTED_VELO_RPY);
 
-                       // Position, x += vx * dt
-                       x_x += x_vx * dt;
-                       x_y += x_vy * dt;
-                       x_z += x_vz * dt;
-                       x_roll = norm_angle(x_roll + x_vroll * dt);
-                       x_pitch = norm_angle(x_pitch + x_vpitch * dt);
-                       x_yaw = norm_angle(x_yaw + x_vyaw * dt);
-                     });
+        // Position, x += vx * dt
+        x_x += x_vx * dt;
+        x_y += x_vy * dt;
+        x_z += x_vz * dt;
+        x_roll = norm_angle(x_roll + x_vroll * dt);
+        x_pitch = norm_angle(x_pitch + x_vpitch * dt);
+        x_yaw = norm_angle(x_yaw + x_vyaw * dt);
+      });
 
     // State residual and mean functions
     filter_.set_r_x_fn(orca_state_residual);
     filter_.set_mean_x_fn(orca_state_mean);
+
+    // Set/reset filter state (P and x)
+    reset();
+  }
+
+  void Filter::reset()
+  {
+    filter_.set_x(Eigen::VectorXd::Zero(STATE_DIM));
+    filter_.set_P(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM)); // Big P! The first measurement will set x
   }
 
   void Filter::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
@@ -416,10 +426,17 @@ namespace orca_base
     }
 
     // If there are no measurements return false
-    if (q_.empty()) {
+    if (q_.empty() || q_.top().stamp_ >= end) {
       RCLCPP_DEBUG(logger_, "no measurements to process");
       return false;
     }
+
+    // Set outlier distance
+    filter_.set_outlier_distance(cxt_.outlier_distance_);
+
+    // Keep track of inliers and outliers
+    int inliers = 0;
+    int outliers = 0;
 
     // Get measurements between start and end
     while (!q_.empty() && q_.top().stamp_ < end) {
@@ -435,17 +452,29 @@ namespace orca_base
       filter_.set_r_z_fn(m.r_z_fn_);
       filter_.set_mean_z_fn(m.mean_z_fn_);
 
-      filter_.update(m.z_, m.R_);
+      if (filter_.update(m.z_, m.R_)) {
+        inliers++;
+      } else {
+        outliers++;
+      }
     }
 
-    // Return the best estimate
+    if (outliers) {
+      RCLCPP_INFO(logger_, "rejected %d outlier(s) at %s", outliers, to_str(end).c_str());
+    }
+
+    if (!inliers || !filter_.valid()) {
+      return false;
+    }
+
+    // Return a new estimate
     filtered_odom.header.stamp = filter_time_;
     pose_from_x(filter_.x(), filtered_odom.pose.pose);
     twist_from_x(filter_.x(), filtered_odom.twist.twist);
     pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
     twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
 
-    return filter_.valid();
+    return true;
   }
 
 } // namespace orca_base

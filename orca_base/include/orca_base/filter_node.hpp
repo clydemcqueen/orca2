@@ -21,13 +21,16 @@ namespace orca_base
   {
   private:
 
-    const std::chrono::milliseconds SPIN_PERIOD{50ms};   // Publish messages at 20Hz
+    const rclcpp::Duration FILTER_TIMEOUT{RCL_S_TO_NS(1)};  // Reset filter if it borks
+    const std::chrono::milliseconds SPIN_PERIOD{50ms};                        // Publish messages at 20Hz
 
     // Parameters
     FilterContext cxt_;
 
     // UKF state
     std::shared_ptr<Filter> filter_;
+    rclcpp::Time queue_time_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time publish_time_{0, 0, RCL_ROS_TIME};
 
     // Control state
     Acceleration u_bar_;                          // Last control, used for filter predict step

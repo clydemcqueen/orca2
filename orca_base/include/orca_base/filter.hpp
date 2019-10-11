@@ -44,6 +44,7 @@ namespace orca_base
     const rclcpp::Duration TOO_OLD{RCL_MS_TO_NS(250)};
 
     rclcpp::Logger logger_;
+    const FilterContext &cxt_;
 
     // Measurement queue
     std::priority_queue<Measurement, std::vector<Measurement>, Measurement> q_;
@@ -57,6 +58,8 @@ namespace orca_base
   public:
 
     explicit Filter(const rclcpp::Logger &logger, const FilterContext &cxt_);
+
+    void reset();
 
     bool filter_valid()
     { return filter_.valid(); }

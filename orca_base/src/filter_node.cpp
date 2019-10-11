@@ -225,6 +225,8 @@ namespace orca_base
 
     // Queue
     filter_->queue_pose(base_f_map);
+
+    queue_time_ = sensor_f_map->header.stamp;
   }
 
   // Timers run on wall time, but now() returns either wall or simulated time -- watch for invalid or duplicate stamps
@@ -242,6 +244,12 @@ namespace orca_base
       return;
     }
     last_time = spin_time;
+
+    // If we're queueing poses, but not publishing odometry, then the filter might be borked. Reset it.
+    if (spin_time - queue_time_ < FILTER_TIMEOUT && spin_time - publish_time_ > FILTER_TIMEOUT) {
+      RCLCPP_WARN(get_logger(), "reset filter");
+      filter_->reset();
+    }
 
     // Filter the odometry, passing in the previous acceleration as the control
     nav_msgs::msg::Odometry filtered_odom;
@@ -271,6 +279,8 @@ namespace orca_base
 
         tf_pub_->publish(tf_message);
       }
+
+      publish_time_ = spin_time;
     }
   }
 
