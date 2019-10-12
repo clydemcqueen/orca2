@@ -23,11 +23,6 @@ namespace orca_base
   // Utility functions
   //==================================================================
 
-  bool valid_stamp(const rclcpp::Time &stamp)
-  {
-    return stamp.nanoseconds() > 0;
-  }
-
   // Create control matrix u
   void to_u(const Acceleration &in, Eigen::VectorXd &out)
   {
@@ -136,8 +131,19 @@ namespace orca_base
 
   void FilterBase::reset()
   {
+    // Clear all pending measurements
+    measurement_q_ = std::priority_queue<Measurement, std::vector<Measurement>, Measurement>();
+
+    // Clear history
+    state_history_.clear();
+    measurement_history_.clear();
+
+    // Reset filter time
+    filter_time_ = {0, 0, RCL_ROS_TIME};
+
+    // Start with a default state and a large covariance matrix
     filter_.set_x(Eigen::VectorXd::Zero(state_dim_));
-    filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_)); // Big P! The first measurement will set x
+    filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_));
   }
 
   void FilterBase::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
@@ -174,40 +180,33 @@ namespace orca_base
     filter_time_ = stamp;
   }
 
-  bool FilterBase::process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+  bool FilterBase::process(const rclcpp::Time &stamp, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
   {
-    rclcpp::Time too_old = t - TOO_OLD;
-    rclcpp::Time start = filter_time_ > too_old ? filter_time_ : too_old;
-    rclcpp::Time end = t - LAG;
-
-    // Pop measurements older than start
-    while (!q_.empty() && q_.top().stamp_ < start) {
-      RCLCPP_WARN(logger_, "measurement %s is older than %s, dropping",
-                  to_str(q_.top().stamp_).c_str(), to_str(start).c_str());
-
-      q_.pop();
+    // Trim state_history_
+    while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
+      RCLCPP_DEBUG(logger_, "pop old state history %s", to_str(state_history_.front().stamp_).c_str());
+      state_history_.pop_front();
     }
 
-    // If there are no measurements return false
-    if (q_.empty() || q_.top().stamp_ >= end) {
-      RCLCPP_DEBUG(logger_, "no measurements to process");
-      return false;
+    // Trim measurement_history_
+    while (!measurement_history_.empty() && measurement_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
+      RCLCPP_DEBUG(logger_, "pop old measurement history %s", to_str(measurement_history_.front().stamp_).c_str());
+      measurement_history_.pop_front();
     }
 
-    // Set outlier distance
+    // Set outlier distance, by doing this each time we can change this on-the-fly
     filter_.set_outlier_distance(cxt_.outlier_distance_);
 
     // Keep track of inliers and outliers
     int inliers = 0;
     int outliers = 0;
 
-    // Get measurements between start and end
-    while (!q_.empty() && q_.top().stamp_ < end) {
-      RCLCPP_DEBUG(logger_, "measurement %s is older than %s, processing",
-                   to_str(q_.top().stamp_).c_str(), to_str(end).c_str());
+    // Process all measurements
+    while (!measurement_q_.empty()) {
+      RCLCPP_DEBUG(logger_, "processing measurement %s", to_str(measurement_q_.top().stamp_).c_str());
 
-      Measurement m = q_.top();
-      q_.pop();
+      Measurement m = measurement_q_.top();
+      measurement_q_.pop();
 
       predict(m.stamp_, u_bar);
 
@@ -220,10 +219,16 @@ namespace orca_base
       } else {
         outliers++;
       }
+
+      // Save measurement in history
+      measurement_history_.push_back(m);
+
+      // Save state in history
+      state_history_.emplace_back(m.stamp_, filter_.x(), filter_.P());
     }
 
     if (outliers) {
-      RCLCPP_INFO(logger_, "rejected %d outlier(s) at %s", outliers, to_str(end).c_str());
+      RCLCPP_INFO(logger_, "rejected %d outlier(s)", outliers);
     }
 
     if (!inliers || !filter_.valid()) {
@@ -233,6 +238,36 @@ namespace orca_base
     // Return a new estimate
     filtered_odom.header.stamp = filter_time_;
     odom_from_filter(filtered_odom);
+
+    return true;
+  }
+
+  // Rewind to a previous state, return true if successful, false if there was no change
+  bool FilterBase::rewind(const rclcpp::Time &stamp)
+  {
+    if (state_history_.empty() || stamp < state_history_.front().stamp_) {
+      RCLCPP_WARN(logger_, "can't rewind to %s, dropping message", to_str(stamp).c_str());
+      return false;
+    }
+
+    // Pop newer states
+    while (!state_history_.empty() && state_history_.back().stamp_ > stamp) {
+      RCLCPP_DEBUG(logger_, "rewind: pop state %s", to_str(stamp).c_str());
+      state_history_.pop_back();
+    }
+
+    // Set the filter state
+    RCLCPP_DEBUG(logger_, "rewind %dms", (stamp - state_history_.back().stamp_).nanoseconds() / 1000000);
+    filter_time_ = state_history_.back().stamp_;
+    filter_.set_x(state_history_.back().x_);
+    filter_.set_P(state_history_.back().P_);
+
+    // Pop newer measurements and put them back into the priority queue
+    while (!measurement_history_.empty() && measurement_history_.back().stamp_ > stamp) {
+      RCLCPP_DEBUG(logger_, "rewind: re-queue measurement %s", to_str(stamp).c_str());
+      measurement_q_.push(measurement_history_.back());
+      measurement_history_.pop_back();
+    }
 
     return true;
   }

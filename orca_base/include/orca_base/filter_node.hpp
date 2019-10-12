@@ -22,14 +22,12 @@ namespace orca_base
   private:
 
     const rclcpp::Duration FILTER_TIMEOUT{RCL_S_TO_NS(1)};  // Reset filter if it borks
-    const std::chrono::milliseconds SPIN_PERIOD{50ms};                        // Publish messages at 20Hz
 
     // Parameters
     FilterContext cxt_;
 
     // UKF state
-    std::shared_ptr<FilterBase> filter_;
-    rclcpp::Time queue_time_{0, 0, RCL_ROS_TIME};
+    std::shared_ptr<FilterBase> odom_filter_;
     rclcpp::Time publish_time_{0, 0, RCL_ROS_TIME};
 
     // Control state
@@ -46,14 +44,18 @@ namespace orca_base
     tf2::Transform t_lcam_base_{};
     tf2::Transform t_rcam_base_{};
 
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
+    rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_pub_;
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
+
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_sub_;
-
-    // Timer
-    rclcpp::TimerBase::SharedPtr spin_timer_;
 
     // Validate parameters
     void validate_parameters();
@@ -74,10 +76,6 @@ namespace orca_base
 
     void rcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
 
-    void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
-                    const tf2::Transform &t_sensor_base, const std::string &frame_id,
-                    const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub);
-
     // Callback wrappers
     Monotonic<FilterNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &FilterNode::baro_callback};
     Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr> control_cb_{this, &FilterNode::control_callback};
@@ -88,20 +86,19 @@ namespace orca_base
     Monotonic<FilterNode *,
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> rcam_cb_{this, &FilterNode::rcam_callback};
 
-    // Publications
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_pub_;
-    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
+    // Process a camera pose
+    void process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
+                      const tf2::Transform &t_sensor_base, const std::string &frame_id,
+                      const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub);
+
+    // Filter a message and publish odometry
+    template<typename T>
+    void filter_odom(const T &msg);
 
   public:
     explicit FilterNode();
 
     ~FilterNode() override = default;
-
-    void spin_once();
   };
 
 } // namespace orca_base

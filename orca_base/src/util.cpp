@@ -58,16 +58,20 @@ namespace orca_base
 
   std::string to_str(const rclcpp::Time &t)
   {
-    std::stringstream s;
-    s << "{" << t.seconds() << "s _or_ " << t.nanoseconds() << "ns}";
-    return s.str();
+    ;
+    return to_str(builtin_interfaces::msg::Time{t});
   }
 
   std::string to_str(const builtin_interfaces::msg::Time &t)
   {
     std::stringstream s;
-    s << "{" << t.sec << "s _plus_ " << t.nanosec << "ns}";
+    s << "{" << t.sec << "s + " << t.nanosec << "ns (~" << static_cast<int>(t.nanosec / 1000000) << "ms)}";
     return s.str();
+  }
+
+  bool valid_stamp(const rclcpp::Time &stamp)
+  {
+    return stamp.nanoseconds() > 0;
   }
 
 } // namespace orca_base

@@ -132,7 +132,7 @@ namespace orca_base
   PoseFilter::PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
     FilterBase{logger, cxt, POSE_STATE_DIM}
   {
-    filter_.set_Q(Eigen::MatrixXd::Identity(state_dim_, state_dim_) * 0.01);
+    filter_.set_Q(Eigen::MatrixXd::Identity(POSE_STATE_DIM, POSE_STATE_DIM) * 0.01);
 
     // State transition function
     filter_.set_f_fn(
@@ -223,45 +223,29 @@ namespace orca_base
     flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
   }
 
-  void PoseFilter::queue_depth(const orca_msgs::msg::Depth &depth)
+  Measurement PoseFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
   {
-    rclcpp::Time stamp{depth.header.stamp};
-
-    if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue depth %s", to_str(stamp).c_str());
-      Measurement m;
-      m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-      {
-        z(0) = px_z;
-      });
-      q_.push(m);
-    } else {
-      RCLCPP_WARN(logger_, "depth stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
-                  to_str(filter_time_).c_str());
-    }
+    Measurement m;
+    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = px_z;
+    });
+    return m;
   }
 
-  void PoseFilter::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
+  Measurement PoseFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
   {
-    rclcpp::Time stamp{pose.header.stamp};
-
-    if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue pose %s", to_str(stamp).c_str());
-      Measurement m;
-      m.init_6dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-      {
-        z(0) = px_x;
-        z(1) = px_y;
-        z(2) = px_z;
-        z(3) = px_roll;
-        z(4) = px_pitch;
-        z(5) = px_yaw;
-      });
-      q_.push(m);
-    } else {
-      RCLCPP_WARN(logger_, "pose stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
-                  to_str(filter_time_).c_str());
-    }
+    Measurement m;
+    m.init_6dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = px_x;
+      z(1) = px_y;
+      z(2) = px_z;
+      z(3) = px_roll;
+      z(4) = px_pitch;
+      z(5) = px_yaw;
+    });
+    return m;
   }
 
 } // namespace orca_base

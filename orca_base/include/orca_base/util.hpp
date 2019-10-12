@@ -95,6 +95,9 @@ namespace orca_base
 
   std::string to_str(const builtin_interfaces::msg::Time &t);
 
+  // True if a rclcpp::Time is valid (non-zero)
+  bool valid_stamp(const rclcpp::Time &stamp);
+
 } // namespace orca_base
 
 #endif // ORCA_BASE_UTIL_HPP

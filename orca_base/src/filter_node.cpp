@@ -17,7 +17,6 @@ namespace orca_base
     (void) fcam_sub_;
     (void) lcam_sub_;
     (void) rcam_sub_;
-    (void) spin_timer_;
 
     // Get parameters
 #undef CXT_MACRO_MEMBER
@@ -51,9 +50,6 @@ namespace orca_base
       "rcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
       { this->rcam_cb_.call(msg); });
 
-    // Loop will run at ~constant wall speed, switch to ros_timer when it exists
-    spin_timer_ = create_wall_timer(SPIN_PERIOD, std::bind(&FilterNode::spin_once, this));
-
     RCLCPP_INFO(get_logger(), "filter_node ready");
   }
 
@@ -72,11 +68,11 @@ namespace orca_base
     // Create filter
     if (cxt_.four_dof_) {
       RCLCPP_INFO(get_logger(), "using 4dof filter");
-      filter_ = std::make_shared<FourFilter>(get_logger(), cxt_);
+      odom_filter_ = std::make_shared<FourFilter>(get_logger(), cxt_);
 
     } else {
       RCLCPP_INFO(get_logger(), "using 6dof filter");
-      filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_);
+      odom_filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_);
     }
   }
 
@@ -161,7 +157,7 @@ namespace orca_base
       }
 
       if (cxt_.filter_baro_) {
-        filter_->queue_depth(depth_msg);
+        filter_odom(depth_msg);
       }
     }
   }
@@ -177,33 +173,44 @@ namespace orca_base
   void FilterNode::fcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
     if (cxt_.filter_fcam_) {
-      queue_pose(msg, t_fcam_base_, "fcam_measurement", fcam_pub_);
+      process_pose(msg, t_fcam_base_, "fcam_measurement", fcam_pub_);
     }
   }
 
   void FilterNode::lcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
     if (cxt_.filter_lcam_) {
-      queue_pose(msg, t_lcam_base_, "lcam_measurement", lcam_pub_);
+      process_pose(msg, t_lcam_base_, "lcam_measurement", lcam_pub_);
     }
   }
 
   void FilterNode::rcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
   {
     if (cxt_.filter_rcam_) {
-      queue_pose(msg, t_rcam_base_, "rcam_measurement", rcam_pub_);
+      process_pose(msg, t_rcam_base_, "rcam_measurement", rcam_pub_);
     }
   }
 
-  void FilterNode::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
-                              const tf2::Transform &t_sensor_base, const std::string &frame_id,
-                              const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub)
+  void FilterNode::process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
+                                const tf2::Transform &t_sensor_base, const std::string &frame_id,
+                                const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub)
   {
+    rclcpp::Time stamp{sensor_f_map->header.stamp};
+
+    // If we're receiving poses but not publishing odometry then the filter might be borked
+    // TODO this doesn't work well when outlier_distance is ~5, which should be reasonable
+    // TODO seed the filter with the current measurement or temporarily suppress outlier rejection
+    if (valid_stamp(publish_time_) && stamp - publish_time_ > FILTER_TIMEOUT) {
+      RCLCPP_WARN(get_logger(), "reset filter");
+      odom_filter_->reset();
+      publish_time_ = stamp;
+    }
+
     // Convert pose to transform
     tf2::Transform t_map_sensor;
     tf2::fromMsg(sensor_f_map->pose.pose, t_map_sensor);
 
-    // Apply transform to get t_map_base
+    // Multiply transforms to get t_map_base
     tf2::Transform t_map_base = t_map_sensor * t_sensor_base;
 
     // Convert transform back to pose
@@ -212,12 +219,12 @@ namespace orca_base
     toMsg(t_map_base, base_f_map.pose.pose);
     base_f_map.pose.covariance = sensor_f_map->pose.covariance;  // TODO rotate covariance
 
-    // Optionally publish pose for diagnostics
+    // Publish unfiltered pose
     if (pose_pub->get_subscription_count() > 0) {
       pose_pub->publish(base_f_map);
     }
 
-    // Optionally publish tf for diagnostics
+    // Publish unfiltered tf
     if (cxt_.publish_measurement_tf_ && tf_pub_->get_subscription_count() > 0) {
       geometry_msgs::msg::TransformStamped geo_tf;
       geo_tf.header = base_f_map.header;
@@ -230,46 +237,25 @@ namespace orca_base
       tf_pub_->publish(tf_message);
     }
 
-    // Queue
-    filter_->queue_pose(base_f_map);
-
-    queue_time_ = sensor_f_map->header.stamp;
+    // Filter and publish odometry
+    filter_odom(base_f_map);
   }
 
-  // Timers run on wall time, but now() returns either wall or simulated time -- watch for invalid or duplicate stamps
-  void FilterNode::spin_once()
+  template<typename T>
+  void FilterNode::filter_odom(const T &msg)
   {
-    // Ignore invalid timestamps
-    auto spin_time = now();
-    if (spin_time.nanoseconds() <= 0) {
-      return;
-    }
-
-    // Ignore duplicate timestamps
-    static rclcpp::Time last_time{0, 0, RCL_ROS_TIME};
-    if (last_time == spin_time) {
-      return;
-    }
-    last_time = spin_time;
-
-    // If we're queueing poses, but not publishing odometry, then the filter might be borked. Reset it.
-    if (spin_time - queue_time_ < FILTER_TIMEOUT && spin_time - publish_time_ > FILTER_TIMEOUT) {
-      RCLCPP_WARN(get_logger(), "reset filter");
-      filter_->reset();
-    }
-
-    // Filter the odometry, passing in the previous acceleration as the control
     nav_msgs::msg::Odometry filtered_odom;
-    if (filter_->process(spin_time, u_bar_, filtered_odom)) {
-      filtered_odom.header.frame_id = cxt_.frame_id_map_;
-      filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
+    filtered_odom.header.frame_id = cxt_.frame_id_map_;
+    filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
 
+    // Filter this message
+    if (odom_filter_->process_message(msg, u_bar_, filtered_odom)) {
       // Publish filtered odometry
       if (filtered_odom_pub_->get_subscription_count() > 0) {
         filtered_odom_pub_->publish(filtered_odom);
       }
 
-      // Publish tf
+      // Publish filtered tf
       if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
         geometry_msgs::msg::TransformStamped geo_tf;
         geo_tf.header = filtered_odom.header;
@@ -287,7 +273,7 @@ namespace orca_base
         tf_pub_->publish(tf_message);
       }
 
-      publish_time_ = spin_time;
+      publish_time_ = msg.header.stamp;
     }
   }
 

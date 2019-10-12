@@ -90,77 +90,135 @@ namespace orca_base
   };
 
   //=============================================================================
-  // Filters
+  // Filter state
+  //=============================================================================
+
+  struct State
+  {
+    rclcpp::Time stamp_;
+    Eigen::VectorXd x_;
+    Eigen::MatrixXd P_;
+
+    // Must be default constructible
+    State() = default;
+
+    State(const rclcpp::Time &stamp, const Eigen::VectorXd &x, const Eigen::MatrixXd &P) :
+      stamp_{stamp}, x_{x}, P_{P}
+    {}
+  };
+
+  //=============================================================================
+  // Filter base
   //=============================================================================
 
   class FilterBase
   {
-    const rclcpp::Duration LAG{RCL_MS_TO_NS(50)};
-    const rclcpp::Duration TOO_OLD{RCL_MS_TO_NS(250)};
+    const rclcpp::Duration HISTORY_LENGTH{RCL_S_TO_NS(1)};
 
+    int state_dim_;
+
+    // Current time of filter
+    rclcpp::Time filter_time_;
+
+    // Measurement priority queue, sorted from oldest to newest
+    std::priority_queue<Measurement, std::vector<Measurement>, Measurement> measurement_q_;
+
+    // State history, ordered from oldest to newest
+    std::deque<State> state_history_;
+
+    // Measurement history, ordered from oldest to newest
+    std::deque<Measurement> measurement_history_;
+
+    // Call filter_->predict
     void predict(const rclcpp::Time &stamp, const Acceleration &u_bar);
+
+    // Process all messages in the queue, return true if there's an odometry message to publish
+    bool process(const rclcpp::Time &stamp, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
+
+    // Rewind to a previous state
+    bool rewind(const rclcpp::Time &stamp);
 
   protected:
 
     rclcpp::Logger logger_;
     const FilterContext &cxt_;
 
-    // Filter
-    int state_dim_;
     ukf::UnscentedKalmanFilter filter_;
-    rclcpp::Time filter_time_{0, 0, RCL_ROS_TIME};
-
-    // Measurement queue
-    std::priority_queue<Measurement, std::vector<Measurement>, Measurement> q_;
 
     virtual void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) = 0;
+
+    virtual Measurement to_measurement(const orca_msgs::msg::Depth &depth) const = 0;
+
+    virtual Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const = 0;
 
   public:
 
     explicit FilterBase(const rclcpp::Logger &logger, const FilterContext &cxt_, int state_dim);
 
+    // Reset the filter
     void reset();
 
+    // Is the filter valid?
     bool filter_valid()
     { return filter_.valid(); }
 
-    virtual void queue_depth(const orca_msgs::msg::Depth &depth)
-    { assert(false); }
+    // Process a message
+    template<typename T>
+    bool process_message(const T &msg, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+    {
+      rclcpp::Time stamp{msg.header.stamp};
 
-    virtual void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
-    { assert(false); }
+      if (stamp < filter_time_ && !rewind(stamp)) {
+        // This message is out of order, and we can't rewind history
+        return false;
+      }
 
-    // Run the filter, return true if there's a odometry message to publish
-    bool process(const rclcpp::Time &t, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
+      // Add this message to the priority queue
+      measurement_q_.push(to_measurement(msg));
+
+      // Process one or more measurements
+      return process(stamp, u_bar, filtered_odom);
+    }
   };
 
+  //=============================================================================
   // Filter only z (depth)
+  //=============================================================================
+
   class DepthFilter : public FilterBase
   {
     void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
 
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
+
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
+
   public:
 
     explicit DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
-
-    void queue_depth(const orca_msgs::msg::Depth &depth) override;
   };
 
+  //=============================================================================
   // Filter 4 DoF, assume roll and pitch are always 0
+  //=============================================================================
+
   class FourFilter : public FilterBase
   {
     void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
 
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
+
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
+
   public:
 
     explicit FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
-
-    void queue_depth(const orca_msgs::msg::Depth &depth) override;
-
-    void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) override;
   };
 
+  //=============================================================================
   // Filter all 6 DoF
+  //=============================================================================
+
   class PoseFilter : public FilterBase
   {
     void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
@@ -169,9 +227,9 @@ namespace orca_base
 
     explicit PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
 
-    void queue_depth(const orca_msgs::msg::Depth &depth) override ;
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
 
-    void queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) override ;
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
   };
 
 } // namespace orca_base

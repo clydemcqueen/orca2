@@ -111,7 +111,7 @@ namespace orca_base
   FourFilter::FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
     FilterBase{logger, cxt, FOUR_STATE_DIM}
   {
-    filter_.set_Q(Eigen::MatrixXd::Identity(state_dim_, state_dim_) * 0.01);
+    filter_.set_Q(Eigen::MatrixXd::Identity(FOUR_STATE_DIM, FOUR_STATE_DIM) * 0.01);
 
     // State transition function
     filter_.set_f_fn(
@@ -188,43 +188,27 @@ namespace orca_base
     flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, 6);
   }
 
-  void FourFilter::queue_depth(const orca_msgs::msg::Depth &depth)
+  Measurement FourFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
   {
-    rclcpp::Time stamp{depth.header.stamp};
-
-    if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue depth %s", to_str(stamp).c_str());
-      Measurement m;
-      m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-      {
-        z(0) = fx_z;
-      });
-      q_.push(m);
-    } else {
-      RCLCPP_WARN(logger_, "depth stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
-                  to_str(filter_time_).c_str());
-    }
+    Measurement m;
+    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = fx_z;
+    });
+    return m;
   }
 
-  void FourFilter::queue_pose(const geometry_msgs::msg::PoseWithCovarianceStamped &pose)
+  Measurement FourFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
   {
-    rclcpp::Time stamp{pose.header.stamp};
-
-    if (stamp >= filter_time_) {
-      RCLCPP_DEBUG(logger_, "queue pose %s", to_str(stamp).c_str());
-      Measurement m;
-      m.init_4dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
-      {
-        z(0) = fx_x;
-        z(1) = fx_y;
-        z(2) = fx_z;
-        z(3) = fx_yaw;
-      });
-      q_.push(m);
-    } else {
-      RCLCPP_WARN(logger_, "pose stamp %s is older than filter time %s, dropping", to_str(stamp).c_str(),
-                  to_str(filter_time_).c_str());
-    }
+    Measurement m;
+    m.init_4dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    {
+      z(0) = fx_x;
+      z(1) = fx_y;
+      z(2) = fx_z;
+      z(3) = fx_yaw;
+    });
+    return m;
   }
 
 } // namespace orca_base
