@@ -423,7 +423,7 @@
                         <stddev>0.007</stddev>
                     </noise>
                 </camera>
-                <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <plugin name="${prefix}_camera_controller" filename="libgazebo_ros_camera.so">
                     <alwaysOn>true</alwaysOn>
                     <updateRate>0.0</updateRate>
                     <cameraName>orca/${prefix}_camera</cameraName>
@@ -448,6 +448,19 @@
     <xacro:camera_plugin prefix="left"/>
 
     <!-- Right down-facing camera: -->
-    <xacro:camera_plugin prefix="right"/>
+<!--    <xacro:camera_plugin prefix="right"/>-->
+
+    <gazebo>
+        <plugin name="p3d_test" filename="libgazebo_ros_p3d.so">
+            <ros>
+                <argument>odom:=ground_truth</argument>
+            </ros>
+            <update_rate>30.0</update_rate>
+            <body_name>base_link</body_name>
+            <frame_name>map</frame_name>
+            <xyz_offsets>0 0 0</xyz_offsets>
+            <rpy_offsets>0 0 0</rpy_offsets>
+        </plugin>
+    </gazebo>
 
 </robot>

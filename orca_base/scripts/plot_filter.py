@@ -5,12 +5,15 @@ Analyze and plot the output of a Kalman filter by subscribing to 2 Odometry mess
 
 Usage: ros2 run orca_base plot_filter.py /pre_filter:=/left_camera/odom /post_filter:=/filtered_odom
 """
+
 import math
 import statistics
 from typing import List
 
 import matplotlib
 import matplotlib.pyplot as plt
+import nees
+import numpy as np
 import rclpy
 import transformations as xf
 from builtin_interfaces.msg import Time
@@ -35,27 +38,45 @@ def diag_index(dim):
 def plot_subplot(subplot, name,
                  depth_xs, depth_values, depth_sds,
                  pre_xs, pre_values, pre_sds,
-                 post_xs, post_values, post_sds):
+                 post_xs, post_values, post_sds,
+                 gt_xs, gt_values):
     """Plot data in a single subplot"""
 
-    plot_post_points = True  # TODO parameter
-    if plot_post_points:
-        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0, elinewidth=1, label='post')
+    # TODO parameters
+    plot_filter_points = True  # Plot filter results as points vs. line
+    plot_error = False  # Plot error bars or not
+    ylim = 0.25  # Y limits
+
+    if gt_xs and gt_values:
+        subplot.plot(gt_xs, gt_values, label='truth')
+
+    if plot_filter_points and plot_error:
+        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0, elinewidth=1,
+                         label='filter')
     else:
-        subplot.plot(post_xs, post_values, label='post')
-        post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
-        post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
-        subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
+        if plot_error:
+            subplot.plot(post_xs, post_values, label='filter')
+            post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
+            post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
+            subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
+        else:
+            subplot.plot(post_xs, post_values, marker='+', ls='', label='filter')
 
     if pre_xs and pre_values and pre_sds:
-        subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
+        if plot_error:
+            subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
+        else:
+            subplot.plot(pre_xs, pre_values, marker='x', ls='', label='pre')
 
     if depth_xs and depth_values and depth_sds:
-        subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1, label='depth')
+        if plot_error:
+            subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1,
+                             label='depth')
+        else:
+            subplot.plot(depth_xs, depth_values, marker='o', ls='', label='depth')
 
-    ylim = False  # TODO parameter
     if ylim:
-        subplot.set_ylim(-4, 4)
+        subplot.set_ylim(-ylim, ylim)
 
     subplot.set_xticklabels([])
     subplot.legend()
@@ -83,14 +104,17 @@ def seconds(stamp: Time) -> float:
 class PlotFilterNode(Node):
 
     def __init__(self):
-        super().__init__('plot_odom')
+        super().__init__('plot_filter')
         self._first_time = None
         self._last_time = None
         self._depth_msgs: List[Depth] = []
         self._pre_msgs: List[PoseWithCovarianceStamped] = []
         self._post_msgs: List[Odometry] = []
+        self._gt_msgs: List[Odometry] = []
 
-        plot_baro = True  # TODO parameter
+        # TODO parameters
+        plot_baro = True
+        plot_gt = True
 
         if plot_baro:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
@@ -98,6 +122,8 @@ class PlotFilterNode(Node):
         self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
         self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)
         self._post_sub = self.create_subscription(Odometry, '/odom', self.post_callback, 5)
+        if plot_gt:
+            self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_callback, 5)
 
     def depth_callback(self, msg: Depth):
         self._depth_msgs.append(msg)
@@ -111,6 +137,10 @@ class PlotFilterNode(Node):
         self._post_msgs.append(msg)
         self.process(msg)
 
+    def gt_callback(self, msg: Odometry):
+        self._gt_msgs.append(msg)
+        self.process(msg)
+
     def process(self, msg):
         s = seconds(msg.header.stamp)
 
@@ -122,6 +152,7 @@ class PlotFilterNode(Node):
 
         # Plot messages?
         if self._last_time - self._first_time > QUEUE_FOR:
+            self.calc_nees()
             self.plot_msgs()
 
             # Reset
@@ -130,6 +161,14 @@ class PlotFilterNode(Node):
             self._depth_msgs: List[Depth] = []
             self._pre_msgs: List[PoseWithCovarianceStamped] = []
             self._post_msgs: List[Odometry] = []
+            self._gt_msgs: List[Odometry] = []
+
+    def calc_nees(self):
+        """Calc and print NEES values"""
+
+        nees_values = nees.nees(self._post_msgs, self._gt_msgs)
+        nees_mean = np.mean(nees_values)
+        print('Mean NEES value', nees_mean, 'PASSED' if nees_mean < 12 else 'FAILED')
 
     def plot_msgs(self):
         """Plot queued messages"""
@@ -137,6 +176,7 @@ class PlotFilterNode(Node):
         # Convert quaternions to Euler angles
         pre_pose_rpys = [q_to_rpy(pre.pose.pose.orientation) for pre in self._pre_msgs]
         post_pose_rpys = [q_to_rpy(post.pose.pose.orientation) for post in self._post_msgs]
+        gt_pose_rpys = [q_to_rpy(gt.pose.pose.orientation) for gt in self._gt_msgs]
 
         # Create a figure and 12 subplots, 6 for the pose and 6 for the twist
         fig, ((axpx, axpy, axpz), (axtx, axty, axtz),
@@ -146,6 +186,8 @@ class PlotFilterNode(Node):
         depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]
         pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]
         post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]
+        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]
+
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
 
@@ -203,13 +245,28 @@ class PlotFilterNode(Node):
                      [math.sqrt(msg.twist.covariance[diag_index(4)]) for msg in self._post_msgs],
                      [math.sqrt(msg.twist.covariance[diag_index(5)]) for msg in self._post_msgs]]
 
+        gt_valuess = [[msg.pose.pose.position.x for msg in self._gt_msgs],
+                      [msg.pose.pose.position.y for msg in self._gt_msgs],
+                      [msg.pose.pose.position.z for msg in self._gt_msgs],
+                      [msg.twist.twist.linear.x for msg in self._gt_msgs],
+                      [msg.twist.twist.linear.y for msg in self._gt_msgs],
+                      [msg.twist.twist.linear.z for msg in self._gt_msgs],
+                      [rpy[0] for rpy in gt_pose_rpys],
+                      [rpy[1] for rpy in gt_pose_rpys],
+                      [rpy[2] for rpy in gt_pose_rpys],
+                      [msg.twist.twist.angular.x for msg in self._gt_msgs],
+                      [msg.twist.twist.angular.y for msg in self._gt_msgs],
+                      [msg.twist.twist.angular.z for msg in self._gt_msgs]]
+
         # Plot everything
-        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds in \
-                zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss, post_valuess, post_sdss):
+        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, gt_values in \
+                zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss, post_valuess, post_sdss,
+                    gt_valuess):
             plot_subplot(subplot, name,
                          depth_xs, depth_values, depth_sds,
                          pre_xs, pre_values, pre_sds,
-                         post_xs, post_values, post_sds)
+                         post_xs, post_values, post_sds,
+                         gt_xs, gt_values)
 
         # Set figure title
         fig.suptitle('pre- and post-filter messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))

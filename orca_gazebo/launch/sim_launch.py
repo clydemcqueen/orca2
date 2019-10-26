@@ -14,6 +14,10 @@ def generate_launch_description():
     # Run everything in wall time until I get this figured out
     use_sim_time = False
 
+    # Update: I hacked up several sensor plugins in gazebo_ros_pkgs to publish everything in wall time,
+    # so vloc_node doesn't need to overwrite the timestamps
+    stamp_msgs_with_current_time = 0
+
     # Must match camera name in URDF file
     forward_camera_name = 'forward_camera'
     forward_camera_frame = 'forward_camera_frame'
@@ -139,7 +143,7 @@ def generate_launch_description():
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
                 'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': int(not use_sim_time),
+                'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
                 'camera_frame_id': left_camera_frame,
             }]),
 
@@ -154,7 +158,7 @@ def generate_launch_description():
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
                 'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': int(not use_sim_time),
+                'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
                 'camera_frame_id': right_camera_frame,
             }]),
     ])

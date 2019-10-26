@@ -120,6 +120,7 @@ install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 # PROGRAMS sets execute bits, FILES clears them
 install(
   PROGRAMS
+  scripts/nees.py
   scripts/plot_control.py
   scripts/plot_filter.py
   scripts/plot_odom.py
