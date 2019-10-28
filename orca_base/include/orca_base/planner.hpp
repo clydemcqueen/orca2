@@ -76,28 +76,36 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // DownRandomPlanner -- markers are on the floor, and there's a down-facing camera
+  // DownSequencePlanner -- markers are on the floor, and there's a down-facing camera
   //=====================================================================================
 
-  class DownRandomPlanner : public BasePlanner
+  class DownSequencePlanner : public BasePlanner
   {
+    bool random_;
+
   public:
 
-    explicit DownRandomPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    explicit DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, bool random) :
+      BasePlanner{logger, cxt},
+      random_{random}
     {}
 
     void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
   //=====================================================================================
-  // ForwardRandomPlanner -- markers are on the walls, and there's a forward-facing camera
+  // ForwardSequencePlanner -- markers are on the walls, and there's a forward-facing camera
   //=====================================================================================
 
-  class ForwardRandomPlanner : public BasePlanner
+  class ForwardSequencePlanner : public BasePlanner
   {
+    bool random_;
+
   public:
 
-    explicit ForwardRandomPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    explicit ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, bool random) :
+      BasePlanner{logger, cxt},
+      random_{random}
     {}
 
     void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;

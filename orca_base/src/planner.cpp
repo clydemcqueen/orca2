@@ -60,7 +60,9 @@ namespace orca_base
     goal.x = x;
     goal.y = y;
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
-      segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
+      if (!segments_.back()->extend(plan, goal)) {
+        segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
+      }
     } else {
       RCLCPP_DEBUG(logger_, "skip line");
     }
@@ -104,7 +106,7 @@ namespace orca_base
     // Keep station at the last waypoint
     segments_.push_back(std::make_shared<BaseSegment>(logger_, cxt_, plan, plan));
 
-    // Create a path for publishing
+    // Create a path for diagnostics
     planned_path_.header.stamp = start.t;
     planned_path_.header.frame_id = cxt_.map_frame_;
     for (auto &i : segments_) {
@@ -137,11 +139,13 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // DownRandomPlanner
+  // DownSequencePlanner
   //=====================================================================================
 
-  void DownRandomPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void DownSequencePlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
   {
+    bool up_down = !random_;
+
     // Waypoints are directly above markers
     std::vector<Pose> waypoints;
     for (const auto &pose : map.poses) {
@@ -149,21 +153,28 @@ namespace orca_base
       waypoint.from_msg(pose.pose);
       waypoint.z = cxt_.auv_z_target_;
       waypoints.push_back(waypoint);
+
+      if (up_down) {
+        waypoint.z = -3;
+        waypoints.push_back(waypoint);
+      }
     }
 
-    // Shuffle waypoints
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(waypoints.begin(), waypoints.end(), g);
+    if (random_) {
+      // Shuffle waypoints
+      std::random_device rd;
+      std::mt19937 g(rd());
+      std::shuffle(waypoints.begin(), waypoints.end(), g);
+    }
 
     plan_waypoints(waypoints, start);
   }
 
   //=====================================================================================
-  // ForwardRandomPlanner
+  // ForwardSequencePlanner
   //=====================================================================================
 
-  void ForwardRandomPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void ForwardSequencePlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
   {
     // Waypoints are directly in front of markers
     std::vector<Pose> waypoints;
@@ -177,10 +188,12 @@ namespace orca_base
       waypoints.push_back(waypoint);
     }
 
-    // Shuffle waypoints
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(waypoints.begin(), waypoints.end(), g);
+    if (random_) {
+      // Shuffle waypoints
+      std::random_device rd;
+      std::mt19937 g(rd());
+      std::shuffle(waypoints.begin(), waypoints.end(), g);
+    }
 
     plan_waypoints(waypoints, start);
   }

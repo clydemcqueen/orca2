@@ -152,7 +152,6 @@ class PlotFilterNode(Node):
 
         # Plot messages?
         if self._last_time - self._first_time > QUEUE_FOR:
-            self.calc_nees()
             self.plot_msgs()
 
             # Reset
@@ -163,15 +162,14 @@ class PlotFilterNode(Node):
             self._post_msgs: List[Odometry] = []
             self._gt_msgs: List[Odometry] = []
 
-    def calc_nees(self):
-        """Calc and print NEES values"""
+    def calc_nees(self) -> float:
+        """Calc mean NEES value"""
 
         nees_values = nees.nees(self._post_msgs, self._gt_msgs)
         if nees_values:
-            nees_mean = np.mean(nees_values)
-            print('Mean NEES value', nees_mean, 'PASSED' if nees_mean < 12 else 'FAILED')
+            return float(np.mean(nees_values))
         else:
-            print('No estimates')
+            return -1.
 
     def plot_msgs(self):
         """Plot queued messages"""
@@ -271,8 +269,18 @@ class PlotFilterNode(Node):
                          post_xs, post_values, post_sds,
                          gt_xs, gt_values)
 
+        # Calc average NEES
+        ave_nees = self.calc_nees()
+        nees_str = ''
+        if ave_nees < 0:
+            nees_str = 'no estimates'
+        elif ave_nees < 12:
+            nees_str = 'ave NEES {:.3f}, SUCCESS'.format(ave_nees)
+        else:
+            nees_str = 'ave NEES {:.3f}, FAILURE'.format(ave_nees)
+
         # Set figure title
-        fig.suptitle('pre- and post-filter messages, {} second(s), with (mean, stddev)'.format(QUEUE_FOR))
+        fig.suptitle('UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')

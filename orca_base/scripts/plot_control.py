@@ -17,15 +17,15 @@ from rclpy.node import Node
 NUM_MESSAGES = 200
 
 
-def calc_fitness(pos_neg, off_on, on):
+def cost_function(pos_neg, off_on, on):
     """
-    Fitness function for a sequence of control messages, lower is better
+    Cost function for a sequence of control messages, lower is better
     :param pos_neg: count of forward<->reverse transitions, cost=10
     :param off_on: count of off->on transitions, cost=5
-    :param on: count of on states, cost=1
-    :return: goodness
+    :param on: count of on states, cost=0
+    :return: cost
     """
-    return 10 * pos_neg + 5 * off_on + on
+    return 10 * pos_neg + 5 * off_on # + on
 
 
 class PlotControlNode(Node):
@@ -87,7 +87,7 @@ class PlotControlNode(Node):
 
         # Plot thruster PWM values
         pwm_axes = [axt0, axt1, axt2, axt3, axt4, axt5]
-        total_usage = 0
+        total_cost = 0
         for i, ax in zip(range(6), pwm_axes):
             pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
 
@@ -104,10 +104,10 @@ class PlotControlNode(Node):
                     off_on += 1
                 if c != 1500:
                     on += 1
-            thruster_usage = calc_fitness(pos_neg, off_on, on)
-            total_usage += thruster_usage
+            cost = cost_function(pos_neg, off_on, on)
+            total_cost += cost
 
-            ax.set_title('T{}: pos_neg={}, off_on={}, on={}, usage={}'.format(i, pos_neg, off_on, on, thruster_usage))
+            ax.set_title('T{}: pos_neg={}, off_on={}, on={}, cost={}'.format(i, pos_neg, off_on, on, cost))
             ax.set_ylim(1400, 1600)
             ax.set_xticklabels([])
             ax.plot(pwm_values)
@@ -121,8 +121,7 @@ class PlotControlNode(Node):
         axol.plot(odom_lag_values)
 
         # Set figure title
-        fig.suptitle('{} messages, total usage={}'.format(NUM_MESSAGES, total_usage))
-        # print(total_usage)
+        fig.suptitle('{} messages, total cost={}'.format(NUM_MESSAGES, total_cost))
 
         # [Over]write PDF to disk
         plt.savefig('plot_control.pdf')

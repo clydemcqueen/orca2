@@ -38,6 +38,10 @@ namespace orca_base
 
     BaseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
+    // Try to change the goal, return true if it worked
+    virtual bool extend(const Pose &start, const Pose &goal)
+    { return false; }
+
     const Pose &plan() const
     { return plan_; }
 
@@ -81,9 +85,13 @@ namespace orca_base
 
   class LineSegment : public BaseSegment
   {
+    void init();
+
   public:
 
     LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+
+    bool extend(const Pose &start, const Pose &goal) override;
 
     bool advance(double dt) override;
   };

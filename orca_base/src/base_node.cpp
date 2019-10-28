@@ -134,7 +134,7 @@ namespace orca_base
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_RANDOM);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_SEQUENCE);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start random mission");
         }
@@ -355,8 +355,11 @@ namespace orca_base
         case orca_msgs::msg::Control::AUV_KEEP_ORIGIN:
           planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_);
           break;
+        case orca_msgs::msg::Control::AUV_SEQUENCE:
+          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, false);
+          break;
         case orca_msgs::msg::Control::AUV_RANDOM:
-          planner = std::make_shared<DownRandomPlanner>(get_logger(), cxt_);
+          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, true);
           break;
         default:
           planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_);

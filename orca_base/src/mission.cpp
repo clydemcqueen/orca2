@@ -8,12 +8,6 @@ namespace orca_base
     logger_{logger},
     planner_{std::move(planner)}
   {
-    RCLCPP_INFO(logger, "pid x=(%g, %g, %g), y=(%g, %g, %g), z=(%g, %g, %g), yaw=(%g, %g, %g)",
-                cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_,
-                cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_,
-                cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_,
-                cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_);
-
     // Create path
     planner_->plan(map, start);
 
