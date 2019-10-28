@@ -67,16 +67,9 @@ namespace orca_base
       return std::hypot(x - that.x, y - that.y);
     }
 
-    // X distance between 2 poses
-    double distance_x(const Pose &that) const
+    double distance_xy(double _x, double _y) const
     {
-      return std::abs(x - that.x);
-    }
-
-    // Y distance between 2 poses
-    double distance_y(const Pose &that) const
-    {
-      return std::abs(y - that.y);
+      return std::hypot(x - _x, y - _y);
     }
 
     // Z distance between 2 poses

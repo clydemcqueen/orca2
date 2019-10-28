@@ -168,7 +168,15 @@ namespace gazebo
     // TODO don't apply thrust force if we're above the surface of the water
     void OnUpdate(const common::UpdateInfo & /*info*/)
     {
+#define WALL_TIME
+#ifdef WALL_TIME
+      // Hack: use wall time
+      auto t = std::chrono::high_resolution_clock::now();
+      rclcpp::Time update_time{t.time_since_epoch().count(), RCL_ROS_TIME};
+      if (valid(control_msg_time_) && update_time - control_msg_time_ > CONTROL_TIMEOUT) {
+#else
       if (valid(control_msg_time_) && node_->now() - control_msg_time_ > CONTROL_TIMEOUT) {
+#endif
         // We were receiving control messages, but they stopped.
         // This is normal, but it might also indicate that a node died.
         // RCLCPP_INFO isn't flushed right away, so use iostream directly.

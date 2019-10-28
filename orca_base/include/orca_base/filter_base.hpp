@@ -212,7 +212,7 @@ namespace orca_base
 
   public:
 
-    explicit FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
+    explicit FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
   };
 
   //=============================================================================
@@ -225,7 +225,7 @@ namespace orca_base
 
   public:
 
-    explicit PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
+    explicit PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
 
     Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
 

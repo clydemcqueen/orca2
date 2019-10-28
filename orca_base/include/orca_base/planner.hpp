@@ -12,63 +12,95 @@ namespace orca_base
   // BasePlanner
   //=====================================================================================
 
-  struct BasePlanner
+  class BasePlanner
   {
     std::vector<std::shared_ptr<BaseSegment>> segments_;  // Trajectory segments
     nav_msgs::msg::Path planned_path_;                    // Path for rviz
 
-    virtual void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-                      const PoseStamped &start) = 0;
+    void add_vertical_segment(Pose &plan, double z);
+
+    void add_rotate_segment(Pose &plan, double yaw);
+
+    void add_line_segment(Pose &plan, double x, double y);
+
+  protected:
+
+    rclcpp::Logger logger_;
+    const BaseContext &cxt_;
+
+    explicit BasePlanner(const rclcpp::Logger &logger, const BaseContext &cxt) :
+      logger_{logger}, cxt_{cxt}
+    {}
+
+    void plan_target(const Pose &target, const PoseStamped &start);
+
+    void plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start);
+
+  public:
+
+    const std::vector<std::shared_ptr<BaseSegment>> &segments() const
+    { return segments_; }
+
+    const nav_msgs::msg::Path &planned_path() const
+    { return planned_path_; }
+
+    virtual void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) = 0;
   };
 
   //=====================================================================================
   // KeepStationPlanner -- keep current pose
   //=====================================================================================
 
-  struct KeepStationPlanner : BasePlanner
+  class KeepStationPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit KeepStationPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
   //=====================================================================================
-  // OriginPlanner -- keep station directly below the origin
+  // KeepOriginPlanner -- keep station directly below the origin
   //=====================================================================================
 
-  struct OriginPlanner : BasePlanner
+  class KeepOriginPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
-  };
+  public:
 
-  //=====================================================================================
-  // RandomPlanner -- base for DownRandomPlanner and ForwardRandomPlanner
-  //=====================================================================================
+    explicit KeepOriginPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
 
-  struct RandomPlanner : BasePlanner
-  {
-    void plan_from_waypoints(rclcpp::Logger &logger, const BaseContext &cxt, std::vector<Pose> &waypoints,
-                             const PoseStamped &start);
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
   //=====================================================================================
   // DownRandomPlanner -- markers are on the floor, and there's a down-facing camera
   //=====================================================================================
 
-  struct DownRandomPlanner : RandomPlanner
+  class DownRandomPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit DownRandomPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
   //=====================================================================================
   // ForwardRandomPlanner -- markers are on the walls, and there's a forward-facing camera
   //=====================================================================================
 
-  struct ForwardRandomPlanner : RandomPlanner
+  class ForwardRandomPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit ForwardRandomPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
   //=====================================================================================
@@ -76,28 +108,44 @@ namespace orca_base
   // X = forward/back, Y = left/right, Z = up/down, Yaw = ccw/cw
   //=====================================================================================
 
-  struct BodyXPlanner : BasePlanner
+  class BodyXPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit BodyXPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
-  struct BodyYPlanner : BasePlanner
+  class BodyYPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit BodyYPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
-  struct BodyZPlanner : BasePlanner
+  class BodyZPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit BodyZPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
-  struct BodyYawPlanner : BasePlanner
+  class BodyYawPlanner : public BasePlanner
   {
-    void plan(rclcpp::Logger &logger, const BaseContext &cxt, const fiducial_vlam_msgs::msg::Map &map,
-              const PoseStamped &start) override;
+  public:
+
+    explicit BodyYawPlanner(const rclcpp::Logger &logger, const BaseContext &cxt) : BasePlanner{logger, cxt}
+    {}
+
+    void plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) override;
   };
 
 } // namespace orca_base

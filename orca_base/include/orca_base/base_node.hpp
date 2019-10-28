@@ -91,8 +91,8 @@ namespace orca_base
     const int joy_button_rov_ = JOY_BUTTON_A;
     const int joy_button_rov_hold_pressure_ = JOY_BUTTON_B;
     const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
-    const int joy_button_auv_mission_4_ = JOY_BUTTON_Y;
-    const int joy_button_auv_mission_5_ = JOY_BUTTON_LOGO;
+    const int joy_button_auv_keep_origin_ = JOY_BUTTON_Y;
+    const int joy_button_auv_random_ = JOY_BUTTON_LOGO;
 
     const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
     const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;

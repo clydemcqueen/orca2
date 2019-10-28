@@ -8,6 +8,13 @@
 namespace orca_base
 {
 
+  //=====================================================================================
+  // Constants
+  //=====================================================================================
+
+  constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m)
+  constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r)
+
 //=====================================================================================
 // BaseSegment stays in one spot, holds x, y, z, yaw at start value
 //=====================================================================================

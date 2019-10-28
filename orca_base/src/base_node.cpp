@@ -120,23 +120,23 @@ namespace orca_base
         } else {
           RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold pressure");
         }
+      } else if (button_down(msg, joy_msg_, joy_button_auv_keep_origin_)) {
+        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_ORIGIN);
+        } else {
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep origin");
+        }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep station");
         }
-      } else if (button_down(msg, joy_msg_, joy_button_auv_mission_4_)) {
+      } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
         if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_4);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_RANDOM);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 4");
-        }
-      } else if (button_down(msg, joy_msg_, joy_button_auv_mission_5_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_5);
-        } else {
-          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start mission 5");
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start random mission");
         }
       }
 
@@ -352,20 +352,14 @@ namespace orca_base
     if (is_auv_mode(new_mode)) {
       std::shared_ptr<BasePlanner> planner;
       switch (new_mode) {
-        case orca_msgs::msg::Control::AUV_4:
-          RCLCPP_INFO(get_logger(), "creating a random plan for a forward-facing camera...");
-          planner = std::make_shared<ForwardRandomPlanner>();
+        case orca_msgs::msg::Control::AUV_KEEP_ORIGIN:
+          planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_);
           break;
-        case orca_msgs::msg::Control::AUV_5:
-          RCLCPP_INFO(get_logger(), "creating a random plan for a down-facing camera...");
-          planner = std::make_shared<DownRandomPlanner>();
+        case orca_msgs::msg::Control::AUV_RANDOM:
+          planner = std::make_shared<DownRandomPlanner>(get_logger(), cxt_);
           break;
         default:
-//          RCLCPP_INFO(get_logger(), "keeping station at (%g, %g, %g), %g...",
-//                      filtered_pose_.pose.x, filtered_pose_.pose.y, filtered_pose_.pose.z, filtered_pose_.pose.yaw);
-//          planner = std::make_shared<KeepStationPlanner>();
-          RCLCPP_INFO(get_logger(), "keeping station at (0, 0, %g), 0...", cxt_.auv_z_target_);
-          planner = std::make_shared<OriginPlanner>();
+          planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_);
           break;
       }
       mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
@@ -386,7 +380,7 @@ namespace orca_base
 
       // Publish path for rviz
       if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-        planned_path_pub_->publish(mission_->planned_path());
+        planned_path_pub_->publish(planner->planned_path());
       }
 
       // Init filtered_path
@@ -453,7 +447,7 @@ int main(int argc, char **argv)
   auto node = std::make_shared<orca_base::BaseNode>();
 
   // Set logger level
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin node
   rclcpp::spin(node);
