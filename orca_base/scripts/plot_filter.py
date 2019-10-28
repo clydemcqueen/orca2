@@ -22,7 +22,7 @@ from nav_msgs.msg import Odometry
 from orca_msgs.msg import Depth
 from rclpy.node import Node
 
-QUEUE_FOR = 1.0  # Seconds
+QUEUE_FOR = 10.0  # Seconds
 
 
 def q_to_rpy(q):
@@ -167,8 +167,11 @@ class PlotFilterNode(Node):
         """Calc and print NEES values"""
 
         nees_values = nees.nees(self._post_msgs, self._gt_msgs)
-        nees_mean = np.mean(nees_values)
-        print('Mean NEES value', nees_mean, 'PASSED' if nees_mean < 12 else 'FAILED')
+        if nees_values:
+            nees_mean = np.mean(nees_values)
+            print('Mean NEES value', nees_mean, 'PASSED' if nees_mean < 12 else 'FAILED')
+        else:
+            print('No estimates')
 
     def plot_msgs(self):
         """Plot queued messages"""

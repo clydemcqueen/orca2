@@ -39,7 +39,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(filter_lcam, bool, true)                   /* Filter left camera messages  */ \
   CXT_MACRO_MEMBER(filter_rcam, bool, true)                   /* Filter right camera messages  */ \
   \
-  CXT_MACRO_MEMBER(outlier_distance, double, 10.0)            /* Reject measurements > n std devs from estimate  */ \
+  CXT_MACRO_MEMBER(outlier_distance, double, 4.0)             /* Reject measurements > n std devs from estimate  */ \
   \
   CXT_MACRO_MEMBER(four_dof, bool, false)                     /* Experiment: run 4dof filter instead of 6dof filter  */ \
 /* End of list */

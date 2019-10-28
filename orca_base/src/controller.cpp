@@ -4,10 +4,10 @@ namespace orca_base
 {
 
   BaseController::BaseController(const BaseContext &cxt) :
-    x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
-    y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
-    z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
-    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
+    x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
+    y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
+    z_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
+    yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
   {
   }
 

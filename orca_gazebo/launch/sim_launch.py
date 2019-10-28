@@ -70,7 +70,6 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'param_fluid_density': 997.0,
                 'auto_start': 0,  # Auto-start AUV mission
-                'auv_z_target': -1.0,  # Mission runs 1m below the surface
                 'auv_controller': 0,  # BaseController
                 'auv_epsilon_xy': 0.05,
                 'auv_epsilon_z': 0.05,

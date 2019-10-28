@@ -39,13 +39,24 @@ namespace pid
       Kd_ = Kd;
     }
 
-    // Intuitive constructor
-    Controller(bool angle, double damping_ratio, double natural_frequency)
+    // Ziegler–Nichols constructor
+    // https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
+    Controller(bool angle, double Ku, double Tu)
     {
       angle_ = angle;
-      Kp_ = natural_frequency * natural_frequency * (1 + 2 * damping_ratio);
-      Ki_ = natural_frequency * natural_frequency * natural_frequency;
-      Kd_ = natural_frequency * (1 + 2 * damping_ratio);
+
+#ifdef CLASSIC
+      // Classic
+      Kp_ = 0.6 * Ku;
+      Ki_ = 1.2 * Ku / Tu;
+      Kd_ = 3 * Ku * Tu / 40;
+#else
+      // P controller
+      // This isn't perfect, but it's stable
+      Kp_ = 0.5 * Ku;
+      Ki_ = 0;
+      Kd_ = 0;
+#endif
     }
 
     // Set target

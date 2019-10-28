@@ -32,21 +32,17 @@ namespace orca_base
   CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015)      /* ROV hold pressure pid Ki  */ \
   CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000096)     /* ROV hold pressure pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_x_pid_kp, double, 3)                   /* AUV x pid Kp  */ \
-  CXT_MACRO_MEMBER(auv_x_pid_ki, double, 2)                   /* AUV x pid Ki  */ \
-  CXT_MACRO_MEMBER(auv_x_pid_kd, double, 1.125)               /* AUV x pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_ku, double, 1)                   /* AUV x pid Ziegler–Nichols ku  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_tu, double, 6)                   /* AUV x pid Ziegler–Nichols tu  */ \
   \
-  CXT_MACRO_MEMBER(auv_y_pid_kp, double, 3)                   /* AUV y pid Kp  */ \
-  CXT_MACRO_MEMBER(auv_y_pid_ki, double, 2)                   /* AUV y pid Ki  */ \
-  CXT_MACRO_MEMBER(auv_y_pid_kd, double, 1.125)               /* AUV y pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_ku, double, 1)                   /* AUV y pid Ziegler–Nichols ku  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_tu, double, 6)                   /* AUV y pid Ziegler–Nichols tu  */ \
   \
-  CXT_MACRO_MEMBER(auv_z_pid_kp, double, 2.4)                 /* AUV z pid Kp  */ \
-  CXT_MACRO_MEMBER(auv_z_pid_ki, double, 1.5)                 /* AUV z pid Ki  */ \
-  CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.96)                /* AUV z pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_ku, double, 1)                   /* AUV z pid Ziegler–Nichols ku  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_tu, double, 6)                   /* AUV z pid Ziegler–Nichols tu  */ \
   \
-  CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 5)                 /* AUV yaw pid Kp  */ \
-  CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0)                 /* AUV yaw pid Ki  */ \
-  CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0)                 /* AUV yaw pid Kd  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_ku, double, 1)                 /* AUV yaw pid Ziegler–Nichols ku  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_tu, double, 6)                 /* AUV yaw pid Ziegler–Nichols tu  */ \
   \
   CXT_MACRO_MEMBER(auv_z_target, double, -0.25)               /* AUV path target z position  */ \
   CXT_MACRO_MEMBER(auv_xy_distance, double, 1)                /* AUV distance in front of marker  */ \
@@ -54,12 +50,12 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_z_speed, double, 0.3)                  /* AUV vertical speed  */ \
   CXT_MACRO_MEMBER(auv_yaw_speed, double, M_PI_4 / 2)         /* AUV rotation speed  */ \
   \
-  CXT_MACRO_MEMBER(keep_poses, int, 100)                      /* Max # of poses on filtered_path  */ \
+  CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
   CXT_MACRO_MEMBER(auv_controller, int, 0)                    /* Controller  */ \
-  CXT_MACRO_MEMBER(auv_epsilon_xy, double, 0.1)               /* Deadzone controller epison xy  */ \
-  CXT_MACRO_MEMBER(auv_epsilon_z, double, 0.1)                /* Deadzone controller epison z  */ \
-  CXT_MACRO_MEMBER(auv_epsilon_yaw, double, 0.2)              /* Deadzone controller epison yaw  */ \
+  CXT_MACRO_MEMBER(auv_epsilon_xy, double, 0.1)               /* Deadzone controller epsilon xy  */ \
+  CXT_MACRO_MEMBER(auv_epsilon_z, double, 0.1)                /* Deadzone controller epsilon z  */ \
+  CXT_MACRO_MEMBER(auv_epsilon_yaw, double, 0.2)              /* Deadzone controller epsilon yaw  */ \
   CXT_MACRO_MEMBER(auv_jerk_xy, double, 0.1)                  /* Slow controller jerk xy  */ \
   CXT_MACRO_MEMBER(auv_jerk_z, double, 0.1)                   /* Slow controller jerk z  */ \
   CXT_MACRO_MEMBER(auv_jerk_yaw, double, 0.2)                 /* Slow controller jerk yaw  */ \
