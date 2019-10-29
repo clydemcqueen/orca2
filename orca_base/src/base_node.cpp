@@ -79,6 +79,8 @@ namespace orca_base
   // New barometer reading
   void BaseNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
+    (void) first;
+
     pressure_ = msg->pressure;
   }
 
@@ -365,7 +367,7 @@ namespace orca_base
           planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_);
           break;
       }
-      mission_ = std::make_shared<Mission>(get_logger(), planner, cxt_, map_, filtered_pose_);
+      mission_ = std::make_shared<Mission>(get_logger(), cxt_, planner, map_, filtered_pose_);
       switch (cxt_.auv_controller_) {
         case 1:
           controller_ = std::make_shared<DeadzoneController>(cxt_);

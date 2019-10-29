@@ -3,7 +3,6 @@
 #include "eigen3/Eigen/Dense"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-#include "orca_base/model.hpp"
 #include "orca_base/util.hpp"
 
 namespace orca_base

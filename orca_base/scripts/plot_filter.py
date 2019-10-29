@@ -42,7 +42,6 @@ def plot_subplot(subplot, name,
                  gt_xs, gt_values):
     """Plot data in a single subplot"""
 
-    # TODO parameters
     plot_filter_points = True  # Plot filter results as points vs. line
     plot_error = False  # Plot error bars or not
     ylim = 0.25  # Y limits
@@ -112,7 +111,6 @@ class PlotFilterNode(Node):
         self._post_msgs: List[Odometry] = []
         self._gt_msgs: List[Odometry] = []
 
-        # TODO parameters
         plot_baro = True
         plot_gt = True
 

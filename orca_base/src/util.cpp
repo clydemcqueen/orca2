@@ -58,7 +58,6 @@ namespace orca_base
 
   std::string to_str(const rclcpp::Time &t)
   {
-    ;
     return to_str(builtin_interfaces::msg::Time{t});
   }
 

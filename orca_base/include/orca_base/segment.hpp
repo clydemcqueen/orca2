@@ -49,7 +49,6 @@ namespace orca_base
     { return ff_; }
 
     // Advance the motion plan, return true to continue, false if we're done
-    // TODO use std::chrono::milliseconds instead of double
     virtual bool advance(double dt);
   };
 

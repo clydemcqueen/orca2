@@ -12,6 +12,8 @@ public:
 
   TestNode() : Node("test_node")
   {
+    (void) sub_;
+
     sub_ = create_subscription<sensor_msgs::msg::Joy>(
       "joy", 1,
       [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void

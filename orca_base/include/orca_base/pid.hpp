@@ -66,7 +66,7 @@ namespace pid
         norm_angle(target);
       }
 
-      if (std::abs(target - target_) > 0.001) { // TODO constant
+      if (std::abs(target - target_) > 0.001) {
         // std::cout << "set target, from " << target_ << " to " << target << std::endl;
         target_ = target;
         prev_error_ = 0;

@@ -92,8 +92,6 @@ class PlotControlNode(Node):
             pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
 
             # Measure fitness
-            # TODO consider error -- closer is better
-            # TODO consider jerk -- less is better
             pos_neg, off_on, on = 0, 0, 0
             for c, n in zip(pwm_values, pwm_values[1:]):
                 if c > 1500 > n:

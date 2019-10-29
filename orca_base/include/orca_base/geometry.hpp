@@ -102,20 +102,17 @@ namespace orca_base
   struct PoseStamped
   {
     rclcpp::Time t;
-    int64_t nanoseconds; // TODO debug
     Pose pose;
 
     void to_msg(geometry_msgs::msg::PoseStamped &msg) const
     {
       msg.header.stamp = t;
-      // msg.header.frame_id TODO for round trip
       pose.to_msg(msg.pose);
     }
 
     void from_msg(const geometry_msgs::msg::PoseStamped &msg)
     {
       t = msg.header.stamp;
-      nanoseconds = t.nanoseconds();
       pose.from_msg(msg.pose);
     }
 

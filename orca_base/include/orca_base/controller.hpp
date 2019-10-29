@@ -28,7 +28,6 @@ namespace orca_base
     explicit BaseController(const BaseContext &cxt);
 
     // Calc u_bar
-    // TODO use std::chrono::milliseconds instead of double
     virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
                       Acceleration &u_bar);
   };

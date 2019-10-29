@@ -3,7 +3,7 @@
 namespace orca_base
 {
 
-  Mission::Mission(rclcpp::Logger logger, std::shared_ptr<BasePlanner> planner, const BaseContext &cxt,
+  Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt, std::shared_ptr<BasePlanner> planner,
                    const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) :
     logger_{logger},
     planner_{std::move(planner)}

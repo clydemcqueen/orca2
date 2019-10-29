@@ -28,6 +28,8 @@ namespace orca_base
 
   bool BaseSegment::advance(double dt)
   {
+    (void) dt;
+
     return true;
   }
 
