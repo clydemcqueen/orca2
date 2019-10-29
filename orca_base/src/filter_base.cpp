@@ -130,6 +130,11 @@ namespace orca_base
 
   void FilterBase::reset()
   {
+    reset(Eigen::VectorXd::Zero(state_dim_));
+  }
+
+  void FilterBase::reset(const Eigen::VectorXd &x)
+  {
     // Clear all pending measurements
     measurement_q_ = std::priority_queue<Measurement, std::vector<Measurement>, Measurement>();
 
@@ -141,7 +146,7 @@ namespace orca_base
     filter_time_ = {0, 0, RCL_ROS_TIME};
 
     // Start with a default state and a large covariance matrix
-    filter_.set_x(Eigen::VectorXd::Zero(state_dim_));
+    filter_.set_x(x);
     filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_));
   }
 

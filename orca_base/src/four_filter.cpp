@@ -29,6 +29,19 @@ namespace orca_base
 #define fx_az x(10)
 #define fx_ayaw x(11)
 
+  // Init x from pose
+  Eigen::VectorXd pose_to_fx(const geometry_msgs::msg::Pose &pose)
+  {
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(FOUR_STATE_DIM);
+
+    fx_x = pose.position.x;
+    fx_y = pose.position.y;
+    fx_z = pose.position.z;
+    fx_yaw = get_yaw(pose.orientation);
+
+    return x;
+  }
+
   // Extract pose from PoseFilter state
   void pose_from_fx(const Eigen::VectorXd &x, geometry_msgs::msg::Pose &out)
   {
@@ -178,6 +191,11 @@ namespace orca_base
     // Custom residual and mean functions
     filter_.set_r_x_fn(four_state_residual);
     filter_.set_mean_x_fn(four_state_mean);
+  }
+
+  void FourFilter::reset(const geometry_msgs::msg::Pose &pose)
+  {
+    FilterBase::reset(pose_to_fx(pose));
   }
 
   void FourFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)

@@ -102,8 +102,8 @@ namespace orca_base
     // Must be default constructible
     State() = default;
 
-    State(const rclcpp::Time &stamp, const Eigen::VectorXd &x, const Eigen::MatrixXd &P) :
-      stamp_{stamp}, x_{x}, P_{P}
+    State(const rclcpp::Time &stamp, Eigen::VectorXd x, Eigen::MatrixXd P) :
+      stamp_{stamp}, x_{std::move(x)}, P_{std::move(P)}
     {}
   };
 
@@ -145,10 +145,15 @@ namespace orca_base
 
     ukf::UnscentedKalmanFilter filter_;
 
+    // Reset the filter with an Eigen vector
+    void reset(const Eigen::VectorXd &x);
+
     virtual void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) = 0;
 
+    // Convert a Depth message to a Measurement
     virtual Measurement to_measurement(const orca_msgs::msg::Depth &depth) const = 0;
 
+    // Convert PoseWithCovarianceStamped message to a Measurement
     virtual Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const = 0;
 
   public:
@@ -157,6 +162,9 @@ namespace orca_base
 
     // Reset the filter
     void reset();
+
+    // Reset the filter with a pose
+    virtual void reset(const geometry_msgs::msg::Pose &pose) = 0;
 
     // Is the filter valid?
     bool filter_valid()
@@ -213,6 +221,9 @@ namespace orca_base
   public:
 
     explicit FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
+
+    // Reset the filter with a pose
+    void reset(const geometry_msgs::msg::Pose &pose) override;
   };
 
   //=============================================================================
@@ -226,6 +237,9 @@ namespace orca_base
   public:
 
     explicit PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
+
+    // Reset the filter with a pose
+    void reset(const geometry_msgs::msg::Pose &pose) override;
 
     Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
 

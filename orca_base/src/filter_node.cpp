@@ -195,17 +195,6 @@ namespace orca_base
                                 const tf2::Transform &t_sensor_base, const std::string &frame_id,
                                 const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub)
   {
-    rclcpp::Time stamp{sensor_f_map->header.stamp};
-
-    // If we're receiving poses but not publishing odometry then the filter might be borked
-    // TODO this doesn't work well when outlier_distance is ~5, which should be reasonable
-    // TODO seed the filter with the current measurement or temporarily suppress outlier rejection
-    if (valid_stamp(publish_time_) && stamp - publish_time_ > FILTER_TIMEOUT) {
-      RCLCPP_WARN(get_logger(), "reset filter");
-      odom_filter_->reset();
-      publish_time_ = stamp;
-    }
-
     // Convert pose to transform
     tf2::Transform t_map_sensor;
     tf2::fromMsg(sensor_f_map->pose.pose, t_map_sensor);
@@ -235,6 +224,14 @@ namespace orca_base
       tf_message.transforms.emplace_back(geo_tf);
 
       tf_pub_->publish(tf_message);
+    }
+
+    // If we're receiving poses but not publishing odometry then reset the filter
+    rclcpp::Time stamp{sensor_f_map->header.stamp};
+    if (valid_stamp(publish_time_) && stamp - publish_time_ > FILTER_TIMEOUT) {
+      RCLCPP_WARN(get_logger(), "reset filter");
+      odom_filter_->reset(base_f_map.pose.pose);
+      publish_time_ = stamp;
     }
 
     // Filter and publish odometry

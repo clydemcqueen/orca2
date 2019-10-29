@@ -35,6 +35,25 @@ namespace orca_base
 #define px_apitch x(16)
 #define px_ayaw x(17)
 
+  // Init x from pose
+  Eigen::VectorXd pose_to_px(const geometry_msgs::msg::Pose &pose)
+  {
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_STATE_DIM);
+
+    px_x = pose.position.x;
+    px_y = pose.position.y;
+    px_z = pose.position.z;
+
+    double roll, pitch, yaw;
+    get_rpy(pose.orientation, roll, pitch, yaw);
+
+    px_roll = roll;
+    px_pitch = pitch;
+    px_yaw = yaw;
+
+    return x;
+  }
+
   // Extract pose from PoseFilter state
   void pose_from_px(const Eigen::VectorXd &x, geometry_msgs::msg::Pose &out)
   {
@@ -213,6 +232,11 @@ namespace orca_base
     // Custom residual and mean functions
     filter_.set_r_x_fn(six_state_residual);
     filter_.set_mean_x_fn(six_state_mean);
+  }
+
+  void PoseFilter::reset(const geometry_msgs::msg::Pose &pose)
+  {
+    FilterBase::reset(pose_to_px(pose));
   }
 
   void PoseFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
