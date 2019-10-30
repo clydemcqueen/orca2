@@ -244,19 +244,19 @@ namespace orca_base
     Pose plan;
     Acceleration ff;
     if (mission_->advance(dt, plan, ff)) {
-      // Compute error
-      Pose error = plan.error(filtered_pose_.pose);
-
       // Compute acceleration due to error
       Acceleration u_bar;
       controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar);
 
       // Acceleration => effort
       Efforts efforts;
-      efforts.from_acceleration(u_bar, filtered_pose_.pose.yaw);
+      efforts.from_acceleration(filtered_pose_.pose.yaw, u_bar);
 
       // Throttle back if AUV is unstable
       efforts.scale(stability_);
+
+      // Compute error for diagnostics
+      Pose error = plan.error(filtered_pose_.pose);
 
       publish_control(msg_time, error, efforts);
     } else {

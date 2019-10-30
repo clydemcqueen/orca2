@@ -89,6 +89,16 @@ namespace orca_base
     static constexpr double torque_to_effort_yaw(double torque_yaw)
     { return torque_yaw / MAX_TORQUE_YAW; }
 
+    // Effort => force / torque
+    static constexpr double effort_to_force_xy(double effort_xy)
+    { return effort_xy * BOLLARD_FORCE_XY; }
+
+    static constexpr double effort_to_torque_yaw(double effort_yaw)
+    { return effort_yaw * MAX_TORQUE_YAW; }
+
+    static constexpr double effort_to_force_z(double effort_z)
+    { return effort_z * BOLLARD_FORCE_Z; }
+
     // Acceleration => force / torque
     static constexpr double accel_to_force_xy(double accel_xy)
     { return MASS * accel_xy; }
@@ -108,6 +118,16 @@ namespace orca_base
 
     static constexpr double accel_to_effort_yaw(double accel_yaw)
     { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
+
+    // Effort => acceleration
+    static constexpr double effort_to_accel_xy(double effort_xy)
+    { return force_to_accel(effort_to_force_xy(effort_xy)); }
+
+    static constexpr double effort_to_accel_z(double effort_z)
+    { return force_to_accel(effort_to_force_z(effort_z)); }
+
+    static constexpr double effort_to_accel_yaw(double effort_yaw)
+    { return torque_to_accel_yaw(effort_to_torque_yaw(effort_yaw)); }
 
     //=====================================================================================
     // Parameters, updated by validate_parameters

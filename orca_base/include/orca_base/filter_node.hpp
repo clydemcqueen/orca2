@@ -31,7 +31,8 @@ namespace orca_base
     rclcpp::Time publish_time_{0, 0, RCL_ROS_TIME};
 
     // Control state
-    Acceleration u_bar_;                          // Last control, used for filter predict step
+    double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
+    Acceleration u_bar_{};                        // Last control, used for filter predict step
 
     // Barometer state
     bool z_valid_{false};                         // True if z_ is valid

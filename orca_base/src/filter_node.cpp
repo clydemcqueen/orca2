@@ -164,10 +164,9 @@ namespace orca_base
 
   void FilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg, bool first)
   {
-    double yaw{};  // TODO
     Efforts e;
     e.from_msg(msg->efforts);
-    e.to_acceleration(u_bar_, yaw);
+    e.to_acceleration(estimated_yaw_, u_bar_);
   }
 
   void FilterNode::fcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
@@ -247,6 +246,9 @@ namespace orca_base
 
     // Filter this message
     if (odom_filter_->process_message(msg, u_bar_, filtered_odom)) {
+      // Save estimated yaw, used to rotate control messages
+      estimated_yaw_ = get_yaw(filtered_odom.pose.pose.orientation);
+
       // Publish filtered odometry
       if (filtered_odom_pub_->get_subscription_count() > 0) {
         filtered_odom_pub_->publish(filtered_odom);

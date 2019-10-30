@@ -242,7 +242,7 @@ namespace orca_base
       yaw_ = 0;
     }
 
-    void from_acceleration(const Acceleration &u_bar, const double current_yaw)
+    void from_acceleration(const double current_yaw, const Acceleration &u_bar)
     {
       // Convert from world frame to body frame
       double x_effort = Model::accel_to_effort_xy(u_bar.x);
@@ -256,9 +256,15 @@ namespace orca_base
       set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
     }
 
-    void to_acceleration(Acceleration &u_bar, const double current_yaw)
+    void to_acceleration(const double current_yaw, Acceleration &u_bar)
     {
-      // TODO
+      double forward_accel = Model::effort_to_accel_xy(forward_);
+      double strafe_accel = Model::effort_to_accel_xy(strafe_);
+      u_bar.z = Model::effort_to_accel_z(vertical_);
+      u_bar.yaw = Model::effort_to_accel_yaw(yaw_);
+
+      // Convert from body frame to world frame
+      rotate_frame(forward_accel, strafe_accel, -current_yaw, u_bar.x, u_bar.y);
     }
 
     void scale(double factor)
