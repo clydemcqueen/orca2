@@ -56,7 +56,7 @@ namespace orca_base
   void FilterNode::validate_parameters()
   {
 #undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
     FILTER_NODE_ALL_PARAMS
 
     // Update model from new parameters
@@ -104,12 +104,12 @@ namespace orca_base
         tf2::Quaternion{pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w},
         tf2::Vector3{pose.position.x, pose.position.y, pose.position.z}};
 
-      RCLCPP_INFO(get_logger(), "%s: parent(%s), child(%s), %s", name.c_str(),
+      RCLCPP_DEBUG(get_logger(), "%s: parent(%s), child(%s), %s", name.c_str(),
                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t2).c_str());
 
       // Invert
       t = t2.inverse();
-      RCLCPP_INFO(get_logger(), "inverted %s: parent(%s), child(%s), %s", name.c_str(),
+      RCLCPP_DEBUG(get_logger(), "inverted %s: parent(%s), child(%s), %s", name.c_str(),
                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t).c_str());
 
     } else {

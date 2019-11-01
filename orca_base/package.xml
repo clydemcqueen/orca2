@@ -22,6 +22,7 @@
     <depend>nav_msgs</depend>
     <depend>orca_msgs</depend>
     <depend>rclcpp</depend>
+    <depend>rclcpp_action</depend>
     <depend>rclpy</depend>
     <depend>ros2_shared</depend>
     <depend>sensor_msgs</depend>

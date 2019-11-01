@@ -1,10 +1,13 @@
 #ifndef ORCA_BASE_BASE_NODE_HPP
 #define ORCA_BASE_BASE_NODE_HPP
 
+#include "rclcpp_action/rclcpp_action.hpp"
+
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include "orca_msgs/action/mission.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
@@ -23,6 +26,12 @@ namespace orca_base
   //=============================================================================
   // Utils
   //=============================================================================
+
+  constexpr bool is_disarmed_mode(uint8_t mode)
+  {
+    using orca_msgs::msg::Control;
+    return mode == Control::DISARMED;
+  }
 
   constexpr bool is_hold_pressure_mode(uint8_t mode)
   {
@@ -142,7 +151,7 @@ namespace orca_base
     // Validate parameters
     void validate_parameters();
 
-    // Callbacks
+    // Subscription callbacks
     void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first);
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
@@ -167,6 +176,18 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
+    // Mission server
+    rclcpp_action::Server<orca_msgs::action::Mission>::SharedPtr mission_server_;
+
+    // Mission callbacks
+    rclcpp_action::GoalResponse
+    mission_goal(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const orca_msgs::action::Mission::Goal> goal);
+
+    rclcpp_action::CancelResponse
+    mission_cancel(std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle);
+
+    void mission_accepted(std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle);
+
     void rov_advance(const rclcpp::Time &stamp);
 
     void auv_advance(const rclcpp::Time &msg_time, double dt);
@@ -175,7 +196,13 @@ namespace orca_base
 
     void publish_control(const rclcpp::Time &msg_time, const Pose &error, const Efforts &efforts);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode);
+    void disarm(const rclcpp::Time &msg_time);
+
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode,
+                  const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
+
+    bool disarmed()
+    { return is_disarmed_mode(mode_); }
 
     bool holding_pressure()
     { return is_hold_pressure_mode(mode_); }

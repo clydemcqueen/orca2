@@ -54,11 +54,22 @@ namespace orca_base
       { this->odom_cb_.call(msg); });
 
     // Other subscriptions
-    using std::placeholders::_1;
+    using namespace std::placeholders;
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
     battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
     auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
     leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
+
+    // Action server
+    mission_server_ = rclcpp_action::create_server<orca_msgs::action::Mission>(
+      get_node_base_interface(),
+      get_node_clock_interface(),
+      get_node_logging_interface(),
+      get_node_waitables_interface(),
+      "mission",
+      std::bind(&BaseNode::mission_goal, this, _1, _2),
+      std::bind(&BaseNode::mission_cancel, this, _1),
+      std::bind(&BaseNode::mission_accepted, this, _1));
 
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
     spin_timer_ = create_wall_timer(SPIN_PERIOD, std::bind(&BaseNode::spin_once, this));
@@ -69,7 +80,7 @@ namespace orca_base
   void BaseNode::validate_parameters()
   {
 #undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
     BASE_NODE_ALL_PARAMS
 
     // Update model from new parameters
@@ -89,7 +100,7 @@ namespace orca_base
   {
     if (msg->low_battery) {
       RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
-      set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
+      disarm(msg->header.stamp);
     }
   }
 
@@ -100,7 +111,7 @@ namespace orca_base
       // Arm/disarm
       if (button_down(msg, joy_msg_, joy_button_disarm_)) {
         RCLCPP_INFO(get_logger(), "disarmed");
-        set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
+        disarm(msg->header.stamp);
       } else if (button_down(msg, joy_msg_, joy_button_arm_)) {
         RCLCPP_INFO(get_logger(), "armed, manual");
         set_mode(msg->header.stamp, orca_msgs::msg::Control::ROV);
@@ -182,7 +193,7 @@ namespace orca_base
   {
     if (msg->leak_detected) {
       RCLCPP_ERROR(get_logger(), "leak detected, disarming");
-      set_mode(msg->header.stamp, orca_msgs::msg::Control::DISARMED);
+      disarm(msg->header.stamp);
     }
   }
 
@@ -207,6 +218,36 @@ namespace orca_base
     if (auv_mode()) {
       auv_advance(msg->header.stamp, odom_cb_.dt());
     }
+  }
+
+  rclcpp_action::GoalResponse BaseNode::mission_goal(
+    const rclcpp_action::GoalUUID &uuid,
+    std::shared_ptr<const orca_msgs::action::Mission::Goal> goal)
+  {
+    // Accept a mission if the sub is disarmed, we have odometry and we have a map
+    if (disarmed() && odom_ok(now()) && map_cb_.receiving()) {
+      RCLCPP_INFO(get_logger(), "mission %d accepted", goal->mode);
+      return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    } else {
+      RCLCPP_WARN(get_logger(), "mission %d rejected", goal->mode);
+      return rclcpp_action::GoalResponse::REJECT;
+    }
+  }
+
+  rclcpp_action::CancelResponse BaseNode::mission_cancel(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle)
+  {
+    // Always accept a cancellation
+    RCLCPP_INFO(get_logger(), "cancel mission %d", goal_handle->get_goal()->mode);
+    return rclcpp_action::CancelResponse::ACCEPT;
+  }
+
+  void BaseNode::mission_accepted(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle)
+  {
+    // Start the mission
+    RCLCPP_INFO(get_logger(), "execute mission %d", goal_handle->get_goal()->mode);
+    set_mode(now(), goal_handle->get_goal()->mode, goal_handle);
   }
 
   void BaseNode::rov_advance(const rclcpp::Time &stamp)
@@ -260,8 +301,9 @@ namespace orca_base
 
       publish_control(msg_time, error, efforts);
     } else {
-      // Stop mission
-      set_mode(msg_time, orca_msgs::msg::Control::DISARMED);
+      // Mission is over, clean up
+      mission_ = nullptr;
+      disarm(msg_time);
     }
   }
 
@@ -340,34 +382,57 @@ namespace orca_base
     }
   }
 
-  // Change operation mode
-  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode)
+  void BaseNode::disarm(const rclcpp::Time &msg_time)
   {
-    // Stop all thrusters
-    all_stop(msg_time);
+    if (mode_ != orca_msgs::msg::Control::DISARMED) {
+      // Stop all thrusters
+      all_stop(msg_time);
+
+      // Abort an active mission
+      if (mission_) {
+        mission_->abort();
+        mission_ = nullptr;
+      }
+
+      // Set mode
+      mode_ = orca_msgs::msg::Control::DISARMED;
+    }
+  }
+
+  // Change operation mode
+  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode,
+                          const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle)
+  {
+    using orca_msgs::msg::Control;
+
+    // Stop, clean up old state, etc.
+    disarm(msg_time);
 
     if (is_hold_pressure_mode(new_mode)) {
-      pressure_hold_pid_->set_target(pressure_);
-      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
-    }
 
-    if (is_auv_mode(new_mode)) {
+      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
+      pressure_hold_pid_->set_target(pressure_);
+
+    } else if (is_auv_mode(new_mode)) {
+
       std::shared_ptr<BasePlanner> planner;
       switch (new_mode) {
-        case orca_msgs::msg::Control::AUV_KEEP_ORIGIN:
+        case Control::AUV_KEEP_ORIGIN:
           planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_);
           break;
-        case orca_msgs::msg::Control::AUV_SEQUENCE:
+        case Control::AUV_SEQUENCE:
           planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, false);
           break;
-        case orca_msgs::msg::Control::AUV_RANDOM:
+        case Control::AUV_RANDOM:
           planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, true);
           break;
         default:
           planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_);
           break;
       }
-      mission_ = std::make_shared<Mission>(get_logger(), cxt_, planner, map_, filtered_pose_);
+
+      mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, map_, filtered_pose_);
+
       switch (cxt_.auv_controller_) {
         case 1:
           controller_ = std::make_shared<DeadzoneController>(cxt_);
@@ -409,22 +474,22 @@ namespace orca_base
     // Various timeouts
     if (rov_mode() && !joy_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost joystick during ROV operation, disarming");
-      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
+      disarm(spin_time);
     }
 
     if (auv_mode() && !odom_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
-      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
+      disarm(spin_time);
     }
 
     if (auv_mode() && stability_ < 0.4) {
       RCLCPP_ERROR(get_logger(), "excessive tilt during AUV operation, disarming");
-      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
+      disarm(spin_time);
     }
 
     if (holding_pressure() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding pressure, disarming");
-      set_mode(spin_time, orca_msgs::msg::Control::DISARMED);
+      disarm(spin_time);
     }
 
     // Auto-start mission

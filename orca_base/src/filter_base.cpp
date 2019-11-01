@@ -232,7 +232,7 @@ namespace orca_base
     }
 
     if (outliers) {
-      RCLCPP_INFO(logger_, "rejected %d outlier(s)", outliers);
+      RCLCPP_DEBUG(logger_, "rejected %d outlier(s)", outliers);
     }
 
     if (!inliers || !filter_.valid()) {

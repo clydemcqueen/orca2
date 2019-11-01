@@ -1,0 +1,17 @@
+# Goal, see constants in Control.msg
+
+uint8 mode
+
+---
+
+# Result
+
+int16 segments_completed
+int16 segments_total
+
+---
+
+# Feedback
+
+int16 segments_completed
+int16 segments_total

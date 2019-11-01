@@ -32,9 +32,9 @@ namespace orca_base
       logger_{logger}, cxt_{cxt}
     {}
 
-    void plan_target(const Pose &target, const PoseStamped &start);
+    void plan_target(const Pose &target, const PoseStamped &start, bool keep_station);
 
-    void plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start);
+    void plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station);
 
   public:
 

@@ -21,6 +21,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -55,6 +56,7 @@ ament_target_dependencies(
   orca_msgs
   nav_msgs
   rclcpp
+  rclcpp_action
   ros2_shared
   sensor_msgs
   tf2
@@ -121,6 +123,7 @@ install(DIRECTORY include/${PROJECT_NAME} DESTINATION include)
 # PROGRAMS sets execute bits, FILES clears them
 install(
   PROGRAMS
+  scripts/experiments.py
   scripts/nees.py
   scripts/plot_control.py
   scripts/plot_filter.py

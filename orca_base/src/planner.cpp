@@ -69,14 +69,14 @@ namespace orca_base
     plan = goal;
   }
 
-  void BasePlanner::plan_target(const Pose &target, const PoseStamped &start)
+  void BasePlanner::plan_target(const Pose &target, const PoseStamped &start, bool keep_station)
   {
     std::vector<Pose> waypoints;
     waypoints.push_back(target);
-    plan_waypoints(waypoints, start);
+    plan_waypoints(waypoints, start, keep_station);
   }
 
-  void BasePlanner::plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start)
+  void BasePlanner::plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
   {
     RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s), keeping station at (%g, %g, %g), %g",
                 waypoints.size() - 1, waypoints.back().x, waypoints.back().y, waypoints.back().z, waypoints.back().yaw);
@@ -103,8 +103,10 @@ namespace orca_base
     // Rotate to the final yaw
     add_rotate_segment(plan, waypoints.back().yaw);
 
-    // Keep station at the last waypoint
-    segments_.push_back(std::make_shared<BaseSegment>(logger_, cxt_, plan, plan));
+    if (keep_station) {
+      // Keep station at the last waypoint
+      segments_.push_back(std::make_shared<BaseSegment>(logger_, cxt_, plan, plan));
+    }
 
     // Create a path for diagnostics
     planned_path_.header.stamp = start.t;
@@ -124,7 +126,7 @@ namespace orca_base
 
   void KeepStationPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
   {
-    plan_target(start.pose, start);
+    plan_target(start.pose, start, true);
   }
 
   //=====================================================================================
@@ -135,7 +137,7 @@ namespace orca_base
   {
     Pose target;
     target.z = cxt_.auv_z_target_;
-    plan_target(target, start);
+    plan_target(target, start, false); // TODO
   }
 
   //=====================================================================================
@@ -144,7 +146,7 @@ namespace orca_base
 
   void DownSequencePlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
   {
-    bool up_down = !random_;
+    bool up_down = false; // !random_;
 
     // Waypoints are directly above markers
     std::vector<Pose> waypoints;
@@ -167,7 +169,7 @@ namespace orca_base
       std::shuffle(waypoints.begin(), waypoints.end(), g);
     }
 
-    plan_waypoints(waypoints, start);
+    plan_waypoints(waypoints, start, false);
   }
 
   //=====================================================================================
@@ -195,7 +197,7 @@ namespace orca_base
       std::shuffle(waypoints.begin(), waypoints.end(), g);
     }
 
-    plan_waypoints(waypoints, start);
+    plan_waypoints(waypoints, start, false);
   }
 
   //=====================================================================================
