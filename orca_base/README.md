@@ -59,9 +59,12 @@ This is possible future work.
 The high-level controllers calculate the pose error and pass it to the 4 PID controllers.
 They may do other pre- or post-processing to improve vehicle dynamics.
 
-There are current 4 high-level controllers:
+There are 5 high-level controllers:
 
-The **BaseController** doesn’t do any pre- or post-processing.
+The **IgnoreEstimateController** ignores the estimate completely.
+Motion is dictated by the motion planner.
+
+The **SimpleController** doesn’t do any pre- or post-processing.
 There are no limits on the output, so PWM signals to the thrusters may vary rapidly and dramatically.
 This may stress the ESCs and thrusters.
 

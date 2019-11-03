@@ -434,17 +434,20 @@ namespace orca_base
       mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, map_, filtered_pose_);
 
       switch (cxt_.auv_controller_) {
-        case 1:
+        case Controllers::SIMPLE:
+          controller_ = std::make_shared<SimpleController>(cxt_);
+          break;
+        case Controllers::IGNORE_ESTIMATE:
+          controller_ = std::make_shared<IgnoreEstimateController>(cxt_);
+          break;
+        case Controllers::DEADZONE:
           controller_ = std::make_shared<DeadzoneController>(cxt_);
           break;
-        case 2:
+        case Controllers::JERK:
           controller_ = std::make_shared<JerkController>(cxt_);
           break;
-        case 3:
+        case Controllers::BEST:
           controller_ = std::make_shared<BestController>(cxt_);
-          break;
-        default:
-          controller_ = std::make_shared<BaseController>(cxt_);
           break;
       }
 

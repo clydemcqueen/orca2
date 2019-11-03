@@ -12,6 +12,15 @@
 namespace orca_base
 {
 
+  struct Controllers
+  {
+    static constexpr int SIMPLE = 0;
+    static constexpr int IGNORE_ESTIMATE = 1;
+    static constexpr int DEADZONE = 2;
+    static constexpr int JERK = 3;
+    static constexpr int BEST = 4;
+  };
+
 #define BASE_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
@@ -52,7 +61,7 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
-  CXT_MACRO_MEMBER(auv_controller, int, 0)                    /* Controller  */ \
+  CXT_MACRO_MEMBER(auv_controller, int, 0)                    /* Controller, type Controllers  */ \
   CXT_MACRO_MEMBER(auv_epsilon_xy, double, 0.1)               /* Deadzone controller epsilon xy  */ \
   CXT_MACRO_MEMBER(auv_epsilon_z, double, 0.1)                /* Deadzone controller epsilon z  */ \
   CXT_MACRO_MEMBER(auv_epsilon_yaw, double, 0.2)              /* Deadzone controller epsilon yaw  */ \

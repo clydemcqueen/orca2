@@ -9,11 +9,10 @@ namespace orca_base
 {
 
   //=====================================================================================
-  // BaseController takes a planned pose and an estimated pose and uses 4 pid controllers to
-  // compute an acceleration.
+  // ControllerBase defines and initializes 4 PID controllers.
   //=====================================================================================
 
-  class BaseController
+  class ControllerBase
   {
   protected:
 
@@ -25,33 +24,71 @@ namespace orca_base
 
   public:
 
-    explicit BaseController(const BaseContext &cxt);
+    explicit ControllerBase(const BaseContext &cxt) :
+      x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
+      y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
+      z_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
+      yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
+    {}
 
     // Calc u_bar
-    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
-                      Acceleration &u_bar);
+    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+                      const Acceleration &ff, Acceleration &u_bar) = 0;
+  };
+
+  //=====================================================================================
+  // SimpleController uses 4 pid controllers to compute u_bar.
+  //=====================================================================================
+
+  class SimpleController : public ControllerBase
+  {
+  public:
+
+    explicit SimpleController(const BaseContext &cxt) : ControllerBase{cxt}
+    {}
+
+    // Calc u_bar
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override;
+  };
+
+  //=====================================================================================
+  // IgnoreEstimateController ignores the estimate, so u_bar = ff.
+  //=====================================================================================
+
+  class IgnoreEstimateController : public ControllerBase
+  {
+  public:
+
+    explicit IgnoreEstimateController(const BaseContext &cxt) : ControllerBase{cxt}
+    {}
+
+    // Calc u_bar
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override
+    { /* NOP */ }
   };
 
   //=====================================================================================
   // DeadzoneController turns off the PID controllers if the error is small
   //=====================================================================================
 
-  class DeadzoneController : public BaseController
+  class DeadzoneController : public ControllerBase
   {
   public:
 
-    explicit DeadzoneController(const BaseContext &cxt) : BaseController{cxt}
+    explicit DeadzoneController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
-              Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override;
   };
 
   //=====================================================================================
   // JerkController limits jerk
   //=====================================================================================
 
-  class JerkController : public BaseController
+  class JerkController : public ControllerBase
   {
   private:
     // Keep previous u_bar
@@ -59,18 +96,18 @@ namespace orca_base
 
   public:
 
-    explicit JerkController(const BaseContext &cxt) : BaseController{cxt}
+    explicit JerkController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
-              Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override;
   };
 
   //=====================================================================================
   // BestController uses a deadzone and limits jerk
   //=====================================================================================
 
-  class BestController : public BaseController
+  class BestController : public ControllerBase
   {
   private:
     // Keep previous u_bar
@@ -78,11 +115,11 @@ namespace orca_base
 
   public:
 
-    explicit BestController(const BaseContext &cxt) : BaseController{cxt}
+    explicit BestController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate, const Acceleration &ff,
-              Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override;
   };
 
 } // namespace pid
