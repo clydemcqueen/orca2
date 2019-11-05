@@ -45,6 +45,9 @@ namespace orca_base
     const Pose &plan() const
     { return plan_; }
 
+    const Pose &goal() const
+    { return goal_; }
+
     const Acceleration &ff() const
     { return ff_; }
 

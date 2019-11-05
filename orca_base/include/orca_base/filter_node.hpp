@@ -21,7 +21,7 @@ namespace orca_base
   {
   private:
 
-    const rclcpp::Duration FILTER_TIMEOUT{RCL_S_TO_NS(1)};  // Reset filter if it borks
+    const rclcpp::Duration FILTER_TIMEOUT{RCL_MS_TO_NS(300)};  // Reset filter if it borks
 
     // Parameters
     FilterContext cxt_;

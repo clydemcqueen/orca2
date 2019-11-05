@@ -60,7 +60,7 @@ namespace orca_base
     goal.x = x;
     goal.y = y;
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
-      if (!segments_.back()->extend(plan, goal)) {
+      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
         segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
       }
     } else {
@@ -109,13 +109,21 @@ namespace orca_base
     }
 
     // Create a path for diagnostics
-    planned_path_.header.stamp = start.t;
-    planned_path_.header.frame_id = cxt_.map_frame_;
-    for (auto &i : segments_) {
+    if (!segments_.empty()) {
+      planned_path_.header.stamp = start.t;
+      planned_path_.header.frame_id = cxt_.map_frame_;
+
       geometry_msgs::msg::PoseStamped pose_msg;
       pose_msg.header.stamp = start.t;
-      planned_path_.header.frame_id = cxt_.map_frame_;
-      i->plan().to_msg(pose_msg.pose);
+
+      for (auto &i : segments_) {
+        planned_path_.header.frame_id = cxt_.map_frame_;
+        i->plan().to_msg(pose_msg.pose);
+        planned_path_.poses.push_back(pose_msg);
+      }
+
+      // Add last goal pose
+      segments_.back()->goal().to_msg(pose_msg.pose);
       planned_path_.poses.push_back(pose_msg);
     }
   }
@@ -137,7 +145,7 @@ namespace orca_base
   {
     Pose target;
     target.z = cxt_.auv_z_target_;
-    plan_target(target, start, false); // TODO
+    plan_target(target, start, true);
   }
 
   //=====================================================================================

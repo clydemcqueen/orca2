@@ -45,43 +45,58 @@ namespace orca_base
     // Sanity check: if we're in a mission action, make sure we're in a good state
     assert(!goal_handle_ || goal_handle_->is_executing());
 
-    // Advance the current motion segment
-    if (planner_->segments()[segment_idx_]->advance(dt)) {
-      plan = planner_->segments()[segment_idx_]->plan();
-      ff = planner_->segments()[segment_idx_]->ff();
+    int num_steps = 1;
+    constexpr double MAX_STEP = 0.1;
 
-      // More to do
-      return true;
+    if (dt > MAX_STEP) {
+      // The numerical approximation gets wonky if dt > 0.1. This might happen if the filter times out and restarts.
+      // Break a large dt into a number of smaller steps.
+      num_steps = std::ceil(dt / MAX_STEP);
+      RCLCPP_DEBUG(logger_, "break dt %g into %d steps", dt, num_steps);
+      dt /= num_steps;
     }
 
-    // The segment is done, move to the next segment
-    if (++segment_idx_ < planner_->segments().size()) {
-      RCLCPP_INFO(logger_, "mission segment %d / %d", segment_idx_, planner_->segments().size());
-      plan = planner_->segments()[segment_idx_]->plan();
-      ff = planner_->segments()[segment_idx_]->ff();
+    for (int i = 0; i < num_steps; ++i) {
+      if (planner_->segments()[segment_idx_]->advance(dt)) {
 
-      // Send mission feedback
-      if (goal_handle_) {
-        feedback_->segments_completed = segment_idx_;
-        goal_handle_->publish_feedback(feedback_);
+        // Advance the current motion segment
+        plan = planner_->segments()[segment_idx_]->plan();
+        ff = planner_->segments()[segment_idx_]->ff();
+
+      } else if (++segment_idx_ < planner_->segments().size()) {
+
+        // The segment is done, move to the next segment
+        RCLCPP_INFO(logger_, "mission segment %d / %d", segment_idx_, planner_->segments().size());
+        plan = planner_->segments()[segment_idx_]->plan();
+        ff = planner_->segments()[segment_idx_]->ff();
+
+        // Send mission feedback
+        if (goal_handle_) {
+          feedback_->segments_completed = segment_idx_;
+          goal_handle_->publish_feedback(feedback_);
+        }
+
+      } else {
+
+        // No more segments
+        RCLCPP_INFO(logger_, "mission complete");
+
+        // Send mission results
+        if (goal_handle_) {
+          auto result = std::make_shared<orca_msgs::action::Mission::Result>();
+          result->segments_completed = result->segments_total = feedback_->segments_total;
+          goal_handle_->succeed(result);
+          goal_handle_ = nullptr;
+          feedback_ = nullptr;
+        }
+
+        // We're done
+        return false;
       }
-
-      // More to do
-      return true;
     }
 
-    RCLCPP_INFO(logger_, "mission complete");
-
-    if (goal_handle_) {
-      auto result = std::make_shared<orca_msgs::action::Mission::Result>();
-      result->segments_completed = result->segments_total = feedback_->segments_total;
-      goal_handle_->succeed(result);
-      goal_handle_ = nullptr;
-      feedback_ = nullptr;
-    }
-
-    // We're done
-    return false;
+    // More to do
+    return true;
   }
 
   void Mission::abort()

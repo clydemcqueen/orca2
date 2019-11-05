@@ -35,14 +35,41 @@ def seconds(stamp: Time) -> float:
     return float(stamp.sec) + float(stamp.nanosec) / 1e9
 
 
+def param_to_str(p: Parameter):
+    val = '(type error)'
+    if p.value.type == ParameterType.PARAMETER_BOOL:
+        val = str(p.value.bool_value)
+    elif p.value.type == ParameterType.PARAMETER_DOUBLE:
+        val = str(p.value.double_value)
+    elif p.value.type == ParameterType.PARAMETER_INTEGER:
+        val = str(p.value.integer_value)
+    return p.name + ': ' + val
+
+
 # Experiment description
 class Experiment(object):
 
-    def __init__(self, note: str, mode: int, base_params: List[Parameter], filter_params: List[Parameter]):
+    def __init__(self, note: str, mode: int, count: int, base_params: List[Parameter], filter_params: List[Parameter]):
+        # Description
         self.note = note
+
+        # Parameters
         self.mode = mode
+        self.count = count
         self.base_params = base_params
         self.filter_params = filter_params
+
+        # Results
+        self.results = []
+
+    def print(self):
+        print('Experiment {}, mission={}, count={}'.format(self.note, self.mode, self.count))
+        for p in self.base_params:
+            print('base_node::{}'.format(param_to_str(p)))
+        for p in self.filter_params:
+            print('filter_node::{}'.format(param_to_str(p)))
+        print('Results: {}'.format(self.results))
+        print()
 
 
 # Experiment runner
@@ -58,42 +85,49 @@ class RunNode(Node):
 
         # Set up experiments
         self._experiments = [
-            Experiment(note='warm up run', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
+            # Experiment(note='simple controller', mode=Control.AUV_SEQUENCE, count=1, base_params=[
+            #     Parameter(name='auv_z_target',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5)),
+            #     Parameter(name='auv_controller',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_INTEGER, integer_value=0)),
+            # ], filter_params=[
+            #     Parameter(name='four_dof',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
+            # ]),
+
+            Experiment(note='ignore estimate controller', mode=Control.AUV_SEQUENCE, count=1, base_params=[
+                Parameter(name='auv_z_target',
+                          value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5)),
+                Parameter(name='auv_controller',
+                          value=ParameterValue(type=ParameterType.PARAMETER_INTEGER, integer_value=1)),
+            ], filter_params=[
                 Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False))
+                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
             ]),
 
-            Experiment(note='six DoF filter 1', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False))
-            ]),
-
-            Experiment(note='four DoF filter 1', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True))
-            ]),
-
-            Experiment(note='six DoF filter 2', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False))
-            ]),
-
-            Experiment(note='four DoF filter 2', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True))
-            ]),
-
-            Experiment(note='six DoF filter 3', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False))
-            ]),
-
-            Experiment(note='four DoF filter 3', mode=Control.AUV_SEQUENCE, base_params=[], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True))
-            ]),
-
+            # Experiment(note='six DoF filter', mode=Control.AUV_SEQUENCE, count=10, base_params=[
+            #     Parameter(name='auv_z_target',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5))
+            # ], filter_params=[
+            #     Parameter(name='four_dof',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False))
+            # ]),
+            #
+            # Experiment(note='four DoF filter', mode=Control.AUV_SEQUENCE, count=10, base_params=[
+            #     Parameter(name='auv_z_target',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5))
+            # ], filter_params=[
+            #     Parameter(name='four_dof',
+            #               value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True))
+            # ]),
         ]
+
+        # self._experiments = []
+        # for step in range(1, 20, 1):
+        #     self._experiments.append(Experiment(note='', mode=Control.AUV_SEQUENCE, count=1, base_params=[
+        #                 Parameter(name='auv_z_target',
+        #                           value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-(2. + step/10.)))
+        #             ], filter_params=[]))
 
         # If we're in a mission record odometry and ground truth messages for later processing
         self._odom_msgs: Optional[List[Odometry]] = None
@@ -116,7 +150,10 @@ class RunNode(Node):
 
         # Start 1st experiment
         self._idx = 0
-        self.get_logger().info('starting experiment {}, "{}"'.format(self._idx, self._experiments[self._idx].note))
+        self._count = 0
+        self.get_logger().info('starting experiment {}, ({}), will run {} time(s)'.format(
+            self._idx, self._experiments[self._idx].note, self._experiments[self._idx].count))
+        self.get_logger().info('starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
 
         # Step 1
         self.set_base_node_params()
@@ -237,17 +274,35 @@ class RunNode(Node):
         nees_values = nees.nees(self._odom_msgs, self._gt_msgs)
 
         if nees_values:
-            self.get_logger().info('average NEES value {}'.format(np.mean(nees_values)))
+            self._experiments[self._idx].results.append(np.mean(nees_values))
+            self.get_logger().info('average NEES value {}'.format(self._experiments[self._idx].results[-1]))
         else:
+            self._experiments[self._idx].results.append(-1)
             self.get_logger().info('no NEES values')
 
     def start_next_experiment(self):
-        self._idx += 1
-        if self._idx < len(self._experiments):
-            self.get_logger().info('starting experiment {}, "{}"'.format(self._idx, self._experiments[self._idx].note))
+        # Next run of this experiment
+        self._count += 1
+        if self._count < self._experiments[self._idx].count:
+            self.get_logger().info('starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
             self.set_base_node_params()
         else:
-            self.get_logger().info('DONE!')
+            # Next experiment
+            self._idx += 1
+            self._count = 0
+            if self._idx < len(self._experiments):
+                self.get_logger().info('starting experiment {}, ({}), will run {} time(s)'.format(
+                    self._idx, self._experiments[self._idx].note, self._experiments[self._idx].count))
+                self.get_logger().info('starting run {} of {}'.format(self._count + 1,
+                                                                      self._experiments[self._idx].count))
+                self.set_base_node_params()
+            else:
+                self.get_logger().info('DONE!')
+                self.print_results()
+
+    def print_results(self):
+        for experiment in self._experiments:
+            experiment.print()
 
 
 def main(args=None):

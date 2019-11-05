@@ -73,9 +73,9 @@ namespace orca_base
   {
   private:
     // Constants
-    const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(2)};   // ROV: disarm if we lose communication
-    const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(2)};  // AUV: disarm if we lose odometry
-    const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(2)};  // Holding z: disarm if we lose barometer
+    const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
+    const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
+    const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
     const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Check timeouts at 10Hz
 
     // Thrusters, order must match the order of the <thruster> tags in the URDF

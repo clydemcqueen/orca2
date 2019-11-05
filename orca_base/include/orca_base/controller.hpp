@@ -66,7 +66,7 @@ namespace orca_base
     // Calc u_bar
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
               const Acceleration &ff, Acceleration &u_bar) override
-    { /* NOP */ }
+    {  u_bar = ff; }
   };
 
   //=====================================================================================
