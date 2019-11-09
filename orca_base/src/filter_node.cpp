@@ -62,17 +62,24 @@ namespace orca_base
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
 
-    // Parse URDF
+    create_filter();
+
     parse_urdf();
+  }
 
-    // Create filter
-    if (cxt_.four_dof_) {
-      RCLCPP_INFO(get_logger(), "using 4dof filter");
-      odom_filter_ = std::make_shared<FourFilter>(get_logger(), cxt_);
-
+  void FilterNode::create_filter()
+  {
+    if (receiving_poses_) {
+      if (cxt_.four_dof_) {
+        RCLCPP_INFO(get_logger(), "4dof pose filter");
+        filter_ = std::make_shared<FourFilter>(get_logger(), cxt_);
+      } else {
+        RCLCPP_INFO(get_logger(), "6dof pose filter");
+        filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_);
+      }
     } else {
-      RCLCPP_INFO(get_logger(), "using 6dof filter");
-      odom_filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_);
+      RCLCPP_INFO(get_logger(), "depth filter");
+      filter_ = std::make_shared<DepthFilter>(get_logger(), cxt_);
     }
   }
 
@@ -105,12 +112,12 @@ namespace orca_base
         tf2::Vector3{pose.position.x, pose.position.y, pose.position.z}};
 
       RCLCPP_DEBUG(get_logger(), "%s: parent(%s), child(%s), %s", name.c_str(),
-                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t2).c_str());
+                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t2).c_str());
 
       // Invert
       t = t2.inverse();
       RCLCPP_DEBUG(get_logger(), "inverted %s: parent(%s), child(%s), %s", name.c_str(),
-                  joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t).c_str());
+                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t).c_str());
 
     } else {
       RCLCPP_ERROR(get_logger(), "joint %s missing", name.c_str());
@@ -157,7 +164,27 @@ namespace orca_base
       }
 
       if (cxt_.filter_baro_) {
-        filter_odom(depth_msg);
+
+        // Still receiving poses?
+        if (receiving_poses_) {
+          rclcpp::Time stamp{depth_msg.header.stamp};
+          if (valid_stamp(last_pose_received_) && stamp - last_pose_received_ > OPEN_WATER_TIMEOUT) {
+            RCLCPP_INFO(get_logger(), "running in open water");
+            receiving_poses_ = false;
+            create_filter();
+          }
+        }
+
+        nav_msgs::msg::Odometry filtered_odom;
+        filtered_odom.header.frame_id = cxt_.frame_id_map_;
+        filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
+
+        if (filter_->process_message(depth_msg, u_bar_, filtered_odom)) {
+          // Save estimated yaw, used to rotate control messages
+          estimated_yaw_ = get_yaw(filtered_odom.pose.pose.orientation);
+
+          publish_odom(filtered_odom);
+        }
       }
     }
   }
@@ -194,6 +221,15 @@ namespace orca_base
                                 const tf2::Transform &t_sensor_base, const std::string &frame_id,
                                 const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub)
   {
+    // If we're using a depth filter, switch to a pose filter
+    if (!receiving_poses_) {
+      RCLCPP_INFO(get_logger(), "found marker(s)");
+      receiving_poses_ = true;
+      create_filter();
+    }
+
+    last_pose_received_ = sensor_f_map->header.stamp;
+
     // Convert pose to transform
     tf2::Transform t_map_sensor;
     tf2::fromMsg(sensor_f_map->pose.pose, t_map_sensor);
@@ -227,52 +263,49 @@ namespace orca_base
 
     // If we're receiving poses but not publishing odometry then reset the filter
     rclcpp::Time stamp{sensor_f_map->header.stamp};
-    if (valid_stamp(publish_time_) && stamp - publish_time_ > FILTER_TIMEOUT) {
+    if (valid_stamp(last_pose_inlier_) && stamp - last_pose_inlier_ > OUTLIER_TIMEOUT) {
       RCLCPP_WARN(get_logger(), "reset filter");
-      odom_filter_->reset(base_f_map.pose.pose);
-      publish_time_ = stamp;
+      filter_->reset(base_f_map.pose.pose);
+      last_pose_inlier_ = stamp;
     }
 
-    // Filter and publish odometry
-    filter_odom(base_f_map);
-  }
-
-  template<typename T>
-  void FilterNode::filter_odom(const T &msg)
-  {
     nav_msgs::msg::Odometry filtered_odom;
     filtered_odom.header.frame_id = cxt_.frame_id_map_;
     filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
 
-    // Filter this message
-    if (odom_filter_->process_message(msg, u_bar_, filtered_odom)) {
+    if (filter_->process_message(base_f_map, u_bar_, filtered_odom)) {
       // Save estimated yaw, used to rotate control messages
       estimated_yaw_ = get_yaw(filtered_odom.pose.pose.orientation);
 
-      // Publish filtered odometry
-      if (filtered_odom_pub_->get_subscription_count() > 0) {
-        filtered_odom_pub_->publish(filtered_odom);
-      }
+      publish_odom(filtered_odom);
 
-      // Publish filtered tf
-      if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
-        geometry_msgs::msg::TransformStamped geo_tf;
-        geo_tf.header = filtered_odom.header;
-        geo_tf.child_frame_id = cxt_.frame_id_base_link_;
+      last_pose_inlier_ = stamp;
+    }
+  }
 
-        // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
-        tf2::Transform t_map_base;
-        fromMsg(filtered_odom.pose.pose, t_map_base);
-        geo_tf.transform = toMsg(t_map_base);
+  void FilterNode::publish_odom(nav_msgs::msg::Odometry &odom)
+  {
+    // Publish odometry
+    if (filtered_odom_pub_->get_subscription_count() > 0) {
+      filtered_odom_pub_->publish(odom);
+    }
 
-        // One transform in this tf message
-        tf2_msgs::msg::TFMessage tf_message;
-        tf_message.transforms.emplace_back(geo_tf);
+    // Publish filtered tf
+    if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
+      geometry_msgs::msg::TransformStamped geo_tf;
+      geo_tf.header = odom.header;
+      geo_tf.child_frame_id = cxt_.frame_id_base_link_;
 
-        tf_pub_->publish(tf_message);
-      }
+      // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
+      tf2::Transform t_map_base;
+      fromMsg(odom.pose.pose, t_map_base);
+      geo_tf.transform = toMsg(t_map_base);
 
-      publish_time_ = msg.header.stamp;
+      // One transform in this tf message
+      tf2_msgs::msg::TFMessage tf_message;
+      tf_message.transforms.emplace_back(geo_tf);
+
+      tf_pub_->publish(tf_message);
     }
   }
 

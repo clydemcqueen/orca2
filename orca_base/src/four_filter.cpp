@@ -70,20 +70,21 @@ namespace orca_base
     out.angular.z = fx_vyaw;
   }
 
-  // Extract pose covariance from PoseFilter covariance
-  void flatten_4x4_covar(const Eigen::MatrixXd &P, std::array<double, 36> &pose_covar, int offset)
+  // Extract pose or twist covariance from PoseFilter covariance
+  void flatten_4x4_covar(const Eigen::MatrixXd &P, std::array<double, 36> &pose_covar, bool pose)
   {
     // Start with identity
     Eigen::MatrixXd m = Eigen::MatrixXd::Identity(6, 6);
 
-    // Copy values from the 4x4
+    // Copy values from the 4x4 into the 6x6
+    int offset = pose ? 0 : 4;
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
         m(i < 3 ? i : i + 2, j < 3 ? j : j + 2) = P(i + offset, j + offset);
       }
     }
 
-    // Flatten
+    // Flatten the 6x6 matrix
     flatten_6x6_covar(m, pose_covar, 0);
   }
 
@@ -202,8 +203,8 @@ namespace orca_base
   {
     pose_from_fx(filter_.x(), filtered_odom.pose.pose);
     twist_from_fx(filter_.x(), filtered_odom.twist.twist);
-    flatten_4x4_covar(filter_.P(), filtered_odom.pose.covariance, 0);
-    flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, 6);
+    flatten_4x4_covar(filter_.P(), filtered_odom.pose.covariance, true);
+    flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
   }
 
   Measurement FourFilter::to_measurement(const orca_msgs::msg::Depth &depth) const

@@ -410,7 +410,7 @@ namespace orca_base
 
     if (is_hold_pressure_mode(new_mode)) {
 
-      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
+      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_);
       pressure_hold_pid_->set_target(pressure_);
 
     } else if (is_auv_mode(new_mode)) {

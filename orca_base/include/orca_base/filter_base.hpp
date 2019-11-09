@@ -204,6 +204,9 @@ namespace orca_base
   public:
 
     explicit DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
+
+    // Reset the filter with a pose
+    void reset(const geometry_msgs::msg::Pose &pose) override;
   };
 
   //=============================================================================

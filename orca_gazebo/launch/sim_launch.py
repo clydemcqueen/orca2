@@ -92,7 +92,7 @@ def generate_launch_description():
                 'predict_accel_control': False,
                 'predict_accel_drag': False,
                 'predict_accel_buoyancy': False,
-                'filter_baro': False,
+                'filter_baro': True,
                 'filter_fcam': False,
                 'filter_lcam': True,
                 'filter_rcam': True,

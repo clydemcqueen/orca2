@@ -3,7 +3,6 @@
 #include "eigen3/Eigen/Dense"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-#include "orca_base/model.hpp"
 #include "orca_base/util.hpp"
 
 namespace orca_base
@@ -19,6 +18,49 @@ namespace orca_base
 #define dx_z x(0)
 #define dx_vz x(1)
 #define dx_az x(2)
+
+  // Init x from pose
+  Eigen::VectorXd pose_to_dx(const geometry_msgs::msg::Pose &pose)
+  {
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(DEPTH_STATE_DIM);
+
+    dx_z = pose.position.z;
+
+    return x;
+  }
+
+  // Extract pose from DepthFilter state
+  void pose_from_dx(const Eigen::VectorXd &x, geometry_msgs::msg::Pose &out)
+  {
+    out.position.x = 0;
+    out.position.y = 0;
+    out.position.z = dx_z;
+
+    out.orientation.x = 0;
+    out.orientation.y = 0;
+    out.orientation.z = 0;
+    out.orientation.w = 1;
+  }
+
+  // Extract twist from PoseFilter state
+  void twist_from_dx(const Eigen::VectorXd &x, geometry_msgs::msg::Twist &out)
+  {
+    out.linear.z = dx_vz;
+  }
+
+  // Extract pose or twist covariance from DepthFilter covariance
+  void flatten_1x1_covar(const Eigen::MatrixXd &P, std::array<double, 36> &pose_covar, bool pose)
+  {
+    // Start with extremely high covariance values
+    Eigen::MatrixXd m = Eigen::MatrixXd::Identity(6, 6) * 1e6;
+
+    // Copy the z value
+    int offset = pose ? 0 : 1;
+    m(2, 2) = P(offset, offset);
+
+    // Flatten the 6x6 matrix
+    flatten_6x6_covar(m, pose_covar, 0);
+  }
 
   DepthFilter::DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
     FilterBase{logger, cxt, DEPTH_STATE_DIM}
@@ -67,14 +109,17 @@ namespace orca_base
       });
   }
 
+  void DepthFilter::reset(const geometry_msgs::msg::Pose &pose)
+  {
+    FilterBase::reset(pose_to_dx(pose));
+  }
+
   void DepthFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
   {
-    // TODO get z, vz and variance
-    // Everything else is made up
-//    pose_from_x(filter_.x(), filtered_odom.pose.pose);
-//    twist_from_x(filter_.x(), filtered_odom.twist.twist);
-//    pose_covar_from_P(filter_.P(), filtered_odom.pose.covariance);
-//    twist_covar_from_P(filter_.P(), filtered_odom.twist.covariance);
+    pose_from_dx(filter_.x(), filtered_odom.pose.pose);
+    twist_from_dx(filter_.x(), filtered_odom.twist.twist);
+    flatten_1x1_covar(filter_.P(), filtered_odom.pose.covariance, true);
+    flatten_1x1_covar(filter_.P(), filtered_odom.twist.covariance, false);
   }
 
   Measurement DepthFilter::to_measurement(const orca_msgs::msg::Depth &depth) const

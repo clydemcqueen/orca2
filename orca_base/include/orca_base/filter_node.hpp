@@ -21,14 +21,28 @@ namespace orca_base
   {
   private:
 
-    const rclcpp::Duration FILTER_TIMEOUT{RCL_MS_TO_NS(300)};  // Reset filter if it borks
+    // FilterNode runs one of two filters:
+    // -- a pose filter takes all sensor input and produces a full pose
+    // -- a depth filter takes barometric data and produces a filtered z value
+    //
+    // When poses are available (near a marker) the pose filter is used.
+    // When poses are not available (running through open water) the depth filter is used.
+    //
+    // Both filters publish odometry. The depth filter publishes very high (>1e4) covariance values for most dimensions.
+
+    bool receiving_poses_{false};
+    std::shared_ptr<FilterBase> filter_;
+    rclcpp::Time last_pose_received_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_pose_inlier_{0, 0, RCL_ROS_TIME};
+
+    // Change modes if poses are missing, or available, for 0.3s (~9 poses)
+    const rclcpp::Duration OPEN_WATER_TIMEOUT{RCL_MS_TO_NS(300)};
+
+    // Reset the filter if poses are consistently rejected as outliers for 0.3s (~9 poses)
+    const rclcpp::Duration OUTLIER_TIMEOUT{RCL_MS_TO_NS(300)};
 
     // Parameters
     FilterContext cxt_;
-
-    // UKF state
-    std::shared_ptr<FilterBase> odom_filter_;
-    rclcpp::Time publish_time_{0, 0, RCL_ROS_TIME};
 
     // Control state
     double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
@@ -61,6 +75,9 @@ namespace orca_base
     // Validate parameters
     void validate_parameters();
 
+    // Create the filter
+    void create_filter();
+
     // Parse urdf
     void parse_urdf();
 
@@ -92,9 +109,8 @@ namespace orca_base
                       const tf2::Transform &t_sensor_base, const std::string &frame_id,
                       const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub);
 
-    // Filter a message and publish odometry
-    template<typename T>
-    void filter_odom(const T &msg);
+    // Publish odometry
+    void publish_odom(nav_msgs::msg::Odometry &odom);
 
   public:
     explicit FilterNode();
