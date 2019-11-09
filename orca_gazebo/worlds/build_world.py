@@ -75,6 +75,29 @@ markers:
     map_file.close()
 
 
+# Huge, sparse pool: 16m x 16m x 4m deep
+huge_pool = [
+    [0, 4, 0, -4, 0, 0, 0],
+    [1, 4, 4, -4, 0, 0, 0],
+    [2, 4, 8, -4, 0, 0, 0],
+    [3, 4, 12, -4, 0, 0, 0],
+
+    [4, 0, 12, -4, 0, 0, 0],
+    [5, 0, 8, -4, 0, 0, 0],
+    [6, 0, 4, -4, 0, 0, 0],
+    [7, 0, 0, -4, 0, 0, 0],
+
+    [8, -4, 0, -4, 0, 0, 0],
+    [9, -4, 4, -4, 0, 0, 0],
+    [10, -4, 8, -4, 0, 0, 0],
+    [11, -4, 12, -4, 0, 0, 0],
+
+    [12, -8, 12, -4, 0, 0, 0],
+    [13, -8, 8, -4, 0, 0, 0],
+    [14, -8, 4, -4, 0, 0, 0],
+    [15, -8, 0, -4, 0, 0, 0],
+]
+
 # Large pool: 8m x 8m x 4m deep
 large_pool = [
     [0, 2, 0, -4, 0, 0, 0],
@@ -165,6 +188,7 @@ small_simple = [
 ]
 
 worlds = [
+    ['huge.world', 'huge_map.yaml', huge_pool],
     ['large.world', 'large_map.yaml', large_pool],
     ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],

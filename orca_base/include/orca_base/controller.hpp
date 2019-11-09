@@ -32,7 +32,7 @@ namespace orca_base
     {}
 
     // Calc u_bar
-    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
                       const Acceleration &ff, Acceleration &u_bar) = 0;
   };
 
@@ -48,7 +48,7 @@ namespace orca_base
     {}
 
     // Calc u_bar
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
 
@@ -64,9 +64,9 @@ namespace orca_base
     {}
 
     // Calc u_bar
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override
-    {  u_bar = ff; }
+    { u_bar = ff; }
   };
 
   //=====================================================================================
@@ -80,7 +80,7 @@ namespace orca_base
     explicit DeadzoneController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
 
@@ -99,7 +99,7 @@ namespace orca_base
     explicit JerkController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
 
@@ -118,7 +118,22 @@ namespace orca_base
     explicit BestController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const Acceleration &ff, Acceleration &u_bar) override;
+  };
+
+  //=====================================================================================
+  // DepthController controls depth, and ignores error on x, y and yaw
+  //=====================================================================================
+
+  class DepthController : public ControllerBase
+  {
+  public:
+
+    explicit DepthController(const BaseContext &cxt) : ControllerBase{cxt}
+    {}
+
+    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
 

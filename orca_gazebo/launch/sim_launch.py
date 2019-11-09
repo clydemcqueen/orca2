@@ -33,8 +33,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'medium.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'medium_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'huge.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'huge_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -70,13 +70,8 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'param_fluid_density': 997.0,
                 'auto_start': 0,  # Auto-start AUV mission
-                'auv_controller': 0,  # SimpleController
-                'auv_epsilon_xy': 0.05,
-                'auv_epsilon_z': 0.05,
-                'auv_epsilon_yaw': 0.1,
-                'auv_jerk_xy': 10.0,
-                'auv_jerk_z': 10.0,
-                'auv_jerk_yaw': 20.0,
+                'auv_controller': 5,  # DepthController
+                'auv_z_target': -2.5,
             }], remappings=[
                 # ('odom', '/' + left_camera_name + '/odom'),
                 # ('odom', '/filtered_odom'),

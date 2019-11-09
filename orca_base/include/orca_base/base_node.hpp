@@ -121,7 +121,8 @@ namespace orca_base
     sensor_msgs::msg::Joy joy_msg_;               // Most recent message
 
     // Odometry state
-    PoseStamped filtered_pose_;                   // Estimated pose
+    nav_msgs::msg::Odometry filtered_odom_;       // Estimated odometry
+    PoseStamped filtered_pose_;                   // Estimated pose TODO remove
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // ROV operation
@@ -190,7 +191,7 @@ namespace orca_base
 
     void rov_advance(const rclcpp::Time &stamp);
 
-    void auv_advance(const rclcpp::Time &msg_time, double dt);
+    void auv_advance(double dt);
 
     void all_stop(const rclcpp::Time &msg_time);
 

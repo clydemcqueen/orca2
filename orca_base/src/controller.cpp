@@ -3,7 +3,8 @@
 namespace orca_base
 {
 
-  void SimpleController::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+  void SimpleController::calc(const BaseContext &cxt, double dt, const Pose &plan,
+                              const nav_msgs::msg::Odometry &estimate,
                               const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -13,13 +14,14 @@ namespace orca_base
     yaw_controller_.set_target(plan.yaw);
 
     // Calculate response to the error
-    u_bar.x = x_controller_.calc(estimate.x, dt) + ff.x;
-    u_bar.y = y_controller_.calc(estimate.y, dt) + ff.y;
-    u_bar.z = z_controller_.calc(estimate.z, dt) + ff.z;
-    u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
+    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
+    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
+    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
   }
 
-  void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+  void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan,
+                                const nav_msgs::msg::Odometry &estimate,
                                 const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -30,21 +32,21 @@ namespace orca_base
 
     // Call PID controllers iff error is large enough
     if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.x, dt) + ff.x;
-      u_bar.y = y_controller_.calc(estimate.y, dt) + ff.y;
+      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
+      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
     } else {
       u_bar.x = ff.x;
       u_bar.y = ff.y;
     }
 
     if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.z, dt) + ff.z;
+      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
     } else {
       u_bar.z = ff.z;
     }
 
     if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
+      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
     } else {
       u_bar.yaw = ff.yaw;
     }
@@ -56,7 +58,8 @@ namespace orca_base
     return next - previous < 0 ? previous - diff : previous + diff;
   }
 
-  void JerkController::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+  void JerkController::calc(const BaseContext &cxt, double dt, const Pose &plan,
+                            const nav_msgs::msg::Odometry &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -66,10 +69,10 @@ namespace orca_base
     yaw_controller_.set_target(plan.yaw);
 
     // Feedforward doesn't count toward the limit
-    u_bar.x = x_controller_.calc(estimate.x, dt);
-    u_bar.y = y_controller_.calc(estimate.y, dt);
-    u_bar.z = z_controller_.calc(estimate.z, dt);
-    u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt);
+    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
+    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
+    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
+    u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
 
     // Limit jerk
     u_bar.x = limit(prev_u_bar_.x, u_bar.x, dt, cxt.auv_jerk_xy_);
@@ -84,7 +87,8 @@ namespace orca_base
     u_bar.add(ff);
   }
 
-  void BestController::calc(const BaseContext &cxt, double dt, const Pose &plan, const Pose &estimate,
+  void BestController::calc(const BaseContext &cxt, double dt, const Pose &plan,
+                            const nav_msgs::msg::Odometry &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -96,21 +100,21 @@ namespace orca_base
     // Call PID controllers iff error is large enough
     // Don't include feedforward
     if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.x, dt);
-      u_bar.y = y_controller_.calc(estimate.y, dt);
+      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
+      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
     } else {
       u_bar.x = 0;
       u_bar.y = 0;
     }
 
     if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.z, dt);
+      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
     } else {
       u_bar.z = 0;
     }
 
     if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt);
+      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
     } else {
       u_bar.yaw = 0;
     }
@@ -126,6 +130,16 @@ namespace orca_base
 
     // Now apply the feedforward
     u_bar.add(ff);
+  }
+
+  void DepthController::calc(const BaseContext &cxt, double dt, const Pose &plan,
+                             const nav_msgs::msg::Odometry &estimate,
+                             const Acceleration &ff, Acceleration &u_bar)
+  {
+    u_bar = ff;
+
+    z_controller_.set_target(plan.z);
+    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
   }
 
 }

@@ -207,6 +207,7 @@ namespace orca_base
   void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
   {
     // Save the pose
+    filtered_odom_ = *msg;
     filtered_pose_.from_msg(*msg);
 
     // Compute a stability metric
@@ -216,7 +217,7 @@ namespace orca_base
 
     // Continue the mission
     if (auv_mode()) {
-      auv_advance(msg->header.stamp, odom_cb_.dt());
+      auv_advance(odom_cb_.dt());
     }
   }
 
@@ -270,7 +271,7 @@ namespace orca_base
     publish_control(stamp, error, efforts);
   }
 
-  void BaseNode::auv_advance(const rclcpp::Time &msg_time, double dt)
+  void BaseNode::auv_advance(double dt)
   {
     // Publish path for rviz
     if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
@@ -287,11 +288,12 @@ namespace orca_base
     if (mission_->advance(dt, plan, ff)) {
       // Compute acceleration due to error
       Acceleration u_bar;
-      controller_->calc(cxt_, dt, plan, filtered_pose_.pose, ff, u_bar);
+      controller_->calc(cxt_, dt, plan, filtered_odom_, ff, u_bar);
 
       // Acceleration => effort
       Efforts efforts;
-      efforts.from_acceleration(filtered_pose_.pose.yaw, u_bar);
+//      efforts.from_acceleration(filtered_pose_.pose.yaw, u_bar);
+      efforts.from_acceleration(plan.yaw, u_bar);
 
       // Throttle back if AUV is unstable
       efforts.scale(stability_);
@@ -299,11 +301,11 @@ namespace orca_base
       // Compute error for diagnostics
       Pose error = plan.error(filtered_pose_.pose);
 
-      publish_control(msg_time, error, efforts);
+      publish_control(filtered_odom_.header.stamp, error, efforts);
     } else {
       // Mission is over, clean up
       mission_ = nullptr;
-      disarm(msg_time);
+      disarm(filtered_odom_.header.stamp);
     }
   }
 
@@ -448,6 +450,9 @@ namespace orca_base
           break;
         case Controllers::BEST:
           controller_ = std::make_shared<BestController>(cxt_);
+          break;
+        case Controllers::DEPTH:
+          controller_ = std::make_shared<DepthController>(cxt_);
           break;
       }
 

@@ -72,16 +72,31 @@ namespace orca_base
       return std::hypot(x - _x, y - _y);
     }
 
+    double distance_xy(const nav_msgs::msg::Odometry &msg) const
+    {
+      return std::hypot(x - msg.pose.pose.position.x, y - msg.pose.pose.position.y);
+    }
+
     // Z distance between 2 poses
     double distance_z(const Pose &that) const
     {
       return std::abs(z - that.z);
     }
 
+    double distance_z(const nav_msgs::msg::Odometry &msg) const
+    {
+      return std::abs(z - msg.pose.pose.position.z);
+    }
+
     // Yaw distance between 2 poses
     double distance_yaw(const Pose &that) const
     {
       return std::abs(norm_angle(yaw - that.yaw));
+    }
+
+    double distance_yaw(const nav_msgs::msg::Odometry &msg) const
+    {
+      return std::abs(norm_angle(yaw - get_yaw(msg.pose.pose.orientation)));
     }
 
     Pose error(const Pose &that) const

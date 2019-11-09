@@ -19,6 +19,7 @@ namespace orca_base
     static constexpr int DEADZONE = 2;
     static constexpr int JERK = 3;
     static constexpr int BEST = 4;
+    static constexpr int DEPTH = 5;
   };
 
 #define BASE_NODE_ALL_PARAMS \
