@@ -31,6 +31,9 @@ namespace orca_base
       yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
     {}
 
+    // Is this controller usable with dead reckoning navigation?
+    virtual bool dead_reckoning() = 0;
+
     // Calc u_bar
     virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
                       const Acceleration &ff, Acceleration &u_bar) = 0;
@@ -47,7 +50,9 @@ namespace orca_base
     explicit SimpleController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    // Calc u_bar
+    bool dead_reckoning() override
+    { return false; }
+
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
@@ -63,7 +68,9 @@ namespace orca_base
     explicit IgnoreEstimateController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
-    // Calc u_bar
+    bool dead_reckoning() override
+    { return true; }
+
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override
     { u_bar = ff; }
@@ -79,6 +86,9 @@ namespace orca_base
 
     explicit DeadzoneController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
+
+    bool dead_reckoning() override
+    { return false; }
 
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
@@ -99,6 +109,9 @@ namespace orca_base
     explicit JerkController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
+    bool dead_reckoning() override
+    { return false; }
+
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
@@ -118,6 +131,9 @@ namespace orca_base
     explicit BestController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
 
+    bool dead_reckoning() override
+    { return false; }
+
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;
   };
@@ -132,6 +148,9 @@ namespace orca_base
 
     explicit DepthController(const BaseContext &cxt) : ControllerBase{cxt}
     {}
+
+    bool dead_reckoning() override
+    { return true; }
 
     void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
               const Acceleration &ff, Acceleration &u_bar) override;

@@ -27,16 +27,16 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // BasePlanner
+  // PlannerBase
   //=====================================================================================
 
-  void BasePlanner::add_keep_station_segment(Pose &plan, double seconds)
+  void PlannerBase::add_keep_station_segment(Pose &plan, double seconds)
   {
     segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, seconds));
     controllers_.push_back(std::make_shared<SimpleController>(cxt_));
   }
 
-  void BasePlanner::add_vertical_segment(Pose &plan, double z)
+  void PlannerBase::add_vertical_segment(Pose &plan, double z)
   {
     Pose goal = plan;
     goal.z = z;
@@ -49,7 +49,7 @@ namespace orca_base
     plan = goal;
   }
 
-  void BasePlanner::add_rotate_segment(Pose &plan, double yaw)
+  void PlannerBase::add_rotate_segment(Pose &plan, double yaw)
   {
     Pose goal = plan;
     goal.yaw = yaw;
@@ -62,7 +62,7 @@ namespace orca_base
     plan = goal;
   }
 
-  void BasePlanner::add_line_segment(Pose &plan, double x, double y)
+  void PlannerBase::add_line_segment(Pose &plan, double x, double y)
   {
     Pose goal = plan;
     goal.x = x;
@@ -83,14 +83,14 @@ namespace orca_base
     plan = goal;
   }
 
-  void BasePlanner::plan_target(const Pose &target, const PoseStamped &start, bool keep_station)
+  void PlannerBase::plan_target(const Pose &target, const PoseStamped &start, bool keep_station)
   {
     std::vector<Pose> waypoints;
     waypoints.push_back(target);
     plan_waypoints(waypoints, start, keep_station);
   }
 
-  void BasePlanner::plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
+  void PlannerBase::plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
   {
     RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s), keeping station at (%g, %g, %g), %g",
                 waypoints.size() - 1, waypoints.back().x, waypoints.back().y, waypoints.back().z, waypoints.back().yaw);
@@ -153,11 +153,58 @@ namespace orca_base
     }
   }
 
+  bool PlannerBase::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
+                            const std::function<void(double completed, double total)> &send_feedback)
+  {
+    if (segments_.empty()) {
+      // Build a few segments
+      PoseStamped start;
+      start.from_msg(estimate);
+      plan_segments(start);
+    }
+
+    Acceleration ff;
+
+    if (segments_[segment_idx_]->advance(dt)) {
+
+      // Advance the current motion segment
+      plan = segments_[segment_idx_]->plan();
+      ff = segments_[segment_idx_]->ff();
+
+    } else if (++segment_idx_ < segments_.size()) {
+
+      // The segment is done, move to the next segment
+      plan = segments_[segment_idx_]->plan();
+      ff = segments_[segment_idx_]->ff();
+
+      // Send mission feedback
+      RCLCPP_INFO(logger_, "mission segment %d of %d", segment_idx_ + 1, segments_.size());
+      send_feedback(segment_idx_, segments_.size());
+
+    } else {
+
+      // We're done
+      return false;
+    }
+
+    // Does this controller need a full pose, and do we have one?
+    if (!controllers_[segment_idx_]->dead_reckoning() && !full_pose(estimate)) {
+      RCLCPP_ERROR(logger_, "controller needs a full pose, stop mission");
+      return false;
+    }
+
+    // Compute acceleration
+    controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
+
+    // The mission continues
+    return true;
+  }
+
   //=====================================================================================
   // KeepStationPlanner
   //=====================================================================================
 
-  void KeepStationPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void KeepStationPlanner::plan_segments(const PoseStamped &start)
   {
     plan_target(start.pose, start, true);
   }
@@ -166,7 +213,7 @@ namespace orca_base
   // KeepOriginPlanner
   //=====================================================================================
 
-  void KeepOriginPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void KeepOriginPlanner::plan_segments(const PoseStamped &start)
   {
     Pose target;
     target.z = cxt_.auv_z_target_;
@@ -177,13 +224,13 @@ namespace orca_base
   // DownSequencePlanner
   //=====================================================================================
 
-  void DownSequencePlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void DownSequencePlanner::plan_segments(const PoseStamped &start)
   {
     bool up_down = false; // !random_;
 
     // Waypoints are directly above markers
     std::vector<Pose> waypoints;
-    for (const auto &pose : map.poses) {
+    for (const auto &pose : map_.poses) {
       Pose waypoint;
       waypoint.from_msg(pose.pose);
       waypoint.z = cxt_.auv_z_target_;
@@ -209,11 +256,11 @@ namespace orca_base
   // ForwardSequencePlanner
   //=====================================================================================
 
-  void ForwardSequencePlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
+  void ForwardSequencePlanner::plan_segments(const PoseStamped &start)
   {
     // Waypoints are directly in front of markers
     std::vector<Pose> waypoints;
-    for (const auto &pose : map.poses) {
+    for (const auto &pose : map_.poses) {
       geometry_msgs::msg::Pose marker_f_world = map_to_world(pose.pose);
       Pose waypoint;
       waypoint.from_msg(marker_f_world);
@@ -231,34 +278,6 @@ namespace orca_base
     }
 
     plan_waypoints(waypoints, start, false);
-  }
-
-  //=====================================================================================
-  // Body planners
-  //=====================================================================================
-
-  // Move forward and back
-  void BodyXPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
-  {
-    // TODO
-  }
-
-  // Move left and right
-  void BodyYPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
-  {
-    // TODO
-  }
-
-  // Move up and down
-  void BodyZPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
-  {
-    // TODO
-  }
-
-  // Move ccw and cw
-  void BodyYawPlanner::plan(const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start)
-  {
-    // TODO
   }
 
 } // namespace orca_base

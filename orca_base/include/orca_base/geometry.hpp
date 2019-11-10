@@ -18,6 +18,11 @@
 namespace orca_base
 {
 
+  constexpr bool full_pose(const nav_msgs::msg::Odometry &odom)
+  {
+    return odom.pose.covariance[0] < 1e4;
+  }
+
   //=====================================================================================
   // Pose
   //=====================================================================================
@@ -136,7 +141,7 @@ namespace orca_base
       pose.from_msg(msg.pose);
     }
 
-    void from_msg(nav_msgs::msg::Odometry &msg)
+    void from_msg(const nav_msgs::msg::Odometry &msg)
     {
       t = msg.header.stamp;
       pose.from_msg(msg.pose.pose);

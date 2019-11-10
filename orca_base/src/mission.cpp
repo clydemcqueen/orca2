@@ -5,26 +5,21 @@ namespace orca_base
 
   Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<BasePlanner> planner,
-                   const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) :
+                   std::shared_ptr<PlannerBase> planner, const PoseStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
     planner_{std::move(planner)}
   {
     // Create path
-    planner_->plan(map, start);
-    RCLCPP_INFO(logger_, "mission has %d segment(s), segment 0", planner_->segments().size());
+    RCLCPP_INFO(logger_, "mission has %d segment(s), segment 1", planner_->segments().size());
 
     // Init feedback
     if (goal_handle_) {
       feedback_ = std::make_shared<orca_msgs::action::Mission::Feedback>();
       feedback_->segments_completed = 0;
-      feedback_->segments_total = planner_->segments().size();
+      feedback_->segments_total = 0;
     }
-
-    // Start
-    segment_idx_ = 0;
   }
 
   bool Mission::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar)
@@ -61,28 +56,16 @@ namespace orca_base
 
     for (int i = 0; i < num_steps; ++i) {
 
-      if (planner_->segments()[segment_idx_]->advance(dt)) {
-
-        // Advance the current motion segment
-        plan = planner_->segments()[segment_idx_]->plan();
-        ff = planner_->segments()[segment_idx_]->ff();
-
-      } else if (++segment_idx_ < planner_->segments().size()) {
-
-        // The segment is done, move to the next segment
-        RCLCPP_INFO(logger_, "mission segment %d / %d", segment_idx_, planner_->segments().size());
-        plan = planner_->segments()[segment_idx_]->plan();
-        ff = planner_->segments()[segment_idx_]->ff();
-
-        // Send mission feedback
+      auto send_feedback = [&](int completed, int total)
+      {
         if (goal_handle_) {
-          feedback_->segments_completed = segment_idx_;
+          feedback_->segments_completed = completed;
+          feedback_->segments_total = total;
           goal_handle_->publish_feedback(feedback_);
         }
+      };
 
-      } else {
-
-        // No more segments
+      if (!planner_->advance(dt, plan, estimate, u_bar, send_feedback)) {
         RCLCPP_INFO(logger_, "mission complete");
 
         // Send mission results
@@ -94,15 +77,11 @@ namespace orca_base
           feedback_ = nullptr;
         }
 
-        // We're done
         return false;
       }
     }
 
-    // Compute acceleration
-    planner_->controllers()[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
-
-    // More to do
+    // The mission continues
     return true;
   }
 

@@ -4,11 +4,6 @@
 namespace orca_base
 {
 
-  bool full_pose(const nav_msgs::msg::Odometry &odom)
-  {
-    return odom.pose.covariance[0] < 1e4;
-  }
-
   //=============================================================================
   // BaseNode
   //=============================================================================
@@ -278,7 +273,12 @@ namespace orca_base
 
   void BaseNode::auv_advance(double dt)
   {
-    // Publish path for rviz
+    // Publish planned path for rviz
+    if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
+      planned_path_pub_->publish(mission_->planned_path());
+    }
+
+    // Publish actual path for rviz
     if (full_pose(filtered_odom_) && count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
       if (filtered_path_.poses.size() > cxt_.keep_poses_) {
         filtered_path_.poses.clear();
@@ -418,28 +418,23 @@ namespace orca_base
 
     } else if (is_auv_mode(new_mode)) {
 
-      std::shared_ptr<BasePlanner> planner;
+      std::shared_ptr<PlannerBase> planner;
       switch (new_mode) {
         case Control::AUV_KEEP_ORIGIN:
-          planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_);
+          planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_, map_);
           break;
         case Control::AUV_SEQUENCE:
-          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, false);
+          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, map_, false);
           break;
         case Control::AUV_RANDOM:
-          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, true);
+          planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, map_, true);
           break;
         default:
-          planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_);
+          planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_, map_);
           break;
       }
 
-      mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, map_, filtered_pose_);
-
-      // Publish path for rviz
-      if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-        planned_path_pub_->publish(planner->planned_path());
-      }
+      mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, filtered_pose_);
 
       // Init filtered_path
       filtered_path_.header.stamp = joy_cb_.curr();
