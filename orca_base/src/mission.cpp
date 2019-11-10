@@ -8,6 +8,7 @@ namespace orca_base
                    std::shared_ptr<BasePlanner> planner,
                    const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start) :
     logger_{logger},
+    cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
     planner_{std::move(planner)}
   {
@@ -26,7 +27,7 @@ namespace orca_base
     segment_idx_ = 0;
   }
 
-  bool Mission::advance(double dt, Pose &plan, Acceleration &ff)
+  bool Mission::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -56,7 +57,10 @@ namespace orca_base
       dt /= num_steps;
     }
 
+    Acceleration ff;
+
     for (int i = 0; i < num_steps; ++i) {
+
       if (planner_->segments()[segment_idx_]->advance(dt)) {
 
         // Advance the current motion segment
@@ -94,6 +98,9 @@ namespace orca_base
         return false;
       }
     }
+
+    // Compute acceleration
+    planner_->controllers()[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
     // More to do
     return true;

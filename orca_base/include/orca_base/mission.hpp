@@ -15,6 +15,7 @@ namespace orca_base
   class Mission
   {
     rclcpp::Logger logger_;                               // ROS logger
+    const BaseContext &cxt_;                              // Parameters
     std::shared_ptr<BasePlanner> planner_;                // Path planner
     int segment_idx_;                                     // Current segment
 
@@ -30,7 +31,7 @@ namespace orca_base
             const fiducial_vlam_msgs::msg::Map &map, const PoseStamped &start);
 
     // Advance the plan, return true to continue
-    bool advance(double dt, Pose &plan, Acceleration &ff);
+    bool advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar);
 
     // Abort the mission
     void abort();

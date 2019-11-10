@@ -15,11 +15,11 @@ namespace orca_base
   constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m)
   constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r)
 
-//=====================================================================================
-// BaseSegment stays in one spot, holds x, y, z, yaw at start value
-//=====================================================================================
+  //=====================================================================================
+  // Segments describe a trajectory from start to goal over time
+  //=====================================================================================
 
-  class BaseSegment
+  class SegmentBase
   {
   protected:
 
@@ -36,30 +36,51 @@ namespace orca_base
 
   public:
 
-    BaseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+    SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
     // Try to change the goal, return true if it worked
     virtual bool extend(const Pose &start, const Pose &goal)
     { return false; }
 
+    // Return the current (planned) pose
     const Pose &plan() const
     { return plan_; }
 
+    // Return the goal pose
     const Pose &goal() const
     { return goal_; }
 
+    // Return the acceleration required at the moment
     const Acceleration &ff() const
     { return ff_; }
 
-    // Advance the motion plan, return true to continue, false if we're done
-    virtual bool advance(double dt);
+    // Advance the motion plan by dt seconds, return true to continue, false if we're done
+    virtual bool advance(double dt) = 0;
   };
 
-//=====================================================================================
-// VerticalSegment ascends or descends, holds x, y, yaw at start value
-//=====================================================================================
+  //=====================================================================================
+  // Pause stays in one spot for a period of time
+  //=====================================================================================
 
-  class VerticalSegment : public BaseSegment
+  class Pause : public SegmentBase
+  {
+    double seconds_;
+
+  public:
+
+    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds) :
+      SegmentBase(logger, cxt, start, start),
+      seconds_{seconds}
+    {}
+
+    bool advance(double dt) override;
+  };
+
+  //=====================================================================================
+  // VerticalSegment ascends or descends, holds x, y, yaw at start value
+  //=====================================================================================
+
+  class VerticalSegment : public SegmentBase
   {
   public:
 
@@ -68,11 +89,11 @@ namespace orca_base
     bool advance(double dt) override;
   };
 
-//=====================================================================================
-// RotateSegment rotates about a point, holds x, y, z at start value
-//=====================================================================================
+  //=====================================================================================
+  // RotateSegment rotates about a point, holds x, y, z at start value
+  //=====================================================================================
 
-  class RotateSegment : public BaseSegment
+  class RotateSegment : public SegmentBase
   {
   public:
 
@@ -81,11 +102,11 @@ namespace orca_base
     bool advance(double dt) override;
   };
 
-//=====================================================================================
-// LineSegment moves in a straight line, holds z, yaw at start value
-//=====================================================================================
+  //=====================================================================================
+  // LineSegment moves in a straight line, holds z, yaw at start value
+  //=====================================================================================
 
-  class LineSegment : public BaseSegment
+  class LineSegment : public SegmentBase
   {
     void init();
 

@@ -77,6 +77,11 @@ namespace orca_base
       return std::hypot(x - msg.pose.pose.position.x, y - msg.pose.pose.position.y);
     }
 
+    double distance_xy(const geometry_msgs::msg::Pose &msg) const
+    {
+      return std::hypot(x - msg.position.x, y - msg.position.y);
+    }
+
     // Z distance between 2 poses
     double distance_z(const Pose &that) const
     {

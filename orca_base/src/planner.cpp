@@ -30,12 +30,19 @@ namespace orca_base
   // BasePlanner
   //=====================================================================================
 
+  void BasePlanner::add_keep_station_segment(Pose &plan, double seconds)
+  {
+    segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, seconds));
+    controllers_.push_back(std::make_shared<SimpleController>(cxt_));
+  }
+
   void BasePlanner::add_vertical_segment(Pose &plan, double z)
   {
     Pose goal = plan;
     goal.z = z;
     if (plan.distance_z(goal) > EPSILON_PLAN_XYZ) {
       segments_.push_back(std::make_shared<VerticalSegment>(logger_, cxt_, plan, goal));
+      controllers_.push_back(std::make_shared<SimpleController>(cxt_));
     } else {
       RCLCPP_DEBUG(logger_, "skip vertical");
     }
@@ -48,6 +55,7 @@ namespace orca_base
     goal.yaw = yaw;
     if (plan.distance_yaw(goal) > EPSILON_PLAN_YAW) {
       segments_.push_back(std::make_shared<RotateSegment>(logger_, cxt_, plan, goal));
+      controllers_.push_back(std::make_shared<SimpleController>(cxt_));
     } else {
       RCLCPP_DEBUG(logger_, "skip rotate");
     }
@@ -60,9 +68,15 @@ namespace orca_base
     goal.x = x;
     goal.y = y;
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
-      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
+//      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
         segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
-      }
+        if (cxt_.auv_open_water_) {
+          // Ignore x, y and yaw during the run
+          controllers_.push_back(std::make_shared<DepthController>(cxt_));
+        } else {
+          controllers_.push_back(std::make_shared<SimpleController>(cxt_));
+        }
+//      }
     } else {
       RCLCPP_DEBUG(logger_, "skip line");
     }
@@ -93,8 +107,18 @@ namespace orca_base
         // Point in the direction of travel
         add_rotate_segment(plan, atan2(waypoint.y - plan.y, waypoint.x - plan.x));
 
+        // Settle at the current rotation
+        if (cxt_.auv_open_water_) {
+          add_keep_station_segment(plan, 5);
+        }
+
         // Travel
         add_line_segment(plan, waypoint.x, waypoint.y);
+
+        // Settle at the new marker
+        if (cxt_.auv_open_water_) {
+          add_keep_station_segment(plan, 5);
+        }
       } else {
         RCLCPP_DEBUG(logger_, "skip travel");
       }
@@ -105,7 +129,8 @@ namespace orca_base
 
     if (keep_station) {
       // Keep station at the last waypoint
-      segments_.push_back(std::make_shared<BaseSegment>(logger_, cxt_, plan, plan));
+      segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, 1e6));
+      controllers_.push_back(std::make_shared<SimpleController>(cxt_));
     }
 
     // Create a path for diagnostics

@@ -130,7 +130,6 @@ namespace orca_base
 
     // AUV operation
     std::shared_ptr<Mission> mission_;            // The mission we're running
-    std::shared_ptr<ControllerBase> controller_;  // Motion controller
     fiducial_vlam_msgs::msg::Map map_;            // Map of fiducial markers
     nav_msgs::msg::Path filtered_path_;           // Estimate of the actual path (from filtered_pose_)
 

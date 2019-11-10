@@ -14,8 +14,11 @@ namespace orca_base
 
   class BasePlanner
   {
-    std::vector<std::shared_ptr<BaseSegment>> segments_;  // Trajectory segments
-    nav_msgs::msg::Path planned_path_;                    // Path for rviz
+    std::vector<std::shared_ptr<SegmentBase>> segments_;        // Trajectory segments
+    std::vector<std::shared_ptr<ControllerBase>> controllers_;  // Trajectory controllers
+    nav_msgs::msg::Path planned_path_;                          // Path for rviz
+
+    void add_keep_station_segment(Pose &plan, double seconds);
 
     void add_vertical_segment(Pose &plan, double z);
 
@@ -38,8 +41,11 @@ namespace orca_base
 
   public:
 
-    const std::vector<std::shared_ptr<BaseSegment>> &segments() const
+    const std::vector<std::shared_ptr<SegmentBase>> &segments() const
     { return segments_; }
+
+    const std::vector<std::shared_ptr<ControllerBase>> &controllers() const
+    { return controllers_; }
 
     const nav_msgs::msg::Path &planned_path() const
     { return planned_path_; }

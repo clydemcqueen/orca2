@@ -11,10 +11,10 @@ namespace orca_base
   constexpr double END_VELO_YAW = 0.1;  // When yaw velo is < this, end the simulation
 
   //=====================================================================================
-  // BaseSegment
+  // SegmentBase
   //=====================================================================================
 
-  BaseSegment::BaseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
+  SegmentBase::SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
     logger_{logger},
     cxt_{cxt},
     plan_{start},
@@ -26,17 +26,21 @@ namespace orca_base
     ff_ = Acceleration{0, 0, cxt.model_.hover_accel_z(), 0};
   }
 
-  bool BaseSegment::advance(double dt)
-  {
-    (void) dt;
-
-    return true;
-  }
-
-  void BaseSegment::finish()
+  void SegmentBase::finish()
   {
     plan_ = goal_;
     twist_ = Twist{};
+  }
+
+  //=====================================================================================
+  // Pause
+  //=====================================================================================
+
+  bool Pause::advance(double dt)
+  {
+    seconds_ -= dt;
+
+    return seconds_ > 0;
   }
 
   //=====================================================================================
@@ -69,8 +73,7 @@ namespace orca_base
   }
 
   VerticalSegment::VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start,
-                                   const Pose &goal) :
-    BaseSegment(logger, cxt, start, goal)
+                                   const Pose &goal) : SegmentBase(logger, cxt, start, goal)
   {
     assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
 
@@ -139,7 +142,7 @@ namespace orca_base
   }
 
   RotateSegment::RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt,
-                               const Pose &start, const Pose &goal) : BaseSegment(logger, cxt, start, goal)
+                               const Pose &start, const Pose &goal) : SegmentBase(logger, cxt, start, goal)
   {
     assert(start.distance_xy(goal) < EPSILON_PLAN_XYZ || start.distance_z(goal) < EPSILON_PLAN_XYZ);
 
@@ -227,7 +230,7 @@ namespace orca_base
   }
 
   LineSegment::LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal) :
-    BaseSegment(logger, cxt, start, goal)
+    SegmentBase(logger, cxt, start, goal)
   {
     assert(start.distance_z(goal) < EPSILON_PLAN_XYZ && start.distance_yaw(goal) < EPSILON_PLAN_YAW);
     init();

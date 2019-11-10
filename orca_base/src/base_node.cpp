@@ -4,6 +4,11 @@
 namespace orca_base
 {
 
+  bool full_pose(const nav_msgs::msg::Odometry &odom)
+  {
+    return odom.pose.covariance[0] < 1e4;
+  }
+
   //=============================================================================
   // BaseNode
   //=============================================================================
@@ -274,7 +279,7 @@ namespace orca_base
   void BaseNode::auv_advance(double dt)
   {
     // Publish path for rviz
-    if (count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
+    if (full_pose(filtered_odom_) && count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
       if (filtered_path_.poses.size() > cxt_.keep_poses_) {
         filtered_path_.poses.clear();
       }
@@ -284,12 +289,8 @@ namespace orca_base
 
     // Advance plan and compute feedforward
     Pose plan;
-    Acceleration ff;
-    if (mission_->advance(dt, plan, ff)) {
-      // Compute acceleration due to error
-      Acceleration u_bar;
-      controller_->calc(cxt_, dt, plan, filtered_odom_, ff, u_bar);
-
+    Acceleration u_bar;
+    if (mission_->advance(dt, plan, filtered_odom_, u_bar)) {
       // Acceleration => effort
       Efforts efforts;
 //      efforts.from_acceleration(filtered_pose_.pose.yaw, u_bar);
@@ -434,27 +435,6 @@ namespace orca_base
       }
 
       mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, map_, filtered_pose_);
-
-      switch (cxt_.auv_controller_) {
-        case Controllers::SIMPLE:
-          controller_ = std::make_shared<SimpleController>(cxt_);
-          break;
-        case Controllers::IGNORE_ESTIMATE:
-          controller_ = std::make_shared<IgnoreEstimateController>(cxt_);
-          break;
-        case Controllers::DEADZONE:
-          controller_ = std::make_shared<DeadzoneController>(cxt_);
-          break;
-        case Controllers::JERK:
-          controller_ = std::make_shared<JerkController>(cxt_);
-          break;
-        case Controllers::BEST:
-          controller_ = std::make_shared<BestController>(cxt_);
-          break;
-        case Controllers::DEPTH:
-          controller_ = std::make_shared<DepthController>(cxt_);
-          break;
-      }
 
       // Publish path for rviz
       if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
