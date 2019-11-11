@@ -36,6 +36,9 @@ namespace orca_base
 
     // Abort the mission
     void abort();
+
+    // Call the mission a success
+    void complete();
   };
 
 } // namespace orca_base

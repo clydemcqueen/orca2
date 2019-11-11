@@ -68,10 +68,7 @@ namespace orca_base
 
   public:
 
-    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds) :
-      SegmentBase(logger, cxt, start, start),
-      seconds_{seconds}
-    {}
+    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds);
 
     bool advance(double dt) override;
   };

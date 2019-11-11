@@ -44,7 +44,7 @@ namespace orca_base
       segments_.push_back(std::make_shared<VerticalSegment>(logger_, cxt_, plan, goal));
       controllers_.push_back(std::make_shared<SimpleController>(cxt_));
     } else {
-      RCLCPP_DEBUG(logger_, "skip vertical");
+      RCLCPP_INFO(logger_, "skip vertical");
     }
     plan = goal;
   }
@@ -57,7 +57,7 @@ namespace orca_base
       segments_.push_back(std::make_shared<RotateSegment>(logger_, cxt_, plan, goal));
       controllers_.push_back(std::make_shared<SimpleController>(cxt_));
     } else {
-      RCLCPP_DEBUG(logger_, "skip rotate");
+      RCLCPP_INFO(logger_, "skip rotate");
     }
     plan = goal;
   }
@@ -69,31 +69,41 @@ namespace orca_base
     goal.y = y;
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
 //      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
-        segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
-        if (cxt_.auv_open_water_) {
-          // Ignore x, y and yaw during the run
-          controllers_.push_back(std::make_shared<DepthController>(cxt_));
-        } else {
-          controllers_.push_back(std::make_shared<SimpleController>(cxt_));
-        }
+      segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
+      if (cxt_.auv_open_water_) {
+        // Ignore x, y and yaw during the run
+        controllers_.push_back(std::make_shared<DepthController>(cxt_));
+      } else {
+        controllers_.push_back(std::make_shared<SimpleController>(cxt_));
+      }
 //      }
     } else {
-      RCLCPP_DEBUG(logger_, "skip line");
+      RCLCPP_INFO(logger_, "skip line");
     }
     plan = goal;
   }
 
-  void PlannerBase::plan_target(const Pose &target, const PoseStamped &start, bool keep_station)
+  void PlannerBase::plan_trajectory(const PoseStamped &start)
   {
+    RCLCPP_INFO(logger_, "plan trajectory to (%g, %g, %g), %g",
+                targets_[target_idx_].x, targets_[target_idx_].y, targets_[target_idx_].z, targets_[target_idx_].yaw);
+
+    // Generate a series of waypoints to minimize dead reckoning TODO
     std::vector<Pose> waypoints;
-    waypoints.push_back(target);
-    plan_waypoints(waypoints, start, keep_station);
+    waypoints.push_back(targets_[target_idx_]);
+
+    // Plan trajectory through the waypoints, possibly keeping station if this is the last target
+    plan_trajectory(waypoints, start, target_idx_ == targets_.size() - 1 && keep_station_);
   }
 
-  void PlannerBase::plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
+  void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
   {
-    RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s), keeping station at (%g, %g, %g), %g",
-                waypoints.size() - 1, waypoints.back().x, waypoints.back().y, waypoints.back().z, waypoints.back().yaw);
+    RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s)", waypoints.size() - 1);
+
+    // Clear existing segments
+    segments_.clear();
+    controllers_.clear();
+    segment_idx_ = 0;
 
     // Start pose
     Pose plan = start.pose;
@@ -151,16 +161,19 @@ namespace orca_base
       segments_.back()->goal().to_msg(pose_msg.pose);
       planned_path_.poses.push_back(pose_msg);
     }
+
+    assert(!segments_.empty());
   }
 
-  bool PlannerBase::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
-                            const std::function<void(double completed, double total)> &send_feedback)
+  int PlannerBase::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
+                           const std::function<void(double completed, double total)> &send_feedback)
   {
+    PoseStamped current_pose;
+    current_pose.from_msg(estimate);
+
     if (segments_.empty()) {
-      // Build a few segments
-      PoseStamped start;
-      start.from_msg(estimate);
-      plan_segments(start);
+      // Generate a trajectory to the first target
+      plan_trajectory(current_pose);
     }
 
     Acceleration ff;
@@ -174,110 +187,85 @@ namespace orca_base
     } else if (++segment_idx_ < segments_.size()) {
 
       // The segment is done, move to the next segment
+      RCLCPP_INFO(logger_, "segment %d of %d", segment_idx_ + 1, segments_.size());
       plan = segments_[segment_idx_]->plan();
       ff = segments_[segment_idx_]->ff();
 
-      // Send mission feedback
-      RCLCPP_INFO(logger_, "mission segment %d of %d", segment_idx_ + 1, segments_.size());
-      send_feedback(segment_idx_, segments_.size());
+    } else if (++target_idx_ < targets_.size()) {
+
+      // Current trajectory complete, move to the next target
+      RCLCPP_INFO(logger_, "target %d of %d", target_idx_ + 1, targets_.size());
+      send_feedback(target_idx_, targets_.size());
+
+      plan_trajectory(current_pose);
+      plan = segments_[segment_idx_]->plan();
+      ff = segments_[segment_idx_]->ff();
 
     } else {
-
-      // We're done
-      return false;
+      return AdvanceRC::SUCCESS;
     }
 
     // Does this controller need a full pose, and do we have one?
     if (!controllers_[segment_idx_]->dead_reckoning() && !full_pose(estimate)) {
       RCLCPP_ERROR(logger_, "controller needs a full pose, stop mission");
-      return false;
+      return AdvanceRC::FAILURE;
     }
 
     // Compute acceleration
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
-    // The mission continues
-    return true;
-  }
-
-  //=====================================================================================
-  // KeepStationPlanner
-  //=====================================================================================
-
-  void KeepStationPlanner::plan_segments(const PoseStamped &start)
-  {
-    plan_target(start.pose, start, true);
-  }
-
-  //=====================================================================================
-  // KeepOriginPlanner
-  //=====================================================================================
-
-  void KeepOriginPlanner::plan_segments(const PoseStamped &start)
-  {
-    Pose target;
-    target.z = cxt_.auv_z_target_;
-    plan_target(target, start, true);
+    return AdvanceRC::CONTINUE;
   }
 
   //=====================================================================================
   // DownSequencePlanner
   //=====================================================================================
 
-  void DownSequencePlanner::plan_segments(const PoseStamped &start)
+  DownSequencePlanner::DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
+                                           fiducial_vlam_msgs::msg::Map map, bool random) :
+    PlannerBase{logger, cxt, std::move(map), true}
   {
-    bool up_down = false; // !random_;
-
-    // Waypoints are directly above markers
-    std::vector<Pose> waypoints;
+    // Targets are directly above the markers
     for (const auto &pose : map_.poses) {
-      Pose waypoint;
-      waypoint.from_msg(pose.pose);
-      waypoint.z = cxt_.auv_z_target_;
-      waypoints.push_back(waypoint);
-
-      if (up_down) {
-        waypoint.z = -3;
-        waypoints.push_back(waypoint);
-      }
+      Pose target;
+      target.from_msg(pose.pose);
+      target.z = cxt_.auv_z_target_;
+      targets_.push_back(target);
     }
 
-    if (random_) {
-      // Shuffle waypoints
+    if (random) {
+      // Shuffle targets
       std::random_device rd;
       std::mt19937 g(rd());
-      std::shuffle(waypoints.begin(), waypoints.end(), g);
+      std::shuffle(targets_.begin(), targets_.end(), g);
     }
-
-    plan_waypoints(waypoints, start, false);
   }
 
   //=====================================================================================
   // ForwardSequencePlanner
   //=====================================================================================
 
-  void ForwardSequencePlanner::plan_segments(const PoseStamped &start)
+  ForwardSequencePlanner::ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
+                                                 fiducial_vlam_msgs::msg::Map map, bool random) :
+    PlannerBase{logger, cxt, std::move(map), false}
   {
-    // Waypoints are directly in front of markers
-    std::vector<Pose> waypoints;
+    // Targets are directly in front of the markers
     for (const auto &pose : map_.poses) {
       geometry_msgs::msg::Pose marker_f_world = map_to_world(pose.pose);
-      Pose waypoint;
-      waypoint.from_msg(marker_f_world);
-      waypoint.x += cos(waypoint.yaw) * cxt_.auv_xy_distance_;
-      waypoint.y += sin(waypoint.yaw) * cxt_.auv_xy_distance_;
-      waypoint.z = cxt_.auv_z_target_;
-      waypoints.push_back(waypoint);
+      Pose target;
+      target.from_msg(marker_f_world);
+      target.x += cos(target.yaw) * cxt_.auv_xy_distance_;
+      target.y += sin(target.yaw) * cxt_.auv_xy_distance_;
+      target.z = cxt_.auv_z_target_;
+      targets_.push_back(target);
     }
 
-    if (random_) {
-      // Shuffle waypoints
+    if (random) {
+      // Shuffle targets
       std::random_device rd;
       std::mt19937 g(rd());
-      std::shuffle(waypoints.begin(), waypoints.end(), g);
+      std::shuffle(targets_.begin(), targets_.end(), g);
     }
-
-    plan_waypoints(waypoints, start, false);
   }
 
 } // namespace orca_base

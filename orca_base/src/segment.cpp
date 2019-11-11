@@ -36,6 +36,13 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
+  Pause::Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds) :
+    SegmentBase(logger, cxt, start, start),
+    seconds_{seconds}
+  {
+    RCLCPP_INFO(logger_, "pause for %g seconds", seconds);
+  }
+
   bool Pause::advance(double dt)
   {
     seconds_ -= dt;

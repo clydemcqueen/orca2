@@ -12,13 +12,13 @@ namespace orca_base
     planner_{std::move(planner)}
   {
     // Create path
-    RCLCPP_INFO(logger_, "mission has %d segment(s), segment 1", planner_->segments().size());
+    RCLCPP_INFO(logger_, "mission has %d targets(s), target 1", planner_->targets().size());
 
     // Init feedback
     if (goal_handle_) {
       feedback_ = std::make_shared<orca_msgs::action::Mission::Feedback>();
-      feedback_->segments_completed = 0;
-      feedback_->segments_total = 0;
+      feedback_->targets_completed = 0;
+      feedback_->targets_total = 0;
     }
   }
 
@@ -28,8 +28,8 @@ namespace orca_base
     if (goal_handle_ && goal_handle_->is_canceling()) {
       RCLCPP_INFO(logger_, "mission cancelled");
       auto result = std::make_shared<orca_msgs::action::Mission::Result>();
-      result->segments_total = feedback_->segments_total;
-      result->segments_completed = feedback_->segments_completed;
+      result->targets_total = feedback_->targets_total;
+      result->targets_completed = feedback_->targets_completed;
       goal_handle_->canceled(result);
       goal_handle_ = nullptr;
       feedback_ = nullptr;
@@ -59,24 +59,18 @@ namespace orca_base
       auto send_feedback = [&](int completed, int total)
       {
         if (goal_handle_) {
-          feedback_->segments_completed = completed;
-          feedback_->segments_total = total;
+          feedback_->targets_completed = completed;
+          feedback_->targets_total = total;
           goal_handle_->publish_feedback(feedback_);
         }
       };
 
-      if (!planner_->advance(dt, plan, estimate, u_bar, send_feedback)) {
-        RCLCPP_INFO(logger_, "mission complete");
-
-        // Send mission results
-        if (goal_handle_) {
-          auto result = std::make_shared<orca_msgs::action::Mission::Result>();
-          result->segments_completed = result->segments_total = feedback_->segments_total;
-          goal_handle_->succeed(result);
-          goal_handle_ = nullptr;
-          feedback_ = nullptr;
-        }
-
+      auto rc = planner_->advance(dt, plan, estimate, u_bar, send_feedback);
+      if (rc == AdvanceRC::FAILURE) {
+        abort();
+        return false;
+      } else if (rc == AdvanceRC::SUCCESS) {
+        complete();
         return false;
       }
     }
@@ -91,9 +85,22 @@ namespace orca_base
 
     if (goal_handle_) {
       auto result = std::make_shared<orca_msgs::action::Mission::Result>();
-      result->segments_total = feedback_->segments_total;
-      result->segments_completed = feedback_->segments_completed;
+      result->targets_total = feedback_->targets_total;
+      result->targets_completed = feedback_->targets_completed;
       goal_handle_->abort(result);
+      goal_handle_ = nullptr;
+      feedback_ = nullptr;
+    }
+  }
+
+  void Mission::complete()
+  {
+    RCLCPP_INFO(logger_, "mission completed");
+
+    if (goal_handle_) {
+      auto result = std::make_shared<orca_msgs::action::Mission::Result>();
+      result->targets_total = result->targets_completed = feedback_->targets_total;
+      goal_handle_->succeed(result);
       goal_handle_ = nullptr;
       feedback_ = nullptr;
     }

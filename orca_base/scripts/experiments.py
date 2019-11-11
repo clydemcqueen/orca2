@@ -233,14 +233,14 @@ class RunNode(Node):
 
     def feedback_cb(self, feedback):
         self.get_logger().debug(
-            'feedback: {0} out of {1}'.format(feedback.feedback.segments_completed, feedback.feedback.segments_total))
+            'feedback: {0} out of {1}'.format(feedback.feedback.targets_completed, feedback.feedback.targets_total))
 
     def get_result_cb(self, future):
         status = future.result().status
         if status == GoalStatus.STATUS_SUCCEEDED:
             result = future.result().result
             self.get_logger().info(
-                'goal succeeded, result: {0} out of {1}'.format(result.segments_completed, result.segments_total))
+                'goal succeeded, result: {0} out of {1}'.format(result.targets_completed, result.targets_total))
 
             # Calc and report NEES
             self.report_nees()

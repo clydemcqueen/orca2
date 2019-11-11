@@ -420,9 +420,12 @@ namespace orca_base
 
       std::shared_ptr<PlannerBase> planner;
       switch (new_mode) {
-        case Control::AUV_KEEP_ORIGIN:
-          planner = std::make_shared<KeepOriginPlanner>(get_logger(), cxt_, map_);
+        case Control::AUV_KEEP_ORIGIN: {
+          Pose origin;
+          origin.z = cxt_.auv_z_target_;
+          planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, origin, true);
           break;
+        }
         case Control::AUV_SEQUENCE:
           planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, map_, false);
           break;
@@ -430,7 +433,7 @@ namespace orca_base
           planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, map_, true);
           break;
         default:
-          planner = std::make_shared<KeepStationPlanner>(get_logger(), cxt_, map_);
+          planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, filtered_pose_.pose, true);
           break;
       }
 

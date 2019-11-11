@@ -8,6 +8,13 @@
 namespace orca_base
 {
 
+  struct AdvanceRC
+  {
+    static constexpr int CONTINUE = 0;
+    static constexpr int SUCCESS = 1;
+    static constexpr int FAILURE = 2;
+  };
+
   //=====================================================================================
   // PlannerBase
   //=====================================================================================
@@ -16,7 +23,10 @@ namespace orca_base
   {
     std::vector<std::shared_ptr<SegmentBase>> segments_;        // Trajectory segments
     std::vector<std::shared_ptr<ControllerBase>> controllers_;  // Trajectory controllers
+
+    int target_idx_;                                            // Current target
     int segment_idx_;                                           // Current segment
+
     nav_msgs::msg::Path planned_path_;                          // Path for rviz
 
     void add_keep_station_segment(Pose &plan, double seconds);
@@ -33,55 +43,47 @@ namespace orca_base
     const BaseContext &cxt_;
     fiducial_vlam_msgs::msg::Map map_;
 
-    explicit PlannerBase(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map) :
-      logger_{logger}, cxt_{cxt}, map_{std::move(map)}, segment_idx_{}
+    std::vector<Pose> targets_;
+    bool keep_station_;
+
+    PlannerBase(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
+                bool keep_station) :
+      logger_{logger}, cxt_{cxt}, map_{std::move(map)}, keep_station_{keep_station}, target_idx_{0}, segment_idx_{0}
     {}
 
-    void plan_target(const Pose &target, const PoseStamped &start, bool keep_station);
+    // Plan a trajectory to targets_[target_idx_]
+    void plan_trajectory(const PoseStamped &start);
 
-    void plan_waypoints(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station);
-
-    virtual void plan_segments(const PoseStamped &start) = 0;
+    // Plan a trajectory through a series of waypoints
+    void plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station);
 
   public:
 
-    const std::vector<std::shared_ptr<SegmentBase>> &segments() const
-    { return segments_; }
+    const std::vector<Pose> &targets() const
+    { return targets_; }
 
     const nav_msgs::msg::Path &planned_path() const
     { return planned_path_; }
 
-    // Advance the plan, return true to continue
-    bool advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
-                 const std::function<void(double completed, double total)>& send_feedback);
+    // Advance the plan, return AdvanceRC
+    int advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
+                const std::function<void(double completed, double total)> &send_feedback);
   };
 
   //=====================================================================================
-  // KeepStationPlanner -- keep current pose
+  // TargetPlanner -- move to target, optionally keeping station
   //=====================================================================================
 
-  class KeepStationPlanner : public PlannerBase
+  class TargetPlanner : public PlannerBase
   {
   public:
 
-    explicit KeepStationPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map) : PlannerBase{logger, cxt, std::move(map)}
-    {}
-
-    void plan_segments(const PoseStamped &start) override;
-  };
-
-  //=====================================================================================
-  // KeepOriginPlanner -- keep station directly below the origin
-  //=====================================================================================
-
-  class KeepOriginPlanner : public PlannerBase
-  {
-  public:
-
-    explicit KeepOriginPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map) : PlannerBase{logger, cxt, std::move(map)}
-    {}
-
-    void plan_segments(const PoseStamped &start) override;
+    TargetPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
+                  const Pose &target, bool keep_station) :
+      PlannerBase{logger, cxt, std::move(map), keep_station}
+    {
+      targets_.push_back(target);
+    }
   };
 
   //=====================================================================================
@@ -90,16 +92,10 @@ namespace orca_base
 
   class DownSequencePlanner : public PlannerBase
   {
-    bool random_;
-
   public:
 
-    explicit DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map, bool random) :
-      PlannerBase{logger, cxt, std::move(map)},
-      random_{random}
-    {}
-
-    void plan_segments(const PoseStamped &start) override;
+    DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
+                        bool random);
   };
 
   //=====================================================================================
@@ -108,16 +104,10 @@ namespace orca_base
 
   class ForwardSequencePlanner : public PlannerBase
   {
-    bool random_;
-
   public:
 
-    explicit ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map, bool random) :
-      PlannerBase{logger, cxt, std::move(map)},
-      random_{random}
-    {}
-
-    void plan_segments(const PoseStamped &start) override;
+    ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
+                           bool random);
   };
 
 } // namespace orca_base
