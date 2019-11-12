@@ -7,6 +7,32 @@ namespace orca_base
                               const nav_msgs::msg::Odometry &estimate,
                               const Acceleration &ff, Acceleration &u_bar)
   {
+#define UNCERTAINTY_TEST
+#ifdef UNCERTAINTY_TEST
+    // Required for dead reckoning
+
+    u_bar = ff;
+
+    if (estimate.pose.covariance[0 * 7] < 1e4) {
+      x_controller_.set_target(plan.x);
+      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
+    }
+
+    if (estimate.pose.covariance[1 * 7] < 1e4) {
+      y_controller_.set_target(plan.y);
+      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
+    }
+
+    if (estimate.pose.covariance[2 * 7] < 1e4) {
+      z_controller_.set_target(plan.z);
+      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    }
+
+    if (estimate.pose.covariance[5 * 7] < 1e4) {
+      yaw_controller_.set_target(plan.yaw);
+      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
+    }
+#else
     // Set targets
     x_controller_.set_target(plan.x);
     y_controller_.set_target(plan.y);
@@ -18,6 +44,7 @@ namespace orca_base
     u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
     u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
     u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
+#endif
   }
 
   void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan,

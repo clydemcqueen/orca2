@@ -70,12 +70,7 @@ namespace orca_base
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
 //      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
       segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
-      if (cxt_.auv_open_water_) {
-        // Ignore x, y and yaw during the run
-        controllers_.push_back(std::make_shared<DepthController>(cxt_));
-      } else {
-        controllers_.push_back(std::make_shared<SimpleController>(cxt_));
-      }
+      controllers_.push_back(std::make_shared<SimpleController>(cxt_));
 //      }
     } else {
       RCLCPP_INFO(logger_, "skip line");
@@ -172,8 +167,15 @@ namespace orca_base
     current_pose.from_msg(estimate);
 
     if (segments_.empty()) {
-      // Generate a trajectory to the first target
-      plan_trajectory(current_pose);
+      if (full_pose(estimate)) {
+        // Generate a trajectory to the first target
+        RCLCPP_INFO(logger_, "bootstrap plan");
+        plan_trajectory(current_pose);
+      } else {
+        // Can't bootstrap
+        RCLCPP_ERROR(logger_, "unknown pose, can't bootstrap");
+        return AdvanceRC::FAILURE;
+      }
     }
 
     Acceleration ff;
@@ -197,7 +199,20 @@ namespace orca_base
       RCLCPP_INFO(logger_, "target %d of %d", target_idx_ + 1, targets_.size());
       send_feedback(target_idx_, targets_.size());
 
-      plan_trajectory(current_pose);
+      if (full_pose(estimate)) {
+        // Start from known location
+        plan_trajectory(current_pose);
+        RCLCPP_INFO(logger_, "planning for next target from known pose");
+      } else {
+        // Still dead reckoning
+        // Future: run through recovery actions to find the target marker
+        RCLCPP_WARN(logger_, "didn't find target, planning for next target anyway");
+        PoseStamped plan_stamped;
+        plan_stamped.pose = targets_[target_idx_ - 1];
+        plan_stamped.t = estimate.header.stamp;
+        plan_trajectory(plan_stamped);
+      }
+
       plan = segments_[segment_idx_]->plan();
       ff = segments_[segment_idx_]->ff();
 
@@ -205,14 +220,14 @@ namespace orca_base
       return AdvanceRC::SUCCESS;
     }
 
-    // Does this controller need a full pose, and do we have one?
-    if (!controllers_[segment_idx_]->dead_reckoning() && !full_pose(estimate)) {
-      RCLCPP_ERROR(logger_, "controller needs a full pose, stop mission");
-      return AdvanceRC::FAILURE;
-    }
-
     // Compute acceleration
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
+
+    // If error is > 0.5m, then replan
+    if (full_pose(estimate) && current_pose.pose.distance_xy(plan) > 0.8) {
+      RCLCPP_INFO(logger_, "off by %g meters, replan to existing target", current_pose.pose.distance_xy(plan));
+      plan_trajectory(current_pose);
+    }
 
     return AdvanceRC::CONTINUE;
   }
