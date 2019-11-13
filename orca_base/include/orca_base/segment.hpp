@@ -38,6 +38,9 @@ namespace orca_base
 
     SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
+    // Write contents to RCLCPP_INFO
+    virtual void log_info() = 0;
+
     // Try to change the goal, return true if it worked
     virtual bool extend(const Pose &start, const Pose &goal)
     { return false; }
@@ -70,6 +73,8 @@ namespace orca_base
 
     Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds);
 
+    void log_info() override;
+
     bool advance(double dt) override;
   };
 
@@ -83,6 +88,8 @@ namespace orca_base
 
     VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
 
+    void log_info() override;
+
     bool advance(double dt) override;
   };
 
@@ -95,6 +102,8 @@ namespace orca_base
   public:
 
     RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+
+    void log_info() override;
 
     bool advance(double dt) override;
   };
@@ -110,6 +119,8 @@ namespace orca_base
   public:
 
     LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+
+    void log_info() override;
 
     bool extend(const Pose &start, const Pose &goal) override;
 

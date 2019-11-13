@@ -57,6 +57,8 @@ namespace orca_base
     using namespace std::placeholders;
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
     battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
+    auto goal_cb = std::bind(&BaseNode::goal_callback, this, _1);
+    goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1, goal_cb);
     auto leak_cb = std::bind(&BaseNode::leak_callback, this, _1);
     leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
 
@@ -101,6 +103,19 @@ namespace orca_base
     if (msg->low_battery) {
       RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
       disarm(msg->header.stamp);
+    }
+  }
+
+  // Start a mission to move to a particular goal
+  void BaseNode::goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg)
+  {
+    if (disarmed()) {
+      Pose goal;
+      goal.from_msg(msg->pose);
+      goal.z = cxt_.auv_z_target_;
+      set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_GOAL, goal);
+    } else {
+      RCLCPP_ERROR(get_logger(), "must be disarmed to start mission");
     }
   }
 
@@ -248,7 +263,7 @@ namespace orca_base
   {
     // Start the mission
     RCLCPP_INFO(get_logger(), "execute mission %d", goal_handle->get_goal()->mode);
-    set_mode(now(), goal_handle->get_goal()->mode, goal_handle);
+    set_mode(now(), goal_handle->get_goal()->mode, Pose{}, goal_handle);
   }
 
   void BaseNode::rov_advance(const rclcpp::Time &stamp)
@@ -403,7 +418,7 @@ namespace orca_base
   }
 
   // Change operation mode
-  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode,
+  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const Pose &goal,
                           const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle)
   {
     using orca_msgs::msg::Control;
@@ -432,6 +447,10 @@ namespace orca_base
         case Control::AUV_RANDOM:
           planner = std::make_shared<DownSequencePlanner>(get_logger(), cxt_, map_, true);
           break;
+        case Control::AUV_GOAL:
+          planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, goal, false);
+          break;
+        case Control::AUV_KEEP_STATION:
         default:
           planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, filtered_pose_.pose, true);
           break;

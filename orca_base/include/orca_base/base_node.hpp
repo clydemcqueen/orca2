@@ -140,6 +140,7 @@ namespace orca_base
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
@@ -155,6 +156,8 @@ namespace orca_base
     void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first);
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
+
+    void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
     void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
 
@@ -198,7 +201,7 @@ namespace orca_base
 
     void disarm(const rclcpp::Time &msg_time);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode,
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const Pose &goal = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
     bool disarmed()

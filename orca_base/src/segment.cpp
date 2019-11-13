@@ -39,8 +39,11 @@ namespace orca_base
   Pause::Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds) :
     SegmentBase(logger, cxt, start, start),
     seconds_{seconds}
+  {}
+
+  void Pause::log_info()
   {
-    RCLCPP_INFO(logger_, "pause for %g seconds", seconds);
+    RCLCPP_INFO(logger_, "pause for %g seconds", seconds_);
   }
 
   bool Pause::advance(double dt)
@@ -90,7 +93,10 @@ namespace orca_base
     // Drag force => thrust force => acceleration => feedforward
     // Add to the hover acceleration
     ff_.z += Model::force_to_accel(-cxt.model_.drag_force_z(velo_z));
+  }
 
+  void VerticalSegment::log_info()
+  {
     RCLCPP_INFO(logger_, "vertical: start %g, goal %g, ff %g", plan_.z, goal_.z, ff_.z);
   }
 
@@ -158,7 +164,10 @@ namespace orca_base
 
     // Drag torque => thrust torque => acceleration => feedforward
     ff_.yaw = Model::torque_to_accel_yaw(-cxt.model_.drag_torque_yaw(velo_yaw));
+  }
 
+  void RotateSegment::log_info()
+  {
     RCLCPP_INFO(logger_, "rotate: start %g, goal %g, ff %g", plan_.yaw, goal_.yaw, ff_.yaw);
   }
 
@@ -267,7 +276,10 @@ namespace orca_base
     // Drag force => thrust force => acceleration => feedforward
     drag_force_to_accel_xy(cxt_, goal_.yaw, cxt_.auv_xy_speed_ * cos(angle_to_goal),
                            cxt_.auv_xy_speed_ * sin(angle_to_goal), ff_.x, ff_.y);
+  }
 
+  void LineSegment::log_info()
+  {
     RCLCPP_INFO(logger_, "line: start (%g, %g), goal (%g, %g), ff (%g, %g)",
                 plan_.x, plan_.y, goal_.x, goal_.y, ff_.x, ff_.y);
   }

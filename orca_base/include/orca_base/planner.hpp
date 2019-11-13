@@ -37,6 +37,9 @@ namespace orca_base
 
     void add_line_segment(Pose &plan, double x, double y);
 
+    // Plan a trajectory through a series of waypoints
+    void plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start);
+
   protected:
 
     rclcpp::Logger logger_;
@@ -53,9 +56,6 @@ namespace orca_base
 
     // Plan a trajectory to targets_[target_idx_]
     void plan_trajectory(const PoseStamped &start);
-
-    // Plan a trajectory through a series of waypoints
-    void plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station);
 
   public:
 

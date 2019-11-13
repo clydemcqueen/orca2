@@ -87,11 +87,11 @@ namespace orca_base
     std::vector<Pose> waypoints;
     waypoints.push_back(targets_[target_idx_]);
 
-    // Plan trajectory through the waypoints, possibly keeping station if this is the last target
-    plan_trajectory(waypoints, start, target_idx_ == targets_.size() - 1 && keep_station_);
+    // Plan trajectory through the waypoints
+    plan_trajectory(waypoints, start);
   }
 
-  void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start, bool keep_station)
+  void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start)
   {
     RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s)", waypoints.size() - 1);
 
@@ -113,29 +113,32 @@ namespace orca_base
         add_rotate_segment(plan, atan2(waypoint.y - plan.y, waypoint.x - plan.x));
 
         // Settle at the current rotation
-        if (cxt_.auv_open_water_) {
-          add_keep_station_segment(plan, 5);
-        }
+//        if (cxt_.auv_open_water_) {
+//          add_keep_station_segment(plan, 3);
+//        }
 
         // Travel
         add_line_segment(plan, waypoint.x, waypoint.y);
 
         // Settle at the new marker
-        if (cxt_.auv_open_water_) {
-          add_keep_station_segment(plan, 5);
-        }
+//        if (cxt_.auv_open_water_) {
+//          add_keep_station_segment(plan, 3);
+//        }
       } else {
         RCLCPP_DEBUG(logger_, "skip travel");
       }
     }
 
-    // Rotate to the final yaw
-    add_rotate_segment(plan, waypoints.back().yaw);
+    // Special behaviors for the last target
+    if (target_idx_ == targets_.size() - 1) {
+      // Rotate to the final yaw
+      add_rotate_segment(plan, waypoints.back().yaw);
 
-    if (keep_station) {
-      // Keep station at the last waypoint
-      segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, 1e6));
-      controllers_.push_back(std::make_shared<SimpleController>(cxt_));
+      if (keep_station_) {
+        // Keep station
+        segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, 1e6));
+        controllers_.push_back(std::make_shared<SimpleController>(cxt_));
+      }
     }
 
     // Create a path for diagnostics
@@ -158,6 +161,8 @@ namespace orca_base
     }
 
     assert(!segments_.empty());
+    RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
+    segments_[0]->log_info();
   }
 
   int PlannerBase::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
@@ -172,7 +177,6 @@ namespace orca_base
         RCLCPP_INFO(logger_, "bootstrap plan");
         plan_trajectory(current_pose);
       } else {
-        // Can't bootstrap
         RCLCPP_ERROR(logger_, "unknown pose, can't bootstrap");
         return AdvanceRC::FAILURE;
       }
@@ -190,6 +194,7 @@ namespace orca_base
 
       // The segment is done, move to the next segment
       RCLCPP_INFO(logger_, "segment %d of %d", segment_idx_ + 1, segments_.size());
+      segments_[segment_idx_]->log_info();
       plan = segments_[segment_idx_]->plan();
       ff = segments_[segment_idx_]->ff();
 
@@ -204,8 +209,8 @@ namespace orca_base
         plan_trajectory(current_pose);
         RCLCPP_INFO(logger_, "planning for next target from known pose");
       } else {
-        // Still dead reckoning
-        // Future: run through recovery actions to find the target marker
+        // Plan a trajectory as if the AUV is at the previous target (it probably isn't)
+        // Future: run through recovery actions to find a good pose
         RCLCPP_WARN(logger_, "didn't find target, planning for next target anyway");
         PoseStamped plan_stamped;
         plan_stamped.pose = targets_[target_idx_ - 1];
@@ -223,9 +228,9 @@ namespace orca_base
     // Compute acceleration
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
-    // If error is > 0.5m, then replan
+    // If error is > epsilon, then replan
     if (full_pose(estimate) && current_pose.pose.distance_xy(plan) > 0.8) {
-      RCLCPP_INFO(logger_, "off by %g meters, replan to existing target", current_pose.pose.distance_xy(plan));
+      RCLCPP_WARN(logger_, "off by %g meters, replan to existing target", current_pose.pose.distance_xy(plan));
       plan_trajectory(current_pose);
     }
 
