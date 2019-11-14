@@ -3,6 +3,11 @@
 namespace astar
 {
 
+  std::ostream &operator<<(std::ostream &os, CandidateNode const &c)
+  {
+    return os << "{marker: " << c.node << ", g_score: " << c.g_score << ", f_score: " << c.f_score << "}";
+  }
+
   // Return the neighbors of this node
   std::vector<Neighbor> Graph::get_neighbors(node_type node)
   {
@@ -25,24 +30,30 @@ namespace astar
 
     std::cout << "queue: ";
     while (!temp.empty()) {
-      auto node = temp.top();
+      auto c = temp.top();
       temp.pop();
-      std::cout << "{" << node.node << ", " << node.f_score << "}, ";
+      std::cout << c << ", ";
     }
     std::cout << std::endl;
   }
 
   // Follow the parent links to reconstruct the shortest path
-  void Solver::reconstruct_path(node_type idx, std::vector<node_type> &path)
+  void Solver::reconstruct_path(node_type node, std::vector<node_type> &path)
   {
-    if (best_parents_.find(idx) != best_parents_.end()) {
-      reconstruct_path(best_parents_[idx], path);
+    if (best_parents_.find(node) != best_parents_.end()) {
+      reconstruct_path(best_parents_[node], path);
     }
-    path.push_back(idx);
+    std::cout << node << ", ";
+    path.push_back(node);
   }
 
-  Solver::Solver(std::vector<Edge> edges, HeuristicFn h) : graph_{Graph(std::move(edges))}, h_{std::move(h)}
+  void Solver::reset()
   {
+    // Clear everything
+    best_g_score_.clear();
+    best_parents_.clear();
+    open_set_ = std::priority_queue<CandidateNode, std::vector<CandidateNode>, CandidateNode>();
+
     // Initialize best_g_score_ with ~infinity
     for (auto edge : graph_.edges_) {
       best_g_score_[edge.a] = std::numeric_limits<double>::max();
@@ -53,6 +64,8 @@ namespace astar
   // Find the best path from start to destination, return true if successful
   bool Solver::find_shortest_path(node_type start, node_type destination, std::vector<node_type> &result)
   {
+    reset();
+
     // Best distance to start node is always 0
     best_g_score_[start] = 0;
 
@@ -65,11 +78,14 @@ namespace astar
       // Pop the path with the best f_score
       auto current = open_set_.top();
       open_set_.pop();
+      std::cout << "pop " << current << std::endl;
 
       // Are we done?
       if (current.node == destination) {
         result.clear();
+        std::cout << "reconstructed path: ";
         reconstruct_path(destination, result);
+        std::cout << std::endl;
         return true;
       }
 
@@ -92,7 +108,9 @@ namespace astar
           best_parents_[neighbor.node] = current.node;
 
           // Add the neighbor to the open set
-          open_set_.push(CandidateNode(neighbor.node, tentative_g_score, h_(neighbor.node, destination)));
+          auto c = CandidateNode(neighbor.node, tentative_g_score, h_(neighbor.node, destination));
+          std::cout << "push " << c << std::endl;
+          open_set_.push(c);
         }
       }
     }

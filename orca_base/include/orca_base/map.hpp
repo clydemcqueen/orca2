@@ -4,6 +4,7 @@
 #include "fiducial_vlam_msgs/msg/map.hpp"
 
 #include "orca_base/astar.hpp"
+#include "orca_base/base_context.hpp"
 #include "orca_base/geometry.hpp"
 
 namespace orca_base
@@ -12,6 +13,7 @@ namespace orca_base
   class Map
   {
     rclcpp::Logger logger_;
+    const BaseContext &cxt_;
 
     // Marker map from vlam
     fiducial_vlam_msgs::msg::Map::SharedPtr vlam_map_;
@@ -24,7 +26,7 @@ namespace orca_base
 
   public:
 
-    explicit Map(const rclcpp::Logger &logger) : logger_{logger}
+    explicit Map(const rclcpp::Logger &logger, const BaseContext &cxt) : logger_{logger}, cxt_{cxt}
     {}
 
     // Initialize or update the map

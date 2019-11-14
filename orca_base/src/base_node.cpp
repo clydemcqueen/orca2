@@ -8,7 +8,7 @@ namespace orca_base
   // BaseNode
   //=============================================================================
 
-  BaseNode::BaseNode() : Node{"base_node"}, map_{get_logger()}
+  BaseNode::BaseNode() : Node{"base_node"}, map_{get_logger(), cxt_}
   {
     // Suppress IDE warnings
     (void) baro_sub_;

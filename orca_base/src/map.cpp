@@ -3,7 +3,7 @@
 namespace orca_base
 {
 
-  constexpr double MAX_DEAD_RECKONING_DISTANCE = 7;
+  constexpr double MAX_DEAD_RECKONING_DISTANCE = 6;
 
   double distance_xy(const geometry_msgs::msg::PoseWithCovariance &start,
                      const geometry_msgs::msg::PoseWithCovariance &dest)
@@ -57,7 +57,7 @@ namespace orca_base
       }
     }
 
-    RCLCPP_INFO(logger_, "marker %d is closest to (%g, %g)", closest_marker, pose.x, pose.y);
+    RCLCPP_INFO(logger_, "(%g, %g) is closest to marker %d", pose.x, pose.y, closest_marker);
     return closest_marker;
   }
 
@@ -71,6 +71,7 @@ namespace orca_base
       for (auto marker : path) {
         Pose pose;
         pose.from_msg(vlam_map_->poses[index(marker)].pose);
+        pose.z = cxt_.auv_z_target_;
         waypoints.push_back(pose);
       }
       waypoints.push_back(destination_pose);

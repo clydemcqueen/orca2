@@ -77,6 +77,8 @@ namespace astar
     }
   };
 
+  std::ostream &operator<<(std::ostream &os, CandidateNode const &c);
+
   // Find the shortest path in a graph
   class Solver
   {
@@ -98,11 +100,14 @@ namespace astar
 
     void print_open_set();
 
-    void reconstruct_path(node_type idx, std::vector<node_type> &path);
+    void reconstruct_path(node_type node, std::vector<node_type> &path);
+
+    void reset();
 
   public:
 
-    explicit Solver(std::vector<Edge> edges, HeuristicFn h);
+    explicit Solver(std::vector<Edge> edges, HeuristicFn h) : graph_{Graph(std::move(edges))}, h_{std::move(h)}
+    {}
 
     // Find the best path from start to destination, return true if successful
     bool find_shortest_path(node_type start, node_type destination, std::vector<node_type> &result);

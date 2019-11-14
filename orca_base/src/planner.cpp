@@ -5,6 +5,8 @@
 namespace orca_base
 {
 
+  constexpr double MAX_POSE_ERROR = 0.6;
+
   //=====================================================================================
   // Utilities
   //=====================================================================================
@@ -149,6 +151,8 @@ namespace orca_base
       planned_path_.header.stamp = start.t;
       planned_path_.header.frame_id = cxt_.map_frame_;
 
+      planned_path_.poses.clear();
+
       geometry_msgs::msg::PoseStamped pose_msg;
       pose_msg.header.stamp = start.t;
 
@@ -231,8 +235,8 @@ namespace orca_base
     // Compute acceleration
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
-    // If error is > epsilon, then replan
-    if (full_pose(estimate) && current_pose.pose.distance_xy(plan) > 0.8) {
+    // If error is > MAX_POSE_ERROR, then replan
+    if (full_pose(estimate) && current_pose.pose.distance_xy(plan) > MAX_POSE_ERROR) {
       RCLCPP_WARN(logger_, "off by %g meters, replan to existing target", current_pose.pose.distance_xy(plan));
       plan_trajectory(current_pose);
     }
