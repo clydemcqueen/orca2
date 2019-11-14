@@ -83,9 +83,12 @@ namespace orca_base
     RCLCPP_INFO(logger_, "plan trajectory to (%g, %g, %g), %g",
                 targets_[target_idx_].x, targets_[target_idx_].y, targets_[target_idx_].z, targets_[target_idx_].yaw);
 
-    // Generate a series of waypoints to minimize dead reckoning TODO
+    // Generate a series of waypoints to minimize dead reckoning
     std::vector<Pose> waypoints;
-    waypoints.push_back(targets_[target_idx_]);
+    if (!map_.get_waypoints(start.pose, targets_[target_idx_], waypoints)) {
+      RCLCPP_ERROR(logger_, "feeling lucky");
+      waypoints.push_back(targets_[target_idx_]);
+    }
 
     // Plan trajectory through the waypoints
     plan_trajectory(waypoints, start);
@@ -242,11 +245,11 @@ namespace orca_base
   //=====================================================================================
 
   DownSequencePlanner::DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                           fiducial_vlam_msgs::msg::Map map, bool random) :
+                                           Map map, bool random) :
     PlannerBase{logger, cxt, std::move(map), true}
   {
     // Targets are directly above the markers
-    for (const auto &pose : map_.poses) {
+    for (const auto &pose : map_.vlam_map()->poses) {
       Pose target;
       target.from_msg(pose.pose);
       target.z = cxt_.auv_z_target_;
@@ -266,11 +269,11 @@ namespace orca_base
   //=====================================================================================
 
   ForwardSequencePlanner::ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                                 fiducial_vlam_msgs::msg::Map map, bool random) :
+                                                 Map map, bool random) :
     PlannerBase{logger, cxt, std::move(map), false}
   {
     // Targets are directly in front of the markers
-    for (const auto &pose : map_.poses) {
+    for (const auto &pose : map_.vlam_map()->poses) {
       geometry_msgs::msg::Pose marker_f_world = map_to_world(pose.pose);
       Pose target;
       target.from_msg(marker_f_world);

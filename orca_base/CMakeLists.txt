@@ -42,7 +42,9 @@ include_directories(
 
 add_executable(
   base_node
+  src/astar.cpp
   src/base_node.cpp
+  src/map.cpp
   src/mission.cpp
   src/planner.cpp
   src/segment.cpp
@@ -92,16 +94,17 @@ ament_target_dependencies(
 )
 
 #=============
-# Test node
+# Test
 #=============
 
 add_executable(
-  test_node
-  src/test_node.cpp
+  astar_test
+  src/astar.cpp
+  src/astar_test.cpp
 )
 
 ament_target_dependencies(
-  test_node
+  astar_test
   rclcpp
   sensor_msgs
 )

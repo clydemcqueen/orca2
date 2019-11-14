@@ -1,8 +1,7 @@
 #ifndef ORCA_BASE_PLANNER_HPP
 #define ORCA_BASE_PLANNER_HPP
 
-#include "fiducial_vlam_msgs/msg/map.hpp"
-
+#include "orca_base/map.hpp"
 #include "orca_base/segment.hpp"
 
 namespace orca_base
@@ -44,13 +43,12 @@ namespace orca_base
 
     rclcpp::Logger logger_;
     const BaseContext &cxt_;
-    fiducial_vlam_msgs::msg::Map map_;
+    Map map_;
 
     std::vector<Pose> targets_;
     bool keep_station_;
 
-    PlannerBase(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
-                bool keep_station) :
+    PlannerBase(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, bool keep_station) :
       logger_{logger}, cxt_{cxt}, map_{std::move(map)}, keep_station_{keep_station}, target_idx_{0}, segment_idx_{0}
     {}
 
@@ -78,7 +76,7 @@ namespace orca_base
   {
   public:
 
-    TargetPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
+    TargetPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
                   const Pose &target, bool keep_station) :
       PlannerBase{logger, cxt, std::move(map), keep_station}
     {
@@ -94,8 +92,7 @@ namespace orca_base
   {
   public:
 
-    DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
-                        bool random);
+    DownSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, bool random);
   };
 
   //=====================================================================================
@@ -106,8 +103,7 @@ namespace orca_base
   {
   public:
 
-    ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, fiducial_vlam_msgs::msg::Map map,
-                           bool random);
+    ForwardSequencePlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, bool random);
   };
 
 } // namespace orca_base

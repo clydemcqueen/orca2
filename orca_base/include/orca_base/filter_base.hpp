@@ -70,7 +70,7 @@ namespace orca_base
     ukf::ResidualFn r_z_fn_;
     ukf::UnscentedMeanFn mean_z_fn_;
 
-    // Must be default constructible
+    // Must be default constructible to be used in a priority queue
     Measurement() = default;
 
     // 1dof z measurement from a depth message

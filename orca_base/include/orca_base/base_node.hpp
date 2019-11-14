@@ -14,6 +14,7 @@
 #include "orca_msgs/msg/leak.hpp"
 
 #include "orca_base/base_context.hpp"
+#include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
 #include "orca_base/monotonic.hpp"
@@ -130,7 +131,7 @@ namespace orca_base
 
     // AUV operation
     std::shared_ptr<Mission> mission_;            // The mission we're running
-    fiducial_vlam_msgs::msg::Map map_;            // Map of fiducial markers
+    Map map_;                                     // Map of fiducial markers
     nav_msgs::msg::Path filtered_path_;           // Estimate of the actual path (from filtered_pose_)
 
     // Outputs

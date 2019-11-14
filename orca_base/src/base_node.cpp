@@ -8,7 +8,7 @@ namespace orca_base
   // BaseNode
   //=============================================================================
 
-  BaseNode::BaseNode() : Node{"base_node"}
+  BaseNode::BaseNode() : Node{"base_node"}, map_{get_logger()}
   {
     // Suppress IDE warnings
     (void) baro_sub_;
@@ -149,19 +149,19 @@ namespace orca_base
           RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold pressure");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_origin_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_.ok()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_ORIGIN);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep origin");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_.ok()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_KEEP_STATION);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep station");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
-        if (odom_ok(msg->header.stamp) && map_cb_.receiving()) {
+        if (odom_ok(msg->header.stamp) && map_.ok()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_SEQUENCE);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start random mission");
@@ -215,7 +215,7 @@ namespace orca_base
   // New map available
   void BaseNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
-    map_ = *msg;
+    map_.set_vlam_map(msg);
   }
 
   // New odometry available
@@ -241,7 +241,7 @@ namespace orca_base
     std::shared_ptr<const orca_msgs::action::Mission::Goal> goal)
   {
     // Accept a mission if the sub is disarmed, we have odometry and we have a map
-    if (disarmed() && odom_ok(now()) && map_cb_.receiving()) {
+    if (disarmed() && odom_ok(now()) && map_.ok()) {
       RCLCPP_INFO(get_logger(), "mission %d accepted", goal->mode);
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     } else {

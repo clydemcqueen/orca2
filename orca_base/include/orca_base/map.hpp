@@ -3,8 +3,7 @@
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
 
-#include <utility>
-
+#include "orca_base/astar.hpp"
 #include "orca_base/geometry.hpp"
 
 namespace orca_base
@@ -13,32 +12,37 @@ namespace orca_base
   class Map
   {
     rclcpp::Logger logger_;
-    fiducial_vlam_msgs::msg::Map map_;
+
+    // Marker map from vlam
+    fiducial_vlam_msgs::msg::Map::SharedPtr vlam_map_;
+
+    // A* solver
+    std::shared_ptr<astar::Solver> solver_;
 
     // Return the index into map_.ids for a marker
     size_t index(int marker) const;
 
   public:
 
-    Map(const rclcpp::Logger &logger, fiducial_vlam_msgs::msg::Map map) :
-      logger_{logger},
-      map_{std::move(map)}
+    explicit Map(const rclcpp::Logger &logger) : logger_{logger}
     {}
 
-    // These functions:
-    // -- generally ignore z, and work better with down-facing cameras
-    // -- don't consider visibility, e.g., closest_visible_marker might be more useful
+    // Initialize or update the map
+    void set_vlam_map(fiducial_vlam_msgs::msg::Map::SharedPtr map);
 
-    // Returns marker closest to a pose
+    // Get the map
+    fiducial_vlam_msgs::msg::Map::SharedPtr vlam_map() const
+    { return vlam_map_; }
+
+    // True if we have a good map
+    bool ok()
+    { return vlam_map_ != nullptr; }
+
+    // Return the closest marker
     int closest_marker(const Pose &pose) const;
 
-    // Returns a waypoint from start_marker to dest_marker, or dest_marker if there are no good waypoints
-    int next_waypoint(int start_marker, int dest_marker) const;
-
-    // Given a start pose, find a good pose to keep station at a marker
-    Pose keep_station_pose(int marker, const Pose &start_pose) const;
-
-    // TODO add waypoint enum functions from mission.cpp
+    // Use A* to generate a path from start_pose to destination_pose that stays close to the markers
+    bool get_waypoints(const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const;
   };
 
 } // namespace orca_base
