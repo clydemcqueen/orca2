@@ -162,7 +162,7 @@ namespace orca_base
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
         if (odom_ok(msg->header.stamp) && map_.ok()) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_SEQUENCE);
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_RANDOM);
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start random mission");
         }
