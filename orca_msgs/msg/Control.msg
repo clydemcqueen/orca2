@@ -1,6 +1,12 @@
 # Header
 std_msgs/Header header
 
+# 4 DoF error for diagnostics
+orca_msgs/Pose error
+
+# 4 DoF efforts for diagnostics
+orca_msgs/Efforts efforts
+
 # Stability, range [1.0, 0.0]
 float64 stability
 
@@ -10,12 +16,12 @@ float64 odom_lag
 # Mode
 uint8 DISARMED=0            # Thrusters are off, all joystick buttons except "arm" are ignored
 uint8 ROV=1                 # ROV: manual thruster control
-uint8 ROV_HOLD_Z=2          # ROV: hold z
+uint8 ROV_HOLD_PRESSURE=2   # ROV: hold pressure
 uint8 AUV_KEEP_STATION=3    # AUV: hold pose
-uint8 AUV_4=4               # AUV: mission #4
-uint8 AUV_5=5               # AUV: mission #5
-uint8 AUV_6=6               # AUV: mission #6
-uint8 AUV_7=7               # AUV: mission #7
+uint8 AUV_KEEP_ORIGIN=4     # AUV: hold pose at map origin
+uint8 AUV_SEQUENCE=5        # AUV: sequential waypoints
+uint8 AUV_RANDOM=6          # AUV: random waypoints
+uint8 AUV_GOAL=7            # AUV: go to goal, typically set by rviz2
 uint8 AUV_8=8               # AUV: mission #8
 uint8 AUV_9=9               # AUV: mission #9
 uint8 AUV_10=10             # AUV: mission #10

@@ -37,6 +37,7 @@ ament_target_dependencies(
   gazebo_dev
   gazebo_ros
   geometry_msgs
+  orca_base
   orca_msgs
   rclcpp
 )
@@ -72,16 +73,6 @@ ament_target_dependencies(
 )
 ament_export_libraries(OrcaThrusterPlugin)
 
-add_library(OrcaGroundTruthPlugin SHARED src/ground_truth_plugin.cpp)
-ament_target_dependencies(
-  OrcaGroundTruthPlugin
-  gazebo_dev
-  gazebo_ros
-  nav_msgs
-  rclcpp
-)
-ament_export_libraries(OrcaGroundTruthPlugin)
-
 add_library(OrcaIMUPlugin SHARED src/imu_plugin.cpp)
 ament_target_dependencies(
   OrcaIMUPlugin
@@ -92,13 +83,6 @@ ament_target_dependencies(
   sensor_msgs
 )
 ament_export_libraries(OrcaIMUPlugin)
-
-add_executable(orca_gazebo_test src/test.cpp)
-ament_target_dependencies(
-  orca_gazebo_test
-  gazebo_dev
-  geometry_msgs
-)
 
 ## Export dependencies
 ament_export_dependencies(gazebo_dev)
@@ -117,8 +101,6 @@ install(
   OrcaBarometerPlugin
   OrcaBuoyancyPlugin
   OrcaIMUPlugin
-  OrcaGroundTruthPlugin
-  orca_gazebo_test
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

@@ -39,13 +39,24 @@ namespace pid
       Kd_ = Kd;
     }
 
-    // Intuitive constructor
-    Controller(bool angle, double damping_ratio, double natural_frequency)
+    // Ziegler–Nichols constructor
+    // https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
+    Controller(bool angle, double Ku, double Tu)
     {
       angle_ = angle;
-      Kp_ = natural_frequency * natural_frequency * (1 + 2 * damping_ratio);
-      Ki_ = natural_frequency * natural_frequency * natural_frequency;
-      Kd_ = natural_frequency * (1 + 2 * damping_ratio);
+
+#ifdef CLASSIC
+      // Classic
+      Kp_ = 0.6 * Ku;
+      Ki_ = 1.2 * Ku / Tu;
+      Kd_ = 3 * Ku * Tu / 40;
+#else
+      // P controller
+      // This isn't perfect, but it's stable
+      Kp_ = 0.5 * Ku;
+      Ki_ = 0;
+      Kd_ = 0;
+#endif
     }
 
     // Set target
@@ -55,13 +66,16 @@ namespace pid
         norm_angle(target);
       }
 
-      target_ = target;
-      prev_error_ = 0;
-      integral_ = 0;
+      if (std::abs(target - target_) > 0.001) {
+        // std::cout << "set target, from " << target_ << " to " << target << std::endl;
+        target_ = target;
+        prev_error_ = 0;
+        integral_ = 0;
+      }
     }
 
     // Run one calculation
-    double calc(double state, double dt, double bias)
+    double calc(double state, double dt)
     {
       double error = target_ - state;
 
@@ -73,7 +87,7 @@ namespace pid
       double derivative = (error - prev_error_) / dt;
       prev_error_ = error;
 
-      return Kp_ * error + Ki_ * integral_ + Kd_ * derivative + bias;
+      return Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
     }
 
     double target()

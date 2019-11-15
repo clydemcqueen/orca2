@@ -8,6 +8,7 @@
  *    <gazebo>
  *      <plugin name="OrcaDragPlugin" filename="libOrcaDragPlugin.so">
  *        <link name="base_link">
+ *          <fluid_density>997</fluid_density>
  *          <center_of_mass>0 0 -0.2</center_of_mass>
  *          <tether_attach>-0.5, -0.4, 0</tether_attach>
  *          <linear_drag>10 20 30</linear_drag>
@@ -17,10 +18,11 @@
  *      </plugin>
  *    </gazebo>
  *
+ *    <fluid_density> Fluid density in kg/m^3. Default is 997 (freshwater), use 1029 for seawater.
  *    <center_of_mass> Drag force is applied to the center of mass.
  *    <tether_attach> Relative position of tether attachment.
  *    <linear_drag> Linear drag constants. See default calculation.
- *    <angular_drag> Angular drag constants. See defaut calculation.
+ *    <angular_drag> Angular drag constants. See default calculation.
  *    <tether_drag> Tether drag constant. See default calculation.
  *
  * Limitations:
@@ -30,8 +32,13 @@
 namespace gazebo
 {
 
+  constexpr double FRESHWATER_DENSITY = 997;
+
   class OrcaDragPlugin : public ModelPlugin
   {
+    // Orca model
+    orca_base::Model orca_model_;
+
     physics::LinkPtr base_link_;
 
     // Drag force will be applied to the center_of_mass_ (body frame)
@@ -41,10 +48,9 @@ namespace gazebo
     ignition::math::Vector3d tether_attach_{0, 0, 0};
 
     // Drag constants (body frame)
-    ignition::math::Vector3d linear_drag_{orca_base::LINEAR_DRAG_X, orca_base::LINEAR_DRAG_Y, orca_base::LINEAR_DRAG_Z};
-    ignition::math::Vector3d angular_drag_{orca_base::ANGULAR_DRAG_YAW, orca_base::ANGULAR_DRAG_YAW,
-                                           orca_base::ANGULAR_DRAG_YAW};
-    double tether_drag_{orca_base::TETHER_DRAG};
+    ignition::math::Vector3d linear_drag_;
+    ignition::math::Vector3d angular_drag_;
+    double tether_drag_;
 
     event::ConnectionPtr update_connection_;
 
@@ -54,11 +60,13 @@ namespace gazebo
     void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
     {
       std::string link_name{"base_link"};
+      double fluid_density = FRESHWATER_DENSITY;
 
       std::cout << std::endl;
       std::cout << "ORCA DRAG PLUGIN PARAMETERS" << std::endl;
       std::cout << "-----------------------------------------" << std::endl;
       std::cout << "Default link name: " << link_name << std::endl;
+      std::cout << "Default fluid density: " << fluid_density << std::endl;
       std::cout << "Default center of mass: " << center_of_mass_ << std::endl;
       std::cout << "Default tether attachment point: " << tether_attach_ << std::endl;
       std::cout << "Default linear drag: " << linear_drag_ << std::endl;
@@ -74,6 +82,11 @@ namespace gazebo
         if (linkElem->HasAttribute("name")) {
           linkElem->GetAttribute("name")->Get(link_name);
           std::cout << "Link name: " << link_name << std::endl;
+        }
+
+        if (linkElem->HasElement("fluid_density")) {
+          fluid_density = linkElem->GetElement("fluid_density")->Get<double>();
+          std::cout << "Fluid density: " << fluid_density << std::endl;
         }
 
         if (linkElem->HasElement("center_of_mass")) {
@@ -101,6 +114,13 @@ namespace gazebo
           std::cout << "Tether drag: " << tether_drag_ << std::endl;
         }
       }
+
+      // Initialize model from parameters
+      // Angular drag is a wild guess, but should be non-zero
+      orca_model_.fluid_density_ = fluid_density;
+      linear_drag_ = {orca_model_.linear_drag_x(), orca_model_.linear_drag_y(), orca_model_.linear_drag_z()};
+      angular_drag_ = {orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw()};
+      tether_drag_ = orca_model_.tether_drag();
 
       base_link_ = model->GetLink(link_name);
       GZ_ASSERT(base_link_ != nullptr, "Missing link");

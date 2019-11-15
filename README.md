@@ -41,6 +41,7 @@ Build Orca2:
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
+git clone https://github.com/clydemcqueen/ukf.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 cd ~/ros2/orca2_ws
@@ -60,10 +61,13 @@ ros2 launch orca_gazebo sim_launch.py
 
 ## Hardware modifications
 
-This is rough sketch of the hardware modifications I made to the BlueROV2. YMMV.
+This is rough sketch of the hardware modifications I made to my 2017 BlueROV2. YMMV.
 
 * Remove the Pixhawk and its UBEC
 * Remove the Raspberry Pi and its UBEC
+* Replace the Raspberry Pi camera with the BlueRobotics USB low-light camera
+* Replace the R2 ESCs with BlueRobotics R3 ESCs
+* Replace the 8-conductor tether with the BlueRobotics slim tether
 * Install the UP Board and a 4A UBEC
 * Install the Maestro and connect to UP via USB; set the jumper to isolate the Maestro power rail from USB-provide power
 * Connect the Bar30 to the UP I2C and 3.3V power pins
@@ -72,4 +76,4 @@ This is rough sketch of the hardware modifications I made to the BlueROV2. YMMV.
 * Connect the lights signal wire to the Maestro; provide power and ground directly from the battery
 * Connect the leak detector to a Maestro digital input
 * Build a voltage divider to provide a voltage signal from the battery (0-17V) to a Maestro analog input (0-5V)
-* Connect the BlueRobotics USB low-light camera to the UP Board
+* Connect the camera to the UP Board

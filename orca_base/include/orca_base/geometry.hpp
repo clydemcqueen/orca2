@@ -4,10 +4,11 @@
 #include "orca_base/model.hpp"
 #include "orca_base/util.hpp"
 
+#include "orca_msgs/msg/efforts.hpp"
 #include "orca_msgs/msg/pose.hpp"
-#include "orca_msgs/msg/pose_error.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -16,6 +17,11 @@
 
 namespace orca_base
 {
+
+  constexpr bool full_pose(const nav_msgs::msg::Odometry &odom)
+  {
+    return odom.pose.covariance[0] < 1e4;
+  }
 
   //=====================================================================================
   // Pose
@@ -53,6 +59,7 @@ namespace orca_base
 
     void from_msg(const geometry_msgs::msg::Pose &msg)
     {
+      // Convert ROS Pose to Orca2 Pose by dropping roll & pitch
       x = msg.position.x;
       y = msg.position.y;
       z = msg.position.z;
@@ -65,16 +72,19 @@ namespace orca_base
       return std::hypot(x - that.x, y - that.y);
     }
 
-    // X distance between 2 poses
-    double distance_x(const Pose &that) const
+    double distance_xy(double _x, double _y) const
     {
-      return std::abs(x - that.x);
+      return std::hypot(x - _x, y - _y);
     }
 
-    // Y distance between 2 poses
-    double distance_y(const Pose &that) const
+    double distance_xy(const nav_msgs::msg::Odometry &msg) const
     {
-      return std::abs(y - that.y);
+      return std::hypot(x - msg.pose.pose.position.x, y - msg.pose.pose.position.y);
+    }
+
+    double distance_xy(const geometry_msgs::msg::Pose &msg) const
+    {
+      return std::hypot(x - msg.position.x, y - msg.position.y);
     }
 
     // Z distance between 2 poses
@@ -83,19 +93,29 @@ namespace orca_base
       return std::abs(z - that.z);
     }
 
+    double distance_z(const nav_msgs::msg::Odometry &msg) const
+    {
+      return std::abs(z - msg.pose.pose.position.z);
+    }
+
     // Yaw distance between 2 poses
     double distance_yaw(const Pose &that) const
     {
       return std::abs(norm_angle(yaw - that.yaw));
     }
 
+    double distance_yaw(const nav_msgs::msg::Odometry &msg) const
+    {
+      return std::abs(norm_angle(yaw - get_yaw(msg.pose.pose.orientation)));
+    }
+
     Pose error(const Pose &that) const
     {
       Pose e;
-      e.x = distance_x(that);
-      e.y = distance_y(that);
-      e.z = distance_z(that);
-      e.yaw = distance_yaw(that);
+      e.x = x - that.x;
+      e.y = y - that.y;
+      e.z = z - that.z;
+      e.yaw = norm_angle(yaw - that.yaw);
       return e;
     }
   };
@@ -107,85 +127,38 @@ namespace orca_base
   struct PoseStamped
   {
     rclcpp::Time t;
-    int64_t nanoseconds; // TODO debug
     Pose pose;
 
     void to_msg(geometry_msgs::msg::PoseStamped &msg) const
     {
       msg.header.stamp = t;
-      // msg.header.frame_id TODO for round trip
       pose.to_msg(msg.pose);
     }
 
     void from_msg(const geometry_msgs::msg::PoseStamped &msg)
     {
       t = msg.header.stamp;
-      nanoseconds = t.nanoseconds();
       pose.from_msg(msg.pose);
     }
 
-    void from_msg(nav_msgs::msg::Odometry &msg)
+    void from_msg(const nav_msgs::msg::Odometry &msg)
     {
       t = msg.header.stamp;
       pose.from_msg(msg.pose.pose);
     }
 
-    void add_to_path(nav_msgs::msg::Path &path)
+    void from_msg(geometry_msgs::msg::PoseWithCovarianceStamped &msg)
+    {
+      t = msg.header.stamp;
+      pose.from_msg(msg.pose.pose);
+    }
+
+    void add_to_path(nav_msgs::msg::Path &path) const
     {
       geometry_msgs::msg::PoseStamped msg;
       to_msg(msg);
       msg.header.frame_id = path.header.frame_id;
       path.poses.push_back(msg);
-    }
-  };
-
-  //=====================================================================================
-  // PoseError
-  //=====================================================================================
-
-  struct PoseError
-  {
-    Pose plan;      // Planned pose -- where we hoped to be
-    Pose estimate;  // Estimated pose -- where we think we are
-    Pose error;     // Error
-
-    Pose sse;       // Sum of the squared errors
-    int64_t steps;  // Steps
-
-    constexpr PoseError() : steps{0}
-    {}
-
-    void add_error()
-    {
-      error = estimate.error(plan);
-      sse.x += error.x * error.x;
-      sse.y += error.y * error.y;
-      sse.z += error.z * error.z;
-      sse.yaw += error.yaw * error.yaw;
-      steps++;
-    }
-
-    Pose rms() const
-    {
-      Pose r;
-      if (steps > 0) {
-        r.x = sqrt(sse.x / steps);
-        r.y = sqrt(sse.y / steps);
-        r.z = sqrt(sse.z / steps);
-        r.yaw = sqrt(sse.yaw / steps);
-
-      }
-      return r;
-    }
-
-    void to_msg(orca_msgs::msg::PoseError &msg) const
-    {
-      plan.to_msg(msg.plan);
-      estimate.to_msg(msg.estimate);
-      error.to_msg(msg.error);
-      sse.to_msg(msg.sse);
-      msg.steps = steps;
-      rms().to_msg(msg.rms);
     }
   };
 
@@ -228,6 +201,21 @@ namespace orca_base
 
     constexpr Acceleration(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
+
+    void add(const Acceleration &that)
+    {
+      x += that.x;
+      y += that.y;
+      z += that.z;
+      yaw += that.yaw;
+    }
+
+    std::string str()
+    {
+      std::stringstream ss;
+      ss << "(" << x << ", " << y << ", " << z << ", " << yaw << ")";
+      return ss.str();
+    }
   };
 
   //=====================================================================================
@@ -247,16 +235,16 @@ namespace orca_base
     Efforts() : forward_{0}, strafe_{0}, vertical_{0}, yaw_{0}
     {}
 
-    double forward()
+    double forward() const
     { return forward_; }
 
-    double strafe()
+    double strafe() const
     { return strafe_; }
 
-    double vertical()
+    double vertical() const
     { return vertical_; }
 
-    double yaw()
+    double yaw() const
     { return yaw_; }
 
     void set_forward(double forward)
@@ -279,18 +267,55 @@ namespace orca_base
       yaw_ = 0;
     }
 
-    void from_acceleration(const Acceleration &u_bar, const double current_yaw)
+    void from_acceleration(const double current_yaw, const Acceleration &u_bar)
     {
       // Convert from world frame to body frame
-      double x_effort = accel_to_effort_xy(u_bar.x);
-      double y_effort = accel_to_effort_xy(u_bar.y);
+      double x_effort = Model::accel_to_effort_xy(u_bar.x);
+      double y_effort = Model::accel_to_effort_xy(u_bar.y);
       double forward, strafe;
       rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
 
       set_forward(forward);
       set_strafe(strafe);
-      set_vertical(accel_to_effort_z(u_bar.z));
-      set_yaw(accel_to_effort_yaw(u_bar.yaw));
+      set_vertical(Model::accel_to_effort_z(u_bar.z));
+      set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
+    }
+
+    void to_acceleration(const double current_yaw, Acceleration &u_bar)
+    {
+      double forward_accel = Model::effort_to_accel_xy(forward_);
+      double strafe_accel = Model::effort_to_accel_xy(strafe_);
+      u_bar.z = Model::effort_to_accel_z(vertical_);
+      u_bar.yaw = Model::effort_to_accel_yaw(yaw_);
+
+      // Convert from body frame to world frame
+      rotate_frame(forward_accel, strafe_accel, -current_yaw, u_bar.x, u_bar.y);
+    }
+
+    void scale(double factor)
+    {
+      // Scale efforts by a factor, useful for throttling
+      set_forward(forward_ * factor);
+      set_strafe(strafe_ * factor);
+      set_vertical(vertical_ * factor);
+      set_yaw(yaw_ * factor);
+    }
+
+    void to_msg(orca_msgs::msg::Efforts &msg) const
+    {
+      msg.forward = forward_;
+      msg.strafe = strafe_;
+      msg.vertical = vertical_;
+      msg.yaw = yaw_;
+    }
+
+    void from_msg(const orca_msgs::msg::Efforts &msg)
+    {
+      forward_ = msg.forward;
+      strafe_ = msg.strafe;
+      vertical_ = msg.vertical;
+      yaw_ = msg.yaw;
+
     }
   };
 

@@ -4,7 +4,7 @@
 Build Gazebo world and fiducial_vlam map files from a list of markers and poses
 Usage:
     cd src/orca2/orca_gazebo/worlds
-    build_world.py
+    python3 build_world.py
 
 Marker format: [marker_num, x, y, z, roll, pitch, yaw]
 
@@ -75,6 +75,29 @@ markers:
     map_file.close()
 
 
+# Huge, sparse pool: 16m x 16m x 4m deep
+huge_pool = [
+    [0, 4, 0, -4, 0, 0, 0],
+    [1, 4, 4, -4, 0, 0, 0],
+    [2, 4, 8, -4, 0, 0, 0],
+    [3, 4, 12, -4, 0, 0, 0],
+
+    [4, 0, 12, -4, 0, 0, 0],
+    [5, 0, 8, -4, 0, 0, 0],
+    [6, 0, 4, -4, 0, 0, 0],
+    [7, 0, 0, -4, 0, 0, 0],
+
+    [8, -4, 0, -4, 0, 0, 0],
+    [9, -4, 4, -4, 0, 0, 0],
+    [10, -4, 8, -4, 0, 0, 0],
+    [11, -4, 12, -4, 0, 0, 0],
+
+    [12, -8, 12, -4, 0, 0, 0],
+    [13, -8, 8, -4, 0, 0, 0],
+    [14, -8, 4, -4, 0, 0, 0],
+    [15, -8, 0, -4, 0, 0, 0],
+]
+
 # Large pool: 8m x 8m x 4m deep
 large_pool = [
     [0, 2, 0, -4, 0, 0, 0],
@@ -98,27 +121,50 @@ large_pool = [
     [15, -4, 0, -4, 0, 0, 0],
 ]
 
-# Small pool: 4m diameter x 1m deep
+# Medium pool: 6m x 6m x 3m deep, markers in a tight square
+medium_square = [
+    [0, 0, 0, -3, 0, 0, 0],
+    [1, 0, 1, -3, 0, 0, 0],
+    [2, 0, 2, -3, 0, 0, 0],
+    [3, 0, 3, -3, 0, 0, 0],
+    [4, 0, 4, -3, 0, 0, 0],
+
+    [5, 1, 4, -3, 0, 0, 0],
+    [6, 2, 4, -3, 0, 0, 0],
+    [7, 3, 4, -3, 0, 0, 0],
+
+    [8, 4, 4, -3, 0, 0, 0],
+    [9, 4, 3, -3, 0, 0, 0],
+    [10, 4, 2, -3, 0, 0, 0],
+    [11, 4, 1, -3, 0, 0, 0],
+    [12, 4, 0, -3, 0, 0, 0],
+
+    [13, 3, 0, -3, 0, 0, 0],
+    [14, 2, 0, -3, 0, 0, 0],
+    [15, 1, 0, -3, 0, 0, 0],
+]
+
+# Small pool: 4m diameter x 3m deep
 small_pool = [
-    [0, 1, 0, -1, 0, 0, 0],
-    [1, 1, 1, -1, 0, 0, 0],
-    [2, 1, 2, -1, 0, 0, 0],
-    [3, 1, 3, -1, 0, 0, 0],
+    [0, 1, 0, -3, 0, 0, 0],
+    [1, 1, 1, -3, 0, 0, 0],
+    [2, 1, 2, -3, 0, 0, 0],
+    [3, 1, 3, -3, 0, 0, 0],
 
-    [4, 0, 3, -1, 0, 0, 0],
-    [5, 0, 2, -1, 0, 0, 0],
-    [6, 0, 1, -1, 0, 0, 0],
-    [7, 0, 0, -1, 0, 0, 0],
+    [4, 0, 3, -3, 0, 0, 0],
+    [5, 0, 2, -3, 0, 0, 0],
+    [6, 0, 1, -3, 0, 0, 0],
+    [7, 0, 0, -3, 0, 0, 0],
 
-    [8, -1, 0, -1, 0, 0, 0],
-    [9, -1, 1, -1, 0, 0, 0],
-    [10, -1, 2, -1, 0, 0, 0],
-    [11, -1, 3, -1, 0, 0, 0],
+    [8, -1, 0, -3, 0, 0, 0],
+    [9, -1, 1, -3, 0, 0, 0],
+    [10, -1, 2, -3, 0, 0, 0],
+    [11, -1, 3, -3, 0, 0, 0],
 
-    [12, -2, 3, -1, 0, 0, 0],
-    [13, -2, 2, -1, 0, 0, 0],
-    [14, -2, 1, -1, 0, 0, 0],
-    [15, -2, 0, -1, 0, 0, 0],
+    [12, -2, 3, -3, 0, 0, 0],
+    [13, -2, 2, -3, 0, 0, 0],
+    [14, -2, 1, -3, 0, 0, 0],
+    [15, -2, 0, -3, 0, 0, 0],
 ]
 
 
@@ -135,13 +181,16 @@ def gen_ring_of_markers(num_markers, radius, z):
 # Pool test #2: 4m diameter x 1m deep, markers on walls
 pt2 = list(gen_ring_of_markers(num_markers=12, radius=3.51/2, z=-0.5))
 
-# Even simpler pool test #2: 1 marker on the wall
+# Even simpler pool test #2: 1 marker on the wall and 1 on the floor
 small_simple = [
-    [0, 2, 0, -0.5, 0, -math.pi / 2, 0]
+    [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
+    [1, 1, 1, -3, 0, 0, 0],
 ]
 
 worlds = [
+    ['huge.world', 'huge_map.yaml', huge_pool],
     ['large.world', 'large_map.yaml', large_pool],
+    ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],
     ['pt2.world', 'pt2_map.yaml', pt2],
     ['simple.world', 'simple_map.yaml', small_simple],

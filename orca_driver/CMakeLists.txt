@@ -71,7 +71,7 @@ ament_target_dependencies(
 # Install
 #=============
 
-## Install C++ targets
+# Install C++ targets
 install(
   TARGETS driver_node test_node
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
@@ -86,7 +86,7 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
-## Install various directories
+# Install various directories
 install(
   DIRECTORY launch cfg maps
   DESTINATION share/${PROJECT_NAME}

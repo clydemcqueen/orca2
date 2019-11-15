@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+
+<sdf version="1.6">
+    <world name="default">
+
+        <include>
+            <uri>model://sun</uri>
+        </include>
+
+<!--        <include>-->
+<!--            <uri>model://ground_plane</uri>-->
+<!--        </include>-->
+
+        <model name="marker0">
+            <include>
+                <static>true</static>
+                <uri>model://marker_0</uri>
+            </include>
+            <pose>2 0 0 0 -1.5707963267948966 0</pose>
+        </model>
+
+        <model name="marker1">
+            <include>
+                <static>true</static>
+                <uri>model://marker_1</uri>
+            </include>
+            <pose>0 0 -2 0 0 0</pose>
+        </model>
+
+    </world>
+</sdf>

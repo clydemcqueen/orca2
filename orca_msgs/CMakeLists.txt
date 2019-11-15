@@ -32,13 +32,15 @@ find_package(std_msgs REQUIRED)
 # Generate ROS messages
 rosidl_generate_interfaces(
   orca_msgs
+  action/Mission.action
   msg/Barometer.msg
   msg/Battery.msg
   msg/Control.msg
+  msg/Depth.msg
+  msg/Efforts.msg
   msg/Leak.msg
   msg/Proc.msg
   msg/Pose.msg
-  msg/PoseError.msg
   msg/PoseStamped.msg
   DEPENDENCIES std_msgs
 )

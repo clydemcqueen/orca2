@@ -36,8 +36,8 @@ def inject(xml: str, initial_pose: Pose):
     rclpy.shutdown()
 
 
-if len(sys.argv) < 6:
-    print('usage: ros2 run orca_gazebo inject_entity.py -- foo.urdf initial_x initial_y initial_z initial_yaw')
+if len(sys.argv) < 8:
+    print('usage: ros2 run orca_gazebo inject_entity.py -- foo.urdf x y z roll pitch yaw')
     sys.exit(1)
 
 f = open(sys.argv[1], 'r')
@@ -46,7 +46,7 @@ p = Pose()
 p.position.x = float(sys.argv[2])
 p.position.y = float(sys.argv[3])
 p.position.z = float(sys.argv[4])
-q = transformations.quaternion_from_euler(0, 0, float(sys.argv[5]))
+q = transformations.quaternion_from_euler(float(sys.argv[5]), float(sys.argv[6]), float(sys.argv[7]))
 p.orientation.w = q[0]
 p.orientation.x = q[1]
 p.orientation.y = q[2]

@@ -1,6 +1,5 @@
 #include "orca_base/util.hpp"
 
-#include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_base
@@ -12,12 +11,17 @@ namespace orca_base
     y_r = y * cos(theta) - x * sin(theta);
   }
 
-  double get_yaw(const geometry_msgs::msg::Quaternion &geometry_q)
+  void get_rpy(const geometry_msgs::msg::Quaternion &q, double &roll, double &pitch, double &yaw)
   {
     tf2::Quaternion tf2_q;
-    tf2::fromMsg(geometry_q, tf2_q);
-    double roll = 0, pitch = 0, yaw = 0;
+    tf2::fromMsg(q, tf2_q);
     tf2::Matrix3x3(tf2_q).getRPY(roll, pitch, yaw);
+  }
+
+  double get_yaw(const geometry_msgs::msg::Quaternion &q)
+  {
+    double roll = 0, pitch = 0, yaw = 0;
+    get_rpy(q, roll, pitch, yaw);
     return yaw;
   }
 
@@ -29,6 +33,44 @@ namespace orca_base
   bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
   {
     return curr->axes[axis] && !prev.axes[axis];
+  }
+
+  std::string to_str_rpy(const tf2::Transform &t)
+  {
+    double roll, pitch, yaw;
+    t.getBasis().getRPY(roll, pitch, yaw);
+    std::stringstream s;
+    s <<
+      "xyz(" << t.getOrigin().x() << ", " << t.getOrigin().y() << ", " << t.getOrigin().z() << ") " <<
+      "rpy(" << roll << ", " << pitch << ", " << yaw << ") ";
+    return s.str();
+  }
+
+  std::string to_str_q(const tf2::Transform &t)
+  {
+    std::stringstream s;
+    s <<
+      "xyz(" << t.getOrigin().x() << ", " << t.getOrigin().y() << ", " << t.getOrigin().z() << ") " <<
+      "q(" << t.getRotation().x() << ", " << t.getRotation().y() << ", " << t.getRotation().z() << ", " <<
+      t.getRotation().w() << ")";
+    return s.str();
+  }
+
+  std::string to_str(const rclcpp::Time &t)
+  {
+    return to_str(builtin_interfaces::msg::Time{t});
+  }
+
+  std::string to_str(const builtin_interfaces::msg::Time &t)
+  {
+    std::stringstream s;
+    s << "{" << t.sec << "s + " << t.nanosec << "ns (~" << static_cast<int>(t.nanosec / 1000000) << "ms)}";
+    return s.str();
+  }
+
+  bool valid_stamp(const rclcpp::Time &stamp)
+  {
+    return stamp.nanoseconds() > 0;
   }
 
 } // namespace orca_base

@@ -1,1 +1,1 @@
-ros2 bag record -o bags/bag2 clock error control depth forward_camera/odom forward_camera/filtered_odom planned_path filtered_path tf tf_static
+ros2 bag record -o bags/wall_bag control barometer forward_camera/camera_pose left_camera/camera_pose right_camera/camera_pose tf tf_static
