@@ -29,6 +29,7 @@ find_package(sensor_msgs REQUIRED)
 
 set(mraa_INCLUDE_DIRS "/usr/include")
 set(mraa_LIBRARIES "/usr/lib/x86_64-linux-gnu/libmraa.so")
+set(mraa_FOUND true)
 
 # Package includes not needed for CMake >= 2.8.11
 include_directories(

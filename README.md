@@ -8,8 +8,8 @@ Orca2 is a [ROS2](http://www.ros.org/) AUV (Autonomous Underwater Vehicle) based
 Orca2 runs in [Gazebo](http://gazebosim.org/), a SITL (software-in-the-loop) simulator.
 Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or laptop.
 
-[Install ROS2 Dashing](https://index.ros.org/doc/ros2/Installation/)
-with the `ros-dashing-desktop` option.
+[Install ROS2 Eloquent](https://index.ros.org/doc/ros2/Installation/)
+with the `ros-eloquent-desktop` option.
 If you install binaries, be sure to also install the development tools and ROS tools from the
 [source installation instructions](https://index.ros.org/doc/ros2/Installation/Linux-Development-Setup/).
 
@@ -20,7 +20,7 @@ sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 
 Install these ROS packages:
 ~~~
-sudo apt install ros-dashing-cv-bridge ros-dashing-camera-calibration-parsers ros-dashing-camera-info-manager ros-dashing-gazebo-ros-pkgs
+sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs
 ~~~
 
 Install MRAA header:
@@ -45,14 +45,14 @@ git clone https://github.com/clydemcqueen/ukf.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 cd ~/ros2/orca2_ws
-source /opt/ros/dashing/setup.bash
+source /opt/ros/eloquent/setup.bash
 colcon build
 ~~~
 
 Run the simulation:
 ~~~
 cd ~/ros2/orca_ws
-source /opt/ros/dashing/setup.bash
+source /opt/ros/eloquent/setup.bash
 source install/local_setup.bash
 export GAZEBO_MODEL_PATH=${PWD}/install/orca_gazebo/share/orca_gazebo/models
 source /usr/share/gazebo/setup.sh
