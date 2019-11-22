@@ -3,78 +3,61 @@
 namespace orca_base
 {
 
+  // Max dead reckoning distance in meters
   constexpr double MAX_DEAD_RECKONING_DISTANCE = 6;
 
-  double distance_xy(const geometry_msgs::msg::PoseWithCovariance &start,
-                     const geometry_msgs::msg::PoseWithCovariance &dest)
-  {
-    return std::hypot(dest.pose.position.x - start.pose.position.x, dest.pose.position.y - start.pose.position.y);
-  }
-
-  size_t Map::index(int marker) const
-  {
-    for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      if (marker == vlam_map_->ids[i]) {
-        return i;
-      }
-    }
-
-    throw (std::runtime_error("marker not found"));
-  }
-
-  void Map::set_vlam_map(fiducial_vlam_msgs::msg::Map::SharedPtr map)
-  {
-    vlam_map_ = std::move(map);
-
-    // Enumerate all paths between markers that are < MAX_DEAD_RECKONING_DISTANCE
-    std::vector<astar::Edge> short_paths;
-    for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      for (size_t j = i + 1; j < vlam_map_->ids.size(); ++j) {
-        double distance = distance_xy(vlam_map_->poses[i], vlam_map_->poses[j]);
-        if (distance < MAX_DEAD_RECKONING_DISTANCE) {
-          short_paths.emplace_back(vlam_map_->ids[i], vlam_map_->ids[j], distance);
-        }
-      }
-    }
-
-    // Create an A* solver that we can use to navigate between markers that are further away
-    solver_ = std::make_shared<astar::Solver>(short_paths, [this](astar::node_type a, astar::node_type b) -> double
-    {
-      return distance_xy(vlam_map_->poses[index(a)], vlam_map_->poses[index(b)]);
-    });
-  }
-
-  int Map::closest_marker(const Pose &pose) const
-  {
-    int closest_marker = -1;
-    double closest_marker_distance = std::numeric_limits<double>::max();
-
-    for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      auto distance = pose.distance_xy(vlam_map_->poses[i].pose);
-      if (distance < closest_marker_distance) {
-        closest_marker = vlam_map_->ids[i];
-        closest_marker_distance = distance;
-      }
-    }
-
-    RCLCPP_INFO(logger_, "(%g, %g) is closest to marker %d", pose.x, pose.y, closest_marker);
-    return closest_marker;
-  }
+  // Pseudo marker IDs
+  constexpr astar::node_type START_ID = -1;
+  constexpr astar::node_type DESTINATION_ID = -2;
 
   bool Map::get_waypoints(const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const
   {
     waypoints.clear();
 
+    // Create a map of marker ids to poses, including the start and destination pose
+    std::map<astar::node_type, Pose> poses;
+
+    // Add start pose to map
+    auto start_z_target = start_pose;
+    start_z_target.z = cxt_.auv_z_target_;
+    poses[START_ID] = start_z_target;
+
+    // Add destination pose to map
+    auto destination_z_target = destination_pose;
+    destination_z_target.z = cxt_.auv_z_target_;
+    poses[DESTINATION_ID] = destination_z_target;
+
+    // Add all of the markers to the map
+    for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
+      Pose pose;
+      pose.from_msg(vlam_map_->poses[i].pose);
+      pose.z = cxt_.auv_z_target_;
+      poses[vlam_map_->ids[i]] = pose;
+    }
+
+    // Enumerate all edges between markers that are < MAX_DEAD_RECKONING_DISTANCE
+    std::vector<astar::Edge> short_paths;
+    for (auto i = poses.begin(); i != poses.end(); ++i) {
+      for (auto j = std::next(i); j != poses.end(); ++j) {
+        auto distance = i->second.distance_xy(j->second);
+        if (distance < MAX_DEAD_RECKONING_DISTANCE) {
+          short_paths.emplace_back(i->first, j->first, distance);
+        }
+      }
+    }
+
+    // Create an A* solver that we can use to navigate between markers that are further away
+    auto solver = std::make_shared<astar::Solver>(short_paths, [&](astar::node_type a, astar::node_type b) -> double
+    {
+      return poses[a].distance_xy(poses[b]);
+    });
+
     // Find the shortest path from the start pose to the destination pose through markers
     std::vector<astar::node_type> path;
-    if (solver_->find_shortest_path(closest_marker(start_pose), closest_marker(destination_pose), path)) {
+    if (solver->find_shortest_path(START_ID, DESTINATION_ID, path)) {
       for (auto marker : path) {
-        Pose pose;
-        pose.from_msg(vlam_map_->poses[index(marker)].pose);
-        pose.z = cxt_.auv_z_target_;
-        waypoints.push_back(pose);
+        waypoints.push_back(poses[marker]);
       }
-      waypoints.push_back(destination_pose);
       return true;
     } else {
       RCLCPP_ERROR(logger_, "A* failed to find a path through the markers");
