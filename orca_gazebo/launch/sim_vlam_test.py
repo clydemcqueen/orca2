@@ -23,11 +23,10 @@ def generate_launch_description():
     down_camera_name = 'down_camera'
     down_camera_frame = 'down_camera_frame'
 
-    orca_description_path = get_package_share_directory('orca_description')
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
-    forward_sdf_path = os.path.join(orca_description_path, 'urdf', 'forward_camera.sdf')
-    down_sdf_path = os.path.join(orca_description_path, 'urdf', 'down_camera.sdf')
+    forward_sdf_path = os.path.join(orca_gazebo_path, 'urdf', 'forward_camera.sdf')
+    down_sdf_path = os.path.join(orca_gazebo_path, 'urdf', 'down_camera.sdf')
     world_path = os.path.join(orca_gazebo_path, 'worlds', 'vlam_test.world')
     map_path = os.path.join(orca_gazebo_path, 'worlds', 'vlam_test_map.yaml')
 

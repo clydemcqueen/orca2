@@ -20,7 +20,7 @@ sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 
 Install these ROS packages:
 ~~~
-sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs
+sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs ros-eloquent-xacro
 ~~~
 
 Install MRAA header:
