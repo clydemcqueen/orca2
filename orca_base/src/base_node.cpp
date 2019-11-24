@@ -1,8 +1,27 @@
 #include "orca_base/base_node.hpp"
-#include "orca_base/pwm.hpp"
+
+#include "orca_shared/pwm.hpp"
+
+using namespace orca;
 
 namespace orca_base
 {
+
+  //=============================================================================
+  // Utilities
+  //=============================================================================
+
+  // Sense a button down event
+  bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button)
+  {
+    return curr->buttons[button] && !prev.buttons[button];
+  }
+
+  // Sense a trim down event
+  bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
+  {
+    return curr->axes[axis] && !prev.axes[axis];
+  }
 
   //=============================================================================
   // BaseNode

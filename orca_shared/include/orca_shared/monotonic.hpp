@@ -1,7 +1,9 @@
-#ifndef ORCA_BASE_MONOTONIC_HPP
-#define ORCA_BASE_MONOTONIC_HPP
+#ifndef ORCA_SHARED_MONOTONIC_HPP
+#define ORCA_SHARED_MONOTONIC_HPP
 
-namespace orca_base
+#include "rclcpp/rclcpp.hpp"
+
+namespace monotonic
 {
 
 //=============================================================================
@@ -106,6 +108,6 @@ namespace orca_base
     { return valid(prev_); }
   };
 
-} // namespace orca_base
+} // namespace orca_shared
 
-#endif //ORCA_BASE_MONOTONIC_HPP
+#endif //ORCA_SHARED_MONOTONIC_HPP

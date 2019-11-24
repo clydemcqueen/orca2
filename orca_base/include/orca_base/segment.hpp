@@ -27,34 +27,34 @@ namespace orca_base
     BaseContext cxt_;
 
     // State
-    Pose goal_;       // Goal pose
-    Pose plan_;       // Planned pose, incremented with each call to advance()
-    Twist twist_;     // Velocity
-    Acceleration ff_; // Acceleration
+    orca::Pose goal_;       // Goal pose
+    orca::Pose plan_;       // Planned pose, incremented with each call to advance()
+    orca::Twist twist_;     // Velocity
+    orca::Acceleration ff_; // Acceleration
 
     void finish();
 
   public:
 
-    SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+    SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Pose &start, const orca::Pose &goal);
 
     // Write contents to RCLCPP_INFO
     virtual void log_info() = 0;
 
     // Try to change the goal, return true if it worked
-    virtual bool extend(const Pose &start, const Pose &goal)
+    virtual bool extend(const orca::Pose &start, const orca::Pose &goal)
     { return false; }
 
     // Return the current (planned) pose
-    const Pose &plan() const
+    const orca::Pose &plan() const
     { return plan_; }
 
     // Return the goal pose
-    const Pose &goal() const
+    const orca::Pose &goal() const
     { return goal_; }
 
     // Return the acceleration required at the moment
-    const Acceleration &ff() const
+    const orca::Acceleration &ff() const
     { return ff_; }
 
     // Advance the motion plan by dt seconds, return true to continue, false if we're done
@@ -71,7 +71,7 @@ namespace orca_base
 
   public:
 
-    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, double seconds);
+    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Pose &start, double seconds);
 
     void log_info() override;
 
@@ -86,7 +86,8 @@ namespace orca_base
   {
   public:
 
-    VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+    VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Pose &start,
+                    const orca::Pose &goal);
 
     void log_info() override;
 
@@ -101,7 +102,8 @@ namespace orca_base
   {
   public:
 
-    RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+    RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Pose &start,
+                  const orca::Pose &goal);
 
     void log_info() override;
 
@@ -118,11 +120,11 @@ namespace orca_base
 
   public:
 
-    LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const Pose &start, const Pose &goal);
+    LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Pose &start, const orca::Pose &goal);
 
     void log_info() override;
 
-    bool extend(const Pose &start, const Pose &goal) override;
+    bool extend(const orca::Pose &start, const orca::Pose &goal) override;
 
     bool advance(double dt) override;
   };

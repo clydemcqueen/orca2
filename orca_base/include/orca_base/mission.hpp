@@ -26,13 +26,13 @@ namespace orca_base
 
     Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
             std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-            std::shared_ptr<PlannerBase> planner, const PoseStamped &start);
+            std::shared_ptr<PlannerBase> planner, const orca::PoseStamped &start);
 
     const nav_msgs::msg::Path &planned_path() const
     { return planner_->planned_path(); }
 
     // Advance the plan, return true to continue
-    bool advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar);
+    bool advance(double dt, orca::Pose &plan, const nav_msgs::msg::Odometry &estimate, orca::Acceleration &u_bar);
 
     // Abort the mission
     void abort();

@@ -1,8 +1,8 @@
-#ifndef ORCA_BASE_GEOMETRY_HPP
-#define ORCA_BASE_GEOMETRY_HPP
+#ifndef ORCA_SHARED_GEOMETRY_HPP
+#define ORCA_SHARED_GEOMETRY_HPP
 
-#include "orca_base/model.hpp"
-#include "orca_base/util.hpp"
+#include "orca_shared/model.hpp"
+#include "orca_shared/util.hpp"
 
 #include "orca_msgs/msg/efforts.hpp"
 #include "orca_msgs/msg/pose.hpp"
@@ -15,7 +15,7 @@
 
 // 4 DoF geometry and motion structs
 
-namespace orca_base
+namespace orca
 {
 
   constexpr bool full_pose(const nav_msgs::msg::Odometry &odom)
@@ -321,6 +321,6 @@ namespace orca_base
     }
   };
 
-} // namespace orca_base
+} // namespace orca_shared
 
-#endif //ORCA_BASE_GEOMETRY_HPP
+#endif //ORCA_SHARED_GEOMETRY_HPP

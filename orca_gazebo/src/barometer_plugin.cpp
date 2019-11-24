@@ -7,7 +7,7 @@
 #include "gazebo_ros/node.hpp"
 #include "gazebo_ros/conversions/builtin_interfaces.hpp"
 
-#include "orca_base/model.hpp"
+#include "orca_shared/model.hpp"
 #include "orca_gazebo/orca_gazebo_util.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 
@@ -49,11 +49,11 @@ namespace gazebo
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr baro_pub_;
 
     // Orca model
-    orca_base::Model orca_model_;
+    orca::Model orca_model_;
 
     // Normal distribution
     std::default_random_engine generator_;
-    std::normal_distribution<double> distribution_{0, orca_base::Model::DEPTH_STDDEV};
+    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
 
   public:
 
@@ -135,7 +135,7 @@ namespace gazebo
           baro_msg.pressure = orca_model_.z_to_pressure(z); // Pascals
           baro_msg.temperature = 10; // Celsius
         } else {
-          baro_msg.pressure = orca_base::Model::ATMOSPHERIC_PRESSURE;
+          baro_msg.pressure = orca::Model::ATMOSPHERIC_PRESSURE;
           baro_msg.temperature = 20;
         }
 

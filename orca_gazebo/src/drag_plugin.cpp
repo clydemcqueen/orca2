@@ -1,7 +1,7 @@
 #include "gazebo/gazebo.hh"
 #include "gazebo/physics/physics.hh"
 
-#include "orca_base/model.hpp"
+#include "orca_shared/model.hpp"
 
 /* A simple drag plugin. Usage:
  *
@@ -37,7 +37,7 @@ namespace gazebo
   class OrcaDragPlugin : public ModelPlugin
   {
     // Orca model
-    orca_base::Model orca_model_;
+    orca::Model orca_model_;
 
     physics::LinkPtr base_link_;
 

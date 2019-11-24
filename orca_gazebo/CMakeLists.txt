@@ -8,8 +8,8 @@ endif ()
 
 # Emulate colcon by providing paths to other projects in the workspace
 if ($ENV{CLION_IDE})
-  set(orca_base_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_base/share/orca_base/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
+  set(orca_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_shared/share/orca_shared/cmake")
 endif ()
 
 find_package(ament_cmake REQUIRED)
@@ -18,8 +18,8 @@ find_package(gazebo_dev REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
-find_package(orca_base REQUIRED)
 find_package(orca_msgs REQUIRED)
+find_package(orca_shared REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -37,8 +37,8 @@ ament_target_dependencies(
   gazebo_dev
   gazebo_ros
   geometry_msgs
-  orca_base
   orca_msgs
+  orca_shared
   rclcpp
 )
 ament_export_libraries(OrcaBarometerPlugin)
@@ -57,7 +57,7 @@ ament_target_dependencies(
   OrcaDragPlugin
   gazebo_dev
   gazebo_ros
-  orca_base
+  orca_shared
   rclcpp
 )
 ament_export_libraries(OrcaDragPlugin)
@@ -67,8 +67,8 @@ ament_target_dependencies(
   OrcaThrusterPlugin
   gazebo_dev
   gazebo_ros
-  orca_base
   orca_msgs
+  orca_shared
   rclcpp
 )
 ament_export_libraries(OrcaThrusterPlugin)

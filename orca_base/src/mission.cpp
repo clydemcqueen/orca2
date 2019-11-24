@@ -1,5 +1,7 @@
 #include "orca_base/mission.hpp"
 
+using namespace orca;
+
 namespace orca_base
 {
 

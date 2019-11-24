@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(orca_base)
+project(orca_filter)
 
 # Default to C++14
 if (NOT CMAKE_CXX_STANDARD)
@@ -16,6 +16,7 @@ if ($ENV{CLION_IDE})
 endif ()
 
 find_package(ament_cmake REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -38,49 +39,30 @@ include_directories(
 )
 
 #=============
-# Base node
+# Filter node
 #=============
 
 add_executable(
-  base_node
-  src/astar.cpp
-  src/base_node.cpp
-  src/map.cpp
-  src/mission.cpp
-  src/planner.cpp
-  src/segment.cpp
-  src/controller.cpp
+  filter_node
+  src/filter_node.cpp
+  src/filter_base.cpp
+  src/depth_filter.cpp
+  src/four_filter.cpp
+  src/pose_filter.cpp
 )
 
 ament_target_dependencies(
-  base_node
-  fiducial_vlam_msgs
+  filter_node
   orca_msgs
   orca_shared
+  geometry_msgs
   nav_msgs
   rclcpp
-  rclcpp_action
   ros2_shared
-  sensor_msgs
   tf2
   tf2_ros
-  visualization_msgs
-)
-
-#=============
-# Test
-#=============
-
-add_executable(
-  astar_test
-  src/astar.cpp
-  src/astar_test.cpp
-)
-
-ament_target_dependencies(
-  astar_test
-  rclcpp
-  sensor_msgs
+  ukf
+  urdf
 )
 
 #=============
@@ -88,18 +70,6 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS base_node DESTINATION lib/${PROJECT_NAME})
-
-# Install Python nodes
-# PROGRAMS sets execute bits, FILES clears them
-install(
-  PROGRAMS
-  scripts/experiments.py
-  scripts/nees.py
-  scripts/plot_control.py
-  scripts/plot_filter.py
-  scripts/plot_odom.py
-  DESTINATION lib/${PROJECT_NAME}
-)
+install(TARGETS filter_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

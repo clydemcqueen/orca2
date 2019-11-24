@@ -1,9 +1,9 @@
-#ifndef ORCA_BASE_MODEL_HPP
-#define ORCA_BASE_MODEL_HPP
+#ifndef ORCA_SHARED_MODEL_HPP
+#define ORCA_SHARED_MODEL_HPP
 
 #include <cmath>
 
-namespace orca_base
+namespace orca
 {
   struct Model
   {
@@ -200,6 +200,6 @@ namespace orca_base
 
   };
 
-} // namespace orca_base
+} // namespace orca_shared
 
-#endif //ORCA_BASE_MODEL_HPP
+#endif //ORCA_SHARED_MODEL_HPP

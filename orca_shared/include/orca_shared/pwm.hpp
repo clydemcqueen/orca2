@@ -3,10 +3,11 @@
 
 #include <cstdint>
 
-#include "orca_base/util.hpp"
+#include "orca_shared/util.hpp"
+
 #include "orca_msgs/msg/control.hpp"
 
-namespace orca_base
+namespace orca
 {
   //---------------------------------
   // Camera tilt servo
@@ -18,12 +19,14 @@ namespace orca_base
 
   constexpr uint16_t tilt_to_pwm(const int tilt)
   {
-    return scale(tilt, TILT_MIN, TILT_MAX, orca_msgs::msg::Control::TILT_45_UP, orca_msgs::msg::Control::TILT_45_DOWN);
+    return orca::scale(tilt, TILT_MIN, TILT_MAX,
+                       orca_msgs::msg::Control::TILT_45_UP, orca_msgs::msg::Control::TILT_45_DOWN);
   }
 
   constexpr int pwm_to_tilt(const uint16_t pwm)
   {
-    return scale(pwm, orca_msgs::msg::Control::TILT_45_UP, orca_msgs::msg::Control::TILT_45_DOWN, TILT_MIN, TILT_MAX);
+    return orca::scale(pwm, orca_msgs::msg::Control::TILT_45_UP, orca_msgs::msg::Control::TILT_45_DOWN,
+                       TILT_MIN, TILT_MAX);
   }
 
   //---------------------------------
@@ -36,14 +39,14 @@ namespace orca_base
 
   constexpr uint16_t brightness_to_pwm(const int brightness)
   {
-    return scale(brightness, BRIGHTNESS_MIN, BRIGHTNESS_MAX,
-                 orca_msgs::msg::Control::LIGHTS_OFF, orca_msgs::msg::Control::LIGHTS_FULL);
+    return orca::scale(brightness, BRIGHTNESS_MIN, BRIGHTNESS_MAX,
+                       orca_msgs::msg::Control::LIGHTS_OFF, orca_msgs::msg::Control::LIGHTS_FULL);
   }
 
   constexpr int pwm_to_brightness(const uint16_t pwm)
   {
-    return scale(pwm, orca_msgs::msg::Control::LIGHTS_OFF, orca_msgs::msg::Control::LIGHTS_FULL,
-                 BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+    return orca::scale(pwm, orca_msgs::msg::Control::LIGHTS_OFF, orca_msgs::msg::Control::LIGHTS_FULL,
+                       BRIGHTNESS_MIN, BRIGHTNESS_MAX);
   }
 
   //---------------------------------
@@ -61,7 +64,7 @@ namespace orca_base
 
   uint16_t effort_to_pwm(const double effort)
   {
-    return clamp(
+    return orca::clamp(
       static_cast<uint16_t>(orca_msgs::msg::Control::THRUST_STOP +
                             (effort > THRUST_STOP ? THRUST_DZ_PWM : (effort < THRUST_STOP ? -THRUST_DZ_PWM : 0)) +
                             std::round(effort * THRUST_RANGE_PWM)),

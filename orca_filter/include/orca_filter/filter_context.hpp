@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_FILTER_CONTEXT_HPP
-#define ORCA_BASE_FILTER_CONTEXT_HPP
+#ifndef ORCA_FILTER_FILTER_CONTEXT_HPP
+#define ORCA_FILTER_FILTER_CONTEXT_HPP
 
 #include <cmath>
 #include <string>
@@ -7,9 +7,9 @@
 
 #include "ros2_shared/context_macros.hpp"
 
-#include "orca_base/model.hpp"
+#include "orca_shared/model.hpp"
 
-namespace orca_base
+namespace orca_filter
 {
 
 #define FILTER_NODE_ALL_PARAMS \
@@ -52,9 +52,9 @@ namespace orca_base
     FILTER_NODE_ALL_PARAMS
 
     // Orca model
-    Model model_{};
+    orca::Model model_{};
   };
 
-} // namespace orca_base
+} // namespace orca_filter
 
-#endif // ORCA_BASE_FILTER_CONTEXT_HPP
+#endif // ORCA_FILTER_FILTER_CONTEXT_HPP

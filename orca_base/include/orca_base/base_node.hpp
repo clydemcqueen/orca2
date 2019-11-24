@@ -13,11 +13,12 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
 
+#include "orca_shared/monotonic.hpp"
+
 #include "orca_base/base_context.hpp"
 #include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
 #include "orca_base/joystick.hpp"
-#include "orca_base/monotonic.hpp"
 
 using namespace std::chrono_literals;
 
@@ -123,7 +124,7 @@ namespace orca_base
 
     // Odometry state
     nav_msgs::msg::Odometry filtered_odom_;       // Estimated odometry
-    PoseStamped filtered_pose_;                   // Estimated pose TODO remove
+    orca::PoseStamped filtered_pose_;                   // Estimated pose TODO remove
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // ROV operation
@@ -169,10 +170,10 @@ namespace orca_base
     void odom_callback(nav_msgs::msg::Odometry::SharedPtr msg, bool first);
 
     // Callback wrappers
-    Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
-    Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
-    Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
-    Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
+    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
+    monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
+    monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+    monotonic::Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
@@ -198,11 +199,11 @@ namespace orca_base
 
     void all_stop(const rclcpp::Time &msg_time);
 
-    void publish_control(const rclcpp::Time &msg_time, const Pose &error, const Efforts &efforts);
+    void publish_control(const rclcpp::Time &msg_time, const orca::Pose &error, const orca::Efforts &efforts);
 
     void disarm(const rclcpp::Time &msg_time);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const Pose &goal = {},
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::Pose &goal = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
     bool disarmed()

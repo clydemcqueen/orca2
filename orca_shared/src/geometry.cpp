@@ -1,6 +1,6 @@
-#include "orca_base/geometry.hpp"
+#include "orca_shared/geometry.hpp"
 
-namespace orca_base
+namespace orca
 {
 
   std::ostream &operator<<(std::ostream &os, Pose const &pose)
@@ -8,4 +8,4 @@ namespace orca_base
     return os << "{" << pose.x << ", " << pose.y << ", " << pose.z << ", " << pose.yaw << "}";
   }
 
-} // namespace orca_base
+} // namespace orca_shared

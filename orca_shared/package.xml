@@ -2,9 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-    <name>orca_base</name>
-    <version>0.2.0</version>
-    <description>Orca controller</description>
+    <name>orca_shared</name>
+    <version>0.1.0</version>
+    <description>Orca shared headers and code</description>
 
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
     <license>BSD</license>
@@ -16,21 +16,11 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
-    <depend>nav_msgs</depend>
     <depend>orca_msgs</depend>
-    <depend>orca_shared</depend>
     <depend>rclcpp</depend>
-    <depend>rclcpp_action</depend>
-    <depend>rclpy</depend>
-    <depend>ros2_shared</depend>
-    <depend>sensor_msgs</depend>
     <depend>tf2</depend>
     <depend>tf2_ros</depend>
-    <depend>ukf</depend>
-    <depend>urdf</depend>
-    <depend>visualization_msgs</depend>
 
     <export>
         <build_type>ament_cmake</build_type>

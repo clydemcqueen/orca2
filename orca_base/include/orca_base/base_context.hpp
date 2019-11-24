@@ -7,7 +7,7 @@
 
 #include "ros2_shared/context_macros.hpp"
 
-#include "orca_base/model.hpp"
+#include "orca_shared/model.hpp"
 
 namespace orca_base
 {
@@ -69,7 +69,7 @@ namespace orca_base
     BASE_NODE_ALL_PARAMS
 
     // Orca model
-    Model model_{};
+    orca::Model model_{};
   };
 
 } // namespace orca_base

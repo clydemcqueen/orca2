@@ -1,8 +1,9 @@
 #ifndef ORCA_BASE_CONTROLLER_HPP
 #define ORCA_BASE_CONTROLLER_HPP
 
+#include "orca_shared/geometry.hpp"
+
 #include "orca_base/base_context.hpp"
-#include "orca_base/geometry.hpp"
 #include "orca_base/pid.hpp"
 
 namespace orca_base
@@ -35,8 +36,8 @@ namespace orca_base
     virtual bool dead_reckoning() = 0;
 
     // Calc u_bar
-    virtual void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-                      const Acceleration &ff, Acceleration &u_bar) = 0;
+    virtual void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+                      const orca::Acceleration &ff, orca::Acceleration &u_bar) = 0;
   };
 
   //=====================================================================================
@@ -53,8 +54,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
   //=====================================================================================
@@ -71,8 +72,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override
     { u_bar = ff; }
   };
 
@@ -90,8 +91,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
   //=====================================================================================
@@ -102,7 +103,7 @@ namespace orca_base
   {
   private:
     // Keep previous u_bar
-    Acceleration prev_u_bar_;
+    orca::Acceleration prev_u_bar_;
 
   public:
 
@@ -112,8 +113,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
   //=====================================================================================
@@ -124,7 +125,7 @@ namespace orca_base
   {
   private:
     // Keep previous u_bar
-    Acceleration prev_u_bar_;
+    orca::Acceleration prev_u_bar_;
 
   public:
 
@@ -134,8 +135,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
   //=====================================================================================
@@ -152,8 +153,8 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const Pose &plan, const nav_msgs::msg::Odometry &estimate,
-              const Acceleration &ff, Acceleration &u_bar) override;
+    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const nav_msgs::msg::Odometry &estimate,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
 } // namespace pid

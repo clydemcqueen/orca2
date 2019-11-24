@@ -1,8 +1,10 @@
-#include "orca_base/filter_node.hpp"
+#include "orca_filter/filter_node.hpp"
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-namespace orca_base
+using namespace orca;
+
+namespace orca_filter
 {
 
   //=============================================================================
@@ -309,7 +311,7 @@ namespace orca_base
     }
   }
 
-} // namespace orca_base
+} // namespace orca_filter
 
 //=============================================================================
 // Main
@@ -324,7 +326,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Init node
-  auto node = std::make_shared<orca_base::FilterNode>();
+  auto node = std::make_shared<orca_filter::FilterNode>();
 
   // Set logger level
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);

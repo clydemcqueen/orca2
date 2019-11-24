@@ -2,6 +2,8 @@
 
 #include <random>
 
+using namespace orca;
+
 namespace orca_base
 {
 

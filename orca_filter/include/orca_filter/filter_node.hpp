@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_FILTER_NODE_HPP
-#define ORCA_BASE_FILTER_NODE_HPP
+#ifndef ORCA_FILTER_FILTER_NODE_HPP
+#define ORCA_FILTER_FILTER_NODE_HPP
 
 #include "urdf/model.h"
 #include "tf2_msgs/msg/tf_message.hpp"
@@ -8,13 +8,14 @@
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
 
-#include "orca_base/filter_context.hpp"
-#include "orca_base/filter_base.hpp"
-#include "orca_base/monotonic.hpp"
+#include "orca_shared/monotonic.hpp"
+
+#include "orca_filter/filter_context.hpp"
+#include "orca_filter/filter_base.hpp"
 
 using namespace std::chrono_literals;
 
-namespace orca_base
+namespace orca_filter
 {
 
   class FilterNode : public rclcpp::Node
@@ -46,7 +47,7 @@ namespace orca_base
 
     // Control state
     double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
-    Acceleration u_bar_{};                        // Last control, used for filter predict step
+    orca::Acceleration u_bar_{};                        // Last control, used for filter predict step
 
     // Barometer state
     bool z_valid_{false};                         // True if z_ is valid
@@ -95,13 +96,13 @@ namespace orca_base
     void rcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
 
     // Callback wrappers
-    Monotonic<FilterNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &FilterNode::baro_callback};
-    Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr> control_cb_{this, &FilterNode::control_callback};
-    Monotonic<FilterNode *,
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &FilterNode::baro_callback};
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr> control_cb_{this, &FilterNode::control_callback};
+    monotonic::Monotonic<FilterNode *,
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> fcam_cb_{this, &FilterNode::fcam_callback};
-    Monotonic<FilterNode *,
+    monotonic::Monotonic<FilterNode *,
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> lcam_cb_{this, &FilterNode::lcam_callback};
-    Monotonic<FilterNode *,
+    monotonic::Monotonic<FilterNode *,
       const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> rcam_cb_{this, &FilterNode::rcam_callback};
 
     // Process a camera pose
@@ -118,6 +119,6 @@ namespace orca_base
     ~FilterNode() override = default;
   };
 
-} // namespace orca_base
+} // namespace orca_filter
 
-#endif // ORCA_BASE_FILTER_NODE_HPP
+#endif // ORCA_FILTER_FILTER_NODE_HPP

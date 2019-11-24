@@ -19,8 +19,8 @@
     <depend>gazebo</depend>
     <depend>gazebo_ros</depend>
     <depend>geometry_msgs</depend>
-    <depend>orca_base</depend>
     <depend>orca_msgs</depend>
+    <depend>orca_shared</depend>
     <depend>rclcpp</depend>
     <depend>rclpy</depend>
 

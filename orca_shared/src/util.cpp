@@ -1,8 +1,8 @@
-#include "orca_base/util.hpp"
+#include "orca_shared/util.hpp"
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-namespace orca_base
+namespace orca
 {
 
   void rotate_frame(const double x, const double y, const double theta, double &x_r, double &y_r)
@@ -23,16 +23,6 @@ namespace orca_base
     double roll = 0, pitch = 0, yaw = 0;
     get_rpy(q, roll, pitch, yaw);
     return yaw;
-  }
-
-  bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button)
-  {
-    return curr->buttons[button] && !prev.buttons[button];
-  }
-
-  bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis)
-  {
-    return curr->axes[axis] && !prev.axes[axis];
   }
 
   std::string to_str_rpy(const tf2::Transform &t)
@@ -73,4 +63,4 @@ namespace orca_base
     return stamp.nanoseconds() > 0;
   }
 
-} // namespace orca_base
+} // namespace orca_shared

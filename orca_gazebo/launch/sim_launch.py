@@ -77,7 +77,7 @@ def generate_launch_description():
             ]),
 
         # Filter
-        Node(package='orca_base', node_executable='filter_node', output='screen',
+        Node(package='orca_filter', node_executable='filter_node', output='screen',
              node_name='filter_node', parameters=[{
                 'use_sim_time': use_sim_time,
                 'param_fluid_density': 997.0,

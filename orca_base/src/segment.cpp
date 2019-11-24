@@ -1,5 +1,7 @@
 #include "orca_base/segment.hpp"
 
+using namespace orca;
+
 namespace orca_base
 {
 

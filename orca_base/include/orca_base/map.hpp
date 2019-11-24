@@ -3,9 +3,10 @@
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
 
+#include "orca_shared/geometry.hpp"
+
 #include "orca_base/astar.hpp"
 #include "orca_base/base_context.hpp"
-#include "orca_base/geometry.hpp"
 
 namespace orca_base
 {
@@ -36,7 +37,7 @@ namespace orca_base
     { return vlam_map_ != nullptr; }
 
     // Use A* to generate a path from start_pose to destination_pose that stays close to the markers
-    bool get_waypoints(const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const;
+    bool get_waypoints(const orca::Pose &start_pose, const orca::Pose &destination_pose, std::vector<orca::Pose> &waypoints) const;
   };
 
 } // namespace orca_base

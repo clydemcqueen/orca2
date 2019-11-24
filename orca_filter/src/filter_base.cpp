@@ -1,11 +1,13 @@
-#include "orca_base/filter_base.hpp"
+#include "orca_filter/filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-#include "orca_base/util.hpp"
+#include "orca_shared/util.hpp"
 
-namespace orca_base
+using namespace orca;
+
+namespace orca_filter
 {
 
   //=============================================================================
@@ -276,4 +278,4 @@ namespace orca_base
     return true;
   }
 
-} // namespace orca_base
+} // namespace orca_filter

@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_UTIL_HPP
-#define ORCA_BASE_UTIL_HPP
+#ifndef ORCA_SHARED_UTIL_HPP
+#define ORCA_SHARED_UTIL_HPP
 
 #include <cstdint>
 #include <cmath>
@@ -9,7 +9,7 @@
 #include "sensor_msgs/msg/joy.hpp"
 #include "tf2/LinearMath/Transform.h"
 
-namespace orca_base
+namespace orca
 {
 
   template<typename T>
@@ -81,11 +81,6 @@ namespace orca_base
   // Get yaw from a quaternion
   double get_yaw(const geometry_msgs::msg::Quaternion &q);
 
-  // Sense a button down event
-  bool button_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int button);
-
-  bool trim_down(const sensor_msgs::msg::Joy::SharedPtr &curr, const sensor_msgs::msg::Joy &prev, int axis);
-
   // Various to_str functions
   std::string to_str_rpy(const tf2::Transform &t);
 
@@ -98,6 +93,6 @@ namespace orca_base
   // True if a rclcpp::Time is valid (non-zero)
   bool valid_stamp(const rclcpp::Time &stamp);
 
-} // namespace orca_base
+} // namespace orca_shared
 
-#endif // ORCA_BASE_UTIL_HPP
+#endif // ORCA_SHARED_UTIL_HPP

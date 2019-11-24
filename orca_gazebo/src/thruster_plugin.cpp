@@ -4,7 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "gazebo_ros/node.hpp"
 
-#include "orca_base/pwm.hpp"
+#include "orca_shared/pwm.hpp"
 #include "orca_msgs/msg/control.hpp"
 
 /* A simple thruster plugin. Usage:
@@ -152,7 +152,7 @@ namespace gazebo
       control_msg_time_ = msg->header.stamp;
 
       for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
-        thrusters_[i].effort = orca_base::pwm_to_effort(msg->thruster_pwm[i]);
+        thrusters_[i].effort = orca::pwm_to_effort(msg->thruster_pwm[i]);
       }
     }
 

@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_FILTER_H
-#define ORCA_BASE_FILTER_H
+#ifndef ORCA_FILTER_FILTER_H
+#define ORCA_FILTER_FILTER_H
 
 #include <queue>
 
@@ -9,10 +9,11 @@
 
 #include "orca_msgs/msg/depth.hpp"
 
-#include "orca_base/filter_context.hpp"
-#include "orca_base/geometry.hpp"
+#include "orca_shared/geometry.hpp"
 
-namespace orca_base
+#include "orca_filter/filter_context.hpp"
+
+namespace orca_filter
 {
 
   //=============================================================================
@@ -130,10 +131,10 @@ namespace orca_base
     std::deque<Measurement> measurement_history_;
 
     // Call filter_->predict
-    void predict(const rclcpp::Time &stamp, const Acceleration &u_bar);
+    void predict(const rclcpp::Time &stamp, const orca::Acceleration &u_bar);
 
     // Process all messages in the queue, return true if there's an odometry message to publish
-    bool process(const rclcpp::Time &stamp, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
+    bool process(const rclcpp::Time &stamp, const orca::Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
 
     // Rewind to a previous state
     bool rewind(const rclcpp::Time &stamp);
@@ -172,7 +173,7 @@ namespace orca_base
 
     // Process a message
     template<typename T>
-    bool process_message(const T &msg, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+    bool process_message(const T &msg, const orca::Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
     {
       rclcpp::Time stamp{msg.header.stamp};
 
@@ -249,6 +250,6 @@ namespace orca_base
     Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
   };
 
-} // namespace orca_base
+} // namespace orca_filter
 
-#endif // ORCA_BASE_FILTER_H
+#endif // ORCA_FILTER_FILTER_H

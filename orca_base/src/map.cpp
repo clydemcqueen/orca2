@@ -1,5 +1,7 @@
 #include "orca_base/map.hpp"
 
+using namespace orca;
+
 namespace orca_base
 {
 
