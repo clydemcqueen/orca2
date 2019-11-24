@@ -15,7 +15,7 @@ if ($ENV{CLION_IDE})
 endif ()
 
 find_package(ament_cmake REQUIRED)
-find_package(Eigen3)
+find_package(Eigen3 REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -44,6 +44,7 @@ add_executable(
   base_node
   src/astar.cpp
   src/base_node.cpp
+  src/geometry.cpp
   src/map.cpp
   src/mission.cpp
   src/planner.cpp

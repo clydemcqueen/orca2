@@ -222,12 +222,15 @@
         <child link="forward_camera_frame"/>
     </joint>
 
+    <!-- Left and right cameras are positioned to see markers along the seafloor. Both are portrait. -->
+
     <!-- Left camera link -->
     <link name="left_camera_link">
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
-                <sphere radius="0.026"/>
+                <!-- Make the aspect ratio obvious -->
+                <box size="0.01 0.04 0.03"/>
             </geometry>
             <material name="red"/>
         </visual>
@@ -235,8 +238,7 @@
 
     <!-- Attach left_camera_link to base_link -->
     <joint name="left_camera_joint" type="fixed">
-        <axis xyz="0 1 0"/>
-        <origin xyz="-0.15 0.18 -0.0675" rpy="0 ${PI/2} 0"/>
+        <origin xyz="-0.15 0.18 -0.0675" rpy="${PI/2} ${PI/2} 0"/>
         <parent link="base_link"/>
         <child link="left_camera_link"/>
     </joint>
@@ -246,18 +248,18 @@
 
     <!-- Attach left_camera_frame to base_link (parsed by filter_node)  -->
     <joint name="left_camera_frame_joint" type="fixed">
-        <origin xyz="-0.15 0.18 -0.0675" rpy="${PI} 0 ${-PI/2}"/>
+        <origin xyz="-0.15 0.18 -0.0675" rpy="0 ${PI} 0"/>
         <parent link="base_link"/>
         <child link="left_camera_frame"/>
     </joint>
 
     <!-- Right camera link -->
     <link name="right_camera_link">
-        <!-- Camera hemisphere -->
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
-                <sphere radius="0.026"/>
+                <!-- Make the aspect ratio obvious -->
+                <box size="0.01 0.04 0.03"/>
             </geometry>
             <material name="red"/>
         </visual>
@@ -265,8 +267,7 @@
 
     <!-- Attach right_camera_link to base_link -->
     <joint name="right_camera_joint" type="fixed">
-        <axis xyz="0 1 0"/>
-        <origin xyz="-0.15 -0.18 -0.0675" rpy="0 1.57079 0"/>
+        <origin xyz="-0.15 -0.18 -0.0675" rpy="${PI/2} ${PI/2} 0"/>
         <parent link="base_link"/>
         <child link="right_camera_link"/>
     </joint>
@@ -274,9 +275,9 @@
     <!-- Right camera frame -->
     <link name="right_camera_frame"/>
 
-    <!-- Attach right_camera_frame to base_link -->
+    <!-- Attach right_camera_frame to base_link (parsed by filter_node) -->
     <joint name="right_camera_frame_joint" type="fixed">
-        <origin xyz="-0.15 -0.18 -0.0675" rpy="${PI} 0 ${-PI/2}"/>
+        <origin xyz="-0.15 -0.18 -0.0675" rpy="0 ${PI} 0"/>
         <parent link="base_link"/>
         <child link="right_camera_frame"/>
     </joint>
@@ -337,8 +338,7 @@
     <gazebo>
         <plugin name="OrcaThrusterPlugin" filename="libOrcaThrusterPlugin.so">
             <link_name>orca::base_link</link_name>
-            <thruster
-                    name="front_right"> <!-- name attributes are ignored; the tag order must match the message array order -->
+            <thruster name="front_right"> <!-- name attributes are ignored; the tag order must match the message array order -->
                 <pos_force>${FORWARD_FORCE}</pos_force> <!-- units are N, positive for ccw, negative for cw -->
                 <neg_force>${REVERSE_FORCE}</neg_force> <!-- units are N, positive for ccw, negative for cw -->
                 <xacro:insert_block name="front_right_origin"/>
@@ -399,15 +399,15 @@
     The camera_controller plugin (wraps a Gazebo camera sensor) simulates a camera driver.
     This xacro macro attaches a camera to ${prefix}_camera_link:
   -->
-    <xacro:macro name="camera_plugin" params="prefix">
+    <xacro:macro name="camera_plugin" params="prefix width height horizontal_fov">
         <gazebo reference="${prefix}_camera_link">
             <sensor type="camera" name="${prefix}_camera">
                 <update_rate>30.0</update_rate>
                 <camera name="head">
-                    <horizontal_fov>1.4</horizontal_fov>
+                    <horizontal_fov>${horizontal_fov}</horizontal_fov>
                     <image>
-                        <width>800</width>
-                        <height>600</height>
+                        <width>${width}</width>
+                        <height>${height}</height>
                         <format>R8G8B8</format>
                     </image>
                     <clip>
@@ -445,10 +445,10 @@
 <!--    <xacro:camera_plugin prefix="forward"/>-->
 
     <!-- Left down-facing camera: -->
-    <xacro:camera_plugin prefix="left"/>
+    <xacro:camera_plugin prefix="left" width="800" height="600" horizontal_fov="1.4"/>
 
     <!-- Right down-facing camera: -->
-<!--    <xacro:camera_plugin prefix="right"/>-->
+    <xacro:camera_plugin prefix="right" width="800" height="600" horizontal_fov="1.4"/>
 
     <gazebo>
         <plugin name="p3d_test" filename="libgazebo_ros_p3d.so">

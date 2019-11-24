@@ -70,10 +70,8 @@ namespace orca_base
     goal.x = x;
     goal.y = y;
     if (plan.distance_xy(goal) > EPSILON_PLAN_XYZ) {
-//      if (segments_.empty() || !segments_.back()->extend(plan, goal)) {
       segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
       controllers_.push_back(std::make_shared<SimpleController>(cxt_));
-//      }
     } else {
       RCLCPP_INFO(logger_, "skip line");
     }
@@ -98,7 +96,10 @@ namespace orca_base
 
   void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start)
   {
-    RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s)", waypoints.size() - 1);
+    RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s):", waypoints.size() - 1);
+    for (auto waypoint : waypoints) {
+      RCLCPP_INFO_STREAM(logger_, waypoint);
+    }
 
     // Clear existing segments
     segments_.clear();
@@ -117,33 +118,19 @@ namespace orca_base
         // Point in the direction of travel
         add_rotate_segment(plan, atan2(waypoint.y - plan.y, waypoint.x - plan.x));
 
-        // Settle at the current rotation
-//        if (cxt_.auv_open_water_) {
-//          add_keep_station_segment(plan, 3);
-//        }
-
         // Travel
         add_line_segment(plan, waypoint.x, waypoint.y);
-
-        // Settle at the new marker
-//        if (cxt_.auv_open_water_) {
-//          add_keep_station_segment(plan, 3);
-//        }
       } else {
         RCLCPP_DEBUG(logger_, "skip travel");
       }
     }
 
-    // Special behaviors for the last target
-    if (target_idx_ == targets_.size() - 1) {
-      // Rotate to the final yaw
-      add_rotate_segment(plan, waypoints.back().yaw);
+    // Always rotate to the target yaw
+    add_rotate_segment(plan, targets_[target_idx_].yaw);
 
-      if (keep_station_) {
-        // Keep station
-        segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, 1e6));
-        controllers_.push_back(std::make_shared<SimpleController>(cxt_));
-      }
+    // Keep station at the last target
+    if (keep_station_ && target_idx_ == targets_.size() - 1) {
+      add_keep_station_segment(plan, 1e6);
     }
 
     // Create a path for diagnostics

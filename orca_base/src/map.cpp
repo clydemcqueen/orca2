@@ -4,7 +4,7 @@ namespace orca_base
 {
 
   // Max dead reckoning distance in meters
-  constexpr double MAX_DEAD_RECKONING_DISTANCE = 6;
+  constexpr double MAX_DEAD_RECKONING_DISTANCE = 9;
 
   // Pseudo marker IDs
   constexpr astar::node_type START_ID = -1;

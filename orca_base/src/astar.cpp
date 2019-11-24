@@ -73,12 +73,12 @@ namespace astar
     open_set_.push(CandidateNode(start, 0, h_(start, destination)));
 
     while (!open_set_.empty()) {
-      print_open_set();
+      // print_open_set();
 
       // Pop the path with the best f_score
       auto current = open_set_.top();
       open_set_.pop();
-      std::cout << "pop " << current << std::endl;
+      // std::cout << "pop " << current << std::endl;
 
       // Are we done?
       if (current.node == destination) {
@@ -96,7 +96,7 @@ namespace astar
 
       // Loop through neighbors
       std::vector<Neighbor> neighbors = graph_.get_neighbors(current.node);
-      std::cout << "considering " << neighbors.size() << " neighbors" << std::endl;
+      // std::cout << "considering " << neighbors.size() << " neighbors" << std::endl;
       for (auto neighbor : neighbors) {
         // tentative_g_score is the distance from start through current to the neighbor
         double tentative_g_score = best_g_score_[current.node] + neighbor.distance;
@@ -109,7 +109,7 @@ namespace astar
 
           // Add the neighbor to the open set
           auto c = CandidateNode(neighbor.node, tentative_g_score, h_(neighbor.node, destination));
-          std::cout << "push " << c << std::endl;
+          // std::cout << "push " << c << std::endl;
           open_set_.push(c);
         }
       }
