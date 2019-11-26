@@ -17,8 +17,6 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
 
     <depend>orca_msgs</depend>
-    <depend>phidgets_imu</depend>
-    <depend>python-smbus</depend>
     <depend>rclcpp</depend>
     <depend>rclpy</depend>
     <depend>ros2_shared</depend>

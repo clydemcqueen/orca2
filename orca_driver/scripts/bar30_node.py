@@ -38,7 +38,7 @@ class Bar30Node(Node):
         self._sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)  # TODO verify that this doesn't matter
 
         # Publish at 10Hz
-        self._baro_pub = self.create_publisher(Barometer, '/barometer')
+        self._baro_pub = self.create_publisher(Barometer, '/barometer', 5)
         self.create_timer(0.1, self.timer_callback)
 
     def timer_callback(self):

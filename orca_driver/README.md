@@ -2,12 +2,16 @@ Hardware interface for [Orca2](https://github.com/clydemcqueen/orca2).
 
 Minimal ROS install:
 ~~~
-sudo apt install ros-dashing-ros-base ros-dashing-cv-bridge ros-dashing-yaml-cpp-vendor
+sudo apt install ros-eloquent-ros-base ros-eloquent-cv-bridge ros-eloquent-yaml-cpp-vendor
 ~~~
 
-Don't build orca_gazebo on the sub:
+Don't build orca_gazebo (and possibly other packages) on the sub:
 ~~~
 touch ~/ros2/orca_ws/src/orca2/orca_gazebo/COLCON_IGNORE
+touch ~/ros2/orca_ws/src/orca2/orca_base/COLCON_IGNORE
+touch ~/ros2/orca_ws/src/orca2/orca_description/COLCON_IGNORE
+touch ~/ros2/orca_ws/src/orca2/orca_filter/COLCON_IGNORE
+touch ~/ros2/orca_ws/src/orca2/orca_shared/COLCON_IGNORE
 ~~~
 
 For the Raspberry Pi camera:
@@ -23,6 +27,8 @@ For the USB camera:
 sudo usermod -a -G video ${USER}
 # Log out and back in again
 
+sudo apt install ros-eloquent-camera-calibration-parsers
+
 cd ~/ros2/orca2_ws/src
 git clone https://github.com/clydemcqueen/opencv_cam.git
 cd ~/ros2/orca2_ws
@@ -31,11 +37,11 @@ colcon build
 
 For the Bar30 TODO:
 ~~~
-pip install smbus future
+sudo apt install python3-smbus python3-future
+
 cd ~
 git clone https://github.com/clydemcqueen/ms5837-python -b python3
-# TODO add ~/ms5837-python to PYTHONPATH
-# TODO port ms5837-python to Python3
+export PYTHONPATH=~/ms5837-python:$PYTHONPATH
 ~~~
 
 For mraa on the UP Board, see https://wiki.up-community.org/MRAA/UPM:
@@ -48,7 +54,8 @@ sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
 
 To record bags:
 ~~~
-sudo apt install sqlite3 ros-dashing-rosbag2* ros-dashing-ros2bag
+sudo apt install sqlite3 ros-eloquent-rosbag2* ros-eloquent-ros2bag
+
 ros2 bag record -a  # Everything, or just some things:
 ros2 bag record /rosout /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
 ~~~

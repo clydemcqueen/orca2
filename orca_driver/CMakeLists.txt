@@ -20,8 +20,6 @@ endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(orca_msgs REQUIRED)
-#find_package(phidgets_imu REQUIRED)
-#find_package(python-smbus REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(ros2_shared REQUIRED)
@@ -34,7 +32,6 @@ set(mraa_FOUND true)
 # Package includes not needed for CMake >= 2.8.11
 include_directories(
   include
-  ${mraa_INCLUDE_DIRS}
 )
 
 #=============
