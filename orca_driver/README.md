@@ -35,15 +35,6 @@ cd ~/ros2/orca2_ws
 colcon build
 ~~~
 
-For the Bar30 TODO:
-~~~
-sudo apt install python3-smbus python3-future
-
-cd ~
-git clone https://github.com/clydemcqueen/ms5837-python -b python3
-export PYTHONPATH=~/ms5837-python:$PYTHONPATH
-~~~
-
 For mraa on the UP Board, see https://wiki.up-community.org/MRAA/UPM:
 ~~~
 sudo add-apt-repository ppa:mraa/mraa
@@ -52,12 +43,20 @@ sudo apt-get install mraa-tools mraa-examples libmraa1 libmraa-dev libupm-dev li
 sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
 ~~~
 
+For the Bar30 (requires MRAA):
+~~~
+cd ~/ros2/orca2_ws/src
+git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
+cd ~/ros2/orca2_ws
+colcon build
+~~~
+
 To record bags:
 ~~~
 sudo apt install sqlite3 ros-eloquent-rosbag2* ros-eloquent-ros2bag
 
 ros2 bag record -a  # Everything, or just some things:
-ros2 bag record /rosout /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
+ros2 bag record /rosout /barometer /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
 ~~~
 
 To isolate ROS2 networks:

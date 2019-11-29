@@ -13,12 +13,14 @@ endif ()
 # Emulate colcon by providing paths to other projects in the workspace
 if ($ENV{CLION_IDE})
   message("Running inside CLion")
+  set(br_ms5837_DIR "${PROJECT_SOURCE_DIR}/../../../install/br_ms5837/share/br_ms5837/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
 endif ()
 
 find_package(ament_cmake REQUIRED)
+find_package(br_ms5837 REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
@@ -45,6 +47,7 @@ add_executable(
 )
 ament_target_dependencies(
   driver_node
+  br_ms5837
   mraa
   orca_msgs
   rclcpp
@@ -79,7 +82,6 @@ install(
 # Install Python nodes
 install(
   PROGRAMS  # PROGRAMS sets execute bits, FILES clears them
-  scripts/bar30_node.py
   scripts/start_driver.sh
   DESTINATION lib/${PROJECT_NAME}
 )

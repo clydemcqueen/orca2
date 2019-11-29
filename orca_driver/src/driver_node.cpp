@@ -15,7 +15,8 @@ namespace orca_driver
   //=============================================================================
 
   DriverNode::DriverNode() :
-    Node{"orca_driver"}
+    Node{"orca_driver"},
+    barometer_{0}
   {
     // Suppress IDE warnings
     (void) control_sub_;
@@ -42,6 +43,7 @@ namespace orca_driver
     }
 
     // Publish battery and leak messages
+    barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", 1);
     battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
     leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
 
@@ -126,7 +128,7 @@ namespace orca_driver
       return;
     }
 
-    if (!read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
+    if (!read_barometer() || !read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
       // Huge problem, we're done
       abort();
       return;
@@ -140,8 +142,19 @@ namespace orca_driver
       all_stop();
     }
 
+    barometer_pub_->publish(barometer_msg_);
     battery_pub_->publish(battery_msg_);
     leak_pub_->publish(leak_msg_);
+  }
+
+  // Read barometer sensor, return true if successful
+  bool DriverNode::read_barometer()
+  {
+    barometer_.read();
+    barometer_msg_.header.stamp = now();
+    barometer_msg_.pressure = barometer_.pressure() * 100; // Pascals
+    barometer_msg_.temperature = barometer_.temperature(); // Celsius
+    return true;
   }
 
   // Read battery sensor, return true if successful
@@ -184,49 +197,6 @@ namespace orca_driver
     }
   }
 
-  // Run a bunch of pre-dive checks, return true if everything looks good
-  bool DriverNode::pre_dive()
-  {
-    RCLCPP_INFO(get_logger(), "running pre-dive checks...");
-
-    if (!read_battery() || !read_leak()) {
-      maestro_.disconnect();
-      return false;
-    }
-
-    RCLCPP_INFO(get_logger(), "voltage is %g, leak status is %d", battery_msg_.voltage, leak_msg_.leak_detected);
-
-    if (leak_msg_.leak_detected) {
-      maestro_.disconnect();
-      return false;
-    }
-
-    if (battery_msg_.low_battery) {
-      maestro_.disconnect();
-      return false;
-    }
-
-    // When the Maestro boots, it should set all thruster channels to 1500.
-    // But on a system restart it might be a bad state. Force an all-stop.
-    all_stop();
-
-    // Check to see that all thrusters are stopped.
-    for (size_t i = 0; i < thrusters_.size(); ++i) {
-      uint16_t value = 0;
-      maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
-      RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
-      if (value != orca_msgs::msg::Control::THRUST_STOP) {
-        RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
-        maestro_.disconnect();
-        return false;
-      }
-    }
-
-    RCLCPP_INFO(get_logger(), "pre-dive checks passed");
-    set_status(Status::ready);
-    return true;
-  }
-
   // Stop all motion
   void DriverNode::all_stop()
   {
@@ -247,20 +217,85 @@ namespace orca_driver
     maestro_.disconnect();
   }
 
-  // Connect to Maestro and run pre-dive checks, return true if we're ready to dive
+  // Connect to Maestro and run pre-dive checks, return true if successful
+  bool DriverNode::connect_controller()
+  {
+    maestro_.connect(cxt_.maestro_port_);
+    if (!maestro_.ready()) {
+      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", cxt_.maestro_port_.c_str());
+      return false;
+    }
+    RCLCPP_INFO(get_logger(), "port %s open", cxt_.maestro_port_.c_str());
+
+    // When the Maestro boots, it should set all thruster channels to 1500.
+    // But on a system restart it might be a bad state. Force an all-stop.
+    all_stop();
+
+    // Check to see that all thrusters are stopped.
+    for (size_t i = 0; i < thrusters_.size(); ++i) {
+      uint16_t value = 0;
+      maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
+      RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
+      if (value != orca_msgs::msg::Control::THRUST_STOP) {
+        RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
+        maestro_.disconnect();
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Connect to the barometer and run pre-dive checks, return true if successful
+  bool DriverNode::connect_barometer()
+  {
+    if (!barometer_.init()) {
+      RCLCPP_ERROR(get_logger(), "can't connect to barometer, correct bus? member of i2c?");
+      return false;
+    }
+    RCLCPP_INFO(get_logger(), "barometer initialized");
+
+    // TODO pre-dive checks
+
+    return true;
+  }
+
+  // Connect to the battery sensor and run pre-dive checks, return true if successful
+  bool DriverNode::connect_battery()
+  {
+    if (!read_battery()) {
+      abort();
+      return false;
+    }
+
+    RCLCPP_INFO(get_logger(), "voltage is %g", battery_msg_.voltage);
+    return !battery_msg_.low_battery;
+  }
+
+  // Connect to the leak sensor and run pre-dive checks, return true if successful
+  bool DriverNode::connect_leak()
+  {
+    if (!read_leak()) {
+      abort();
+      return false;
+    }
+
+    RCLCPP_INFO(get_logger(), "leak status is %d", leak_msg_.leak_detected);
+    return !leak_msg_.leak_detected;
+  }
+
+  // Connect to all hardware and run pre-dive checks, return true if we're ready to dive
   bool DriverNode::connect()
   {
     set_status(Status::none);
-    std::string port = cxt_.maestro_port_;
-    RCLCPP_INFO(get_logger(), "opening port %s...", port.c_str());
-    maestro_.connect(port);
-    if (!maestro_.ready()) {
-      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", port.c_str());
+    if (!connect_barometer() || !connect_battery() || !connect_controller() || !connect_leak()) {
+      abort();
       return false;
     }
-    RCLCPP_INFO(get_logger(), "port %s open", port.c_str());
 
-    return pre_dive();
+    RCLCPP_INFO(get_logger(), "hardware initialized, pre-dive checks passed");
+    set_status(Status::ready);
+    return true;
   }
 
   // Normal exit

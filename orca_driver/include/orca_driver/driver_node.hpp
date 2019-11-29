@@ -6,11 +6,13 @@
 
 #include "mraa/common.hpp"
 #include "mraa/led.hpp"
+#include "br_ms5837/MS5837.h"
 
 #include "rclcpp/rclcpp.hpp"
 
 #include "orca_driver/driver_context.hpp"
 #include "orca_driver/maestro.hpp"
+#include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/leak.hpp"
@@ -39,6 +41,7 @@ namespace orca_driver
 
     // State
     maestro::Maestro maestro_;
+    orca_msgs::msg::Barometer barometer_msg_;
     orca_msgs::msg::Battery battery_msg_;
     orca_msgs::msg::Leak leak_msg_;
     Status status_;
@@ -51,6 +54,7 @@ namespace orca_driver
     rclcpp::TimerBase::SharedPtr spin_timer_;
 
     // Publications
+    rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_pub_;
     rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
     rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
 
@@ -60,6 +64,9 @@ namespace orca_driver
     mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};
 
+    // Barometer on i2c bus 0
+    MS5837 barometer_;
+
     void validate_parameters();
 
     void set_status(Status status);
@@ -68,11 +75,19 @@ namespace orca_driver
 
     void timer_callback();
 
+    bool read_barometer();
+
     bool read_battery();
 
     bool read_leak();
 
-    bool pre_dive();
+    bool connect_controller();
+
+    bool connect_barometer();
+
+    bool connect_battery();
+
+    bool connect_leak();
 
     void all_stop();
 

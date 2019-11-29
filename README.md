@@ -44,6 +44,7 @@ git clone https://github.com/clydemcqueen/orca2.git
 git clone https://github.com/clydemcqueen/ukf.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 git clone https://github.com/ptrmu/ros2_shared.git
+git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
 cd ~/ros2/orca2_ws
 source /opt/ros/eloquent/setup.bash
 colcon build

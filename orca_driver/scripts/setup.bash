@@ -7,9 +7,6 @@ unset LD_LIBRARY_PATH
 unset COLCON_PREFIX_PATH
 unset PYTHONPATH
 
-# Add ms5837 (required for bar30_node.py)
-export PYTHONPATH=~/ms5837-python
-
 # Add ROS2 paths
 . /opt/ros/eloquent/setup.bash
 . install/local_setup.bash
