@@ -108,7 +108,8 @@ def generate_launch_description():
                 'publish_tfs': 1,  # Publish marker /tf
                 'marker_length': 0.1778,  # Marker length
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
-                'make_not_use_map': 0}]),  # Don't modify the map
+                'make_not_use_map': 0  # Don't modify the map
+            }]),
 
         # Localize against the map -- forward camera
         Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
