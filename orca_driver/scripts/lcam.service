@@ -3,8 +3,8 @@ Description=Orca left camera
 
 [Service]
 Type=forking
-User=clyde
-ExecStart=/home/clyde/ros2/orca_ws/install/orca_driver/lib/orca_driver/start_lcam.sh
+User=pi
+ExecStart=/home/pi/orca2/orca_driver/scripts/start_lcam.sh
 
 [Install]
 WantedBy=multi-user.target
