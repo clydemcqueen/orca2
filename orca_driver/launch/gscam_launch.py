@@ -11,8 +11,8 @@ from launch_ros.actions import Node
 # 2x RPi Zero running start_lcam.sh and start_rcam.sh
 
 # GSCam config:
-lcam_cfg = 'udpsrc port=5601 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264 ! videoconvert'
-rcam_cfg = 'udpsrc port=5602 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264 ! videoconvert'
+wa1_cfg = 'udpsrc port=5601 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264 ! videoconvert'
+wa2_cfg = 'udpsrc port=5602 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264 ! videoconvert'
 
 
 def generate_launch_description():
@@ -24,8 +24,8 @@ def generate_launch_description():
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
     map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
 
-    left_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa1_dry_800x600.yaml' # TODO
-    right_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa1_dry_800x600.yaml' # TODO
+    left_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa1_dry_800x600.yaml'
+    right_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa2_dry_800x600.yaml'
 
     map_frame = 'map'
 
@@ -44,7 +44,7 @@ def generate_launch_description():
         # Left camera
         Node(package='gscam', node_executable='gscam_node', output=output,
              node_name='gscam_node', parameters=[{
-                'gscam_config': lcam_cfg,
+                'gscam_config': wa1_cfg,
                 'camera_name': left_camera_name,
                 'camera_info_url': left_camera_info,
                 'frame_id': left_camera_frame
@@ -56,7 +56,7 @@ def generate_launch_description():
         # Right camera
         Node(package='gscam', node_executable='gscam_node', output=output,
              node_name='gscam_node', parameters=[{
-                'gscam_config': rcam_cfg,
+                'gscam_config': wa2_cfg,
                 'camera_name': right_camera_name,
                 'camera_info_url': right_camera_info,
                 'frame_id': right_camera_frame

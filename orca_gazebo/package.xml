@@ -23,6 +23,7 @@
     <depend>orca_shared</depend>
     <depend>rclcpp</depend>
     <depend>rclpy</depend>
+    <depend>sim_fiducial</depend>
 
     <export>
         <build_type>ament_cmake</build_type>

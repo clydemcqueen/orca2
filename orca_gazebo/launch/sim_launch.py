@@ -47,7 +47,7 @@ def generate_launch_description():
         ], output='screen'),
 
         # Add the AUV to the simulation
-        Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
+        Node(package='sim_fiducial', node_executable='inject_entity.py', output='screen',
              arguments=[urdf_path, '0', '0', surface, '0', '0', '0']),
 
         # Publish static joints

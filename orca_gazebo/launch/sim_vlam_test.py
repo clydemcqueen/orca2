@@ -2,7 +2,7 @@
 Launch a test harness for fiducial_vlam
 
 Inject a new camera on-the-fly:
-ros2 run orca_gazebo inject_entity.py install/orca_description/share/orca_description/urdf/fixed_camera.sdf 0 0 0 0 0 0
+ros2 run sim_fiducial inject_entity.py install/orca_description/share/orca_description/urdf/fixed_camera.sdf 0 0 0 0 0 0
 
 (But deleting a model from Gazebo might delete the ROS node before the ROS subscriptions, causing a memory leak.)
 """
@@ -42,11 +42,11 @@ def generate_launch_description():
         ], output='screen'),
 
         # Add forward-facing camera to the simulation
-        Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
+        Node(package='sim_fiducial', node_executable='inject_entity.py', output='screen',
              arguments=[forward_sdf_path, '0', '0', '0', '0', '0', '0']),
 
         # Add down-facing camera to the simulation
-        Node(package='orca_gazebo', node_executable='inject_entity.py', output='screen',
+        Node(package='sim_fiducial', node_executable='inject_entity.py', output='screen',
              arguments=[down_sdf_path, '-0.2', '0', '0', '0', '1.570796', '0']),
 
         # # Load and publish a known map

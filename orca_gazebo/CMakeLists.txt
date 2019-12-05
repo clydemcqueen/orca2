@@ -10,6 +10,7 @@ endif ()
 if ($ENV{CLION_IDE})
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(orca_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_shared/share/orca_shared/cmake")
+  set(sim_fiducial_DIR "${PROJECT_SOURCE_DIR}/../../../install/sim_fiducial/share/sim_fiducial/cmake")
 endif ()
 
 find_package(ament_cmake REQUIRED)
@@ -23,6 +24,7 @@ find_package(orca_shared REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(sim_fiducial REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
 include_directories(
@@ -108,14 +110,8 @@ install(
 
 ## Install various directories
 install(
-  DIRECTORY launch models worlds sdf
+  DIRECTORY launch worlds
   DESTINATION share/${PROJECT_NAME}
-)
-
-## Install Python scripts
-install(
-  PROGRAMS src/inject_entity.py
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()
