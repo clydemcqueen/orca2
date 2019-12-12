@@ -1,4 +1,4 @@
-"""Launch a simulation with fiducial_vlam"""
+"""Launch a simulation with fiducial_vlam_sam"""
 
 import os
 
@@ -102,8 +102,8 @@ def generate_launch_description():
             ]),
 
         # Load and publish a known map
-        Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
-             node_name='vmap_node', parameters=[{
+        Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
+             node_name='vmap_main', parameters=[{
                 'use_sim_time': use_sim_time,
                 'publish_tfs': 1,  # Publish marker /tf
                 'marker_length': 0.1778,  # Marker length
@@ -112,7 +112,7 @@ def generate_launch_description():
             }]),
 
         # Localize against the map -- forward camera
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[{
                 'use_sim_time': use_sim_time,
                 'publish_tfs': 0,
@@ -127,7 +127,7 @@ def generate_launch_description():
             }]),
 
         # Localize against the map -- left camera
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_left', node_namespace=left_camera_name, parameters=[{
                 'use_sim_time': use_sim_time,
                 'publish_tfs': 0,
@@ -142,7 +142,7 @@ def generate_launch_description():
             }]),
 
         # Localize against the map -- right camera
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
+        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_right', node_namespace=right_camera_name, parameters=[{
                 'use_sim_time': use_sim_time,
                 'publish_tfs': 0,

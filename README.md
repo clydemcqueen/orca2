@@ -10,8 +10,8 @@ Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or l
 
 [Install ROS2 Eloquent](https://index.ros.org/doc/ros2/Installation/)
 with the `ros-eloquent-desktop` option.
-If you install binaries, be sure to also install the development tools and ROS tools from the
-[source installation instructions](https://index.ros.org/doc/ros2/Installation/Linux-Development-Setup/).
+If you install binaries, be sure to also install Colcon from the
+[Colcon tutorial](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
 
 Install Gazebo v9:
 ~~~
