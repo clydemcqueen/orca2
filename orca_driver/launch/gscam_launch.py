@@ -2,9 +2,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch_ros.actions import Node
+from launch_ros.actions import Node, ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
 
 # GSCam launch, useful for testing the image processing pipeline
+# Uses ROS2 components and IPC
 
 # Setup:
 # 2x RPi camera module 2 with a wide angle lens sold by BlueRobotics
@@ -27,84 +29,32 @@ def generate_launch_description():
     left_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa1_dry_800x600.yaml'
     right_camera_info = 'file://' + get_package_share_directory('orca_driver') + '/cfg/wa2_dry_800x600.yaml'
 
-    map_frame = 'map'
-
     # Must match the URDF file
     base_link_frame = 'base_link'
     left_camera_name = 'left_camera'
+    left_camera_name_full = '/' + left_camera_name
     left_camera_frame = 'left_camera_frame'
     right_camera_name = 'right_camera'
+    right_camera_name_full = '/' + right_camera_name
     right_camera_frame = 'right_camera_frame'
 
-    return LaunchDescription([
+    nodes = [
         # Publish static transforms
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output=output,
              arguments=[urdf_path]),
 
-        # Left camera
-        Node(package='gscam', node_executable='gscam_node', output=output,
-             node_name='gscam_node', parameters=[{
-                'gscam_config': wa1_cfg,
-                'camera_name': left_camera_name,
-                'camera_info_url': left_camera_info,
-                'frame_id': left_camera_frame
-            }], remappings=[
-                ('camera/camera_info', '/' + left_camera_name + '/camera_info'),
-                ('camera/image_raw', '/' + left_camera_name + '/image_raw'),
-            ]),
-
-        # Right camera
-        Node(package='gscam', node_executable='gscam_node', output=output,
-             node_name='gscam_node', parameters=[{
-                'gscam_config': wa2_cfg,
-                'camera_name': right_camera_name,
-                'camera_info_url': right_camera_info,
-                'frame_id': right_camera_frame
-            }], remappings=[
-                ('camera/camera_info', '/' + right_camera_name + '/camera_info'),
-                ('camera/image_raw', '/' + right_camera_name + '/image_raw'),
-            ]),
-
         # Mapper
-        Node(package='fiducial_vlam', node_executable='vmap_node', output=output,
-             node_name='vmap_node', parameters=[{
+        Node(package='fiducial_vlam', node_executable='vmap_main', output=output,
+             node_name='vmap', parameters=[{
                 'publish_tfs': 1,  # Publish marker /tf
                 'marker_length': 0.1778,  # Marker length
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
                 'make_not_use_map': 0  # Don't modify the map
             }]),
 
-        # Localize against the map -- left camera
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_left', node_namespace=left_camera_name, parameters=[{
-                'publish_tfs': 0,
-                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
-                'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 1,
-                'publish_base_pose': 0,
-                'publish_camera_odom': 0,
-                'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': 0,
-                'camera_frame_id': left_camera_frame,
-            }]),
-
-        # Localize against the map -- right camera
-        Node(package='fiducial_vlam', node_executable='vloc_node', output='screen',
-             node_name='vloc_right', node_namespace=right_camera_name, parameters=[{
-                'publish_tfs': 0,
-                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
-                'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 1,
-                'publish_base_pose': 0,
-                'publish_camera_odom': 0,
-                'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': 0,
-                'camera_frame_id': right_camera_frame,
-            }]),
-
         # Filter
         Node(package='orca_filter', node_executable='filter_node', output=output,
-             node_name='filter_node', parameters=[{
+             node_name='filter', parameters=[{
                 'param_fluid_density': 997.0,
                 'baro_init': 0,  # Init in-air
                 'predict_accel': False,
@@ -123,4 +73,92 @@ def generate_launch_description():
                 ('lcam_f_map', '/' + left_camera_name + '/camera_pose'),
                 ('rcam_f_map', '/' + right_camera_name + '/camera_pose'),
             ]),
-    ])
+    ]
+
+    # 1: compose nodes at launch
+    # 2: link nodes statically
+    composition_method = 2
+
+    left_vloc_params = {
+        'publish_tfs': 0,
+        'publish_tfs_per_marker': 0,
+        'sub_camera_info_best_effort_not_reliable': 1,
+        'publish_camera_pose': 1,
+        'publish_base_pose': 0,
+        'publish_camera_odom': 1,
+        'publish_base_odom': 0,
+        'stamp_msgs_with_current_time': 0,
+        'camera_frame_id': left_camera_frame,
+    }
+
+    right_vloc_params = {
+        'publish_tfs': 0,
+        'publish_tfs_per_marker': 0,
+        'sub_camera_info_best_effort_not_reliable': 1,
+        'publish_camera_pose': 1,
+        'publish_base_pose': 0,
+        'publish_camera_odom': 1,
+        'publish_base_odom': 0,
+        'stamp_msgs_with_current_time': 0,
+        'camera_frame_id': right_camera_frame,
+    }
+
+    left_gscam_params = {
+        'gscam_config': wa1_cfg,
+        'camera_name': left_camera_name,
+        'camera_info_url': left_camera_info,
+        'frame_id': left_camera_frame
+    }
+
+    right_gscam_params = {
+        'gscam_config': wa2_cfg,
+        'camera_name': right_camera_name,
+        'camera_info_url': right_camera_info,
+        'frame_id': right_camera_frame
+    }
+
+    if composition_method == 1:
+
+        nodes.append(
+            ComposableNodeContainer(
+                package='rclcpp_components', node_executable='component_container', output=output,
+                node_name='composite', node_namespace=left_camera_name_full, composable_node_descriptions=[
+                    ComposableNode(package='fiducial_vlam', node_plugin='fiducial_vlam::VlocNode', node_name='vloc',
+                                   node_namespace=left_camera_name_full,
+                                   extra_arguments=[{'use_intra_process_comms': True}],
+                                   parameters=[left_vloc_params]),
+                    ComposableNode(package='gscam', node_plugin='gscam::GSCamNode', node_name='gscam',
+                                   node_namespace=left_camera_name_full,
+                                   extra_arguments=[{'use_intra_process_comms': True}],
+                                   parameters=[left_gscam_params]),
+                ]))
+
+        nodes.append(
+            ComposableNodeContainer(
+                package='rclcpp_components', node_executable='component_container', output=output,
+                node_name='composite', node_namespace=right_camera_name_full, composable_node_descriptions=[
+                    ComposableNode(package='fiducial_vlam', node_plugin='fiducial_vlam::VlocNode', node_name='vloc',
+                                   node_namespace=right_camera_name_full,
+                                   extra_arguments=[{'use_intra_process_comms': True}],
+                                   parameters=[right_vloc_params]),
+                    ComposableNode(package='gscam', node_plugin='gscam::GSCamNode', node_name='gscam',
+                                   node_namespace=right_camera_name_full,
+                                   extra_arguments=[{'use_intra_process_comms': True}],
+                                   parameters=[right_gscam_params]),
+                ]))
+
+    elif composition_method == 2:
+
+        # Brittle: we're counting on the fact that the parameter names don't collide
+
+        nodes.append(
+            Node(package='orca_driver', node_executable='gscam_vloc_main', output=output,
+                 node_namespace=left_camera_name_full,
+                 parameters=[left_vloc_params, left_gscam_params]))
+
+        nodes.append(
+            Node(package='orca_driver', node_executable='gscam_vloc_main', output=output,
+                 node_namespace=right_camera_name_full,
+                 parameters=[right_vloc_params, right_gscam_params]))
+
+    return LaunchDescription(nodes)

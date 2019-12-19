@@ -14,6 +14,8 @@ endif ()
 if ($ENV{CLION_IDE})
   message("Running inside CLion")
   set(br_ms5837_DIR "${PROJECT_SOURCE_DIR}/../../../install/br_ms5837/share/br_ms5837/cmake")
+  set(fiducial_vlam_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam/share/fiducial_vlam/cmake")
+  set(gscam_DIR "${PROJECT_SOURCE_DIR}/../../../install/gscam/share/gscam/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
@@ -21,6 +23,8 @@ endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(br_ms5837 REQUIRED)
+find_package(fiducial_vlam REQUIRED)
+find_package(gscam REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
@@ -69,12 +73,34 @@ ament_target_dependencies(
 )
 
 #=============
+# Composite gscam and fiducial_vlam main
+#=============
+
+add_executable(
+  gscam_vloc_main
+  src/gscam_vloc_main.cpp
+)
+ament_target_dependencies(
+  gscam_vloc_main
+  fiducial_vlam
+  gscam
+  rclcpp
+)
+
+# Why is this necessary?
+add_library(gscam_node SHARED IMPORTED)
+set_property(TARGET gscam_node PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../../../install/gscam/lib/libgscam_node.so")
+add_library(vloc_node SHARED IMPORTED)
+set_property(TARGET vloc_node PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam/lib/libvloc_node.so")
+target_link_libraries(gscam_vloc_main gscam_node vloc_node)
+
+#=============
 # Install
 #=============
 
 # Install C++ targets
 install(
-  TARGETS driver_node test_node
+  TARGETS driver_node test_node gscam_vloc_main
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
   RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2
 )
