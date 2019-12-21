@@ -21,10 +21,17 @@ if ($ENV{CLION_IDE})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
 endif ()
 
+# If we're running fiducial_vlam_sam instead of fiducial_vlam, set this to TRUE
+# This shouldn't be required... a bug in the GTSAM CMakeLists.txt?
+set(RUN_GTSAM FALSE)
+
 find_package(ament_cmake REQUIRED)
 find_package(br_ms5837 REQUIRED)
 find_package(fiducial_vlam REQUIRED)
 find_package(gscam REQUIRED)
+if (RUN_GTSAM)
+  find_package(GTSAM REQUIRED)
+endif ()
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
@@ -87,12 +94,12 @@ ament_target_dependencies(
   rclcpp
 )
 
-# Why is this necessary?
-add_library(gscam_node SHARED IMPORTED)
-set_property(TARGET gscam_node PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../../../install/gscam/lib/libgscam_node.so")
-add_library(vloc_node SHARED IMPORTED)
-set_property(TARGET vloc_node PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam/lib/libvloc_node.so")
-target_link_libraries(gscam_vloc_main gscam_node vloc_node)
+# Best practice, see https://discourse.ros.org/t/ament-best-practice-for-sharing-libraries/3602
+target_link_libraries(gscam_vloc_main gscam::gscam_node fiducial_vlam::vloc_node)
+
+if (RUN_GTSAM)
+  target_link_libraries(gscam_vloc_main gtsam)
+endif ()
 
 #=============
 # Install

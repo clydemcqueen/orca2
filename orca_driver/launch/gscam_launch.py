@@ -76,8 +76,8 @@ def generate_launch_description():
     ]
 
     # 1: compose nodes at launch
-    # 2: link nodes statically
-    composition_method = 2
+    # 2: link nodes manually
+    composition_method = 1
 
     left_vloc_params = {
         'publish_tfs': 0,
