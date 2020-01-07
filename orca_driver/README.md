@@ -1,5 +1,8 @@
 Hardware interface for [Orca2](https://github.com/clydemcqueen/orca2).
 
+TODO: split install instructions for device builds and simulation builds.
+Move device build instructions here, and simulation build instructions to orca_gazebo/README.md.
+
 Minimal ROS install:
 ~~~
 sudo apt install ros-eloquent-ros-base ros-eloquent-cv-bridge ros-eloquent-yaml-cpp-vendor
