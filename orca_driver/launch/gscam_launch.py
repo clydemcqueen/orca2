@@ -7,6 +7,7 @@ from launch_ros.descriptions import ComposableNode
 
 # GSCam launch, useful for testing the image processing pipeline
 # Uses ROS2 components and IPC
+# Requires gscam2 driver
 
 # Setup:
 # 2x RPi camera module 2 with a wide angle lens sold by BlueRobotics

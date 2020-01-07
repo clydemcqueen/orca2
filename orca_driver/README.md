@@ -1,7 +1,12 @@
 Hardware interface for [Orca2](https://github.com/clydemcqueen/orca2).
 
-TODO: split install instructions for device builds and simulation builds.
-Move device build instructions here, and simulation build instructions to orca_gazebo/README.md.
+Install MRAA header (required for the hardware interface, not required to run the simulation):
+
+~~~
+sudo add-apt-repository ppa:mraa/mraa
+sudo apt-get update
+sudo apt-get install libmraa2 libmraa-dev libmraa-java python-mraa python3-mraa node-mraa mraa-tools
+~~~
 
 Minimal ROS install:
 ~~~
@@ -20,7 +25,7 @@ touch ~/ros2/orca_ws/src/orca2/orca_shared/COLCON_IGNORE
 For the Raspberry Pi camera:
 ~~~
 cd ~/ros2/orca2_ws/src
-git clone https://github.com/clydemcqueen/gscam.git -b ros2
+git clone https://github.com/clydemcqueen/gscam2.git
 cd ~/ros2/orca2_ws
 colcon build
 ~~~
