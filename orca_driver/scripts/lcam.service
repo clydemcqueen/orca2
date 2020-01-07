@@ -1,0 +1,10 @@
+[Unit]
+Description=Orca left camera
+
+[Service]
+Type=forking
+User=pi
+ExecStart=/home/pi/orca2/orca_driver/scripts/start_lcam.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -10,8 +10,8 @@ Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or l
 
 [Install ROS2 Eloquent](https://index.ros.org/doc/ros2/Installation/)
 with the `ros-eloquent-desktop` option.
-If you install binaries, be sure to also install the development tools and ROS tools from the
-[source installation instructions](https://index.ros.org/doc/ros2/Installation/Linux-Development-Setup/).
+If you install binaries, be sure to also install Colcon from the
+[Colcon tutorial](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
 
 Install Gazebo v9:
 ~~~
@@ -23,28 +23,21 @@ Install these ROS packages:
 sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs ros-eloquent-xacro
 ~~~
 
-Install MRAA header:
-
-~~~
-sudo add-apt-repository ppa:mraa/mraa
-sudo apt-get update
-sudo apt-get install libmraa2 libmraa-dev libmraa-java python-mraa python3-mraa node-mraa mraa-tools
-~~~
-
 Use your favorite Python package manager to install these Python packages:
 ~~~
 pip3 install numpy transformations
 ~~~
 
-Build Orca2:
+Build Orca2 (but not the orca_driver hardware interface):
 ~~~
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
+touch orca2/orca_driver/COLCON_IGNORE
 git clone https://github.com/clydemcqueen/ukf.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 git clone https://github.com/ptrmu/ros2_shared.git
-git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
+git clone https://github.com/clydemcqueen/sim_fiducial.git
 cd ~/ros2/orca2_ws
 source /opt/ros/eloquent/setup.bash
 colcon build
@@ -55,7 +48,7 @@ Run the simulation:
 cd ~/ros2/orca_ws
 source /opt/ros/eloquent/setup.bash
 source install/local_setup.bash
-export GAZEBO_MODEL_PATH=${PWD}/install/orca_gazebo/share/orca_gazebo/models
+export GAZEBO_MODEL_PATH=${PWD}/install/sim_fiducial/share/sim_fiducial/models
 source /usr/share/gazebo/setup.sh
 ros2 launch orca_gazebo sim_launch.py
 ~~~
