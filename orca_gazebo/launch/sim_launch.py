@@ -32,8 +32,8 @@ def generate_launch_description():
     orca_gazebo_path = get_package_share_directory('orca_gazebo')
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'huge.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'huge_map.yaml')
+    world_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring.world')
+    map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring_map.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -87,9 +87,9 @@ def generate_launch_description():
                 'predict_accel_drag': False,
                 'predict_accel_buoyancy': False,
                 'filter_baro': True,
-                'filter_fcam': False,
-                'filter_lcam': True,
-                'filter_rcam': True,
+                'filter_fcam': True,
+                'filter_lcam': False,
+                'filter_rcam': False,
                 'urdf_file': urdf_path,
                 'urdf_barometer_joint': 'baro_joint',
                 'urdf_forward_camera_joint': 'forward_camera_frame_joint',
@@ -127,32 +127,32 @@ def generate_launch_description():
             }]),
 
         # Localize against the map -- left camera
-        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_left', node_namespace=left_camera_name, parameters=[{
-                'use_sim_time': use_sim_time,
-                'publish_tfs': 0,
-                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
-                'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 1,
-                'publish_base_pose': 0,
-                'publish_camera_odom': 0,
-                'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
-                'camera_frame_id': left_camera_frame,
-            }]),
+        # Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
+        #      node_name='vloc_left', node_namespace=left_camera_name, parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #         'publish_tfs': 0,
+        #         'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
+        #         'sub_camera_info_best_effort_not_reliable': 1,
+        #         'publish_camera_pose': 1,
+        #         'publish_base_pose': 0,
+        #         'publish_camera_odom': 0,
+        #         'publish_base_odom': 0,
+        #         'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
+        #         'camera_frame_id': left_camera_frame,
+        #     }]),
 
         # Localize against the map -- right camera
-        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_right', node_namespace=right_camera_name, parameters=[{
-                'use_sim_time': use_sim_time,
-                'publish_tfs': 0,
-                'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
-                'sub_camera_info_best_effort_not_reliable': 1,
-                'publish_camera_pose': 1,
-                'publish_base_pose': 0,
-                'publish_camera_odom': 0,
-                'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
-                'camera_frame_id': right_camera_frame,
-            }]),
+        # Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
+        #      node_name='vloc_right', node_namespace=right_camera_name, parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #         'publish_tfs': 0,
+        #         'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
+        #         'sub_camera_info_best_effort_not_reliable': 1,
+        #         'publish_camera_pose': 1,
+        #         'publish_base_pose': 0,
+        #         'publish_camera_odom': 0,
+        #         'publish_base_odom': 0,
+        #         'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
+        #         'camera_frame_id': right_camera_frame,
+        #     }]),
     ])

@@ -442,13 +442,13 @@
     </xacro:macro>
 
     <!-- Forward-facing camera: -->
-<!--    <xacro:camera_plugin prefix="forward"/>-->
+    <xacro:camera_plugin prefix="forward" width="800" height="600" horizontal_fov="1.4"/>
 
     <!-- Left down-facing camera: -->
-    <xacro:camera_plugin prefix="left" width="800" height="600" horizontal_fov="1.4"/>
+<!--    <xacro:camera_plugin prefix="left" width="800" height="600" horizontal_fov="1.4"/>-->
 
     <!-- Right down-facing camera: -->
-    <xacro:camera_plugin prefix="right" width="800" height="600" horizontal_fov="1.4"/>
+<!--    <xacro:camera_plugin prefix="right" width="800" height="600" horizontal_fov="1.4"/>-->
 
     <gazebo>
         <plugin name="p3d_test" filename="libgazebo_ros_p3d.so">

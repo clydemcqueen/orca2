@@ -171,4 +171,18 @@ namespace orca_base
     u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
   }
 
+  void MoveToMarkerController::calc(double dt, const Observation &plan, const Observation &observation,
+                                    const orca::Acceleration &ff, orca::Acceleration &u_bar)
+  {
+    forward_controller_.set_target(plan.distance);
+    yaw_controller_.set_target(plan.yaw);
+    vertical_controller_.set_target(0.5); // TODO
+
+    u_bar = ff;
+
+    u_bar.x = -forward_controller_.calc(observation.distance, dt) + ff.x;
+    u_bar.yaw = -yaw_controller_.calc(observation.yaw, dt) + ff.yaw;
+    // TODO u_bar.z
+  }
+
 }

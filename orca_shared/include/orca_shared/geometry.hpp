@@ -7,6 +7,7 @@
 #include "orca_msgs/msg/efforts.hpp"
 #include "orca_msgs/msg/pose.hpp"
 
+#include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -318,6 +319,77 @@ namespace orca
       vertical_ = msg.vertical;
       yaw_ = msg.yaw;
 
+    }
+  };
+
+  //=====================================================================================
+  // Observation -- observation of a feature (e.g. ArUco marker) from the sub
+  //=====================================================================================
+
+  struct Observation
+  {
+    static constexpr int INVALID_ID = -1;
+
+    rclcpp::Time stamp{0, 0, RCL_ROS_TIME};
+
+    int id;
+    double distance;
+    double yaw;
+
+    Observation() : id{INVALID_ID}, distance{0}, yaw{0}
+    {}
+
+    void from_msg(const rclcpp::Time &_stamp, int _id, const fiducial_vlam_msgs::msg::Observation &msg)
+    {
+      // Assumptions:
+      // -- camera is pointed forward
+      // -- camera is mounted at base_link (not true, but OK for now)
+      // -- pixels are square
+      // -- markers are mounted vertically
+      // -- roll and pitch are zero
+
+      // TODO get from context or observations.camera_info
+      double hfov = 1.4;            // Horizontal field of view
+      double hres = 800;            // Horizontal resolution
+      double marker_len = 0.1778;   // Marker length
+
+      stamp = _stamp;
+      id = _id;
+
+      // Find the longest side of the marker in pixels
+      double side01 = std::hypot(msg.x0 - msg.x1, msg.y0 - msg.y1);
+      double side12 = std::hypot(msg.x1 - msg.x2, msg.y1 - msg.y2);
+      double side23 = std::hypot(msg.x2 - msg.x3, msg.y2 - msg.y3);
+      double side30 = std::hypot(msg.x3 - msg.x0, msg.y3 - msg.y0);
+      double longest_side = side01;
+      if (side12 > longest_side) {
+        longest_side = side12;
+      }
+      if (side23 > longest_side) {
+        longest_side = side23;
+      }
+      if (side30 > longest_side) {
+        longest_side = side30;
+      }
+
+      distance = marker_len / sin(longest_side / hres * hfov);
+
+      // Center of marker
+      double x = (msg.x0 + msg.x1 + msg.x2 + msg.x3) / 4;
+
+      yaw = hfov / 2 - x * hfov / hres;
+    }
+
+    bool from_msg(int _id, const fiducial_vlam_msgs::msg::Observations &msg)
+    {
+      for (const auto &r : msg.observations) {
+        if (r.id == _id) {
+          from_msg(msg.header.stamp, _id, r);
+          return true;
+        }
+      }
+
+      return false;
     }
   };
 

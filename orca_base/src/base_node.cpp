@@ -68,6 +68,9 @@ namespace orca_base
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
       "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
+    obs_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
+      "fiducial_observations", 1, [this](const fiducial_vlam_msgs::msg::Observations::SharedPtr msg) -> void
+      { this->obs_cb_.call(msg); });
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
       "odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
       { this->odom_cb_.call(msg); });
@@ -179,11 +182,11 @@ namespace orca_base
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot keep station");
         }
-      } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
-        if (odom_ok(msg->header.stamp) && map_.ok()) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_RANDOM);
+      } else if (button_down(msg, joy_msg_, joy_button_move_to_marker_)) {
+        if (obs_ok(msg->header.stamp) && observation_.id != orca::Observation::INVALID_ID) {
+          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_10);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot start random mission");
+          RCLCPP_ERROR(get_logger(), "marker 0 not in view, cannot start move to marker mission");
         }
       }
 
@@ -250,8 +253,21 @@ namespace orca_base
     stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
 
     // Continue the mission
+    // TODO check for !first
     if (auv_mode()) {
       auv_advance(odom_cb_.dt());
+    }
+  }
+
+  // New marker observation available
+  void BaseNode::obs_callback(fiducial_vlam_msgs::msg::Observations::SharedPtr msg, bool first)
+  {
+    // Save the observation
+    observation_.from_msg(0, *msg);
+
+    // Continue the mission
+    if (!first && mtm_mode()) {
+      mtm_advance(obs_cb_.dt());
     }
   }
 
@@ -343,6 +359,36 @@ namespace orca_base
       disarm(filtered_odom_.header.stamp);
     }
   }
+
+  void BaseNode::mtm_advance(double dt)
+  {
+    // Advance plan and compute feedforward
+    if (mtm_segment_->advance(dt)) {
+      // Calc acceleration
+      Acceleration u_bar;
+      mtm_controller_->calc(dt, mtm_segment_->plan(), observation_, mtm_segment_->ff(), u_bar);
+
+      // Acceleration in the body frame => effort
+      Efforts efforts;
+      efforts.set_forward(Model::accel_to_effort_xy(u_bar.x));
+      efforts.set_strafe(0);
+      efforts.set_vertical(Model::accel_to_effort_xy(u_bar.z));
+      efforts.set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
+
+      // Error doesn't make sense here
+      Pose error;
+
+      publish_control(filtered_odom_.header.stamp, error, efforts);
+
+    } else {
+      // Mission is over, clean up
+      RCLCPP_INFO(get_logger(), "mission completed");
+      mtm_segment_ = nullptr;
+      mtm_controller_ = nullptr;
+      disarm(observation_.stamp);
+    }
+  }
+
 
   void BaseNode::all_stop(const rclcpp::Time &msg_time)
   {
@@ -481,6 +527,17 @@ namespace orca_base
       filtered_path_.header.stamp = joy_cb_.curr();
       filtered_path_.header.frame_id = cxt_.map_frame_;
       filtered_path_.poses.clear();
+
+    } else if (is_mtm_mode(new_mode)) {
+
+      RCLCPP_INFO(get_logger(), "move to marker");
+      orca::Observation goal_observation;
+      goal_observation.id = 0;
+      goal_observation.distance = 1.5;
+      goal_observation.yaw = 0;
+      mtm_segment_ = std::make_shared<MoveToMarkerSegment>(cxt_, 0, observation_, goal_observation);
+      mtm_controller_ = std::make_shared<MoveToMarkerController>(cxt_);
+
     }
 
     // Set the new mode
@@ -513,6 +570,11 @@ namespace orca_base
 
     if (holding_pressure() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding pressure, disarming");
+      disarm(spin_time);
+    }
+
+    if (mtm_mode() && !obs_ok(spin_time)) {
+      RCLCPP_ERROR(get_logger(), "lost observations while moving to marker, disarming");
       disarm(spin_time);
     }
 

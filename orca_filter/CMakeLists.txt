@@ -55,6 +55,7 @@ ament_target_dependencies(
   filter_node
   orca_msgs
   orca_shared
+  fiducial_vlam_msgs
   geometry_msgs
   nav_msgs
   rclcpp

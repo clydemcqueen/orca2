@@ -129,6 +129,42 @@ namespace orca_base
     bool advance(double dt) override;
   };
 
+  //=====================================================================================
+  // MoveToMarkerSegment uses observations, not poses
+  //=====================================================================================
+
+  class MoveToMarkerSegment
+  {
+    BaseContext cxt_;
+
+    // Target marker
+    int marker_id_;
+
+    // State
+    orca::Observation goal_;    // Goal observation
+    orca::Observation plan_;    // Planned observation, incremented with each call to advance()
+    orca::Twist twist_;         // Velocity in the body frame
+    orca::Acceleration ff_;     // Acceleration in the body frame
+
+  public:
+
+    MoveToMarkerSegment(BaseContext cxt, int marker_id, orca::Observation start, orca::Observation goal);
+
+    // Return the current (planned) observation
+    const orca::Observation &plan() const
+    { return plan_; }
+
+    // Return the goal observation
+    const orca::Observation &goal() const
+    { return goal_; }
+
+    // Return the acceleration required at the moment -- in the body frame
+    const orca::Acceleration &ff() const
+    { return ff_; }
+
+    bool advance(double dt);
+  };
+
 } // namespace orca_base
 
 #endif //ORCA_BASE_SEGMENT_HPP

@@ -4,6 +4,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
+#include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
@@ -16,9 +17,9 @@
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/base_context.hpp"
+#include "orca_base/joystick.hpp"
 #include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
-#include "orca_base/joystick.hpp"
 
 using namespace std::chrono_literals;
 
@@ -50,7 +51,13 @@ namespace orca_base
   constexpr bool is_auv_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode >= Control::AUV_KEEP_STATION;
+    return mode >= Control::AUV_KEEP_STATION && mode < Control::AUV_10;
+  }
+
+  constexpr bool is_mtm_mode(uint8_t mode)
+  {
+    using orca_msgs::msg::Control;
+    return mode == Control::AUV_10;
   }
 
   //=============================================================================
@@ -77,6 +84,7 @@ namespace orca_base
     // Constants
     const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
     const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
+    const rclcpp::Duration OBS_TIMEOUT{RCL_S_TO_NS(1)};   // AUV obs: disarm if we lose observations
     const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
     const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Check timeouts at 10Hz
 
@@ -103,7 +111,8 @@ namespace orca_base
     const int joy_button_rov_hold_pressure_ = JOY_BUTTON_B;
     const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
     const int joy_button_auv_keep_origin_ = JOY_BUTTON_Y;
-    const int joy_button_auv_random_ = JOY_BUTTON_LOGO;
+    //const int joy_button_auv_random_ = JOY_BUTTON_LOGO;
+    const int joy_button_move_to_marker_ = JOY_BUTTON_LOGO;
 
     const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
     const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
@@ -127,6 +136,9 @@ namespace orca_base
     orca::PoseStamped filtered_pose_;                   // Estimated pose TODO remove
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
+    // Fiducial observation
+    orca::Observation observation_;
+
     // ROV operation
     std::shared_ptr<pid::Controller> pressure_hold_pid_;
 
@@ -134,6 +146,10 @@ namespace orca_base
     std::shared_ptr<Mission> mission_;            // The mission we're running
     Map map_;                                     // Map of fiducial markers
     nav_msgs::msg::Path filtered_path_;           // Estimate of the actual path (from filtered_pose_)
+
+    // Move-to-marker operation
+    std::shared_ptr<MoveToMarkerSegment> mtm_segment_;
+    std::shared_ptr<MoveToMarkerController> mtm_controller_;
 
     // Outputs
     int tilt_{};                                  // Camera tilt
@@ -146,6 +162,7 @@ namespace orca_base
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
+    rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr obs_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
     // Timer
@@ -167,12 +184,16 @@ namespace orca_base
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
+    void obs_callback(fiducial_vlam_msgs::msg::Observations::SharedPtr msg, bool first);
+
     void odom_callback(nav_msgs::msg::Odometry::SharedPtr msg, bool first);
 
     // Callback wrappers
+    // TODO some const, some not?
     monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
     monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+    monotonic::Monotonic<BaseNode *, fiducial_vlam_msgs::msg::Observations::SharedPtr> obs_cb_{this, &BaseNode::obs_callback};
     monotonic::Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
 
     // Publications
@@ -197,6 +218,8 @@ namespace orca_base
 
     void auv_advance(double dt);
 
+    void mtm_advance(double dt);
+
     void all_stop(const rclcpp::Time &msg_time);
 
     void publish_control(const rclcpp::Time &msg_time, const orca::Pose &error, const orca::Efforts &efforts);
@@ -218,11 +241,17 @@ namespace orca_base
     bool auv_mode()
     { return is_auv_mode(mode_); }
 
+    bool mtm_mode()
+    { return is_mtm_mode(mode_); }
+
     bool baro_ok(const rclcpp::Time &t)
     { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
 
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
+
+    bool obs_ok(const rclcpp::Time &t)
+    { return obs_cb_.receiving() && t - obs_cb_.prev() < OBS_TIMEOUT; }
 
     bool odom_ok(const rclcpp::Time &t)
     { return odom_cb_.receiving() && t - odom_cb_.prev() < ODOM_TIMEOUT; }

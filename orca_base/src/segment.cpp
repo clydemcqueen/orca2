@@ -314,4 +314,79 @@ namespace orca_base
     }
   }
 
+  //=====================================================================================
+  // MoveToMarkerSegment
+  //=====================================================================================
+
+  // Compute the deceleration (glide) distance
+  double deceleration_distance_forward(const BaseContext &cxt, double velo_x)
+  {
+    double x = 0;
+
+    for (int ticks = 0; ticks < NUM_MAX_TICKS; ++ticks) {
+      // Compute drag force
+      double accel_drag_x = Model::force_to_accel(-cxt.model_.drag_force_x(velo_x));
+
+      // Update velocity
+      velo_x -= accel_drag_x * NUM_DT;
+
+      // Update distance
+      x += velo_x * NUM_DT;
+
+      if (velo_x < END_VELO_XY) {
+        // Close enough
+        return x;
+      }
+    }
+
+    std::cout << "deceleration_distance_forward failed" << std::endl;
+    return 0;
+  }
+
+  MoveToMarkerSegment::MoveToMarkerSegment(BaseContext cxt, int marker_id, orca::Observation start,
+                                           orca::Observation goal) :
+    cxt_{std::move(cxt)},
+    marker_id_{marker_id},
+    plan_{std::move(start)},
+    goal_{std::move(goal)},
+    twist_{},
+    ff_{}
+  {
+    twist_ = Twist{};
+
+    // Forward acceleration
+    ff_.x = Model::force_to_accel(-cxt_.model_.drag_force_x(cxt_.auv_xy_speed_));
+
+    // Counteract buoyancy
+    ff_.z = cxt_.model_.hover_accel_z();
+  }
+
+  bool MoveToMarkerSegment::advance(double dt)
+  {
+    // Moving foward is +x but -distance
+    double distance_remaining = plan_.distance - goal_.distance;
+
+    if (distance_remaining > EPSILON_PLAN_XYZ) {
+      if (distance_remaining - deceleration_distance_forward(cxt_, twist_.x) < EPSILON_PLAN_XYZ) {
+        // Decelerate
+        ff_.x = 0;
+      }
+
+      // Compute acceleration due to drag
+      double accel_drag_x = Model::force_to_accel(-cxt_.model_.drag_force_x(twist_.x));
+
+      // Update velocity
+      twist_.x += (ff_.x - accel_drag_x) * dt;
+
+      // Update plan
+      plan_.distance -= twist_.x * dt;
+
+      return true;
+    } else {
+      plan_ = goal_;
+      twist_ = Twist();
+      return false;
+    }
+  }
+
 } // namespace orca_base

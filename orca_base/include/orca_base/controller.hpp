@@ -157,6 +157,31 @@ namespace orca_base
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
-} // namespace pid
+  //=====================================================================================
+  // Experimental "move to marker" controller uses fiducial_vlam observations, not poses
+  // Observations are in the body frame, not the world frame
+  //=====================================================================================
+
+  class MoveToMarkerController
+  {
+    // PID controllers
+    pid::Controller forward_controller_;
+    pid::Controller vertical_controller_;
+    pid::Controller yaw_controller_;
+
+  public:
+
+    explicit MoveToMarkerController(const BaseContext &cxt) :
+      forward_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
+      vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
+      yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
+    {}
+
+    // ff and u_bar are in the body frame TODO create unique type to avoid confusion
+    void calc(double dt, const orca::Observation &plan, const orca::Observation &observation,
+              const orca::Acceleration &ff, orca::Acceleration &u_bar);
+  };
+
+} // namespace orca_base
 
 #endif // ORCA_BASE_CONTROLLER_HPP
