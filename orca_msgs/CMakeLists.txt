@@ -40,7 +40,6 @@ rosidl_generate_interfaces(
   msg/Depth.msg
   msg/Efforts.msg
   msg/Leak.msg
-  msg/Proc.msg
   DEPENDENCIES geometry_msgs std_msgs
 )
 
