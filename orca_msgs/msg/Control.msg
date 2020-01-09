@@ -1,8 +1,8 @@
 # Header
 std_msgs/Header header
 
-# 4 DoF error for diagnostics
-orca_msgs/Pose error
+# Error for diagnostics
+geometry_msgs/Pose error
 
 # 4 DoF efforts for diagnostics
 orca_msgs/Efforts efforts

@@ -5,7 +5,6 @@
 #include "orca_shared/util.hpp"
 
 #include "orca_msgs/msg/efforts.hpp"
-#include "orca_msgs/msg/pose.hpp"
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -48,14 +47,6 @@ namespace orca
       tf2::Quaternion q;
       q.setRPY(0, 0, yaw);
       msg.orientation = tf2::toMsg(q);
-    }
-
-    void to_msg(orca_msgs::msg::Pose &msg) const
-    {
-      msg.x = x;
-      msg.y = y;
-      msg.z = z;
-      msg.yaw = yaw;
     }
 
     void from_msg(const geometry_msgs::msg::Pose &msg)
