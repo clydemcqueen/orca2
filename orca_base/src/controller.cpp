@@ -6,7 +6,7 @@ namespace orca_base
 {
 
   void SimpleController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                              const nav_msgs::msg::Odometry &estimate,
+                              const FiducialPoseStamped &estimate,
                               const Acceleration &ff, Acceleration &u_bar)
   {
 #define UNCERTAINTY_TEST
@@ -15,24 +15,24 @@ namespace orca_base
 
     u_bar = ff;
 
-    if (estimate.pose.covariance[0 * 7] < 1e4) {
+    if (estimate.pose.x_valid) {
       x_controller_.set_target(plan.x);
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
+      u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
     }
 
-    if (estimate.pose.covariance[1 * 7] < 1e4) {
+    if (estimate.pose.y_valid) {
       y_controller_.set_target(plan.y);
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
+      u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
     }
 
-    if (estimate.pose.covariance[2 * 7] < 1e4) {
+    if (estimate.pose.z_valid) {
       z_controller_.set_target(plan.z);
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+      u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     }
 
-    if (estimate.pose.covariance[5 * 7] < 1e4) {
+    if (estimate.pose.yaw_valid) {
       yaw_controller_.set_target(plan.yaw);
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
+      u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     }
 #else
     // Set targets
@@ -42,15 +42,15 @@ namespace orca_base
     yaw_controller_.set_target(plan.yaw);
 
     // Calculate response to the error
-    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
-    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
+    u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
+    u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
 #endif
   }
 
   void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                                const nav_msgs::msg::Odometry &estimate,
+                                const FiducialPoseStamped &estimate,
                                 const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -60,22 +60,22 @@ namespace orca_base
     yaw_controller_.set_target(plan.yaw);
 
     // Call PID controllers iff error is large enough
-    if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
+    if (plan.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
+      u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
+      u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
     } else {
       u_bar.x = ff.x;
       u_bar.y = ff.y;
     }
 
-    if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    if (plan.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
+      u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     } else {
       u_bar.z = ff.z;
     }
 
-    if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
+    if (plan.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
+      u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     } else {
       u_bar.yaw = ff.yaw;
     }
@@ -88,7 +88,7 @@ namespace orca_base
   }
 
   void JerkController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const nav_msgs::msg::Odometry &estimate,
+                            const FiducialPoseStamped &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -98,10 +98,10 @@ namespace orca_base
     yaw_controller_.set_target(plan.yaw);
 
     // Feedforward doesn't count toward the limit
-    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
-    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
-    u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
+    u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt);
+    u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt);
+    u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt);
+    u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt);
 
     // Limit jerk
     u_bar.x = limit(prev_u_bar_.x, u_bar.x, dt, cxt.auv_jerk_xy_);
@@ -117,7 +117,7 @@ namespace orca_base
   }
 
   void BestController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const nav_msgs::msg::Odometry &estimate,
+                            const FiducialPoseStamped &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -128,22 +128,22 @@ namespace orca_base
 
     // Call PID controllers iff error is large enough
     // Don't include feedforward
-    if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
+    if (plan.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
+      u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt);
+      u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt);
     } else {
       u_bar.x = 0;
       u_bar.y = 0;
     }
 
-    if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
+    if (plan.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
+      u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt);
     } else {
       u_bar.z = 0;
     }
 
-    if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
+    if (plan.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
+      u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt);
     } else {
       u_bar.yaw = 0;
     }
@@ -162,26 +162,26 @@ namespace orca_base
   }
 
   void DepthController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                             const nav_msgs::msg::Odometry &estimate,
+                             const FiducialPoseStamped &estimate,
                              const Acceleration &ff, Acceleration &u_bar)
   {
     u_bar = ff;
 
     z_controller_.set_target(plan.z);
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
   }
 
-  void MoveToMarkerController::calc(double dt, const Observation &plan, const Observation &observation,
+  void MoveToMarkerController::calc(double dt, const FiducialPoseStamped &plan, const FiducialPoseStamped &estimate,
                                     const orca::Acceleration &ff, orca::Acceleration &u_bar)
   {
-    forward_controller_.set_target(plan.distance);
-    yaw_controller_.set_target(plan.yaw);
+    forward_controller_.set_target(plan.observations[0].distance);
+    yaw_controller_.set_target(plan.observations[0].yaw);
     vertical_controller_.set_target(0.5); // TODO
 
     u_bar = ff;
 
-    u_bar.x = -forward_controller_.calc(observation.distance, dt) + ff.x;
-    u_bar.yaw = -yaw_controller_.calc(observation.yaw, dt) + ff.yaw;
+    u_bar.x = -forward_controller_.calc(estimate.observations[0].distance, dt) + ff.x;
+    u_bar.yaw = -yaw_controller_.calc(estimate.observations[0].yaw, dt) + ff.yaw;
     // TODO u_bar.z
   }
 

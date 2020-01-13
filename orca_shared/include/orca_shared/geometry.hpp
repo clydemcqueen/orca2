@@ -18,11 +18,6 @@
 namespace orca
 {
 
-  constexpr bool full_pose(const nav_msgs::msg::Odometry &odom)
-  {
-    return odom.pose.covariance[0] < 1e4;
-  }
-
   //=====================================================================================
   // Pose
   //=====================================================================================
@@ -154,6 +149,26 @@ namespace orca
       msg.header.frame_id = path.header.frame_id;
       path.poses.push_back(msg);
     }
+  };
+
+  //=====================================================================================
+  // PoseWithCovariance
+  //=====================================================================================
+
+  struct PoseWithCovariance
+  {
+    Pose pose;
+
+    // Don't store the full 6x6 covariance, just store 4 bits of data
+    bool x_valid;
+    bool y_valid;
+    bool z_valid;
+    bool yaw_valid;
+
+    bool full_pose() const
+    { return x_valid && y_valid && z_valid && yaw_valid; }
+
+    void from_msg(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance);
   };
 
   //=====================================================================================
@@ -319,69 +334,33 @@ namespace orca
 
   struct Observation
   {
-    static constexpr int INVALID_ID = -1;
-
-    rclcpp::Time stamp{0, 0, RCL_ROS_TIME};
-
     int id;
     double distance;
     double yaw;
 
-    Observation() : id{INVALID_ID}, distance{0}, yaw{0}
+    Observation() : id{-1}, distance{0}, yaw{0}
     {}
 
-    void from_msg(const rclcpp::Time &_stamp, int _id, const fiducial_vlam_msgs::msg::Observation &msg)
-    {
-      // Assumptions:
-      // -- camera is pointed forward
-      // -- camera is mounted at base_link (not true, but OK for now)
-      // -- pixels are square
-      // -- markers are mounted vertically
-      // -- roll and pitch are zero
+    void from_msg(const fiducial_vlam_msgs::msg::Observation &msg);
+  };
 
-      // TODO get from context or observations.camera_info
-      double hfov = 1.4;            // Horizontal field of view
-      double hres = 800;            // Horizontal resolution
-      double marker_len = 0.1778;   // Marker length
+  std::ostream &operator<<(std::ostream &os, Observation const &obs);
 
-      stamp = _stamp;
-      id = _id;
+  //=====================================================================================
+  // FiducialPoseStamped -- pose and observations
+  //=====================================================================================
 
-      // Find the longest side of the marker in pixels
-      double side01 = std::hypot(msg.x0 - msg.x1, msg.y0 - msg.y1);
-      double side12 = std::hypot(msg.x1 - msg.x2, msg.y1 - msg.y2);
-      double side23 = std::hypot(msg.x2 - msg.x3, msg.y2 - msg.y3);
-      double side30 = std::hypot(msg.x3 - msg.x0, msg.y3 - msg.y0);
-      double longest_side = side01;
-      if (side12 > longest_side) {
-        longest_side = side12;
-      }
-      if (side23 > longest_side) {
-        longest_side = side23;
-      }
-      if (side30 > longest_side) {
-        longest_side = side30;
-      }
+  struct FiducialPoseStamped
+  {
+    rclcpp::Time t{0, 0, RCL_ROS_TIME};
+    PoseWithCovariance pose;
+    std::vector<Observation> observations;
 
-      distance = marker_len / sin(longest_side / hres * hfov);
+    void from_msg(const nav_msgs::msg::Odometry &msg);
 
-      // Center of marker
-      double x = (msg.x0 + msg.x1 + msg.x2 + msg.x3) / 4;
+    void from_msg(const fiducial_vlam_msgs::msg::Observations &msg);
 
-      yaw = hfov / 2 - x * hfov / hres;
-    }
-
-    bool from_msg(int _id, const fiducial_vlam_msgs::msg::Observations &msg)
-    {
-      for (const auto &r : msg.observations) {
-        if (r.id == _id) {
-          from_msg(msg.header.stamp, _id, r);
-          return true;
-        }
-      }
-
-      return false;
-    }
+    void add_to_path(nav_msgs::msg::Path &path) const;
   };
 
 } // namespace orca_shared

@@ -37,7 +37,7 @@ namespace orca_base
     void add_line_segment(orca::Pose &plan, double x, double y);
 
     // Plan a trajectory through a series of waypoints
-    void plan_trajectory(const std::vector<orca::Pose> &waypoints, const orca::PoseStamped &start);
+    void plan_trajectory(const std::vector<orca::Pose> &waypoints, const orca::Pose &start);
 
   protected:
 
@@ -53,7 +53,7 @@ namespace orca_base
     {}
 
     // Plan a trajectory to targets_[target_idx_]
-    void plan_trajectory(const orca::PoseStamped &start);
+    void plan_trajectory(const orca::Pose &start);
 
   public:
 
@@ -64,7 +64,7 @@ namespace orca_base
     { return planned_path_; }
 
     // Advance the plan, return AdvanceRC
-    int advance(double dt, orca::Pose &plan, const nav_msgs::msg::Odometry &estimate, orca::Acceleration &u_bar,
+    int advance(double dt, orca::Pose &plan, const orca::FiducialPoseStamped &estimate, orca::Acceleration &u_bar,
                 const std::function<void(double completed, double total)> &send_feedback);
   };
 

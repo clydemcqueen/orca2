@@ -3,6 +3,16 @@
 
 #include "rclcpp_action/rclcpp_action.hpp"
 
+#define SYNC_FIDUCIAL
+#ifdef SYNC_FIDUCIAL
+// TODO goes away when orca_filter handles FiducialPose
+
+#include "message_filters/subscriber.h"
+#include "message_filters/synchronizer.h"
+#include "message_filters/sync_policies/exact_time.h"
+
+#endif
+
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "sensor_msgs/msg/joy.hpp"
@@ -12,6 +22,14 @@
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
+
+#define MERGE_DEPTH
+#ifdef MERGE_DEPTH
+// TODO goes away when orca_filter handles FiducialPose
+#include "orca_msgs/msg/depth.hpp"
+
+#endif
+
 #include "orca_msgs/msg/leak.hpp"
 
 #include "orca_shared/monotonic.hpp"
@@ -110,8 +128,8 @@ namespace orca_base
     const int joy_button_rov_ = JOY_BUTTON_A;
     const int joy_button_rov_hold_pressure_ = JOY_BUTTON_B;
     const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
-    const int joy_button_auv_keep_origin_ = JOY_BUTTON_Y;
-    //const int joy_button_auv_random_ = JOY_BUTTON_LOGO;
+//    const int joy_button_auv_keep_origin_ = JOY_BUTTON_Y;
+    const int joy_button_auv_random_ = JOY_BUTTON_Y;
     const int joy_button_move_to_marker_ = JOY_BUTTON_LOGO;
 
     const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
@@ -132,12 +150,10 @@ namespace orca_base
     sensor_msgs::msg::Joy joy_msg_;               // Most recent message
 
     // Odometry state
-    nav_msgs::msg::Odometry filtered_odom_;       // Estimated odometry
-    orca::PoseStamped filtered_pose_;                   // Estimated pose TODO remove
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
-    // Fiducial observation
-    orca::Observation observation_;
+    // Fiducial pose
+    orca::FiducialPoseStamped fiducial_pose_;
 
     // ROV operation
     std::shared_ptr<pid::Controller> pressure_hold_pid_;
@@ -157,13 +173,27 @@ namespace orca_base
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
+#ifdef MERGE_DEPTH
+    rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
+#endif
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
+
+#ifdef SYNC_FIDUCIAL
+    message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
+    message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
+    using FiducialPolicy = message_filters::sync_policies::ExactTime<
+      fiducial_vlam_msgs::msg::Observations,
+      nav_msgs::msg::Odometry>;
+    using FiducialSync = message_filters::Synchronizer<FiducialPolicy>;
+    std::shared_ptr<FiducialSync> fiducial_sync_;
+#else
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr obs_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+#endif
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
@@ -176,6 +206,12 @@ namespace orca_base
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
+#ifdef MERGE_DEPTH
+
+    void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
+
+#endif
+
     void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
     void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
@@ -184,17 +220,32 @@ namespace orca_base
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
+#ifdef SYNC_FIDUCIAL
+
+    void fiducial_callback(
+      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
+
+#else
     void obs_callback(fiducial_vlam_msgs::msg::Observations::SharedPtr msg, bool first);
 
     void odom_callback(nav_msgs::msg::Odometry::SharedPtr msg, bool first);
+#endif
 
     // Callback wrappers
     // TODO some const, some not?
-    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
+    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this,
+                                                                                          &BaseNode::baro_callback};
+#ifdef MERGE_DEPTH
+    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Depth::SharedPtr> depth_cb_{this,
+                                                                                       &BaseNode::depth_callback};
+#endif
     monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
+#ifndef SYNC_FIDUCIAL
     monotonic::Monotonic<BaseNode *, fiducial_vlam_msgs::msg::Observations::SharedPtr> obs_cb_{this, &BaseNode::obs_callback};
     monotonic::Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
+#endif
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
@@ -250,11 +301,20 @@ namespace orca_base
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
 
+#ifdef SYNC_FIDUCIAL
+
+    bool obs_ok(const rclcpp::Time &t)
+    { return true; } // TODO
+
+    bool odom_ok(const rclcpp::Time &t)
+    { return true; } // TODO
+#else
     bool obs_ok(const rclcpp::Time &t)
     { return obs_cb_.receiving() && t - obs_cb_.prev() < OBS_TIMEOUT; }
 
     bool odom_ok(const rclcpp::Time &t)
     { return odom_cb_.receiving() && t - odom_cb_.prev() < ODOM_TIMEOUT; }
+#endif
 
   public:
     explicit BaseNode();

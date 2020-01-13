@@ -181,6 +181,8 @@ def gen_ring_of_markers(num_markers, radius, z):
 # Pool test #2: 4m diameter x 1m deep, markers on walls
 pt2 = list(gen_ring_of_markers(num_markers=12, radius=3.51/2, z=-0.5))
 
+medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
+
 # Very large ring of vertical markers
 large_ring = list(gen_ring_of_markers(num_markers=4, radius=8, z=-0.5))
 
@@ -196,6 +198,7 @@ worlds = [
     ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],
     ['pt2.world', 'pt2_map.yaml', pt2],
+    ['medium_ring.world', 'medium_ring_map.yaml', medium_ring],
     ['large_ring.world', 'large_ring_map.yaml', large_ring],
     ['simple.world', 'simple_map.yaml', small_simple],
 ]

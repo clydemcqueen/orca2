@@ -343,10 +343,10 @@ namespace orca_base
     return 0;
   }
 
-  MoveToMarkerSegment::MoveToMarkerSegment(BaseContext cxt, int marker_id, orca::Observation start,
-                                           orca::Observation goal) :
+  MoveToMarkerSegment::MoveToMarkerSegment(const rclcpp::Logger &logger, BaseContext cxt,
+                                           orca::FiducialPoseStamped start, orca::FiducialPoseStamped goal) :
+    logger_{logger},
     cxt_{std::move(cxt)},
-    marker_id_{marker_id},
     plan_{std::move(start)},
     goal_{std::move(goal)},
     twist_{},
@@ -359,12 +359,18 @@ namespace orca_base
 
     // Counteract buoyancy
     ff_.z = cxt_.model_.hover_accel_z();
+
+    // TODO move to loginfo
+    RCLCPP_INFO(logger_, "mtm: start (%g, %g), goal (%g, %g), ff x %g",
+                plan_.observations[0].distance, plan_.observations[0].yaw,
+                goal_.observations[0].distance, goal_.observations[0].yaw,
+                ff_.x, ff_.y);
   }
 
   bool MoveToMarkerSegment::advance(double dt)
   {
     // Moving foward is +x but -distance
-    double distance_remaining = plan_.distance - goal_.distance;
+    double distance_remaining = plan_.observations[0].distance - goal_.observations[0].distance;
 
     if (distance_remaining > EPSILON_PLAN_XYZ) {
       if (distance_remaining - deceleration_distance_forward(cxt_, twist_.x) < EPSILON_PLAN_XYZ) {
@@ -379,7 +385,7 @@ namespace orca_base
       twist_.x += (ff_.x - accel_drag_x) * dt;
 
       // Update plan
-      plan_.distance -= twist_.x * dt;
+      plan_.observations[0].distance -= twist_.x * dt;
 
       return true;
     } else {

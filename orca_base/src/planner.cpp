@@ -80,14 +80,14 @@ namespace orca_base
     plan = goal;
   }
 
-  void PlannerBase::plan_trajectory(const PoseStamped &start)
+  void PlannerBase::plan_trajectory(const Pose &start)
   {
     RCLCPP_INFO(logger_, "plan trajectory to (%g, %g, %g), %g",
                 targets_[target_idx_].x, targets_[target_idx_].y, targets_[target_idx_].z, targets_[target_idx_].yaw);
 
     // Generate a series of waypoints to minimize dead reckoning
     std::vector<Pose> waypoints;
-    if (!map_.get_waypoints(start.pose, targets_[target_idx_], waypoints)) {
+    if (!map_.get_waypoints(start, targets_[target_idx_], waypoints)) {
       RCLCPP_ERROR(logger_, "feeling lucky");
       waypoints.push_back(targets_[target_idx_]);
     }
@@ -96,7 +96,7 @@ namespace orca_base
     plan_trajectory(waypoints, start);
   }
 
-  void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const PoseStamped &start)
+  void PlannerBase::plan_trajectory(const std::vector<Pose> &waypoints, const Pose &start)
   {
     RCLCPP_INFO(logger_, "plan trajectory through %d waypoint(s):", waypoints.size() - 1);
     for (auto waypoint : waypoints) {
@@ -109,7 +109,7 @@ namespace orca_base
     segment_idx_ = 0;
 
     // Start pose
-    Pose plan = start.pose;
+    Pose plan = start;
 
     // Travel to each waypoint, breaking down z, yaw and xy phases
     for (auto &waypoint : waypoints) {
@@ -137,14 +137,10 @@ namespace orca_base
 
     // Create a path for diagnostics
     if (!segments_.empty()) {
-      planned_path_.header.stamp = start.t;
       planned_path_.header.frame_id = cxt_.map_frame_;
-
       planned_path_.poses.clear();
 
       geometry_msgs::msg::PoseStamped pose_msg;
-      pose_msg.header.stamp = start.t;
-
       for (auto &i : segments_) {
         planned_path_.header.frame_id = cxt_.map_frame_;
         i->plan().to_msg(pose_msg.pose);
@@ -161,17 +157,14 @@ namespace orca_base
     segments_[0]->log_info();
   }
 
-  int PlannerBase::advance(double dt, Pose &plan, const nav_msgs::msg::Odometry &estimate, Acceleration &u_bar,
+  int PlannerBase::advance(double dt, Pose &plan, const FiducialPoseStamped &estimate, Acceleration &u_bar,
                            const std::function<void(double completed, double total)> &send_feedback)
   {
-    PoseStamped current_pose;
-    current_pose.from_msg(estimate);
-
     if (segments_.empty()) {
-      if (full_pose(estimate)) {
+      if (estimate.pose.full_pose()) {
         // Generate a trajectory to the first target
         RCLCPP_INFO(logger_, "bootstrap plan");
-        plan_trajectory(current_pose);
+        plan_trajectory(estimate.pose.pose);
       } else {
         RCLCPP_ERROR(logger_, "unknown pose, can't bootstrap");
         return AdvanceRC::FAILURE;
@@ -200,18 +193,15 @@ namespace orca_base
       RCLCPP_INFO(logger_, "target %d of %d", target_idx_ + 1, targets_.size());
       send_feedback(target_idx_, targets_.size());
 
-      if (full_pose(estimate)) {
+      if (estimate.pose.full_pose()) {
         // Start from known location
-        plan_trajectory(current_pose);
+        plan_trajectory(estimate.pose.pose);
         RCLCPP_INFO(logger_, "planning for next target from known pose");
       } else {
         // Plan a trajectory as if the AUV is at the previous target (it probably isn't)
         // Future: run through recovery actions to find a good pose
         RCLCPP_WARN(logger_, "didn't find target, planning for next target anyway");
-        PoseStamped plan_stamped;
-        plan_stamped.pose = targets_[target_idx_ - 1];
-        plan_stamped.t = estimate.header.stamp;
-        plan_trajectory(plan_stamped);
+        plan_trajectory(targets_[target_idx_ - 1]);
       }
 
       plan = segments_[segment_idx_]->plan();
@@ -225,9 +215,9 @@ namespace orca_base
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
     // If error is > MAX_POSE_ERROR, then replan
-    if (full_pose(estimate) && current_pose.pose.distance_xy(plan) > MAX_POSE_ERROR) {
-      RCLCPP_WARN(logger_, "off by %g meters, replan to existing target", current_pose.pose.distance_xy(plan));
-      plan_trajectory(current_pose);
+    if (estimate.pose.full_pose() && estimate.pose.pose.distance_xy(plan) > MAX_POSE_ERROR) {
+      RCLCPP_WARN(logger_, "off by %g meters, replan to existing target", estimate.pose.pose.distance_xy(plan));
+      plan_trajectory(estimate.pose.pose);
     }
 
     return AdvanceRC::CONTINUE;

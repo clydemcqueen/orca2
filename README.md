@@ -6,7 +6,7 @@ Orca2 is a [ROS2](http://www.ros.org/) AUV (Autonomous Underwater Vehicle) based
 ## Simulation
 
 Orca2 runs in [Gazebo](http://gazebosim.org/), a SITL (software-in-the-loop) simulator.
-Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or laptop.
+Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or laptop and run the simulation.
 
 [Install ROS2 Eloquent](https://index.ros.org/doc/ros2/Installation/)
 with the `ros-eloquent-desktop` option.
@@ -52,6 +52,21 @@ export GAZEBO_MODEL_PATH=${PWD}/install/sim_fiducial/share/sim_fiducial/models
 source /usr/share/gazebo/setup.sh
 ros2 launch orca_gazebo sim_launch.py
 ~~~
+
+A few of the XBox controls:
+* window button: disarm (stop all thrusters, disable all buttons except "arm")
+* menu button: arm (enable all buttons, go to ROV mode). Use the joystick to move around in ROV mode.
+* A: go to ROV mode
+* B: go to ROV mode, and hold depth using the barometer
+* X: start AUV "keep station" mission (mode 3). All AUV missions use camera(s) and ArUco markers to localize
+* Y: start AUV "go to all markers in a random pattern" mission (mode 6)
+
+Starting a mission from the ros2 CLI:
+~~~
+ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 6}' 
+~~~
+
+All of the AUV missions use cameras and ArUco markers to localize.
 
 ## Hardware modifications
 

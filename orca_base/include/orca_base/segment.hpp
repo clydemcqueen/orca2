@@ -135,30 +135,28 @@ namespace orca_base
 
   class MoveToMarkerSegment
   {
+    rclcpp::Logger logger_;
     BaseContext cxt_;
 
-    // Target marker
-    int marker_id_;
-
     // State
-    orca::Observation goal_;    // Goal observation
-    orca::Observation plan_;    // Planned observation, incremented with each call to advance()
+    orca::FiducialPoseStamped goal_;    // Goal pose
+    orca::FiducialPoseStamped plan_;    // Planned pose, incremented with each call to advance()
     orca::Twist twist_;         // Velocity in the body frame
     orca::Acceleration ff_;     // Acceleration in the body frame
 
   public:
 
-    MoveToMarkerSegment(BaseContext cxt, int marker_id, orca::Observation start, orca::Observation goal);
+    MoveToMarkerSegment(const rclcpp::Logger &logger, BaseContext cxt, orca::FiducialPoseStamped start, orca::FiducialPoseStamped goal);
 
-    // Return the current (planned) observation
-    const orca::Observation &plan() const
+    // Return the current (planned) pose
+    const orca::FiducialPoseStamped &plan() const
     { return plan_; }
 
-    // Return the goal observation
-    const orca::Observation &goal() const
+    // Return the goal pose
+    const orca::FiducialPoseStamped &goal() const
     { return goal_; }
 
-    // Return the acceleration required at the moment -- in the body frame
+    // Return the acceleration required at the moment -- in the body frame!
     const orca::Acceleration &ff() const
     { return ff_; }
 
