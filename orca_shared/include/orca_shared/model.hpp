@@ -200,6 +200,6 @@ namespace orca
 
   };
 
-} // namespace orca_shared
+} // namespace orca
 
 #endif //ORCA_SHARED_MODEL_HPP

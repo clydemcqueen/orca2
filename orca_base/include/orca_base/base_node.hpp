@@ -3,15 +3,9 @@
 
 #include "rclcpp_action/rclcpp_action.hpp"
 
-#define SYNC_FIDUCIAL
-#ifdef SYNC_FIDUCIAL
-// TODO goes away when orca_filter handles FiducialPose
-
 #include "message_filters/subscriber.h"
 #include "message_filters/synchronizer.h"
 #include "message_filters/sync_policies/exact_time.h"
-
-#endif
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "fiducial_vlam_msgs/msg/observations.hpp"
@@ -22,13 +16,7 @@
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
-
-#define MERGE_DEPTH
-#ifdef MERGE_DEPTH
-// TODO goes away when orca_filter handles FiducialPose
 #include "orca_msgs/msg/depth.hpp"
-
-#endif
 
 #include "orca_msgs/msg/leak.hpp"
 
@@ -153,7 +141,7 @@ namespace orca_base
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
     // Fiducial pose
-    orca::FiducialPoseStamped fiducial_pose_;
+    orca::FPStamped fiducial_pose_;
 
     // ROV operation
     std::shared_ptr<pid::Controller> pressure_hold_pid_;
@@ -173,16 +161,13 @@ namespace orca_base
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
-#ifdef MERGE_DEPTH
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
-#endif
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
-#ifdef SYNC_FIDUCIAL
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
     message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
     using FiducialPolicy = message_filters::sync_policies::ExactTime<
@@ -190,10 +175,6 @@ namespace orca_base
       nav_msgs::msg::Odometry>;
     using FiducialSync = message_filters::Synchronizer<FiducialPolicy>;
     std::shared_ptr<FiducialSync> fiducial_sync_;
-#else
-    rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr obs_sub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-#endif
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
@@ -206,11 +187,7 @@ namespace orca_base
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
-#ifdef MERGE_DEPTH
-
     void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
-
-#endif
 
     void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
@@ -220,32 +197,18 @@ namespace orca_base
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
-#ifdef SYNC_FIDUCIAL
-
     void fiducial_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
       const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
-
-#else
-    void obs_callback(fiducial_vlam_msgs::msg::Observations::SharedPtr msg, bool first);
-
-    void odom_callback(nav_msgs::msg::Odometry::SharedPtr msg, bool first);
-#endif
 
     // Callback wrappers
     // TODO some const, some not?
     monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this,
                                                                                           &BaseNode::baro_callback};
-#ifdef MERGE_DEPTH
     monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Depth::SharedPtr> depth_cb_{this,
                                                                                        &BaseNode::depth_callback};
-#endif
     monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
-#ifndef SYNC_FIDUCIAL
-    monotonic::Monotonic<BaseNode *, fiducial_vlam_msgs::msg::Observations::SharedPtr> obs_cb_{this, &BaseNode::obs_callback};
-    monotonic::Monotonic<BaseNode *, nav_msgs::msg::Odometry::SharedPtr> odom_cb_{this, &BaseNode::odom_callback};
-#endif
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
@@ -269,7 +232,7 @@ namespace orca_base
 
     void auv_advance(double dt);
 
-    void mtm_advance(double dt);
+//    void mtm_advance(double dt);
 
     void all_stop(const rclcpp::Time &msg_time);
 
@@ -277,7 +240,7 @@ namespace orca_base
 
     void disarm(const rclcpp::Time &msg_time);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::Pose &goal = {},
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::FP &goal = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
     bool disarmed()
@@ -301,20 +264,14 @@ namespace orca_base
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
 
-#ifdef SYNC_FIDUCIAL
-
     bool obs_ok(const rclcpp::Time &t)
     { return true; } // TODO
 
     bool odom_ok(const rclcpp::Time &t)
     { return true; } // TODO
-#else
-    bool obs_ok(const rclcpp::Time &t)
-    { return obs_cb_.receiving() && t - obs_cb_.prev() < OBS_TIMEOUT; }
 
-    bool odom_ok(const rclcpp::Time &t)
-    { return odom_cb_.receiving() && t - odom_cb_.prev() < ODOM_TIMEOUT; }
-#endif
+    bool depth_ok(const rclcpp::Time &t)
+    { return depth_cb_.receiving() && t - depth_cb_.prev() < BARO_TIMEOUT; }
 
   public:
     explicit BaseNode();

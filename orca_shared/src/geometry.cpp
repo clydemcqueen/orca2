@@ -54,29 +54,45 @@ namespace orca
     yaw = hfov / 2 - x * hfov / hres;
   }
 
-  void FiducialPoseStamped::from_msg(const nav_msgs::msg::Odometry &msg)
+  double FP::closest_obs() const
   {
-    t = msg.header.stamp;
-    pose.from_msg(msg.pose);
+    double closest = std::numeric_limits<double>::max();
+
+    for (auto i : observations) {
+      if (i.distance < closest) {
+        closest = i.distance;
+      }
+    }
+
+    return closest;
   }
 
-  void FiducialPoseStamped::from_msg(const fiducial_vlam_msgs::msg::Observations &msg)
+  void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom)
   {
-    t = msg.header.stamp;
+    pose.from_msg(odom.pose);
+
     observations.clear();
-    for (const auto &r : msg.observations) {
+    for (const auto &r : obs.observations) {
       Observation observation;
       observation.from_msg(r);
       observations.push_back(observation);
     }
   }
 
-  void FiducialPoseStamped::add_to_path(nav_msgs::msg::Path &path) const
+  void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom)
+  {
+    assert(obs.header.stamp == odom.header.stamp);
+
+    t = obs.header.stamp;
+    fp.from_msgs(obs, odom);
+  }
+
+  void FPStamped::add_to_path(nav_msgs::msg::Path &path) const
   {
     geometry_msgs::msg::PoseStamped msg;
     msg.header.stamp = t;
     msg.header.frame_id = path.header.frame_id;
-    pose.pose.to_msg(msg.pose);
+    fp.pose.pose.to_msg(msg.pose);
     path.poses.push_back(msg);
   }
 

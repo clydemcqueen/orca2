@@ -64,11 +64,9 @@ namespace orca_base
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
       "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
-#ifdef MERGE_DEPTH
     depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
       "depth", 1, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
       { this->depth_cb_.call(msg); });
-#endif
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
       "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
@@ -78,19 +76,10 @@ namespace orca_base
 
     using namespace std::placeholders;
 
-#ifdef SYNC_FIDUCIAL
     fiducial_sync_.reset(new FiducialSync(FiducialPolicy(1), obs_sub_, odom_sub_));
     fiducial_sync_->registerCallback(std::bind(&BaseNode::fiducial_callback, this, _1, _2));
     obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
     odom_sub_.subscribe(this, "odom"); // Uses default qos
-#else
-    obs_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
-      "fiducial_observations", 1, [this](const fiducial_vlam_msgs::msg::Observations::SharedPtr msg) -> void
-      { this->obs_cb_.call(msg); });
-    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "odom", 1, [this](const nav_msgs::msg::Odometry::SharedPtr msg) -> void
-      { this->odom_cb_.call(msg); });
-#endif
 
     // Other subscriptions
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
@@ -135,16 +124,12 @@ namespace orca_base
     pressure_ = msg->pressure;
   }
 
-#ifdef MERGE_DEPTH
-
   // New depth reading
   void BaseNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool first)
   {
     // If observations timed out, run the mission loop w/ just depth
     // TODO
   }
-
-#endif
 
   // New battery reading
   void BaseNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
@@ -159,9 +144,9 @@ namespace orca_base
   void BaseNode::goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
     if (disarmed()) {
-      Pose goal;
-      goal.from_msg(msg->pose);
-      goal.z = cxt_.auv_z_target_;
+      FP goal;
+      goal.pose.pose.from_msg(msg->pose);
+      goal.pose.pose.z = cxt_.auv_z_target_;
       set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_GOAL, goal);
     } else {
       RCLCPP_ERROR(get_logger(), "must be disarmed to start mission");
@@ -267,8 +252,6 @@ namespace orca_base
     map_.set_vlam_map(msg);
   }
 
-#ifdef SYNC_FIDUCIAL
-
   void BaseNode::fiducial_callback(
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
@@ -290,9 +273,8 @@ namespace orca_base
     // First message?
     bool first = !monotonic::valid(prev_time);
 
-    // Save the observations and pose TODO combine into 1 call
-    fiducial_pose_.from_msg(*obs_msg);
-    fiducial_pose_.from_msg(*odom_msg);
+    // Save the observations and pose
+    fiducial_pose_.from_msgs(*obs_msg, *odom_msg);
 
     // Skip the first message -- the dt will be too large
     if (first) {
@@ -308,43 +290,10 @@ namespace orca_base
     // Continue mission
     if (auv_mode()) {
       auv_advance(dt);
-    } else if (mtm_mode()) {
-      mtm_advance(dt);
+//    } else if (mtm_mode()) {
+//      mtm_advance(dt);
     }
   }
-
-#else
-
-  // New odometry available
-  void BaseNode::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg, bool first)
-  {
-    // Save the pose
-    fiducial_pose_.from_msg(*msg);
-
-    // Compute a stability metric
-    double roll, pitch, yaw;
-    get_rpy(msg->pose.pose.orientation, roll, pitch, yaw);
-    stability_ = std::min(clamp(std::cos(roll), 0.0, 1.0), clamp(std::cos(pitch), 0.0, 1.0));
-
-    // Continue the mission
-    if (!first && auv_mode()) {
-      auv_advance(odom_cb_.dt());
-    }
-  }
-
-  // New marker observation available
-  void BaseNode::obs_callback(fiducial_vlam_msgs::msg::Observations::SharedPtr msg, bool first)
-  {
-    // Save the observation
-    fiducial_pose_.from_msg(*msg);
-
-    // Continue the mission
-    if (!first && mtm_mode()) {
-      mtm_advance(obs_cb_.dt());
-    }
-  }
-
-#endif
 
   rclcpp_action::GoalResponse BaseNode::mission_goal(
     const rclcpp_action::GoalUUID &uuid,
@@ -373,7 +322,7 @@ namespace orca_base
   {
     // Start the mission
     RCLCPP_INFO(get_logger(), "execute mission %d", goal_handle->get_goal()->mode);
-    set_mode(now(), goal_handle->get_goal()->mode, Pose{}, goal_handle);
+    set_mode(now(), goal_handle->get_goal()->mode, FP{}, goal_handle);
   }
 
   void BaseNode::rov_advance(const rclcpp::Time &stamp)
@@ -404,7 +353,7 @@ namespace orca_base
     }
 
     // Publish actual path for rviz
-    if (fiducial_pose_.pose.full_pose() && count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
+    if (fiducial_pose_.fp.pose.full_pose() && count_subscribers(filtered_path_pub_->get_topic_name()) > 0) {
       if (filtered_path_.poses.size() > cxt_.keep_poses_) {
         filtered_path_.poses.clear();
       }
@@ -413,19 +362,19 @@ namespace orca_base
     }
 
     // Advance plan and compute feedforward
-    Pose plan;
+    FP plan;
     Acceleration u_bar;
     if (mission_->advance(dt, plan, fiducial_pose_, u_bar)) {
       // Acceleration => effort
       Efforts efforts;
 //      efforts.from_acceleration(filtered_pose_.pose.yaw, u_bar);
-      efforts.from_acceleration(plan.yaw, u_bar);
+      efforts.from_acceleration(plan.pose.pose.yaw, u_bar);
 
       // Throttle back if AUV is unstable
-      efforts.scale(stability_);
+//      efforts.scale(stability_);
 
       // Compute error for diagnostics
-      Pose error = plan.error(fiducial_pose_.pose.pose);
+      Pose error = plan.pose.pose.error(fiducial_pose_.fp.pose.pose);
 
       publish_control(fiducial_pose_.t, error, efforts);
     } else {
@@ -435,6 +384,7 @@ namespace orca_base
     }
   }
 
+#if 0
   void BaseNode::mtm_advance(double dt)
   {
     // Advance plan and compute feedforward
@@ -463,7 +413,7 @@ namespace orca_base
       disarm(fiducial_pose_.t);
     }
   }
-
+#endif
 
   void BaseNode::all_stop(const rclcpp::Time &msg_time)
   {
@@ -501,11 +451,8 @@ namespace orca_base
       control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
     }
     control_msg.stability = stability_;
-#ifdef SYNC_FIDUCIAL
     // TODO
-#else
-    control_msg.odom_lag = (now() - odom_cb_.curr()).seconds();
-#endif
+    //control_msg.odom_lag = (now() - odom_cb_.curr()).seconds();
     control_pub_->publish(control_msg);
 
     // Publish rviz thrust markers
@@ -562,7 +509,7 @@ namespace orca_base
   }
 
   // Change operation mode
-  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const Pose &goal,
+  void BaseNode::set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const FP &goal,
                           const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle)
   {
     using orca_msgs::msg::Control;
@@ -580,8 +527,8 @@ namespace orca_base
       std::shared_ptr<PlannerBase> planner;
       switch (new_mode) {
         case Control::AUV_KEEP_ORIGIN: {
-          Pose origin;
-          origin.z = cxt_.auv_z_target_;
+          FP origin;
+          origin.pose.pose.z = cxt_.auv_z_target_;
           planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, origin, true);
           break;
         }
@@ -596,7 +543,7 @@ namespace orca_base
           break;
         case Control::AUV_KEEP_STATION:
         default:
-          planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, fiducial_pose_.pose.pose, true);
+          planner = std::make_shared<TargetPlanner>(get_logger(), cxt_, map_, fiducial_pose_.fp, true);
           break;
       }
 
@@ -611,12 +558,12 @@ namespace orca_base
 
       RCLCPP_INFO(get_logger(), "move to marker");
       orca::Observation goal_observation;
-      goal_observation.id = fiducial_pose_.observations[0].id;
+      goal_observation.id = fiducial_pose_.fp.observations[0].id;
       goal_observation.distance = 1.5;
       goal_observation.yaw = 0;
-      orca::FiducialPoseStamped goal_fiducial_pose;
+      orca::FP goal_fiducial_pose;
       goal_fiducial_pose.observations.push_back(goal_observation);
-      mtm_segment_ = std::make_shared<MoveToMarkerSegment>(get_logger(), cxt_, fiducial_pose_, goal_fiducial_pose);
+      mtm_segment_ = std::make_shared<MoveToMarkerSegment>(get_logger(), cxt_, fiducial_pose_.fp, goal_fiducial_pose);
       mtm_controller_ = std::make_shared<MoveToMarkerController>(cxt_);
 
     }
@@ -639,8 +586,8 @@ namespace orca_base
       disarm(spin_time);
     }
 
-    if (auv_mode() && !odom_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost odometry during AUV operation, disarming");
+    if (auv_mode() && !depth_ok(spin_time)) {
+      RCLCPP_ERROR(get_logger(), "lost depth during AUV operation, disarming");
       disarm(spin_time);
     }
 

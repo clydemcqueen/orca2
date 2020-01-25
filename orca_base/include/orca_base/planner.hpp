@@ -28,16 +28,16 @@ namespace orca_base
 
     nav_msgs::msg::Path planned_path_;                          // Path for rviz
 
-    void add_keep_station_segment(orca::Pose &plan, double seconds);
+    void add_keep_station_segment(orca::FP &plan, double seconds);
 
-    void add_vertical_segment(orca::Pose &plan, double z);
+    void add_vertical_segment(orca::FP &plan, double z);
 
-    void add_rotate_segment(orca::Pose &plan, double yaw);
+    void add_rotate_segment(orca::FP &plan, double yaw);
 
-    void add_line_segment(orca::Pose &plan, double x, double y);
+    void add_line_segment(orca::FP &plan, double x, double y);
 
     // Plan a trajectory through a series of waypoints
-    void plan_trajectory(const std::vector<orca::Pose> &waypoints, const orca::Pose &start);
+    void plan_trajectory(const std::vector<orca::Pose> &waypoints, const orca::FP &start);
 
   protected:
 
@@ -45,7 +45,7 @@ namespace orca_base
     const BaseContext &cxt_;
     Map map_;
 
-    std::vector<orca::Pose> targets_;
+    std::vector<orca::FP> targets_;
     bool keep_station_;
 
     PlannerBase(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, bool keep_station) :
@@ -53,18 +53,18 @@ namespace orca_base
     {}
 
     // Plan a trajectory to targets_[target_idx_]
-    void plan_trajectory(const orca::Pose &start);
+    void plan_trajectory(const orca::FP &start);
 
   public:
 
-    const std::vector<orca::Pose> &targets() const
+    const std::vector<orca::FP> &targets() const
     { return targets_; }
 
     const nav_msgs::msg::Path &planned_path() const
     { return planned_path_; }
 
     // Advance the plan, return AdvanceRC
-    int advance(double dt, orca::Pose &plan, const orca::FiducialPoseStamped &estimate, orca::Acceleration &u_bar,
+    int advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Acceleration &u_bar,
                 const std::function<void(double completed, double total)> &send_feedback);
   };
 
@@ -77,7 +77,7 @@ namespace orca_base
   public:
 
     TargetPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
-                  const orca::Pose &target, bool keep_station) :
+                  const orca::FP &target, bool keep_station) :
       PlannerBase{logger, cxt, std::move(map), keep_station}
     {
       targets_.push_back(target);

@@ -7,7 +7,7 @@ namespace orca_base
 
   Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<PlannerBase> planner, const FiducialPoseStamped &start) :
+                   std::shared_ptr<PlannerBase> planner, const FPStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
@@ -24,7 +24,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(double dt, Pose &plan, const FiducialPoseStamped &estimate, Acceleration &u_bar)
+  bool Mission::advance(double dt, FP &plan, const FPStamped &estimate, Acceleration &u_bar)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -65,7 +65,7 @@ namespace orca_base
         }
       };
 
-      auto rc = planner_->advance(dt, plan, estimate, u_bar, send_feedback);
+      auto rc = planner_->advance(dt, plan, estimate.fp, u_bar, send_feedback);
       if (rc == AdvanceRC::FAILURE) {
         abort();
         return false;

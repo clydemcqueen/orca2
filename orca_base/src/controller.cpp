@@ -5,14 +5,32 @@ using namespace orca;
 namespace orca_base
 {
 
-  void SimpleController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                              const FiducialPoseStamped &estimate,
+  // TODO all controllers need to look at uncertainty and obs.distance
+
+  void SimpleController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                               const Acceleration &ff, Acceleration &u_bar)
   {
-#define UNCERTAINTY_TEST
-#ifdef UNCERTAINTY_TEST
-    // Required for dead reckoning
+#if 1
+    u_bar = ff;
 
+    if (estimate.closest_obs() < 1.8) {
+      // Pose is probably good -- run PID controllers on x, y, yaw
+
+      x_controller_.set_target(plan.pose.pose.x);
+      u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
+
+      y_controller_.set_target(plan.pose.pose.y);
+      u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
+
+      yaw_controller_.set_target(plan.pose.pose.yaw);
+      u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
+    }
+
+    z_controller_.set_target(plan.pose.pose.z);
+    u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
+#endif
+
+#if 0
     u_bar = ff;
 
     if (estimate.pose.x_valid) {
@@ -34,7 +52,9 @@ namespace orca_base
       yaw_controller_.set_target(plan.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     }
-#else
+#endif
+
+#if 0
     // Set targets
     x_controller_.set_target(plan.x);
     y_controller_.set_target(plan.y);
@@ -49,18 +69,17 @@ namespace orca_base
 #endif
   }
 
-  void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                                const FiducialPoseStamped &estimate,
+  void DeadzoneController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                                 const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
+    x_controller_.set_target(plan.pose.pose.x);
+    y_controller_.set_target(plan.pose.pose.y);
+    z_controller_.set_target(plan.pose.pose.z);
+    yaw_controller_.set_target(plan.pose.pose.yaw);
 
     // Call PID controllers iff error is large enough
-    if (plan.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
+    if (plan.pose.pose.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
       u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
     } else {
@@ -68,13 +87,13 @@ namespace orca_base
       u_bar.y = ff.y;
     }
 
-    if (plan.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
+    if (plan.pose.pose.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     } else {
       u_bar.z = ff.z;
     }
 
-    if (plan.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
+    if (plan.pose.pose.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     } else {
       u_bar.yaw = ff.yaw;
@@ -87,15 +106,14 @@ namespace orca_base
     return next - previous < 0 ? previous - diff : previous + diff;
   }
 
-  void JerkController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const FiducialPoseStamped &estimate,
+  void JerkController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
+    x_controller_.set_target(plan.pose.pose.x);
+    y_controller_.set_target(plan.pose.pose.y);
+    z_controller_.set_target(plan.pose.pose.z);
+    yaw_controller_.set_target(plan.pose.pose.yaw);
 
     // Feedforward doesn't count toward the limit
     u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt);
@@ -116,19 +134,18 @@ namespace orca_base
     u_bar.add(ff);
   }
 
-  void BestController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const FiducialPoseStamped &estimate,
+  void BestController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
+    x_controller_.set_target(plan.pose.pose.x);
+    y_controller_.set_target(plan.pose.pose.y);
+    z_controller_.set_target(plan.pose.pose.z);
+    yaw_controller_.set_target(plan.pose.pose.yaw);
 
     // Call PID controllers iff error is large enough
     // Don't include feedforward
-    if (plan.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
+    if (plan.pose.pose.distance_xy(estimate.pose.pose) > cxt.auv_epsilon_xy_) {
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt);
       u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt);
     } else {
@@ -136,13 +153,13 @@ namespace orca_base
       u_bar.y = 0;
     }
 
-    if (plan.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
+    if (plan.pose.pose.distance_z(estimate.pose.pose) > cxt.auv_epsilon_z_) {
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt);
     } else {
       u_bar.z = 0;
     }
 
-    if (plan.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
+    if (plan.pose.pose.distance_yaw(estimate.pose.pose) > cxt.auv_epsilon_yaw_) {
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt);
     } else {
       u_bar.yaw = 0;
@@ -161,17 +178,16 @@ namespace orca_base
     u_bar.add(ff);
   }
 
-  void DepthController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                             const FiducialPoseStamped &estimate,
+  void DepthController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                              const Acceleration &ff, Acceleration &u_bar)
   {
     u_bar = ff;
 
-    z_controller_.set_target(plan.z);
+    z_controller_.set_target(plan.pose.pose.z);
     u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
   }
 
-  void MoveToMarkerController::calc(double dt, const FiducialPoseStamped &plan, const FiducialPoseStamped &estimate,
+  void MoveToMarkerController::calc(double dt, const FP &plan, const FP &estimate,
                                     const orca::Acceleration &ff, orca::Acceleration &u_bar)
   {
     forward_controller_.set_target(plan.observations[0].distance);

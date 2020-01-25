@@ -347,18 +347,29 @@ namespace orca
   std::ostream &operator<<(std::ostream &os, Observation const &obs);
 
   //=====================================================================================
-  // FiducialPoseStamped -- pose and observations
+  // Fiducial pose (FP) -- pose and observations
   //=====================================================================================
 
-  struct FiducialPoseStamped
+  struct FP
   {
-    rclcpp::Time t{0, 0, RCL_ROS_TIME};
     PoseWithCovariance pose;
     std::vector<Observation> observations;
 
-    void from_msg(const nav_msgs::msg::Odometry &msg);
+    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom);
 
-    void from_msg(const fiducial_vlam_msgs::msg::Observations &msg);
+    double closest_obs() const;
+  };
+
+  //=====================================================================================
+  // FPStamped -- pose and observations with timestamp
+  //=====================================================================================
+
+  struct FPStamped
+  {
+    rclcpp::Time t{0, 0, RCL_ROS_TIME};
+    FP fp;
+
+    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
   };

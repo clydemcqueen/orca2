@@ -36,7 +36,7 @@ namespace orca_base
     virtual bool dead_reckoning() = 0;
 
     // Calc u_bar
-    virtual void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    virtual void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
                       const orca::Acceleration &ff, orca::Acceleration &u_bar) = 0;
   };
 
@@ -54,7 +54,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -72,7 +72,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override
     { u_bar = ff; }
   };
@@ -91,7 +91,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -113,7 +113,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -135,7 +135,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -153,7 +153,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::Pose &plan, const orca::FiducialPoseStamped &estimate,
+    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -178,7 +178,7 @@ namespace orca_base
     {}
 
     // ff and u_bar are in the body frame TODO create unique type to avoid confusion
-    void calc(double dt, const orca::FiducialPoseStamped &plan, const orca::FiducialPoseStamped &pose,
+    void calc(double dt, const orca::FP &plan, const orca::FP &pose,
               const orca::Acceleration &ff, orca::Acceleration &u_bar);
   };
 
