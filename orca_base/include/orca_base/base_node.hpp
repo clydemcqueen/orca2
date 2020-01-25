@@ -12,14 +12,13 @@
 #include "sensor_msgs/msg/joy.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include "orca_description/parser.hpp"
 #include "orca_msgs/action/mission.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
-
 #include "orca_msgs/msg/leak.hpp"
-
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/base_context.hpp"
@@ -127,6 +126,9 @@ namespace orca_base
 
     // Parameters and dynamics model
     BaseContext cxt_;
+
+    // Parsed URDF
+    orca_description::Parser parser_;
 
     // Mode
     uint8_t mode_{orca_msgs::msg::Control::DISARMED};

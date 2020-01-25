@@ -103,7 +103,16 @@ namespace orca_base
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
     spin_timer_ = create_wall_timer(SPIN_PERIOD, std::bind(&BaseNode::spin_once, this));
 
-    RCLCPP_INFO(get_logger(), "base_node ready");
+    // Parse URDF
+    if (!parser_.parse()) {
+      RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
+    } else {
+      std::cout << "baro " << to_str_rpy(parser_.t_baro_base) << std::endl;
+      std::cout << "fcam " << to_str_rpy(parser_.t_fcam_base) << std::endl;
+      std::cout << "lcam " << to_str_rpy(parser_.t_lcam_base) << std::endl;
+      std::cout << "rcam " << to_str_rpy(parser_.t_rcam_base) << std::endl;
+      RCLCPP_INFO(get_logger(), "base_node ready");
+    }
   }
 
   void BaseNode::validate_parameters()
