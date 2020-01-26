@@ -37,7 +37,7 @@ namespace orca_base
     (void) leak_sub_;
     (void) map_sub_;
     (void) obs_sub_;
-    (void) odom_sub_;
+//    (void) odom_sub_;
     (void) spin_timer_;
 
     // Get parameters
@@ -64,9 +64,6 @@ namespace orca_base
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
       "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
-    depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
-      "depth", 1, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
-      { this->depth_cb_.call(msg); });
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
       "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
@@ -76,10 +73,10 @@ namespace orca_base
 
     using namespace std::placeholders;
 
-    fiducial_sync_.reset(new FiducialSync(FiducialPolicy(1), obs_sub_, odom_sub_));
+    fiducial_sync_.reset(new FiducialSync(FiducialPolicy(1), obs_sub_, fcam_sub_));
     fiducial_sync_->registerCallback(std::bind(&BaseNode::fiducial_callback, this, _1, _2));
     obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
-    odom_sub_.subscribe(this, "odom"); // Uses default qos
+    fcam_sub_.subscribe(this, "fcam_f_map"); // Uses default qos
 
     // Other subscriptions
     auto battery_cb = std::bind(&BaseNode::battery_callback, this, _1);
@@ -131,13 +128,7 @@ namespace orca_base
     (void) first;
 
     pressure_ = msg->pressure;
-  }
-
-  // New depth reading
-  void BaseNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool first)
-  {
-    // If observations timed out, run the mission loop w/ just depth
-    // TODO
+    z_ = barometer_.pressure_to_depth(cxt_.model_, msg->pressure);
   }
 
   // New battery reading
@@ -203,12 +194,12 @@ namespace orca_base
         } else {
           RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot run random plan");
         }
-      } else if (button_down(msg, joy_msg_, joy_button_move_to_marker_)) {
-        if (obs_ok(msg->header.stamp)) {
-          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_10);
-        } else {
-          RCLCPP_ERROR(get_logger(), "no observations, cannot start move to marker mission");
-        }
+//      } else if (button_down(msg, joy_msg_, joy_button_move_to_marker_)) {
+//        if (obs_ok(msg->header.stamp)) {
+//          set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_10);
+//        } else {
+//          RCLCPP_ERROR(get_logger(), "no observations, cannot start move to marker mission");
+//        }
       }
 
       // Z trim
@@ -263,7 +254,7 @@ namespace orca_base
 
   void BaseNode::fiducial_callback(
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
+    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
   {
     rclcpp::Time prev_time = fiducial_pose_.t;
     rclcpp::Time curr_time = obs_msg->header.stamp;
@@ -282,25 +273,44 @@ namespace orca_base
     // First message?
     bool first = !monotonic::valid(prev_time);
 
+    // Convert pose to transform
+    tf2::Transform t_map_sensor;
+    tf2::fromMsg(fcam_msg->pose.pose, t_map_sensor);
+
+    // Multiply transforms to get t_map_base
+    tf2::Transform t_map_base = t_map_sensor * parser_.t_fcam_base;
+
+    // Convert transform back to pose
+    geometry_msgs::msg::PoseWithCovarianceStamped base_f_map;
+    base_f_map.header = fcam_msg->header;
+    toMsg(t_map_base, base_f_map.pose.pose);
+    base_f_map.pose.covariance = fcam_msg->pose.covariance;  // TODO rotate covariance
+
+    if (!monotonic::valid(fiducial_pose_.t)) {
+      RCLCPP_INFO(get_logger(), "got observation");
+    }
+
     // Save the observations and pose
-    fiducial_pose_.from_msgs(*obs_msg, *odom_msg);
+    fiducial_pose_.from_msgs(*obs_msg, base_f_map);
 
-    // Skip the first message -- the dt will be too large
-    if (first) {
-      return;
-    }
+    if (cxt_.sensor_loop_) {
+      // Skip the first message -- the dt will be too large
+      if (first) {
+        return;
+      }
 
-    // Reject large dt
-    double dt = (curr_time - prev_time).seconds();
-    if (dt > 0.5) {
-      return;
-    }
+      // Reject large dt
+      double dt = (curr_time - prev_time).seconds();
+      if (dt > 0.5) {
+        return;
+      }
 
-    // Continue mission
-    if (auv_mode()) {
-      auv_advance(dt);
+      // Continue mission
+      if (auv_mode()) {
+        auv_advance(dt);
 //    } else if (mtm_mode()) {
 //      mtm_advance(dt);
+      }
     }
   }
 
@@ -356,6 +366,11 @@ namespace orca_base
 
   void BaseNode::auv_advance(double dt)
   {
+    // Slam in z
+    // TODO TODO TODO
+    fiducial_pose_.fp.pose.pose.z = z_;
+    fiducial_pose_.fp.pose.z_valid = true;
+
     // Publish planned path for rviz
     if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
       planned_path_pub_->publish(mission_->planned_path());
@@ -595,30 +610,38 @@ namespace orca_base
       disarm(spin_time);
     }
 
-    if (auv_mode() && !depth_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost depth during AUV operation, disarming");
-      disarm(spin_time);
-    }
+//    if (auv_mode() && !depth_ok(spin_time)) {
+//      RCLCPP_ERROR(get_logger(), "lost depth during AUV operation, disarming");
+//      disarm(spin_time);
+//    }
 
-    if (auv_mode() && stability_ < 0.4) {
-      RCLCPP_ERROR(get_logger(), "excessive tilt during AUV operation, disarming");
-      disarm(spin_time);
-    }
+//    if (auv_mode() && stability_ < 0.4) {
+//      RCLCPP_ERROR(get_logger(), "excessive tilt during AUV operation, disarming");
+//      disarm(spin_time);
+//    }
 
     if (holding_pressure() && !baro_ok(spin_time)) {
       RCLCPP_ERROR(get_logger(), "lost barometer while holding pressure, disarming");
       disarm(spin_time);
     }
 
-    if (mtm_mode() && !obs_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost observations while moving to marker, disarming");
-      disarm(spin_time);
+    if (monotonic::valid(fiducial_pose_.t) && !odom_ok(spin_time)) {
+      // We lost observations, nuke fiducial_pose_
+      RCLCPP_INFO(get_logger(), "lost observations");
+      fiducial_pose_ = FPStamped{};
     }
 
     // Auto-start mission
     if (!auv_mode() && is_auv_mode(cxt_.auto_start_) && !joy_ok(spin_time) && odom_ok(spin_time)) {
       RCLCPP_INFO(get_logger(), "auto-starting mission %d", cxt_.auto_start_);
       set_mode(spin_time, cxt_.auto_start_);
+    }
+
+    // TODO test for fiducial_ok
+    if (!cxt_.sensor_loop_ && auv_mode() && baro_ok(spin_time)) {
+      // Continue mission
+      static std::chrono::duration<double> dt = SPIN_PERIOD;
+      auv_advance(dt.count());
     }
   }
 

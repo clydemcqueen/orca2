@@ -70,34 +70,33 @@ def generate_launch_description():
                 'param_fluid_density': 997.0,
                 'auv_z_target': -0.5,
             }], remappings=[
-                # ('odom', '/' + forward_camera_name + '/odom'),
-                # ('odom', '/filtered_odom'),
+                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
             ]),
 
         # Filter
-        Node(package='orca_filter', node_executable='filter_node', output='screen',
-             node_name='filter_node', parameters=[{
-                'use_sim_time': use_sim_time,
-                'param_fluid_density': 997.0,
-                'baro_init': 0,  # Init in-air
-                'predict_accel': False,
-                'predict_accel_control': False,
-                'predict_accel_drag': False,
-                'predict_accel_buoyancy': False,
-                'filter_baro': True,
-                'filter_fcam': True,
-                'filter_lcam': False,
-                'filter_rcam': False,
-                'urdf_file': urdf_path,
-                'urdf_barometer_joint': 'baro_joint',
-                'urdf_forward_camera_joint': 'forward_camera_frame_joint',
-                'urdf_left_camera_joint': 'left_camera_frame_joint',
-                'urdf_right_camera_joint': 'right_camera_frame_joint',
-            }], remappings=[
-                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-                ('lcam_f_map', '/' + left_camera_name + '/camera_pose'),
-                ('rcam_f_map', '/' + right_camera_name + '/camera_pose'),
-            ]),
+        # Node(package='orca_filter', node_executable='filter_node', output='screen',
+        #      node_name='filter_node', parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #         'param_fluid_density': 997.0,
+        #         'baro_init': 0,  # Init in-air
+        #         'predict_accel': False,
+        #         'predict_accel_control': False,
+        #         'predict_accel_drag': False,
+        #         'predict_accel_buoyancy': False,
+        #         'filter_baro': True,
+        #         'filter_fcam': True,
+        #         'filter_lcam': False,
+        #         'filter_rcam': False,
+        #         'urdf_file': urdf_path,
+        #         'urdf_barometer_joint': 'baro_joint',
+        #         'urdf_forward_camera_joint': 'forward_camera_frame_joint',
+        #         'urdf_left_camera_joint': 'left_camera_frame_joint',
+        #         'urdf_right_camera_joint': 'right_camera_frame_joint',
+        #     }], remappings=[
+        #         ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+        #         ('lcam_f_map', '/' + left_camera_name + '/camera_pose'),
+        #         ('rcam_f_map', '/' + right_camera_name + '/camera_pose'),
+        #     ]),
 
         # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
@@ -120,7 +119,7 @@ def generate_launch_description():
                 'publish_base_pose': 0,
                 'publish_camera_odom': 0,
                 'publish_base_odom': 0,
-                'stamp_msgs_with_current_time': int(not use_sim_time),
+                'stamp_msgs_with_current_time': stamp_msgs_with_current_time,
                 'camera_frame_id': forward_camera_frame,
             }]),
 

@@ -43,6 +43,7 @@ set(ORCA_SHARED_LIB "orca_shared")
 
 add_library(
   ${ORCA_SHARED_LIB} SHARED
+  src/baro.cpp
   src/geometry.cpp
   src/util.cpp
 )

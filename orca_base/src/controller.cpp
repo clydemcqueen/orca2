@@ -13,9 +13,9 @@ namespace orca_base
 #if 1
     u_bar = ff;
 
-    if (estimate.closest_obs() < 1.8) {
-      // Pose is probably good -- run PID controllers on x, y, yaw
-
+    // Trust x, y and yaw if the covar is low and we have a fairly close observation
+    // TODO use estimate.info == POSE
+    if (estimate.closest_obs() < 1.8 && estimate.pose.full_pose()) {
       x_controller_.set_target(plan.pose.pose.x);
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
 
@@ -26,8 +26,13 @@ namespace orca_base
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     }
 
-    z_controller_.set_target(plan.pose.pose.z);
-    u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
+    // Trust z if we're getting it from baro
+    // TODO use estimate.info
+    if (estimate.pose.z_valid) {
+      z_controller_.set_target(plan.pose.pose.z);
+      u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
+    }
+
 #endif
 
 #if 0
@@ -54,7 +59,7 @@ namespace orca_base
     }
 #endif
 
-#if 0
+#if 0/
     // Set targets
     x_controller_.set_target(plan.x);
     y_controller_.set_target(plan.y);

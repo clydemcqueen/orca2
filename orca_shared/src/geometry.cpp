@@ -67,9 +67,25 @@ namespace orca
     return closest;
   }
 
-  void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom)
+  FP::Information FP::info() const
   {
-    pose.from_msg(odom.pose);
+    if (closest_obs() < 1.8 && pose.full_pose()) {
+      return Information::POSE;
+    } else if (!observations.empty() && pose.z_valid) {
+      return Information::OBSERVATION_Z;
+    } else if (!observations.empty()) {
+      return Information::OBSERVATION;
+    } else if (pose.z_valid) {
+      return Information::Z;
+    } else {
+      return Information::NONE;
+    }
+  }
+
+  void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
+                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg)
+  {
+    pose.from_msg(fcam_msg.pose);
 
     observations.clear();
     for (const auto &r : obs.observations) {
@@ -79,12 +95,13 @@ namespace orca
     }
   }
 
-  void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom)
+  void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
+                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg)
   {
-    assert(obs.header.stamp == odom.header.stamp);
+    assert(obs.header.stamp == fcam_msg.header.stamp);
 
     t = obs.header.stamp;
-    fp.from_msgs(obs, odom);
+    fp.from_msgs(obs, fcam_msg);
   }
 
   void FPStamped::add_to_path(nav_msgs::msg::Path &path) const

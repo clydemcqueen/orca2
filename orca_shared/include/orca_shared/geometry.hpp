@@ -352,12 +352,25 @@ namespace orca
 
   struct FP
   {
+    enum class Information
+    {
+      NONE,           // No information
+      Z,              // Have z
+      OBSERVATION,    // Have observation
+      OBSERVATION_Z,  // Have observation and z
+      POSE            // Have observation and full pose
+    };
+
     PoseWithCovariance pose;
     std::vector<Observation> observations;
 
-    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom);
-
     double closest_obs() const;
+
+    Information info() const;
+
+    void from_msgs(
+      const fiducial_vlam_msgs::msg::Observations &obs,
+      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg);
   };
 
   //=====================================================================================
@@ -369,7 +382,9 @@ namespace orca
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
     FP fp;
 
-    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs, const nav_msgs::msg::Odometry &odom);
+    void from_msgs(
+      const fiducial_vlam_msgs::msg::Observations &obs,
+      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
   };

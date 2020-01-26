@@ -17,8 +17,8 @@
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
-#include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/leak.hpp"
+#include "orca_shared/baro.hpp"
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/base_context.hpp"
@@ -91,7 +91,7 @@ namespace orca_base
     const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
     const rclcpp::Duration OBS_TIMEOUT{RCL_S_TO_NS(1)};   // AUV obs: disarm if we lose observations
     const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
-    const std::chrono::milliseconds SPIN_PERIOD{100ms};   // Check timeouts at 10Hz
+    const std::chrono::milliseconds SPIN_PERIOD{50ms};   // Spin at 20Hz
 
     // Thrusters, order must match the order of the <thruster> tags in the URDF
     const std::vector<Thruster> THRUSTERS = {
@@ -135,6 +135,8 @@ namespace orca_base
 
     // Barometer state
     double pressure_{};
+    orca::Barometer barometer_{0}; // Init at surface
+    double z_{};
 
     // Joystick state
     sensor_msgs::msg::Joy joy_msg_;               // Most recent message
@@ -163,7 +165,6 @@ namespace orca_base
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
-    rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
@@ -171,10 +172,10 @@ namespace orca_base
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
-    message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
+    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_sub_;
     using FiducialPolicy = message_filters::sync_policies::ExactTime<
       fiducial_vlam_msgs::msg::Observations,
-      nav_msgs::msg::Odometry>;
+      geometry_msgs::msg::PoseWithCovarianceStamped>;
     using FiducialSync = message_filters::Synchronizer<FiducialPolicy>;
     std::shared_ptr<FiducialSync> fiducial_sync_;
 
@@ -189,8 +190,6 @@ namespace orca_base
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
-    void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
-
     void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
     void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
@@ -201,14 +200,12 @@ namespace orca_base
 
     void fiducial_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
+      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
 
     // Callback wrappers
     // TODO some const, some not?
     monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this,
                                                                                           &BaseNode::baro_callback};
-    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Depth::SharedPtr> depth_cb_{this,
-                                                                                       &BaseNode::depth_callback};
     monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
 
@@ -257,8 +254,8 @@ namespace orca_base
     bool auv_mode()
     { return is_auv_mode(mode_); }
 
-    bool mtm_mode()
-    { return is_mtm_mode(mode_); }
+//    bool mtm_mode()
+//    { return is_mtm_mode(mode_); }
 
     bool baro_ok(const rclcpp::Time &t)
     { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
@@ -266,14 +263,8 @@ namespace orca_base
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
 
-    bool obs_ok(const rclcpp::Time &t)
-    { return true; } // TODO
-
     bool odom_ok(const rclcpp::Time &t)
-    { return true; } // TODO
-
-    bool depth_ok(const rclcpp::Time &t)
-    { return depth_cb_.receiving() && t - depth_cb_.prev() < BARO_TIMEOUT; }
+    { return monotonic::valid(fiducial_pose_.t) && t - fiducial_pose_.t < ODOM_TIMEOUT; }
 
   public:
     explicit BaseNode();

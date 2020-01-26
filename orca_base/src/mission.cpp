@@ -50,6 +50,7 @@ namespace orca_base
       // The numerical approximation gets wonky if dt > 0.1. This might happen if the filter times out and restarts.
       // Break a large dt into a number of smaller steps.
       num_steps = std::ceil(dt / MAX_STEP);
+      assert(num_steps < 20);
       RCLCPP_DEBUG(logger_, "break dt %g into %d steps", dt, num_steps);
       dt /= num_steps;
     }

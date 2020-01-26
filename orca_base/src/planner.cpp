@@ -162,7 +162,7 @@ namespace orca_base
                            const std::function<void(double completed, double total)> &send_feedback)
   {
     if (segments_.empty()) {
-      if (estimate.pose.full_pose()) {
+      if (/* estimate.pose.full_pose() */ estimate.info() == FP::Information::POSE) {
         // Generate a trajectory to the first target
         RCLCPP_INFO(logger_, "bootstrap plan");
         plan_trajectory(estimate);
@@ -188,7 +188,7 @@ namespace orca_base
       RCLCPP_INFO(logger_, "target %d of %d", target_idx_ + 1, targets_.size());
       send_feedback(target_idx_, targets_.size());
 
-      if (estimate.pose.full_pose()) {
+      if (/* estimate.pose.full_pose() */ estimate.info() == FP::Information::POSE) {
         // Start from known location
         plan_trajectory(estimate);
         RCLCPP_INFO(logger_, "planning for next target from known pose");
@@ -210,7 +210,7 @@ namespace orca_base
     controllers_[segment_idx_]->calc(cxt_, dt, plan, estimate, ff, u_bar);
 
     // If error is > MAX_POSE_ERROR, then replan
-    if (estimate.pose.full_pose() && estimate.pose.pose.distance_xy(plan.pose.pose) > MAX_POSE_ERROR) {
+    if (/* estimate.pose.full_pose() */ estimate.info() == FP::Information::POSE && estimate.pose.pose.distance_xy(plan.pose.pose) > MAX_POSE_ERROR) {
       RCLCPP_WARN(logger_, "off by %g meters, replan to existing target", estimate.pose.pose.distance_xy(plan.pose.pose));
       plan_trajectory(estimate);
     }
