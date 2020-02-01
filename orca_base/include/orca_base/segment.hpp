@@ -26,30 +26,12 @@ namespace orca_base
     rclcpp::Logger logger_;
     BaseContext cxt_;
 
-    // State
-    orca::FP goal_;       // Goal pose
-    orca::FP plan_;       // Planned pose, incremented with each call to advance()
-
-//    void finish();
-
   public:
 
-    SegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP start, orca::FP goal);
+    SegmentBase(const rclcpp::Logger &logger, BaseContext cxt);
 
     // Write contents to RCLCPP_INFO
     virtual void log_info() = 0;
-
-    // Return the current (planned) pose
-    const orca::FP &plan() const
-    { return plan_; }
-
-    // Return the goal pose
-    const orca::FP &goal() const
-    { return goal_; }
-
-    // Return the acceleration required at the moment
-    virtual const orca::Acceleration &ff() const = 0;
-//    { return ff_; }
 
     // Advance the motion plan by dt seconds, return true to continue, false if we're done
     virtual bool advance(double dt) = 0;
@@ -63,16 +45,26 @@ namespace orca_base
   {
   protected:
 
+    orca::FP plan_;         // Planned pose, incremented with each call to advance()
+    orca::FP goal_;         // Goal pose
+
     orca::Twist twist_;     // Velocity in the world frame
     orca::Acceleration ff_; // Acceleration in the world frame
 
   public:
     PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP start, orca::FP goal);
 
-    const orca::Acceleration &ff() const override
-    { return ff_; }
+    const orca::FP &plan() const
+    { return plan_; }
 
-    // TODO advance() should project pose to observation
+    const orca::FP &goal() const
+    { return goal_; }
+
+    const orca::Twist &twist() const
+    { return twist_; }
+
+    const orca::Acceleration &ff() const
+    { return ff_; }
   };
 
   //=====================================================================================
@@ -83,15 +75,27 @@ namespace orca_base
   {
   protected:
 
-    orca::Twist twist_body_;     // Velocity in the body frame
-    orca::Acceleration ff_body_; // Acceleration in the body frame
+    orca::Observation plan_;    // Goal observation
+    orca::Observation goal_;    // Planned observation, incremented with each call to advance()
+
+    orca::TwistBody twist_;     // Velocity in the body frame
+    orca::AccelerationBody ff_; // Acceleration in the body frame
 
   public:
-    ObservationSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP start, orca::FP goal);
+    ObservationSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::Observation start,
+                           orca::Observation goal);
 
-    // TODO transform body to world???
-    const orca::Acceleration &ff() const override
-    { return ff_body_; }
+    const orca::Observation &plan() const
+    { return plan_; }
+
+    const orca::Observation &goal() const
+    { return goal_; }
+
+    const orca::TwistBody &twist() const
+    { return twist_; }
+
+    const orca::AccelerationBody &ff() const
+    { return ff_; }
   };
 
   //=====================================================================================
@@ -157,15 +161,31 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // MoveToMarkerSegment uses observations, not poses
+  // RotateToMarkerSegment rotates to face a marker
   //=====================================================================================
 
-  class MoveToMarkerSegment : ObservationSegmentBase
+  class RotateToMarkerSegment : public ObservationSegmentBase
   {
   public:
 
-    MoveToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start,
-                        const orca::FP &goal);
+    RotateToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
+                        const orca::Observation &goal);
+
+    void log_info() override;
+
+    bool advance(double dt) override;
+  };
+
+  //=====================================================================================
+  // MoveToMarkerSegment moves forward toward a marker
+  //=====================================================================================
+
+  class MoveToMarkerSegment : public ObservationSegmentBase
+  {
+  public:
+
+    MoveToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
+                        const orca::Observation &goal);
 
     void log_info() override;
 

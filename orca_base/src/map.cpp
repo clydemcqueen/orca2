@@ -1,7 +1,5 @@
 #include "orca_base/map.hpp"
 
-using namespace orca;
-
 namespace orca_base
 {
 
@@ -12,12 +10,131 @@ namespace orca_base
   constexpr astar::node_type START_ID = -1;
   constexpr astar::node_type DESTINATION_ID = -2;
 
-  bool Map::get_waypoints(const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const
+  // Marker info
+  // TODO get from vlam message
+  const double marker_length = 0.1778;
+
+  //=====================================================================================
+  // Utilities
+  //=====================================================================================
+
+  // Rotate markers from vlam map frame (derived from OpenCV) to ROS world frame (typically called "map")
+  // Also see orca_gazebo/build_worlds.py
+  geometry_msgs::msg::Pose vlam_to_map(const geometry_msgs::msg::Pose &marker_f_vlam)
+  {
+    const static tf2::Quaternion t_map_vlam(0, 0, -sqrt(0.5), sqrt(0.5));
+
+    tf2::Quaternion t_vlam_marker(marker_f_vlam.orientation.x, marker_f_vlam.orientation.y,
+                                  marker_f_vlam.orientation.z, marker_f_vlam.orientation.w);
+    tf2::Quaternion t_map_marker = t_map_vlam * t_vlam_marker;
+
+    geometry_msgs::msg::Pose marker_f_map = marker_f_vlam;
+    marker_f_map.orientation.x = t_map_marker.x();
+    marker_f_map.orientation.y = t_map_marker.y();
+    marker_f_map.orientation.z = t_map_marker.z();
+    marker_f_map.orientation.w = t_map_marker.w();
+    return marker_f_map;
+  }
+
+  inline cv::Point3d tf_to_cv(tf2::Vector3 p)
+  {
+    return cv::Point3d(p.x(), p.y(), p.z());
+  }
+
+  // Return true if this point is inside of the rectangle [[0, 0], [2*cx, 2*cy]]
+  inline bool in_frame(const cv::Point2d &p, double cx, double cy)
+  {
+    return p.x >= 0 && p.x <= 2 * cx && p.y >= 0 && p.y <= 2 * cy;
+  }
+
+  //=====================================================================================
+  // Marker
+  //=====================================================================================
+
+  Marker::Marker(int _id, const geometry_msgs::msg::Pose &_marker_f_map) : id{_id}, marker_f_map{_marker_f_map}
+  {
+    // Build corners in marker frame
+    tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
+    tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+    tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+    tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
+
+    // Get transform from marker frame to map frame
+    tf2::Transform t_map_marker;
+    tf2::fromMsg(marker_f_map, t_map_marker);
+
+    // Transform corners into map frame
+    corner0_f_map = t_map_marker * corner0_f_marker;
+    corner1_f_map = t_map_marker * corner1_f_marker;
+    corner2_f_map = t_map_marker * corner2_f_marker;
+    corner3_f_map = t_map_marker * corner3_f_marker;
+  }
+
+  bool Marker::predict_observation(const image_geometry::PinholeCameraModel &cam_model, const tf2::Transform &t_cam_map,
+                                   orca::Observation &obs) const
+  {
+    // Camera frame: x right, y down, z forward
+
+    obs.id = id;
+
+    // Transform corners from map frame to camera frame
+    auto corner0_f_cam = t_cam_map * corner0_f_map;
+    auto corner1_f_cam = t_cam_map * corner1_f_map;
+    auto corner2_f_cam = t_cam_map * corner2_f_map;
+    auto corner3_f_cam = t_cam_map * corner3_f_map;
+
+    // Ignore markers that are behind the camera
+    if (corner0_f_cam.z() < 0 || corner1_f_cam.z() < 0 || corner2_f_cam.z() < 0 || corner3_f_cam.z() < 0) {
+      return false;
+    }
+
+    // Ignore markers that are not facing the camera
+    // TODO
+
+    // Project corners onto the image plane
+    obs.c0 = cam_model.project3dToPixel(tf_to_cv(corner0_f_cam));
+    obs.c1 = cam_model.project3dToPixel(tf_to_cv(corner1_f_cam));
+    obs.c2 = cam_model.project3dToPixel(tf_to_cv(corner2_f_cam));
+    obs.c3 = cam_model.project3dToPixel(tf_to_cv(corner3_f_cam));
+
+    // Ignore markers that are outside of the visible frame
+    if (!in_frame(obs.c0, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(obs.c1, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(obs.c2, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(obs.c3, cam_model.cx(), cam_model.cy())) {
+      return false;
+    }
+
+    // Estimate distance and yaw
+    obs.estimate_distance_and_yaw_from_corners();
+
+    return true;
+  }
+
+  //=====================================================================================
+  // Map
+  //=====================================================================================
+
+  void Map::set_vlam_map(fiducial_vlam_msgs::msg::Map::SharedPtr map)
+  {
+    // Save map
+    vlam_map_ = std::move(map);
+
+    // Build markers_
+    markers_.clear();
+    for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
+      markers_.emplace_back(vlam_map_->ids[i], vlam_map_->poses[i].pose);
+    }
+  }
+
+  // TODO ignores marker orientation, so only works for down-facing cameras and markers on the seafloor
+  bool Map::get_waypoints(const orca::Pose &start_pose, const orca::Pose &destination_pose,
+                          std::vector<orca::Pose> &waypoints) const
   {
     waypoints.clear();
 
     // Create a map of marker ids to poses, including the start and destination pose
-    std::map<astar::node_type, Pose> poses;
+    std::map<astar::node_type, orca::Pose> poses;
 
     // Add start pose to map
     auto start_z_target = start_pose;
@@ -31,7 +148,7 @@ namespace orca_base
 
     // Add all of the markers to the map
     for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      Pose pose;
+      orca::Pose pose;
       pose.from_msg(vlam_map_->poses[i].pose);
       pose.z = cxt_.auv_z_target_;
       poses[vlam_map_->ids[i]] = pose;

@@ -16,7 +16,7 @@ namespace orca_base
   {
     rclcpp::Logger logger_;                               // ROS logger
     const BaseContext &cxt_;                              // Parameters
-    std::shared_ptr<PlannerBase> planner_;                // Path planner
+    std::shared_ptr<Planner> planner_;                // Path planner
 
     // Mission action state
     std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle_;
@@ -26,13 +26,13 @@ namespace orca_base
 
     Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
             std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-            std::shared_ptr<PlannerBase> planner, const orca::FPStamped &start);
+            std::shared_ptr<Planner> planner, const orca::FPStamped &start);
 
     const nav_msgs::msg::Path &planned_path() const
     { return planner_->planned_path(); }
 
     // Advance the plan, return true to continue
-    bool advance(double dt, orca::FP &plan, const orca::FPStamped &estimate, orca::Acceleration &u_bar);
+    bool advance(double dt, orca::FP &plan, const orca::FPStamped &estimate, orca::Efforts &efforts);
 
     // Abort the mission
     void abort();

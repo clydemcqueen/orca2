@@ -17,8 +17,10 @@ if ($ENV{CLION_IDE})
 endif ()
 
 find_package(ament_cmake REQUIRED)
+find_package(cv_bridge REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(orca_description REQUIRED)
 find_package(orca_msgs REQUIRED)
@@ -56,11 +58,13 @@ add_executable(
 
 ament_target_dependencies(
   base_node
+  cv_bridge
   fiducial_vlam_msgs
+  image_geometry
+  nav_msgs
   orca_description
   orca_msgs
   orca_shared
-  nav_msgs
   rclcpp
   rclcpp_action
   ros2_shared

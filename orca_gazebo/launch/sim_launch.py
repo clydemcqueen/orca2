@@ -71,6 +71,8 @@ def generate_launch_description():
                 'auv_z_target': -0.5,
             }], remappings=[
                 ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+                ('fcam_image', '/' + forward_camera_name + '/image_raw'),
+                ('fcam_info', '/' + forward_camera_name + '/camera_info'),
             ]),
 
         # Filter

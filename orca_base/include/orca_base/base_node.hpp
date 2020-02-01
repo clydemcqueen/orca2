@@ -1,15 +1,17 @@
 #ifndef ORCA_BASE_BASE_NODE_HPP
 #define ORCA_BASE_BASE_NODE_HPP
 
-#include "rclcpp_action/rclcpp_action.hpp"
-
+#include "fiducial_vlam_msgs/msg/map.hpp"
+#include "fiducial_vlam_msgs/msg/observations.hpp"
+#include "image_geometry/pinhole_camera_model.h"
 #include "message_filters/subscriber.h"
 #include "message_filters/synchronizer.h"
 #include "message_filters/sync_policies/exact_time.h"
-
-#include "fiducial_vlam_msgs/msg/map.hpp"
-#include "fiducial_vlam_msgs/msg/observations.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "sensor_msgs/msg/camera_info.hpp"
+#include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/joy.hpp"
+#include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "orca_description/parser.hpp"
@@ -56,13 +58,7 @@ namespace orca_base
   constexpr bool is_auv_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode >= Control::AUV_KEEP_STATION && mode < Control::AUV_10;
-  }
-
-  constexpr bool is_mtm_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode == Control::AUV_10;
+    return mode >= Control::AUV_KEEP_STATION;
   }
 
   //=============================================================================
@@ -115,9 +111,7 @@ namespace orca_base
     const int joy_button_rov_ = JOY_BUTTON_A;
     const int joy_button_rov_hold_pressure_ = JOY_BUTTON_B;
     const int joy_button_auv_keep_station_ = JOY_BUTTON_X;
-//    const int joy_button_auv_keep_origin_ = JOY_BUTTON_Y;
     const int joy_button_auv_random_ = JOY_BUTTON_Y;
-    const int joy_button_move_to_marker_ = JOY_BUTTON_LOGO;
 
     const int joy_button_tilt_down_ = JOY_BUTTON_LEFT_BUMPER;
     const int joy_button_tilt_up_ = JOY_BUTTON_RIGHT_BUMPER;
@@ -144,8 +138,14 @@ namespace orca_base
     // Odometry state
     double stability_{1.0};                       // Roll and pitch stability, 1.0 (flat) to 0.0 (>90 degree tilt)
 
-    // Fiducial pose
-    orca::FPStamped fiducial_pose_;
+    // Camera model
+    image_geometry::PinholeCameraModel fcam_model_;
+
+    // Plan
+    orca::FP plan_;
+
+    // Observations and pose estimate
+    orca::FPStamped estimate_;
 
     // ROV operation
     std::shared_ptr<pid::Controller> pressure_hold_pid_;
@@ -153,7 +153,7 @@ namespace orca_base
     // AUV operation
     std::shared_ptr<Mission> mission_;            // The mission we're running
     Map map_;                                     // Map of fiducial markers
-    nav_msgs::msg::Path filtered_path_;           // Estimate of the actual path (from filtered_pose_)
+    nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
     // Move-to-marker operation
     std::shared_ptr<MoveToMarkerSegment> mtm_segment_;
@@ -166,13 +166,17 @@ namespace orca_base
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr fcam_image_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
+    // Sync pose + observations
+    // These will only be sent if markers were found
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
-    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_sub_;
+    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_pose_sub_;
     using FiducialPolicy = message_filters::sync_policies::ExactTime<
       fiducial_vlam_msgs::msg::Observations,
       geometry_msgs::msg::PoseWithCovarianceStamped>;
@@ -186,9 +190,13 @@ namespace orca_base
     void validate_parameters();
 
     // Subscription callbacks
-    void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first);
+    void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg);
 
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
+
+    void fcam_image_callback(sensor_msgs::msg::Image::SharedPtr msg);
+
+    void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
     void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
@@ -203,17 +211,22 @@ namespace orca_base
       const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
 
     // Callback wrappers
-    // TODO some const, some not?
-    monotonic::Monotonic<BaseNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this,
-                                                                                          &BaseNode::baro_callback};
+    monotonic::Valid<BaseNode *, orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &BaseNode::baro_callback};
+    monotonic::Valid<BaseNode *, sensor_msgs::msg::Image::SharedPtr> fcam_image_cb_{this,
+                                                                                    &BaseNode::fcam_image_callback};
+    monotonic::Valid<BaseNode *, sensor_msgs::msg::CameraInfo::SharedPtr> fcam_info_cb_{this,
+                                                                                        &BaseNode::fcam_info_callback};
     monotonic::Monotonic<BaseNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &BaseNode::joy_callback};
     monotonic::Valid<BaseNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &BaseNode::map_callback};
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr fcam_predicted_obs_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr esimated_path_pub_;   // Actual path
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;    // Planned path to next target
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;     // Planned path with all targets
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr filtered_path_pub_;
 
     // Mission server
     rclcpp_action::Server<orca_msgs::action::Mission>::SharedPtr mission_server_;
@@ -230,8 +243,6 @@ namespace orca_base
     void rov_advance(const rclcpp::Time &stamp);
 
     void auv_advance(double dt);
-
-//    void mtm_advance(double dt);
 
     void all_stop(const rclcpp::Time &msg_time);
 
@@ -254,17 +265,14 @@ namespace orca_base
     bool auv_mode()
     { return is_auv_mode(mode_); }
 
-//    bool mtm_mode()
-//    { return is_mtm_mode(mode_); }
-
     bool baro_ok(const rclcpp::Time &t)
     { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
 
     bool joy_ok(const rclcpp::Time &t)
     { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
 
-    bool odom_ok(const rclcpp::Time &t)
-    { return monotonic::valid(fiducial_pose_.t) && t - fiducial_pose_.t < ODOM_TIMEOUT; }
+    bool fp_ok(const rclcpp::Time &t)
+    { return monotonic::valid(estimate_.t) && t - estimate_.t < ODOM_TIMEOUT; }
 
   public:
     explicit BaseNode();

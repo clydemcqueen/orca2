@@ -5,17 +5,22 @@ using namespace orca;
 namespace orca_base
 {
 
-  // TODO all controllers need to look at uncertainty and obs.distance
+  PoseController::PoseController(const BaseContext &cxt) :
+    cxt_{cxt},
+    x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
+    y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
+    z_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
+    yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
+  {}
 
-  void SimpleController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
-                              const Acceleration &ff, Acceleration &u_bar)
+  void PoseController::calc(double dt, const FP &plan, const FP &estimate,
+                            const Acceleration &ff, orca::Efforts &efforts)
   {
 #if 1
-    u_bar = ff;
+    orca::Acceleration u_bar = ff;
 
     // Trust x, y and yaw if the covar is low and we have a fairly close observation
-    // TODO use estimate.info == POSE
-    if (estimate.closest_obs() < 1.8 && estimate.pose.full_pose()) {
+    if (estimate.good_pose()) {
       x_controller_.set_target(plan.pose.pose.x);
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
 
@@ -27,11 +32,12 @@ namespace orca_base
     }
 
     // Trust z if we're getting it from baro
-    // TODO use estimate.info
-    if (estimate.pose.z_valid) {
+    if (estimate.good_z()) {
       z_controller_.set_target(plan.pose.pose.z);
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     }
+
+    efforts.from_acceleration(plan.pose.pose.yaw, u_bar);
 
 #endif
 
@@ -59,7 +65,7 @@ namespace orca_base
     }
 #endif
 
-#if 0/
+#if 0
     // Set targets
     x_controller_.set_target(plan.x);
     y_controller_.set_target(plan.y);
@@ -74,6 +80,7 @@ namespace orca_base
 #endif
   }
 
+#if 0
   void DeadzoneController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
                                 const Acceleration &ff, Acceleration &u_bar)
   {
@@ -191,19 +198,32 @@ namespace orca_base
     z_controller_.set_target(plan.pose.pose.z);
     u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
   }
+#endif
 
-  void MoveToMarkerController::calc(double dt, const FP &plan, const FP &estimate,
-                                    const orca::Acceleration &ff, orca::Acceleration &u_bar)
+  MoveToMarkerController::MoveToMarkerController(const BaseContext &cxt) :
+    cxt_{cxt},
+    forward_controller_{false, 0.04, 0, 0},
+    vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
+    yaw_controller_{true, 0.2, 0, 0}
+  {}
+
+  void MoveToMarkerController::calc(double dt, const orca::Observation &plan, const orca::Observation &estimate,
+                                    const orca::AccelerationBody &ff, orca::Efforts &efforts)
   {
-    forward_controller_.set_target(plan.observations[0].distance);
-    yaw_controller_.set_target(plan.observations[0].yaw);
-    vertical_controller_.set_target(0.5); // TODO
+    orca::AccelerationBody u_bar = ff;
 
-    u_bar = ff;
+    forward_controller_.set_target(plan.distance);
+    vertical_controller_.set_target(0.5); // TODO add z to orca::Observation
+    yaw_controller_.set_target(plan.yaw);
 
-    u_bar.x = -forward_controller_.calc(estimate.observations[0].distance, dt) + ff.x;
-    u_bar.yaw = -yaw_controller_.calc(estimate.observations[0].yaw, dt) + ff.yaw;
+    u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.forward;
     // TODO u_bar.z
+    u_bar.yaw = -yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
+
+    efforts.set_forward(Model::accel_to_effort_xy(u_bar.forward));
+    efforts.set_strafe(0);
+    efforts.set_vertical(Model::accel_to_effort_z(u_bar.vertical));
+    efforts.set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
   }
 
 }

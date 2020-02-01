@@ -11,6 +11,7 @@
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "opencv2/core/types.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 // 4 DoF geometry and motion structs
@@ -19,7 +20,7 @@ namespace orca
 {
 
   //=====================================================================================
-  // Pose
+  // Pose in world frame
   //=====================================================================================
 
   struct Pose
@@ -165,14 +166,17 @@ namespace orca
     bool z_valid;
     bool yaw_valid;
 
-    bool full_pose() const
+    bool good_pose() const
     { return x_valid && y_valid && z_valid && yaw_valid; }
+
+    bool good_z() const
+    { return z_valid; }
 
     void from_msg(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance);
   };
 
   //=====================================================================================
-  // Twist
+  // Twist in the world frame
   //=====================================================================================
 
   struct Twist
@@ -195,7 +199,22 @@ namespace orca
   };
 
   //=====================================================================================
-  // Acceleration
+  // Twist in the body frame
+  //=====================================================================================
+
+  struct TwistBody
+  {
+    double forward;
+    double strafe;
+    double vertical;
+    double yaw;
+
+    constexpr TwistBody() : forward{0}, strafe{0}, vertical{0}, yaw{0}
+    {}
+  };
+
+  //=====================================================================================
+  // Acceleration in the world frame
   //=====================================================================================
 
   struct Acceleration
@@ -218,14 +237,30 @@ namespace orca
       z += that.z;
       yaw += that.yaw;
     }
-
-    std::string str()
-    {
-      std::stringstream ss;
-      ss << "(" << x << ", " << y << ", " << z << ", " << yaw << ")";
-      return ss.str();
-    }
   };
+
+  std::ostream &operator<<(std::ostream &os, Acceleration const &a);
+
+  //=====================================================================================
+  // Acceleration in the body frame
+  //=====================================================================================
+
+  struct AccelerationBody
+  {
+    double forward;
+    double strafe;
+    double vertical;
+    double yaw;
+
+    constexpr AccelerationBody() : forward{0}, strafe{0}, vertical{0}, yaw{0}
+    {}
+
+    constexpr AccelerationBody(double _forward, double _strafe, double _vertical, double _yaw) :
+      forward{_forward}, strafe{_strafe}, vertical{_vertical}, yaw{_yaw}
+    {}
+  };
+
+  std::ostream &operator<<(std::ostream &os, AccelerationBody const &a);
 
   //=====================================================================================
   // Thruster efforts from joystick or pid controllers, in the body frame
@@ -328,18 +363,26 @@ namespace orca
     }
   };
 
+  std::ostream &operator<<(std::ostream &os, Efforts const &e);
+
   //=====================================================================================
-  // Observation -- observation of a feature (e.g. ArUco marker) from the sub
+  // Observation -- observation of a marker from a camera
   //=====================================================================================
+
+  // Should be Observation::NOT_A_MARKER, but sometimes gives a linker error if < C++17
+  constexpr int NOT_A_MARKER = -1;
 
   struct Observation
   {
-    int id;
-    double distance;
-    double yaw;
+    int id;                       // Marker ID
+    cv::Point2d c0, c1, c2, c3;   // Corners
+    double distance;              // Estimated distance to marker
+    double yaw;                   // Yaw to center of marker
 
-    Observation() : id{-1}, distance{0}, yaw{0}
+    Observation() : id{NOT_A_MARKER}
     {}
+
+    void estimate_distance_and_yaw_from_corners();
 
     void from_msg(const fiducial_vlam_msgs::msg::Observation &msg);
   };
@@ -352,21 +395,23 @@ namespace orca
 
   struct FP
   {
-    enum class Information
-    {
-      NONE,           // No information
-      Z,              // Have z
-      OBSERVATION,    // Have observation
-      OBSERVATION_Z,  // Have observation and z
-      POSE            // Have observation and full pose
-    };
-
     PoseWithCovariance pose;
     std::vector<Observation> observations;
 
     double closest_obs() const;
 
-    Information info() const;
+    bool good_pose() const
+    { return pose.good_pose() && closest_obs() < 1.8; }
+
+    bool good_obs() const
+    { return !observations.empty(); }
+
+    bool good_obs(int id) const;
+
+    bool get_obs(int id, Observation &obs) const;
+
+    bool good_z() const
+    { return pose.good_z(); }
 
     void from_msgs(
       const fiducial_vlam_msgs::msg::Observations &obs,

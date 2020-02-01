@@ -10,12 +10,12 @@ namespace orca_base
 {
 
   //=====================================================================================
-  // ControllerBase defines and initializes 4 PID controllers.
+  // PoseController uses 4 pid controllers in the world frame to compute efforts
   //=====================================================================================
 
-  class ControllerBase
+  class PoseController
   {
-  protected:
+    const BaseContext &cxt_;
 
     // PID controllers
     pid::Controller x_controller_;
@@ -25,39 +25,13 @@ namespace orca_base
 
   public:
 
-    explicit ControllerBase(const BaseContext &cxt) :
-      x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
-      y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
-      z_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
-      yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
-    {}
+    explicit PoseController(const BaseContext &cxt);
 
-    // Is this controller usable with dead reckoning navigation?
-    virtual bool dead_reckoning() = 0;
-
-    // Calc u_bar
-    virtual void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
-                      const orca::Acceleration &ff, orca::Acceleration &u_bar) = 0;
+    void calc(double dt, const orca::FP &plan, const orca::FP &estimate,
+              const orca::Acceleration &ff, orca::Efforts &efforts);
   };
 
-  //=====================================================================================
-  // SimpleController uses 4 pid controllers to compute u_bar.
-  //=====================================================================================
-
-  class SimpleController : public ControllerBase
-  {
-  public:
-
-    explicit SimpleController(const BaseContext &cxt) : ControllerBase{cxt}
-    {}
-
-    bool dead_reckoning() override
-    { return false; }
-
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
-              const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
-  };
-
+#if 0
   //=====================================================================================
   // IgnoreEstimateController ignores the estimate, so u_bar = ff.
   //=====================================================================================
@@ -156,6 +130,7 @@ namespace orca_base
     void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
+#endif
 
   //=====================================================================================
   // Experimental "move to marker" controller uses fiducial_vlam observations, not poses
@@ -164,6 +139,8 @@ namespace orca_base
 
   class MoveToMarkerController
   {
+    const BaseContext &cxt_;
+
     // PID controllers
     pid::Controller forward_controller_;
     pid::Controller vertical_controller_;
@@ -171,15 +148,10 @@ namespace orca_base
 
   public:
 
-    explicit MoveToMarkerController(const BaseContext &cxt) :
-      forward_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
-      vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
-      yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
-    {}
+    explicit MoveToMarkerController(const BaseContext &cxt);
 
-    // ff and u_bar are in the body frame TODO create unique type to avoid confusion
-    void calc(double dt, const orca::FP &plan, const orca::FP &pose,
-              const orca::Acceleration &ff, orca::Acceleration &u_bar);
+    void calc(double dt, const orca::Observation &plan, const orca::Observation &estimate,
+              const orca::AccelerationBody &ff, orca::Efforts &efforts);
   };
 
 } // namespace orca_base

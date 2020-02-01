@@ -16,8 +16,10 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
+    <depend>cv_bridge</depend>
     <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
+    <depend>image_geometry</depend>
     <depend>nav_msgs</depend>
     <depend>orca_description</depend>
     <depend>orca_msgs</depend>

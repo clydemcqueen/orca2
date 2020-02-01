@@ -7,7 +7,7 @@ namespace orca_base
 
   Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<PlannerBase> planner, const FPStamped &start) :
+                   std::shared_ptr<Planner> planner, const FPStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
@@ -24,7 +24,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(double dt, FP &plan, const FPStamped &estimate, Acceleration &u_bar)
+  bool Mission::advance(double dt, FP &plan, const FPStamped &estimate, orca::Efforts &efforts)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -51,7 +51,7 @@ namespace orca_base
       // Break a large dt into a number of smaller steps.
       num_steps = std::ceil(dt / MAX_STEP);
       assert(num_steps < 20);
-      RCLCPP_DEBUG(logger_, "break dt %g into %d steps", dt, num_steps);
+      RCLCPP_INFO(logger_, "break dt %g into %d steps", dt, num_steps);
       dt /= num_steps;
     }
 
@@ -66,11 +66,11 @@ namespace orca_base
         }
       };
 
-      auto rc = planner_->advance(dt, plan, estimate.fp, u_bar, send_feedback);
-      if (rc == AdvanceRC::FAILURE) {
+      auto rc = planner_->advance(dt, plan, estimate.fp, efforts, send_feedback);
+      if (rc == Planner::AdvanceRC::FAILURE) {
         abort();
         return false;
-      } else if (rc == AdvanceRC::SUCCESS) {
+      } else if (rc == Planner::AdvanceRC::SUCCESS) {
         complete();
         return false;
       }
