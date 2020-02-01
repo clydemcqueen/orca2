@@ -154,35 +154,59 @@ namespace orca_base
     }
   }
 
-  void draw_text(const CvFont &font, cv::Mat &image, const std::string &s, const cv::Point2d &p, cv::Scalar color,
-                 bool below)
+  void draw_text(cv::Mat &image, const std::string &s, const cv::Point2d &p, cv::Scalar color)
   {
-    CvSize text_size;
-    int baseline;
-    cvGetTextSize(s.c_str(), &font, &text_size, &baseline);
-    CvPoint origin = cvPoint(int(p.x) - text_size.width / 2, int(p.y) - 3 - baseline - 3 + (below ? 30 : 0));
-    putText(image, s.c_str(), origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, color);
+    putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, 1, color);
   }
 
-  void draw_corner(const CvFont &font, cv::Mat &image, const cv::Point2d &p, cv::Scalar color)
+  void BaseNode::write_status(cv::Mat &image)
   {
-    cv::circle(image, p, 3, color, 1);
+    cv::Point2d p{10, 20};
+    std::stringstream ss;
+    ss.precision(3);
+
+    if (mode_ == orca_msgs::msg::Control::DISARMED) {
+      ss << "DISARMED";
+    } else if (mode_ == orca_msgs::msg::Control::ROV) {
+      ss << "ARMED";
+    } else if (mode_ == orca_msgs::msg::Control::ROV_HOLD_PRESSURE) {
+      ss << "HOLD PRESSURE z=" << z_;
+    } else if (mission_ != nullptr) {
+      if (mission_->planner().recovery()) {
+        ss << "RECOVERY target m";
+      } else {
+        ss << "MISSION target m";
+      }
+      ss << mission_->planner().target_marker();
+    } else {
+      ss << "ERROR";
+    }
+    draw_text(image, ss.str(), p, CV_RGB(255, 0, 0));
+
+    p.y += 20;
+    ss.str("");
+
+    ss << estimate_.fp.observations.size() << " observation(s)";
+    draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
   }
 
-  // TODO draw box instead of corners, highlight c0
-  void draw_observations(const CvFont &font, cv::Mat &image, const std::vector<orca::Observation> &observations,
-                         cv::Scalar color)
+  void draw_observations(cv::Mat &image, const std::vector<orca::Observation> &observations, cv::Scalar color)
   {
     for (const auto &obs : observations) {
       // Draw marker name
-      draw_text(font, image, std::string("marker" + std::to_string(obs.id)), obs.c3, color, true);
+      cv::Point2d p = obs.c3;
+      p.y += 30;
+      std::stringstream ss;
+      ss.precision(3);
 
-      // Draw marker corners
-      draw_text(font, image, "c0", obs.c0, color, false);
-      draw_corner(font, image, obs.c0, color);
-      draw_corner(font, image, obs.c1, color);
-      draw_corner(font, image, obs.c2, color);
-      draw_corner(font, image, obs.c3, color);
+      ss << "m" << obs.id << " d=" << obs.distance;
+      draw_text(image, ss.str(), p, color);
+
+      // Draw bounding box
+      cv::line(image, obs.c0, obs.c1, color);
+      cv::line(image, obs.c1, obs.c2, color);
+      cv::line(image, obs.c2, obs.c3, color);
+      cv::line(image, obs.c3, obs.c0, color);
     }
   }
 
@@ -190,15 +214,13 @@ namespace orca_base
   {
     if (fcam_predicted_obs_pub_->get_subscription_count() > 0) {
       CvFont font;
-      cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5); // TODO how expensive is this?
+      cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 0.5, 0.5); // TODO how expensive is this?
       cv_bridge::CvImagePtr marked;
       marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
-      // Draw predicted observations
-      draw_observations(font, marked->image, plan_.observations, CV_RGB(255, 0, 0));
-
-      // Draw actual observations
-      draw_observations(font, marked->image, estimate_.fp.observations, CV_RGB(0, 255, 0));
+      draw_observations(marked->image, plan_.observations, CV_RGB(255, 0, 0));
+      draw_observations(marked->image, estimate_.fp.observations, CV_RGB(0, 255, 0));
+      write_status(marked->image);
 
       fcam_predicted_obs_pub_->publish(*marked->toImageMsg());
     }

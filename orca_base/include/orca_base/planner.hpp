@@ -102,6 +102,12 @@ namespace orca_base
     const nav_msgs::msg::Path &target_path() const
     { return target_path_; }
 
+    bool recovery() const
+    { return recovery_; }
+
+    int target_marker() const
+    { return targets_.empty() ? orca::NOT_A_MARKER : targets_[target_idx_].marker_id; }
+
     // Global planner: move to a pose, optionally keeping station when we get there
     void plan_target(const orca::FP &fp, bool keep_station);
 

@@ -189,6 +189,9 @@ namespace orca_base
     // Validate parameters
     void validate_parameters();
 
+    // Timer callback
+    void spin_once();
+
     // Subscription callbacks
     void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg);
 
@@ -253,6 +256,8 @@ namespace orca_base
     void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::FP &goal = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
+    void write_status(cv::Mat &image);
+
     bool disarmed()
     { return is_disarmed_mode(mode_); }
 
@@ -278,8 +283,6 @@ namespace orca_base
     explicit BaseNode();
 
     ~BaseNode() override = default;
-
-    void spin_once();
   };
 
 } // namespace orca_base
