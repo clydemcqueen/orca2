@@ -207,7 +207,8 @@ namespace orca_base
     yaw_controller_{true, 0.5, 0, 0}
   {}
 
-  void MoveToMarkerController::calc(double dt, const orca::Observation &plan, const orca::Observation &estimate,
+  void MoveToMarkerController::calc(double dt, const orca::Observation &plan, double plan_z,
+                                    const orca::Observation &estimate, double estimate_z,
                                     const orca::AccelerationBody &ff, orca::Efforts &efforts)
   {
     orca::AccelerationBody u_bar = ff;
@@ -215,15 +216,20 @@ namespace orca_base
     // If we have an observation, run the PID controller(s)
     if (estimate.id != orca::NOT_A_MARKER) {
       forward_controller_.set_target(plan.distance);
-      vertical_controller_.set_target(0.5); // TODO add z to orca::Observation
       yaw_controller_.set_target(plan.yaw);
 
+      // The distance calculation is quite noisy, so just use the ff for now
+      // Re-visit this if obs.destination is filtered
 //    u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.forward;
       u_bar.forward = ff.forward;
-      // TODO u_bar.z
       u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
     }
 
+    // Always run the vertical PID controller
+    vertical_controller_.set_target(plan_z);
+    u_bar.vertical = vertical_controller_.calc(estimate_z, dt) + ff.vertical;
+
+    // Compute efforts
     efforts.set_forward(Model::accel_to_effort_xy(u_bar.forward));
     efforts.set_strafe(0);
     efforts.set_vertical(Model::accel_to_effort_z(u_bar.vertical));

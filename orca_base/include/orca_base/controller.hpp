@@ -150,7 +150,8 @@ namespace orca_base
 
     explicit MoveToMarkerController(const BaseContext &cxt);
 
-    void calc(double dt, const orca::Observation &plan, const orca::Observation &estimate,
+    void calc(double dt, const orca::Observation &plan, double plan_z,
+              const orca::Observation &estimate, double estimate_z,
               const orca::AccelerationBody &ff, orca::Efforts &efforts);
   };
 

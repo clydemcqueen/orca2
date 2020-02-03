@@ -235,9 +235,11 @@ namespace orca_base
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
+    // TODO get plan_z from map
     orca::Observation estimate_obs;
     estimate.get_obs(marker_id_, estimate_obs);
-    controller_->calc(dt, segments_[segment_idx_]->plan(), estimate_obs, segments_[segment_idx_]->ff(), efforts);
+    controller_->calc(dt, segments_[segment_idx_]->plan(), -0.5, estimate_obs, estimate.pose.pose.z,
+                      segments_[segment_idx_]->ff(), efforts);
 
     return true;
   }

@@ -418,6 +418,9 @@ namespace orca_base
 
     // Drag torque => thrust torque => acceleration => feedforward
     ff_.yaw = Model::torque_to_accel_yaw(-cxt.model_.drag_torque_yaw(velo_yaw));
+
+    // Counteract buoyancy
+    ff_.vertical = cxt_.model_.hover_accel_z();
   }
 
   void RotateToMarkerSegment::log_info()
