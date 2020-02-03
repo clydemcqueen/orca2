@@ -7,15 +7,12 @@ namespace orca_base
 
   Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<Planner> planner, const FPStamped &start) :
+                   std::shared_ptr<MissionPlanner> planner, const FPStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
     planner_{std::move(planner)}
   {
-    // Create path
-    RCLCPP_INFO(logger_, "mission has %d targets(s), target 1", planner_->targets().size());
-
     // Init feedback
     if (goal_handle_) {
       feedback_ = std::make_shared<orca_msgs::action::Mission::Feedback>();
@@ -67,10 +64,10 @@ namespace orca_base
       };
 
       auto rc = planner_->advance(dt, plan, estimate.fp, efforts, send_feedback);
-      if (rc == Planner::AdvanceRC::FAILURE) {
+      if (rc == AdvanceRC::FAILURE) {
         abort();
         return false;
-      } else if (rc == Planner::AdvanceRC::SUCCESS) {
+      } else if (rc == AdvanceRC::SUCCESS) {
         complete();
         return false;
       }

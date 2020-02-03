@@ -371,19 +371,21 @@ namespace orca_base
 
   void MoveToMarkerSegment::log_info()
   {
-    RCLCPP_INFO_STREAM(logger_, "move to marker start " << plan_ << ", goal " << goal_);
+    RCLCPP_INFO_STREAM(logger_, "move to marker start: " << plan_ << ", goal: " << goal_);
   }
 
   bool MoveToMarkerSegment::advance(double dt)
   {
-    // Moving foward is +x but -distance
+    // Moving forward is +x but -distance
     double distance_remaining = plan_.distance - goal_.distance;
 
     if (distance_remaining > EPSILON_PLAN_XYZ) {
+#if 0
       if (distance_remaining - deceleration_distance_forward(cxt_, twist_.forward) < EPSILON_PLAN_XYZ) {
         // Decelerate
         ff_.forward = 0;
       }
+#endif
 
       // Compute acceleration due to drag
       double accel_drag_x = Model::force_to_accel(-cxt_.model_.drag_force_x(twist_.forward));
@@ -420,17 +422,19 @@ namespace orca_base
 
   void RotateToMarkerSegment::log_info()
   {
-    RCLCPP_INFO(logger_, "rotate to marker: start %g, goal %g, ff %g", plan_.yaw, goal_.yaw, ff_.yaw);
+    RCLCPP_INFO_STREAM(logger_, "rotate to marker start: " << plan_ << ", goal: " << goal_);
   }
 
   bool RotateToMarkerSegment::advance(double dt)
   {
     double distance_remaining = std::abs(norm_angle(goal_.yaw - plan_.yaw));
     if (distance_remaining > EPSILON_PLAN_YAW) {
+#if 0
       if (distance_remaining - deceleration_distance_yaw(cxt_, twist_.yaw) < EPSILON_PLAN_YAW) {
         // Decelerate
         ff_.yaw = 0;
       }
+#endif
 
       // Compute acceleration due to drag
       double accel_drag_yaw = Model::torque_to_accel_yaw(-cxt_.model_.drag_torque_yaw(twist_.yaw));

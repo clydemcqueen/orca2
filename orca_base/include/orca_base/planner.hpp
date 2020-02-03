@@ -12,52 +12,47 @@
 namespace orca_base
 {
 
-  class Planner
+  struct AdvanceRC
   {
-  public:
+    static constexpr int CONTINUE = 0;
+    static constexpr int SUCCESS = 1;
+    static constexpr int FAILURE = 2;
+  };
 
-    struct AdvanceRC
-    {
-      static constexpr int CONTINUE = 0;
-      static constexpr int SUCCESS = 1;
-      static constexpr int FAILURE = 2;
-    };
+  //=====================================================================================
+  // Target
+  //=====================================================================================
 
-  private:
+  struct Target
+  {
+    int marker_id;
+    orca::FP fp;
 
-    struct Target
-    {
-      int marker_id;
-      orca::FP fp;
+    Target() : marker_id{orca::NOT_A_MARKER}
+    {}
 
-      Target() : marker_id{orca::NOT_A_MARKER}
-      {}
+    Target(int _marker_id, orca::FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
+    {}
+  };
 
-      Target(int _marker_id, orca::FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
-      {}
-    };
+  std::ostream &operator<<(std::ostream &os, Target const &target);
 
+  //=====================================================================================
+  // LocalPlanner -- build a local plan to a target
+  //=====================================================================================
+
+  class LocalPlanner
+  {
     rclcpp::Logger logger_;
     const BaseContext &cxt_;
     Map map_;
-    orca_description::Parser parser_;
-    image_geometry::PinholeCameraModel fcam_model_;
 
-    // Plan & plan state
-    std::vector<Target> targets_;                               // Global plan
-    bool keep_station_;                                         // Keep station (pause forever) at last target
-    std::vector<std::shared_ptr<PoseSegmentBase>> segments_;    // Local plan
-    std::shared_ptr<PoseController> controller_;                // Plan controller
-    int target_idx_;                                            // Current target
+    Target target_;                                             // Target
+    bool keep_station_;                                         // True: keep station at target
+    std::vector<std::shared_ptr<PoseSegmentBase>> segments_;    // Motion segments
     int segment_idx_;                                           // Current segment
-
-    // Recovery state
-    bool recovery_;
-    std::shared_ptr<MoveToMarkerSegment> recovery_segment_;
-    std::shared_ptr<MoveToMarkerController> recovery_controller_;
-
-    nav_msgs::msg::Path planned_path_;                          // Path to next target
-    nav_msgs::msg::Path target_path_;                           // Path to all targets
+    std::shared_ptr<PoseController> controller_;                // Motion controller
+    nav_msgs::msg::Path local_path_;                            // Path to next target
 
     void add_keep_station_segment(orca::FP &plan, double seconds);
 
@@ -67,46 +62,97 @@ namespace orca_base
 
     void add_line_segment(orca::FP &plan, double x, double y);
 
-    // Local planner: plan a trajectory through a series of waypoints
-    void plan_trajectory(const std::vector<orca::Pose> &waypoints, const orca::FP &start);
+  public:
 
-    // Local planner: plan a trajectory to targets_[target_idx_]
-    void plan_trajectory(const orca::FP &start);
+    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, Target target,
+      Map map, bool keep_station);
 
-    // Attempt to find a good pose
-    void recover(const orca::Observation &start);
+    bool advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
+                const std::function<void(double completed, double total)> &send_feedback);
+
+    const Target &target() const
+    { return target_; }
+
+    const nav_msgs::msg::Path &local_path() const
+    { return local_path_; }
+  };
+
+  //=====================================================================================
+  // MoveToMarkerPlanner -- a recovery strategy
+  //=====================================================================================
+
+  class MoveToMarkerPlanner
+  {
+    rclcpp::Logger logger_;
+    const BaseContext &cxt_;
+
+    int marker_id_;                                                   // Target
+    std::vector<std::shared_ptr<ObservationSegmentBase>> segments_;   // Motion segments
+    int segment_idx_;                                                 // Current segment
+    std::shared_ptr<MoveToMarkerController> controller_;              // Motion controller
+
+  public:
+
+    MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start);
+
+    bool advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
+                const std::function<void(double completed, double total)> &send_feedback);
+
+    int marker_id() const
+    { return marker_id_; }
+  };
+
+  //=====================================================================================
+  // MissionPlanner -- orchestrate planning to reach a list of targets
+  //=====================================================================================
+
+  class MissionPlanner
+  {
+    rclcpp::Logger logger_;
+    const BaseContext &cxt_;
+    Map map_;
+    orca_description::Parser parser_;
+    image_geometry::PinholeCameraModel fcam_model_;
+
+    // Plan & plan state
+    std::vector<Target> targets_;                             // Global plan
+    bool keep_station_;                                       // True: keep station at last target
+    int target_idx_;                                          // Current target
+    nav_msgs::msg::Path global_path_;                         // Path to all targets
+    std::shared_ptr<LocalPlanner> local_planner_;             // Local planner, or...
+    std::shared_ptr<MoveToMarkerPlanner> recovery_planner_;   // ... recovery planner
 
     // Given a planned pose, predict the marker observations for the forward camera
     void predict_observations(orca::FP &plan) const;
 
-    // Create target_path_ for subsequent publishing
-    void create_target_path();
+    // Finalize the global plan, called by plan_*()
+    void finish_global_plan();
 
-    int advance_recovery(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
-                         const std::function<void(double completed, double total)> &send_feedback);
+    // Create a local_planner_
+    void start_local_plan(const orca::FP &start);
 
-    int advance_plan(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
-                     const std::function<void(double completed, double total)> &send_feedback);
+    // Create a recovery_planner_
+    void start_recovery_plan(const orca::Observation &start);
 
   public:
 
-    Planner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, orca_description::Parser parser,
-            const image_geometry::PinholeCameraModel &fcam_model_);
+    MissionPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map, orca_description::Parser parser,
+                   const image_geometry::PinholeCameraModel &fcam_model_);
 
     const std::vector<Target> &targets() const
     { return targets_; }
 
-    const nav_msgs::msg::Path &planned_path() const
-    { return planned_path_; }
+    const nav_msgs::msg::Path &global_path() const
+    { return global_path_; }
 
-    const nav_msgs::msg::Path &target_path() const
-    { return target_path_; }
-
-    bool recovery() const
-    { return recovery_; }
-
-    int target_marker() const
+    int target_marker_id() const
     { return targets_.empty() ? orca::NOT_A_MARKER : targets_[target_idx_].marker_id; }
+
+    bool in_recovery() const
+    { return recovery_planner_ != nullptr; }
+
+    int recovery_marker_id() const
+    { return recovery_planner_ == nullptr ? orca::NOT_A_MARKER : recovery_planner_->marker_id(); }
 
     // Global planner: move to a pose, optionally keeping station when we get there
     void plan_target(const orca::FP &fp, bool keep_station);

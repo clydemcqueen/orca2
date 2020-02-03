@@ -33,6 +33,15 @@ namespace orca
   }
 
   //=====================================================================================
+  // Twist in the world frame
+  //=====================================================================================
+
+  std::ostream &operator<<(std::ostream &os, Twist const &t)
+  {
+    return os << "{" << t.x << ", " << t.y << ", " << t.z << ", " << t.yaw << "}";
+  }
+
+  //=====================================================================================
   // Acceleration in the world frame
   //=====================================================================================
 
@@ -110,17 +119,24 @@ namespace orca
   // Fiducial pose (FP) -- pose and observations
   //=====================================================================================
 
-  double FP::closest_obs() const
+  double FP::closest_obs(Observation &obs) const
   {
     double closest = std::numeric_limits<double>::max();
 
     for (auto i : observations) {
       if (i.distance < closest) {
         closest = i.distance;
+        obs = i;
       }
     }
 
     return closest;
+  }
+
+  double FP::closest_obs() const
+  {
+    Observation obs;
+    return closest_obs(obs);
   }
 
   bool FP::good_obs(int id) const

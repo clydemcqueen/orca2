@@ -172,12 +172,10 @@ namespace orca_base
     } else if (mode_ == orca_msgs::msg::Control::ROV_HOLD_PRESSURE) {
       ss << "HOLD PRESSURE z=" << z_;
     } else if (mission_ != nullptr) {
-      if (mission_->planner().recovery()) {
-        ss << "RECOVERY target m";
-      } else {
-        ss << "MISSION target m";
+      ss << "MISSION target m" << mission_->planner().target_marker_id();
+      if (mission_->planner().in_recovery()) {
+        ss << " RECOVERY move to m" << mission_->planner().recovery_marker_id();
       }
-      ss << mission_->planner().target_marker();
     } else {
       ss << "ERROR";
     }
@@ -285,7 +283,7 @@ namespace orca_base
         if (fp_ok(msg->header.stamp) && map_.ok()) {
           set_mode(msg->header.stamp, orca_msgs::msg::Control::AUV_RANDOM);
         } else {
-          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot run random plan");
+          RCLCPP_ERROR(get_logger(), "no odometry | no map | invalid filter, cannot run random mission");
         }
       }
 
@@ -467,12 +465,13 @@ namespace orca_base
     estimate_.fp.pose.pose.z = z_;
     estimate_.fp.pose.z_valid = true;
 
-    // Publish planned path for rviz
-    if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
-      planned_path_pub_->publish(mission_->planned_path());
-    }
+    // Publish local plan
+    // TODO
+//    if (count_subscribers(planned_path_pub_->get_topic_name()) > 0) {
+//      planned_path_pub_->publish(mission_->planned_path());
+//    }
 
-    // Publish actual path for rviz
+    // Publish estimated path
     if (estimate_.fp.good_pose() && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
       if (estimated_path_.poses.size() > cxt_.keep_poses_) {
         estimated_path_.poses.clear();
@@ -605,7 +604,7 @@ namespace orca_base
     } else if (is_auv_mode(new_mode)) {
 
       // Create planner, will build a global and local plan
-      auto planner = std::make_shared<Planner>(get_logger(), cxt_, map_, parser_, fcam_model_);
+      auto planner = std::make_shared<MissionPlanner>(get_logger(), cxt_, map_, parser_, fcam_model_);
       switch (new_mode) {
         case Control::AUV_KEEP_ORIGIN: {
           FP origin;
@@ -628,9 +627,9 @@ namespace orca_base
           break;
       }
 
-      // Publish target path for rviz
+      // Publish global path for rviz
       if (count_subscribers(target_path_pub_->get_topic_name()) > 0) {
-        target_path_pub_->publish(planner->target_path());
+        target_path_pub_->publish(planner->global_path());
       }
 
       // Create mission, passing in the planner
@@ -686,9 +685,8 @@ namespace orca_base
       set_mode(spin_time, cxt_.auto_start_);
     }
 
-    // If observations have stopped during a mission advance the mission from the timer
-    // Useful for dead reckoning using just the barometer
-    if (!cxt_.sensor_loop_ && auv_mode() && baro_ok(spin_time) && fp_ok(spin_time)) {
+    // Advance the mission
+    if (!cxt_.sensor_loop_ && auv_mode()) {
       static std::chrono::duration<double> dt = SPIN_PERIOD;
       auv_advance(dt.count());
     }

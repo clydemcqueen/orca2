@@ -198,6 +198,8 @@ namespace orca
     }
   };
 
+  std::ostream &operator<<(std::ostream &os, Twist const &t);
+
   //=====================================================================================
   // Twist in the body frame
   //=====================================================================================
@@ -398,18 +400,29 @@ namespace orca
     PoseWithCovariance pose;
     std::vector<Observation> observations;
 
+    // TODO naming is confusing -- fix
+
+    // Get the closest observation and return the distance
+    double closest_obs(Observation &obs) const;
+
+    // Return the distance of the closest observation
     double closest_obs() const;
 
+    // True if pose is good
     bool good_pose() const
     { return pose.good_pose() && closest_obs() < 1.8; }
 
+    // True if there is at least one good observation
     bool good_obs() const
     { return !observations.empty(); }
 
+    // True if there is a good observation of a particular marker
     bool good_obs(int id) const;
 
+    // Get the observation of a particular marker, return true if successful
     bool get_obs(int id, Observation &obs) const;
 
+    // True if z is good
     bool good_z() const
     { return pose.good_z(); }
 
