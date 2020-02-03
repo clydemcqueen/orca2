@@ -384,9 +384,10 @@ namespace orca
     Observation() : id{NOT_A_MARKER}
     {}
 
-    void estimate_distance_and_yaw_from_corners();
+    void estimate_distance_and_yaw_from_corners(double marker_length, double hfov, double hres);
 
-    void from_msg(const fiducial_vlam_msgs::msg::Observation &msg);
+    void from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
+                  double marker_length, double hfov, double hres);
   };
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs);
@@ -428,7 +429,8 @@ namespace orca
 
     void from_msgs(
       const fiducial_vlam_msgs::msg::Observations &obs,
-      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg);
+      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+      double marker_length, double hfov, double hres);
   };
 
   //=====================================================================================
@@ -442,7 +444,8 @@ namespace orca
 
     void from_msgs(
       const fiducial_vlam_msgs::msg::Observations &obs,
-      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg);
+      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+      double marker_length, double hfov, double hres);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
   };

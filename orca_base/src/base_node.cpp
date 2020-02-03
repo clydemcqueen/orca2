@@ -388,7 +388,7 @@ namespace orca_base
     }
 
     // Save the observations and pose
-    estimate_.from_msgs(*obs_msg, base_f_map);
+    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), 1.4, 800);
 
     if (cxt_.sensor_loop_) {
       // Skip the first message -- the dt will be too large

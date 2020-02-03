@@ -3,13 +3,6 @@
 namespace orca
 {
 
-  // TODO get from camera info
-  const double hfov = 1.4;  // Horizontal field of view
-  const double hres = 800;  // Horizontal resolution
-
-  // TODO get from context
-  const double marker_len = 0.1778;
-
   //=====================================================================================
   // Pose in world frame
   //=====================================================================================
@@ -63,7 +56,7 @@ namespace orca
   // Observation -- observation of a marker from a camera
   //=====================================================================================
 
-  void Observation::estimate_distance_and_yaw_from_corners()
+  void Observation::estimate_distance_and_yaw_from_corners(double marker_length, double hfov, double hres)
   {
     // Assumptions:
     // -- camera is pointed forward
@@ -88,7 +81,7 @@ namespace orca
       longest_side = side30;
     }
 
-    distance = marker_len / sin(longest_side / hres * hfov);
+    distance = marker_length / sin(longest_side / hres * hfov);
 
     // Center of marker
     double x = (c0.x + c1.x + c2.x + c3.x) / 4;
@@ -96,7 +89,8 @@ namespace orca
     yaw = hfov / 2 - x * hfov / hres;
   }
 
-  void Observation::from_msg(const fiducial_vlam_msgs::msg::Observation &msg)
+  void Observation::from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
+                             double marker_length, double hfov, double hres)
   {
     id = msg.id;
     c0.x = msg.x0;
@@ -107,7 +101,7 @@ namespace orca
     c1.y = msg.y1;
     c2.y = msg.y2;
     c3.y = msg.y3;
-    estimate_distance_and_yaw_from_corners();
+    estimate_distance_and_yaw_from_corners(marker_length, hfov, hres);
   }
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs)
@@ -163,14 +157,15 @@ namespace orca
   }
 
   void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg)
+                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                     double marker_length, double hfov, double hres)
   {
     pose.from_msg(fcam_msg.pose);
 
     observations.clear();
     for (const auto &r : obs.observations) {
       Observation observation;
-      observation.from_msg(r);
+      observation.from_msg(r, marker_length, hfov, hres);
       observations.push_back(observation);
     }
   }
@@ -180,12 +175,13 @@ namespace orca
   //=====================================================================================
 
   void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg)
+                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                            double marker_length, double hfov, double hres)
   {
     assert(obs.header.stamp == fcam_msg.header.stamp);
 
     t = obs.header.stamp;
-    fp.from_msgs(obs, fcam_msg);
+    fp.from_msgs(obs, fcam_msg, marker_length, hfov, hres);
   }
 
   void FPStamped::add_to_path(nav_msgs::msg::Path &path) const

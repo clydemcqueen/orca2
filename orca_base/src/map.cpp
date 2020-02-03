@@ -10,10 +10,6 @@ namespace orca_base
   constexpr astar::node_type START_ID = -1;
   constexpr astar::node_type DESTINATION_ID = -2;
 
-  // Marker info
-  // TODO get from vlam message
-  const double marker_length = 0.1778;
-
   //=====================================================================================
   // Utilities
   //=====================================================================================
@@ -51,7 +47,8 @@ namespace orca_base
   // Marker
   //=====================================================================================
 
-  Marker::Marker(int _id, const geometry_msgs::msg::Pose &_marker_f_map) : id{_id}, marker_f_map{_marker_f_map}
+  Marker::Marker(int _id, const geometry_msgs::msg::Pose &_marker_f_map, double _marker_length) :
+    marker_length{_marker_length}, id{_id}, marker_f_map{_marker_f_map}
   {
     // Build corners in marker frame
     tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
@@ -106,7 +103,7 @@ namespace orca_base
     }
 
     // Estimate distance and yaw
-    obs.estimate_distance_and_yaw_from_corners();
+    obs.estimate_distance_and_yaw_from_corners(marker_length, 1.4, 800);
 
     return true;
   }
@@ -123,7 +120,7 @@ namespace orca_base
     // Build markers_
     markers_.clear();
     for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      markers_.emplace_back(vlam_map_->ids[i], vlam_map_->poses[i].pose);
+      markers_.emplace_back(vlam_map_->ids[i], vlam_map_->poses[i].pose, vlam_map_->marker_length);
     }
   }
 
