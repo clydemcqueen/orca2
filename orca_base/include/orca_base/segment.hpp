@@ -99,7 +99,35 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // Pause stays in one spot for a period of time
+  // Pose segments can move in x, y, z, yaw, or any of those in combination
+  //=====================================================================================
+
+  class PoseSegment : public PoseSegmentBase
+  {
+    orca::Twist target_twist_;
+
+  public:
+
+    PoseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, const orca::FP &goal);
+
+    void log_info() override;
+
+    bool advance(double dt) override;
+
+    // Factory methods: make a segment that gets from plan to goal, and update plan
+    static std::shared_ptr<PoseSegment>
+    make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double z);
+
+    static std::shared_ptr<PoseSegment>
+    make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double yaw);
+
+    static std::shared_ptr<PoseSegment>
+    make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double x, double y);
+  };
+
+
+  //=====================================================================================
+  // Pause segments stay in one pose for a period of time
   //=====================================================================================
 
   class Pause : public PoseSegmentBase
@@ -116,51 +144,6 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // VerticalSegment ascends or descends, holds x, y, yaw at start value
-  //=====================================================================================
-
-  class VerticalSegment : public PoseSegmentBase
-  {
-  public:
-
-    VerticalSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, const orca::FP &goal);
-
-    void log_info() override;
-
-    bool advance(double dt) override;
-  };
-
-  //=====================================================================================
-  // RotateSegment rotates about a point, holds x, y, z at start value
-  //=====================================================================================
-
-  class RotateSegment : public PoseSegmentBase
-  {
-  public:
-
-    RotateSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, const orca::FP &goal);
-
-    void log_info() override;
-
-    bool advance(double dt) override;
-  };
-
-  //=====================================================================================
-  // LineSegment moves in a straight line, holds z, yaw at start value
-  //=====================================================================================
-
-  class LineSegment : public PoseSegmentBase
-  {
-  public:
-
-    LineSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, const orca::FP &goal);
-
-    void log_info() override;
-
-    bool advance(double dt) override;
-  };
-
-  //=====================================================================================
   // RotateToMarkerSegment rotates to face a marker
   //=====================================================================================
 
@@ -169,7 +152,7 @@ namespace orca_base
   public:
 
     RotateToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
-                        const orca::Observation &goal);
+                          const orca::Observation &goal);
 
     void log_info() override;
 

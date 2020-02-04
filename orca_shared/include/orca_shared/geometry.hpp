@@ -431,7 +431,27 @@ namespace orca
       const fiducial_vlam_msgs::msg::Observations &obs,
       const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
       double marker_length, double hfov, double hres);
+
+    // XY distance between 2 poses
+    double distance_xy(const FP &that) const
+    {
+      return pose.pose.distance_xy(that.pose.pose);
+    }
+
+    // Z distance between 2 poses
+    double distance_z(const FP &that) const
+    {
+      return pose.pose.distance_z(that.pose.pose);
+    }
+
+    // Yaw distance between 2 poses
+    double distance_yaw(const FP &that) const
+    {
+      return pose.pose.distance_yaw(that.pose.pose);
+    }
   };
+
+  std::ostream &operator<<(std::ostream &os, FP const &fp);
 
   //=====================================================================================
   // FPStamped -- pose and observations with timestamp

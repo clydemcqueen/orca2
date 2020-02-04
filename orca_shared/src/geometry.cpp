@@ -170,6 +170,11 @@ namespace orca
     }
   }
 
+  std::ostream &operator<<(std::ostream &os, FP const &fp)
+  {
+    os << "{pose: " << fp.pose.pose << ", " << fp.observations.size() << " observations}";
+  }
+
   //=====================================================================================
   // FPStamped -- pose and observations with timestamp
   //=====================================================================================

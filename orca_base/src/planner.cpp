@@ -129,41 +129,18 @@ namespace orca_base
 
   void LocalPlanner::add_vertical_segment(FP &plan, double z)
   {
-    FP goal = plan;
-    goal.pose.pose.z = z;
-    if (plan.pose.pose.distance_z(goal.pose.pose) > EPSILON_PLAN_XYZ) {
-      segments_.push_back(std::make_shared<VerticalSegment>(logger_, cxt_, plan, goal));
-    } else {
-      RCLCPP_INFO(logger_, "skip vertical");
-    }
-    plan = goal;
+    segments_.push_back(PoseSegment::make_vertical(logger_, cxt_, plan, z));
   }
 
   void LocalPlanner::add_rotate_segment(FP &plan, double yaw)
   {
-    FP goal = plan;
-    goal.pose.pose.yaw = yaw;
-    if (plan.pose.pose.distance_yaw(goal.pose.pose) > EPSILON_PLAN_YAW) {
-      segments_.push_back(std::make_shared<RotateSegment>(logger_, cxt_, plan, goal));
-    } else {
-      RCLCPP_INFO(logger_, "skip rotate");
-    }
-    plan = goal;
+    segments_.push_back(PoseSegment::make_rotate(logger_, cxt_, plan, yaw));
   }
 
   void LocalPlanner::add_line_segment(FP &plan, double x, double y)
   {
-    FP goal = plan;
-    goal.pose.pose.x = x;
-    goal.pose.pose.y = y;
-    if (plan.pose.pose.distance_xy(goal.pose.pose) > EPSILON_PLAN_XYZ) {
-      segments_.push_back(std::make_shared<LineSegment>(logger_, cxt_, plan, goal));
-    } else {
-      RCLCPP_INFO(logger_, "skip line");
-    }
-    plan = goal;
+    segments_.push_back(PoseSegment::make_line(logger_, cxt_, plan, x, y));
   }
-
 
   bool LocalPlanner::advance(double dt, FP &plan, const FP &estimate, orca::Efforts &efforts,
                              const std::function<void(double completed, double total)> &send_feedback)
@@ -333,7 +310,7 @@ namespace orca_base
         if (estimate.good_pose()) {
 
           // Good pose, make sure the plan & estimate are reasonably close
-          if (estimate.pose.pose.distance_xy(plan.pose.pose) > MAX_POSE_XY_ERR) {
+          if (estimate.distance_xy(plan) > MAX_POSE_XY_ERR) {
             RCLCPP_INFO(logger_, "large pose error, re-plan");
             start_local_plan(estimate);
             return AdvanceRC::CONTINUE;
