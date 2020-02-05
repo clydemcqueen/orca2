@@ -62,6 +62,8 @@ namespace orca_base
 
     void add_line_segment(orca::FP &plan, double x, double y);
 
+    void add_pose_segment(orca::FP &plan, const orca::FP &goal);
+
   public:
 
     LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, Target target,

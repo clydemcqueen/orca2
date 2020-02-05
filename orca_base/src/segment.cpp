@@ -219,7 +219,7 @@ namespace orca_base
 
   bool PoseSegment::advance(double dt)
   {
-    // End when goal ~ plan
+    // End when goal ~= plan
     double remaining_xy = plan_.distance_xy(goal_);
     double remaining_z = plan_.distance_z(goal_);
     double remaining_yaw = plan_.distance_yaw(goal_);
@@ -228,21 +228,30 @@ namespace orca_base
       return false;
     } else {
 
-      // Decelerate (glide) the last bit
-      if (remaining_xy - deceleration_distance_xy(cxt_, goal_.pose.pose.yaw, twist_.x, twist_.y) < EPSILON_PLAN_XYZ) {
+      // Glide
+      if (!glide_xy_ &&
+          remaining_xy - deceleration_distance_xy(cxt_, goal_.pose.pose.yaw, twist_.x, twist_.y) < EPSILON_PLAN_XYZ) {
+        RCLCPP_INFO(logger_, "glide xy");
+        glide_xy_ = true;
         ff_.x = ff_.y = 0;
       }
 
-      if (remaining_z - deceleration_distance_z(cxt_, twist_.z) < EPSILON_PLAN_XYZ) {
+      if (!glide_z_ && remaining_z - deceleration_distance_z(cxt_, twist_.z) < EPSILON_PLAN_XYZ) {
+        RCLCPP_INFO(logger_, "glide z");
+        glide_z_ = true;
         ff_.z = cxt_.model_.hover_accel_z();
       }
 
-      if (remaining_yaw - deceleration_distance_yaw(cxt_, twist_.yaw) < EPSILON_PLAN_YAW) {
+      if (!glide_yaw_ && remaining_yaw - deceleration_distance_yaw(cxt_, twist_.yaw) < EPSILON_PLAN_YAW) {
+        RCLCPP_INFO(logger_, "glide yaw");
+        glide_yaw_ = true;
         ff_.yaw = 0;
       }
 
-      // Calc feedforward for x and y
-      drag_force_to_accel_xy(cxt_, plan_.pose.pose.yaw, target_twist_.x, target_twist_.y, ff_.x, ff_.y);
+      // Update xy feedforward
+      if (!glide_xy_) {
+        drag_force_to_accel_xy(cxt_, plan_.pose.pose.yaw, target_twist_.x, target_twist_.y, ff_.x, ff_.y);
+      }
 
       // std::cout << "ff_: " << ff_ << std::endl;
 
@@ -303,6 +312,14 @@ namespace orca_base
     FP goal = plan;
     goal.pose.pose.x = x;
     goal.pose.pose.y = y;
+    auto result = std::make_shared<PoseSegment>(logger, cxt, plan, goal);
+    plan = goal;
+    return result;
+  }
+
+  std::shared_ptr<PoseSegment>
+  PoseSegment::make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, FP &plan, const orca::FP &goal)
+  {
     auto result = std::make_shared<PoseSegment>(logger, cxt, plan, goal);
     plan = goal;
     return result;

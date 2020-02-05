@@ -104,7 +104,13 @@ namespace orca_base
 
   class PoseSegment : public PoseSegmentBase
   {
+    // Target velocity
     orca::Twist target_twist_;
+
+    // Motion is bang-bang: full thrust (accelerate and maintain velocity) or zero thrust (glide)
+    bool glide_xy_{false};
+    bool glide_z_{false};
+    bool glide_yaw_{false};
 
   public:
 
@@ -123,6 +129,9 @@ namespace orca_base
 
     static std::shared_ptr<PoseSegment>
     make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double x, double y);
+
+    static std::shared_ptr<PoseSegment>
+    make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, const orca::FP &goal);
   };
 
 

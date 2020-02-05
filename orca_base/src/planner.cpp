@@ -7,6 +7,8 @@ using namespace orca;
 
 namespace orca_base
 {
+  // Short vs. long local plan
+  constexpr double MAX_SHORT_LOCAL_PLAN = 2;
 
   // Replan if the estimate and the plan disagree
   constexpr double MAX_POSE_XY_ERR = 0.6;
@@ -63,37 +65,52 @@ namespace orca_base
     logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
     segment_idx_{0}, controller_{std::make_shared<PoseController>(cxt_)}
   {
-    RCLCPP_INFO_STREAM(logger_, "local plan to: " << target);
-
-    // Generate a series of waypoints to minimize dead reckoning
-    std::vector<Pose> waypoints;
-    if (map_.get_waypoints(start.pose.pose, target_.fp.pose.pose, waypoints)) {
-      RCLCPP_INFO(logger_, "... through %d waypoints", waypoints.size() - 1);
-    } else {
-      waypoints.push_back(target_.fp.pose.pose);
-    }
+    // Future: build a plan that will keep markers in view at all times
+    // For now, consider 2 cases:
+    // 1. short plan: use a single segment to move from start to target
+    // 2. long plan: find a series of waypoints (if possible), and always face the direction of motion
 
     // Start pose
     FP plan = start;
 
-    // Travel to each waypoint, breaking down z, yaw and xy phases
-    for (auto &waypoint : waypoints) {
-      // Ascend/descend to target z
-      add_vertical_segment(plan, waypoint.z);
+    if (target.fp.distance_xy(start) < MAX_SHORT_LOCAL_PLAN) {
+      RCLCPP_INFO_STREAM(logger_, "short plan: " << target);
 
-      if (plan.pose.pose.distance_xy(waypoint.x, waypoint.y) > EPSILON_PLAN_XYZ) {
-        // Point in the direction of travel
-        add_rotate_segment(plan, atan2(waypoint.y - plan.pose.pose.y, waypoint.x - plan.pose.pose.x));
+      add_pose_segment(plan, target.fp);
 
-        // Travel
-        add_line_segment(plan, waypoint.x, waypoint.y);
+    } else {
+      RCLCPP_INFO_STREAM(logger_, "long plan: " << target);
+
+      // Generate a series of waypoints to minimize dead reckoning
+      std::vector<Pose> waypoints;
+      if (map_.get_waypoints(start.pose.pose, target_.fp.pose.pose, waypoints)) {
+        RCLCPP_INFO(logger_, "... through %d waypoints", waypoints.size() - 1);
       } else {
-        RCLCPP_INFO(logger_, "skip travel");
+        waypoints.push_back(target_.fp.pose.pose);
       }
+
+      // Travel to each waypoint, breaking down z, yaw and xy phases
+      for (auto &waypoint : waypoints) {
+        // Ascend/descend to target z
+        add_vertical_segment(plan, waypoint.z);
+
+        if (plan.pose.pose.distance_xy(waypoint.x, waypoint.y) > EPSILON_PLAN_XYZ) {
+          // Point in the direction of travel
+          add_rotate_segment(plan, atan2(waypoint.y - plan.pose.pose.y, waypoint.x - plan.pose.pose.x));
+
+          // Travel
+          add_line_segment(plan, waypoint.x, waypoint.y);
+        } else {
+          RCLCPP_INFO(logger_, "skip travel");
+        }
+      }
+
+      // Always rotate to the target yaw
+      add_rotate_segment(plan, target_.fp.pose.pose.yaw);
     }
 
-    // Always rotate to the target yaw
-    add_rotate_segment(plan, target_.fp.pose.pose.yaw);
+    // Pause
+    add_keep_station_segment(plan, 5);
 
     // Keep station at the last target
     if (keep_station_) {
@@ -140,6 +157,11 @@ namespace orca_base
   void LocalPlanner::add_line_segment(FP &plan, double x, double y)
   {
     segments_.push_back(PoseSegment::make_line(logger_, cxt_, plan, x, y));
+  }
+
+  void LocalPlanner::add_pose_segment(FP &plan, const FP &goal)
+  {
+    segments_.push_back(PoseSegment::make_pose(logger_, cxt_, plan, goal));
   }
 
   bool LocalPlanner::advance(double dt, FP &plan, const FP &estimate, orca::Efforts &efforts,

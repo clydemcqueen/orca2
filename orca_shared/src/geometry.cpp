@@ -172,7 +172,7 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, FP const &fp)
   {
-    os << "{pose: " << fp.pose.pose << ", " << fp.observations.size() << " observations}";
+    os << fp.pose.pose;
   }
 
   //=====================================================================================
