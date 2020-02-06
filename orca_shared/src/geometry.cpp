@@ -198,4 +198,9 @@ namespace orca
     path.poses.push_back(msg);
   }
 
+  std::ostream &operator<<(std::ostream &os, FPStamped const &fp)
+  {
+    os << fp.fp.pose.pose;
+  }
+
 } // namespace orca_shared

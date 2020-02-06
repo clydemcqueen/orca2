@@ -21,7 +21,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(double dt, FP &plan, const FPStamped &estimate, orca::Efforts &efforts)
+  bool Mission::advance(rclcpp::Duration d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -41,15 +41,15 @@ namespace orca_base
     assert(!goal_handle_ || goal_handle_->is_executing());
 
     int num_steps = 1;
-    constexpr double MAX_STEP = 0.1;
+    auto MAX_STEP = rclcpp::Duration::from_seconds(0.1);
 
-    if (dt > MAX_STEP) {
+    if (d > MAX_STEP) {
       // The numerical approximation gets wonky if dt > 0.1. This might happen if the filter times out and restarts.
       // Break a large dt into a number of smaller steps.
-      num_steps = std::ceil(dt / MAX_STEP);
+      num_steps = std::ceil(d.seconds() / MAX_STEP.seconds());
       assert(num_steps < 20);
-      RCLCPP_INFO(logger_, "break dt %g into %d steps", dt, num_steps);
-      dt /= num_steps;
+      RCLCPP_INFO(logger_, "break dt %g into %d steps", d.seconds(), num_steps);
+      d = rclcpp::Duration::from_seconds(d.seconds() / num_steps);
     }
 
     for (int i = 0; i < num_steps; ++i) {
@@ -63,7 +63,7 @@ namespace orca_base
         }
       };
 
-      auto rc = planner_->advance(dt, plan, estimate.fp, efforts, send_feedback);
+      auto rc = planner_->advance(d, plan, estimate, efforts, send_feedback);
       if (rc == AdvanceRC::FAILURE) {
         abort();
         return false;

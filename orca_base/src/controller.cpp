@@ -13,11 +13,12 @@ namespace orca_base
     yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
   {}
 
-  void PoseController::calc(double dt, const FP &plan, const FP &estimate,
+  void PoseController::calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate,
                             const Acceleration &ff, orca::Efforts &efforts)
   {
 #if 1
-    orca::Acceleration u_bar = ff;
+    auto dt = d.seconds();
+    auto u_bar = ff;
 
     // Trust x, y and yaw if the covar is low and we have a fairly close observation
     if (estimate.good_pose()) {
@@ -207,11 +208,12 @@ namespace orca_base
     yaw_controller_{true, 0.5, 0, 0}
   {}
 
-  void MoveToMarkerController::calc(double dt, const orca::Observation &plan, double plan_z,
+  void MoveToMarkerController::calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
                                     const orca::Observation &estimate, double estimate_z,
                                     const orca::AccelerationBody &ff, orca::Efforts &efforts)
   {
-    orca::AccelerationBody u_bar = ff;
+    auto dt = d.seconds();
+    auto u_bar = ff;
 
     // If we have an observation, run the PID controller(s)
     if (estimate.id != orca::NOT_A_MARKER) {

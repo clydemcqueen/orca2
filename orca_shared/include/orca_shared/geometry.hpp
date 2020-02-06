@@ -468,7 +468,27 @@ namespace orca
       double marker_length, double hfov, double hres);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
+
+    // XY distance between 2 poses
+    double distance_xy(const FPStamped &that) const
+    {
+      return fp.pose.pose.distance_xy(that.fp.pose.pose);
+    }
+
+    // Z distance between 2 poses
+    double distance_z(const FPStamped &that) const
+    {
+      return fp.pose.pose.distance_z(that.fp.pose.pose);
+    }
+
+    // Yaw distance between 2 poses
+    double distance_yaw(const FPStamped &that) const
+    {
+      return fp.pose.pose.distance_yaw(that.fp.pose.pose);
+    }
   };
+
+  std::ostream &operator<<(std::ostream &os, FPStamped const &fp);
 
 } // namespace orca_shared
 

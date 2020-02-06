@@ -34,7 +34,7 @@ namespace orca_base
     virtual void log_info() = 0;
 
     // Advance the motion plan by dt seconds, return true to continue, false if we're done
-    virtual bool advance(double dt) = 0;
+    virtual bool advance(const rclcpp::Duration &d) = 0;
   };
 
   //=====================================================================================
@@ -45,16 +45,16 @@ namespace orca_base
   {
   protected:
 
-    orca::FP plan_;         // Planned pose, incremented with each call to advance()
+    orca::FPStamped plan_;  // Planned pose, incremented with each call to advance()
     orca::FP goal_;         // Goal pose
 
     orca::Twist twist_;     // Velocity in the world frame
     orca::Acceleration ff_; // Acceleration in the world frame
 
   public:
-    PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP start, orca::FP goal);
+    PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped start, orca::FP goal);
 
-    const orca::FP &plan() const
+    const orca::FPStamped &plan() const
     { return plan_; }
 
     const orca::FP &goal() const
@@ -114,24 +114,25 @@ namespace orca_base
 
   public:
 
-    PoseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, const orca::FP &goal);
+    PoseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+                const orca::FP &goal);
 
     void log_info() override;
 
-    bool advance(double dt) override;
+    bool advance(const rclcpp::Duration &d) override;
 
     // Factory methods: make a segment that gets from plan to goal, and update plan
     static std::shared_ptr<PoseSegment>
-    make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double z);
+    make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double z);
 
     static std::shared_ptr<PoseSegment>
-    make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double yaw);
+    make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double yaw);
 
     static std::shared_ptr<PoseSegment>
-    make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, double x, double y);
+    make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double x, double y);
 
     static std::shared_ptr<PoseSegment>
-    make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FP &plan, const orca::FP &goal);
+    make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, const orca::FP &goal);
   };
 
 
@@ -141,15 +142,19 @@ namespace orca_base
 
   class Pause : public PoseSegmentBase
   {
-    double seconds_;
+    rclcpp::Duration d_;    // Time remaining
 
   public:
 
-    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, double seconds);
+    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+          const rclcpp::Duration &d);
 
     void log_info() override;
 
-    bool advance(double dt) override;
+    const rclcpp::Duration &time_remaining() const
+    { return d_; }
+
+    bool advance(const rclcpp::Duration &d) override;
   };
 
   //=====================================================================================
@@ -165,7 +170,7 @@ namespace orca_base
 
     void log_info() override;
 
-    bool advance(double dt) override;
+    bool advance(const rclcpp::Duration &d) override;
   };
 
   //=====================================================================================
@@ -181,7 +186,7 @@ namespace orca_base
 
     void log_info() override;
 
-    bool advance(double dt) override;
+    bool advance(const rclcpp::Duration &d) override;
   };
 
 } // namespace orca_base

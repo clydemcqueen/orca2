@@ -142,7 +142,7 @@ namespace orca_base
     image_geometry::PinholeCameraModel fcam_model_;
 
     // Plan
-    orca::FP plan_;
+    orca::FPStamped plan_;
 
     // Observations and pose estimate
     orca::FPStamped estimate_;
@@ -245,7 +245,7 @@ namespace orca_base
 
     void rov_advance(const rclcpp::Time &stamp);
 
-    void auv_advance(double dt);
+    void auv_advance(const rclcpp::Duration &d);
 
     void all_stop(const rclcpp::Time &msg_time);
 

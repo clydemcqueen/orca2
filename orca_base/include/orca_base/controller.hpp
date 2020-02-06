@@ -27,7 +27,7 @@ namespace orca_base
 
     explicit PoseController(const BaseContext &cxt);
 
-    void calc(double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate,
               const orca::Acceleration &ff, orca::Efforts &efforts);
   };
 
@@ -150,7 +150,7 @@ namespace orca_base
 
     explicit MoveToMarkerController(const BaseContext &cxt);
 
-    void calc(double dt, const orca::Observation &plan, double plan_z,
+    void calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
               const orca::Observation &estimate, double estimate_z,
               const orca::AccelerationBody &ff, orca::Efforts &efforts);
   };

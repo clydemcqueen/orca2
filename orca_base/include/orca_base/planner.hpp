@@ -54,22 +54,22 @@ namespace orca_base
     std::shared_ptr<PoseController> controller_;                // Motion controller
     nav_msgs::msg::Path local_path_;                            // Path to next target
 
-    void add_keep_station_segment(orca::FP &plan, double seconds);
+    void add_keep_station_segment(orca::FPStamped &plan, double seconds);
 
-    void add_vertical_segment(orca::FP &plan, double z);
+    void add_vertical_segment(orca::FPStamped &plan, double z);
 
-    void add_rotate_segment(orca::FP &plan, double yaw);
+    void add_rotate_segment(orca::FPStamped &plan, double yaw);
 
-    void add_line_segment(orca::FP &plan, double x, double y);
+    void add_line_segment(orca::FPStamped &plan, double x, double y);
 
-    void add_pose_segment(orca::FP &plan, const orca::FP &goal);
+    void add_pose_segment(orca::FPStamped &plan, const orca::FP &goal);
 
   public:
 
-    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start, Target target,
+    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start, Target target,
       Map map, bool keep_station);
 
-    bool advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
+    bool advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Efforts &efforts,
                 const std::function<void(double completed, double total)> &send_feedback);
 
     const Target &target() const
@@ -97,7 +97,7 @@ namespace orca_base
 
     MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start);
 
-    bool advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
+    bool advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Efforts &efforts,
                 const std::function<void(double completed, double total)> &send_feedback);
 
     int marker_id() const
@@ -131,7 +131,7 @@ namespace orca_base
     void finish_global_plan();
 
     // Create a local_planner_
-    void start_local_plan(const orca::FP &start);
+    void start_local_plan(const orca::FPStamped &start);
 
     // Create a recovery_planner_
     void start_recovery_plan(const orca::Observation &start);
@@ -166,7 +166,7 @@ namespace orca_base
     void plan_wall_markers(bool random);
 
     // Advance the plan by dt, return AdvanceRC
-    int advance(double dt, orca::FP &plan, const orca::FP &estimate, orca::Efforts &efforts,
+    int advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Efforts &efforts,
                 const std::function<void(double completed, double total)> &send_feedback);
   };
 

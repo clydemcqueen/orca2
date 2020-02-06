@@ -216,7 +216,7 @@ namespace orca_base
       cv_bridge::CvImagePtr marked;
       marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
-      draw_observations(marked->image, plan_.observations, CV_RGB(255, 0, 0));
+      draw_observations(marked->image, plan_.fp.observations, CV_RGB(255, 0, 0));
       draw_observations(marked->image, estimate_.fp.observations, CV_RGB(0, 255, 0));
       write_status(marked->image);
 
@@ -397,14 +397,14 @@ namespace orca_base
       }
 
       // Reject large dt
-      double dt = (curr_time - prev_time).seconds();
-      if (dt > 0.5) {
+      auto d = curr_time - prev_time;
+      if (d.seconds() > 0.5) {
         return;
       }
 
       // Continue mission
       if (auv_mode()) {
-        auv_advance(dt);
+        auv_advance(d);
       }
     }
   }
@@ -459,7 +459,7 @@ namespace orca_base
     publish_control(stamp, error, efforts);
   }
 
-  void BaseNode::auv_advance(double dt)
+  void BaseNode::auv_advance(const rclcpp::Duration &d)
   {
     // Slam in z TODO better way to do this?
     estimate_.fp.pose.pose.z = z_;
@@ -482,9 +482,9 @@ namespace orca_base
 
     // Advance plan and compute efforts
     Efforts efforts;
-    if (mission_->advance(dt, plan_, estimate_, efforts)) {
+    if (mission_->advance(d, plan_, estimate_, efforts)) {
       // Error for diagnostics (only useful if we have a good pose)
-      Pose error = plan_.pose.pose.error(estimate_.fp.pose.pose);
+      Pose error = plan_.fp.pose.pose.error(estimate_.fp.pose.pose);
       publish_control(estimate_.t, error, efforts);
     } else {
       // Mission is over, clean up
@@ -687,8 +687,7 @@ namespace orca_base
 
     // Advance the mission
     if (!cxt_.sensor_loop_ && auv_mode()) {
-      static std::chrono::duration<double> dt = SPIN_PERIOD;
-      auv_advance(dt.count());
+      auv_advance(SPIN_PERIOD);
     }
   }
 

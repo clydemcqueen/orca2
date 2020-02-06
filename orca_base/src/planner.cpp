@@ -60,7 +60,7 @@ namespace orca_base
   // LocalPlanner -- build a local plan to a target
   //=====================================================================================
 
-  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FP &start,
+  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
                              Target target, Map map, bool keep_station) :
     logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
     segment_idx_{0}, controller_{std::make_shared<PoseController>(cxt_)}
@@ -71,9 +71,9 @@ namespace orca_base
     // 2. long plan: find a series of waypoints (if possible), and always face the direction of motion
 
     // Start pose
-    FP plan = start;
+    FPStamped plan = start;
 
-    if (target.fp.distance_xy(start) < MAX_SHORT_LOCAL_PLAN) {
+    if (target.fp.distance_xy(start.fp) < MAX_SHORT_LOCAL_PLAN) {
       RCLCPP_INFO_STREAM(logger_, "short plan: " << target);
 
       add_pose_segment(plan, target.fp);
@@ -83,7 +83,7 @@ namespace orca_base
 
       // Generate a series of waypoints to minimize dead reckoning
       std::vector<Pose> waypoints;
-      if (map_.get_waypoints(start.pose.pose, target_.fp.pose.pose, waypoints)) {
+      if (map_.get_waypoints(start.fp.pose.pose, target_.fp.pose.pose, waypoints)) {
         RCLCPP_INFO(logger_, "... through %d waypoints", waypoints.size() - 1);
       } else {
         waypoints.push_back(target_.fp.pose.pose);
@@ -94,9 +94,9 @@ namespace orca_base
         // Ascend/descend to target z
         add_vertical_segment(plan, waypoint.z);
 
-        if (plan.pose.pose.distance_xy(waypoint.x, waypoint.y) > EPSILON_PLAN_XYZ) {
+        if (plan.fp.pose.pose.distance_xy(waypoint.x, waypoint.y) > EPSILON_PLAN_XYZ) {
           // Point in the direction of travel
-          add_rotate_segment(plan, atan2(waypoint.y - plan.pose.pose.y, waypoint.x - plan.pose.pose.x));
+          add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
 
           // Travel
           add_line_segment(plan, waypoint.x, waypoint.y);
@@ -125,7 +125,7 @@ namespace orca_base
       geometry_msgs::msg::PoseStamped pose_msg;
       for (auto &i : segments_) {
         local_path_.header.frame_id = cxt_.map_frame_;
-        i->plan().pose.pose.to_msg(pose_msg.pose);
+        i->plan().fp.pose.pose.to_msg(pose_msg.pose);
         local_path_.poses.push_back(pose_msg);
       }
 
@@ -139,36 +139,36 @@ namespace orca_base
     segments_[0]->log_info();
   }
 
-  void LocalPlanner::add_keep_station_segment(FP &plan, double seconds)
+  void LocalPlanner::add_keep_station_segment(FPStamped &plan, double seconds)
   {
-    segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, seconds));
+    segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
   }
 
-  void LocalPlanner::add_vertical_segment(FP &plan, double z)
+  void LocalPlanner::add_vertical_segment(FPStamped &plan, double z)
   {
     segments_.push_back(PoseSegment::make_vertical(logger_, cxt_, plan, z));
   }
 
-  void LocalPlanner::add_rotate_segment(FP &plan, double yaw)
+  void LocalPlanner::add_rotate_segment(FPStamped &plan, double yaw)
   {
     segments_.push_back(PoseSegment::make_rotate(logger_, cxt_, plan, yaw));
   }
 
-  void LocalPlanner::add_line_segment(FP &plan, double x, double y)
+  void LocalPlanner::add_line_segment(FPStamped &plan, double x, double y)
   {
     segments_.push_back(PoseSegment::make_line(logger_, cxt_, plan, x, y));
   }
 
-  void LocalPlanner::add_pose_segment(FP &plan, const FP &goal)
+  void LocalPlanner::add_pose_segment(FPStamped &plan, const FP &goal)
   {
     segments_.push_back(PoseSegment::make_pose(logger_, cxt_, plan, goal));
   }
 
-  bool LocalPlanner::advance(double dt, FP &plan, const FP &estimate, orca::Efforts &efforts,
+  bool LocalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
                              const std::function<void(double completed, double total)> &send_feedback)
   {
     // Update the plan
-    if (segments_[segment_idx_]->advance(dt)) {
+    if (segments_[segment_idx_]->advance(d)) {
       // Continue in this segment
     } else if (++segment_idx_ < segments_.size()) {
       // Move to the next segment
@@ -183,7 +183,7 @@ namespace orca_base
     plan = segments_[segment_idx_]->plan();
 
     // Run PID controller and calculate efforts
-    controller_->calc(dt, plan, estimate, segments_[segment_idx_]->ff(), efforts);
+    controller_->calc(d, plan.fp, estimate.fp, segments_[segment_idx_]->ff(), efforts);
 
     return true;
   }
@@ -214,11 +214,11 @@ namespace orca_base
     segments_[segment_idx_]->log_info();
   }
 
-  bool MoveToMarkerPlanner::advance(double dt, FP &plan, const FP &estimate, orca::Efforts &efforts,
+  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
                                     const std::function<void(double completed, double total)> &send_feedback)
   {
     // Advance the plan
-    if (segments_[segment_idx_]->advance(dt)) {
+    if (segments_[segment_idx_]->advance(d)) {
       // Continue in this segment
     } else if (++segment_idx_ < segments_.size()) {
       // Move to next segment
@@ -230,14 +230,14 @@ namespace orca_base
 
     // Share plan with caller (useful for diagnostics)
     plan = {};
-    plan.observations.push_back(segments_[segment_idx_]->plan());
+    plan.fp.observations.push_back(segments_[segment_idx_]->plan());
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     // TODO get plan_z from map
     orca::Observation estimate_obs;
-    estimate.get_obs(marker_id_, estimate_obs);
-    controller_->calc(dt, segments_[segment_idx_]->plan(), -0.5, estimate_obs, estimate.pose.pose.z,
+    estimate.fp.get_obs(marker_id_, estimate_obs);
+    controller_->calc(d, segments_[segment_idx_]->plan(), -0.5, estimate_obs, estimate.fp.pose.pose.z,
                       segments_[segment_idx_]->ff(), efforts);
 
     return true;
@@ -285,7 +285,7 @@ namespace orca_base
     // RCLCPP_INFO(logger_, "Predicted %d observation(s)", num_observations);
   }
 
-  void MissionPlanner::start_local_plan(const orca::FP &start)
+  void MissionPlanner::start_local_plan(const orca::FPStamped &start)
   {
     recovery_planner_ = nullptr;
 
@@ -300,17 +300,17 @@ namespace orca_base
     recovery_planner_ = std::make_shared<MoveToMarkerPlanner>(logger_, cxt_, start);
   }
 
-  int MissionPlanner::advance(double dt, FP &plan, const FP &estimate, orca::Efforts &efforts,
+  int MissionPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
                               const std::function<void(double completed, double total)> &send_feedback)
   {
     // Bootstrap
     if (!local_planner_ && !recovery_planner_) {
-      if (estimate.good_pose()) {
+      if (estimate.fp.good_pose()) {
         RCLCPP_INFO(logger_, "start local plan from good pose");
         start_local_plan(estimate);
       } else {
         orca::Observation closest_observation;
-        if (estimate.closest_obs(closest_observation) < MAX_GOOD_OBS_DISTANCE) {
+        if (estimate.fp.closest_obs(closest_observation) < MAX_GOOD_OBS_DISTANCE) {
           RCLCPP_INFO(logger_, "start recovery plan from good observation");
           start_recovery_plan(closest_observation);
         } else {
@@ -323,13 +323,13 @@ namespace orca_base
     if (local_planner_) {
 
       // Advance the local plan
-      if (local_planner_->advance(dt, plan, estimate, efforts, send_feedback)) {
+      if (local_planner_->advance(d, plan, estimate, efforts, send_feedback)) {
 
         // Predict observations from the planned pose
-        predict_observations(plan);
+        predict_observations(plan.fp);
 
         // Is there a good pose?
-        if (estimate.good_pose()) {
+        if (estimate.fp.good_pose()) {
 
           // Good pose, make sure the plan & estimate are reasonably close
           if (estimate.distance_xy(plan) > MAX_POSE_XY_ERR) {
@@ -350,8 +350,8 @@ namespace orca_base
           // This should keep the marker visible until we're close enough to get a good pose
           Observation plan_target_obs, estimate_target_obs;
 
-          if (plan.get_obs(targets_[target_idx_].marker_id, plan_target_obs) &&
-              estimate.get_obs(targets_[target_idx_].marker_id, estimate_target_obs)) {
+          if (plan.fp.get_obs(targets_[target_idx_].marker_id, plan_target_obs) &&
+              estimate.fp.get_obs(targets_[target_idx_].marker_id, estimate_target_obs)) {
 
             double err_distance = std::abs(plan_target_obs.distance - estimate_target_obs.distance);
             double err_yaw = std::abs(plan_target_obs.yaw - estimate_target_obs.yaw);
@@ -374,7 +374,7 @@ namespace orca_base
           RCLCPP_INFO_STREAM(logger_, "next target: " << targets_[target_idx_]);
           send_feedback(target_idx_, targets_.size());
 
-          if (estimate.good_pose()) {
+          if (estimate.fp.good_pose()) {
             // Known good pose, plan immediately
             start_local_plan(estimate);
           } else {
@@ -390,14 +390,14 @@ namespace orca_base
     } else {
 
       // In recovery. Success?
-      if (estimate.good_pose()) {
+      if (estimate.fp.good_pose()) {
         RCLCPP_INFO(logger_, "recovery succeeded");
 
         // Known good pose, plan this cycle
         start_local_plan(estimate);
       } else {
         // Advance the recovery plan
-        if (!recovery_planner_->advance(dt, plan, estimate, efforts, send_feedback)) {
+        if (!recovery_planner_->advance(d, plan, estimate, efforts, send_feedback)) {
           RCLCPP_INFO(logger_, "recovery complete, no good pose, giving up");
           return AdvanceRC::FAILURE;
         }
