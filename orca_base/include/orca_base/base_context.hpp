@@ -48,9 +48,13 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(auv_z_target, double, -0.25)               /* AUV path target z position  */ \
   CXT_MACRO_MEMBER(auv_xy_distance, double, 1)                /* AUV distance in front of marker  */ \
-  CXT_MACRO_MEMBER(auv_xy_speed, double, 0.5)                 /* AUV speed in the xy plane  */ \
-  CXT_MACRO_MEMBER(auv_z_speed, double, 0.3)                  /* AUV vertical speed  */ \
-  CXT_MACRO_MEMBER(auv_yaw_speed, double, M_PI_4 / 2)         /* AUV rotation speed  */ \
+  \
+  CXT_MACRO_MEMBER(auv_xy_accel, double, 0.5)                 /* AUV acceleration in the xy plane  */ \
+  CXT_MACRO_MEMBER(auv_xy_velo, double, 0.5)                  /* AUV velocity in the xy plane  */ \
+  CXT_MACRO_MEMBER(auv_z_accel, double, 0.3)                  /* AUV vertical acceleration  */ \
+  CXT_MACRO_MEMBER(auv_z_velo, double, 0.3)                   /* AUV vertical velocity  */ \
+  CXT_MACRO_MEMBER(auv_yaw_accel, double, M_PI_4 / 2)         /* AUV rotation acceleration  */ \
+  CXT_MACRO_MEMBER(auv_yaw_velo, double, M_PI_4 / 2)          /* AUV rotation velocity  */ \
   \
   CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \

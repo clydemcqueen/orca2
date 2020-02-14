@@ -63,4 +63,4 @@ namespace orca
     return stamp.nanoseconds() > 0;
   }
 
-} // namespace orca_shared
+} // namespace orca

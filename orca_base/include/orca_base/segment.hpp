@@ -99,42 +99,52 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // Pose segments can move in x, y, z, yaw, or any of those in combination
+  // Use a trapezoidal velocity planner to plan motion in x, y, z, yaw
   //=====================================================================================
 
-  class PoseSegment : public PoseSegmentBase
+  class TrapVelo : public PoseSegmentBase
   {
-    // Target velocity
-    orca::Twist target_twist_;
+    double angle_to_goal_;
 
-    // Motion is bang-bang: full thrust (accelerate and maintain velocity) or zero thrust (glide)
-    bool glide_xy_{false};
-    bool glide_z_{false};
-    bool glide_yaw_{false};
+    orca::Acceleration initial_accel_;  // Initial total acceleration, not modified
+    orca::Acceleration accel_;          // Total acceleration, accel_ = drag_ + ff_
+    orca::Acceleration drag_;           // Acceleration due to drag
+    orca::Twist twist_;                 // Velocity
+
+    rclcpp::Time xy_run_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time xy_decel_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time xy_stop_{0, 0, RCL_ROS_TIME};
+
+    rclcpp::Time z_run_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time z_decel_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time z_stop_{0, 0, RCL_ROS_TIME};
+
+    rclcpp::Time yaw_run_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time yaw_decel_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time yaw_stop_{0, 0, RCL_ROS_TIME};
 
   public:
 
-    PoseSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
-                const orca::FP &goal);
+    TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+             const orca::FP &goal);
 
     void log_info() override;
 
     bool advance(const rclcpp::Duration &d) override;
 
     // Factory methods: make a segment that gets from plan to goal, and update plan
-    static std::shared_ptr<PoseSegment>
+    static std::shared_ptr<TrapVelo>
     make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double z);
 
-    static std::shared_ptr<PoseSegment>
+    static std::shared_ptr<TrapVelo>
     make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double yaw);
 
-    static std::shared_ptr<PoseSegment>
+    static std::shared_ptr<TrapVelo>
     make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double x, double y);
 
-    static std::shared_ptr<PoseSegment>
+    static std::shared_ptr<TrapVelo>
     make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, const orca::FP &goal);
   };
-
 
   //=====================================================================================
   // Pause segments stay in one pose for a period of time
@@ -158,15 +168,15 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // RotateToMarkerSegment rotates to face a marker
+  // RotateToMarker rotates to face a marker
   //=====================================================================================
 
-  class RotateToMarkerSegment : public ObservationSegmentBase
+  class RotateToMarker : public ObservationSegmentBase
   {
   public:
 
-    RotateToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
-                          const orca::Observation &goal);
+    RotateToMarker(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
+                   const orca::Observation &goal);
 
     void log_info() override;
 
@@ -174,15 +184,15 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // MoveToMarkerSegment moves forward toward a marker
+  // MoveToMarker moves forward toward a marker
   //=====================================================================================
 
-  class MoveToMarkerSegment : public ObservationSegmentBase
+  class MoveToMarker : public ObservationSegmentBase
   {
   public:
 
-    MoveToMarkerSegment(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
-                        const orca::Observation &goal);
+    MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start,
+                 const orca::Observation &goal);
 
     void log_info() override;
 

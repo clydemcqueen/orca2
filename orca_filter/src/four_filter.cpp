@@ -152,8 +152,8 @@ namespace orca_filter
             // Add acceleration due to drag
             // TODO create & use AddLinkForce(drag_force, c_of_mass) and AddRelativeTorque(drag_torque)
             // Simple approximation:
-            fx_ax += cxt.model_.drag_accel_x(fx_vx);
-            fx_ay += cxt.model_.drag_accel_y(fx_vy);
+            fx_ax += cxt.model_.drag_accel_f(fx_vx);  // TODO f or x?
+            fx_ay += cxt.model_.drag_accel_s(fx_vy);  // TODO s or y?
             fx_az += cxt.model_.drag_accel_z(fx_vz);
             fx_ayaw += cxt.model_.drag_accel_yaw(fx_vyaw);
           }

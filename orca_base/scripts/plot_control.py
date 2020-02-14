@@ -4,17 +4,48 @@
 Analyze and plot orca_msgs/msg/Control messages
 
 Usage: ros2 run orca_base plot_control.py
+
+Updating plots is tricky.
+
+Method 1 (failed):
+-- turn interactive mode on using plt.ion()
+-- call plt.pause(0.01) to allow/force an update
+
+Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend. This brings the Qt5Agg window
+to the front and grabs focus, interrupting anything else you're doing. This is annoying.
+
+Method 2 (current):
+-- use the PDF backend to write plots to PDF files
+-- view the files using `evince fig.pdf`
+
+Evince watches the file and reloads whenever it changes. The downside is that the plot is a static image, so
+resizing the window doesn't do what you expect.
+
+Perhaps worth investigating:
+-- custom mypause function that doesn't call activateWindow()
+-- matplotlib animations
 """
 
+import matplotlib
+
+# Set backend before importing matplotlib.pyplot
+matplotlib.use('pdf')
+
+from geometry_msgs.msg import Quaternion
+import matplotlib.pyplot as plt
+from orca_msgs.msg import Control
+import rclpy
+from rclpy.node import Node
+import transformations as xf
 from typing import List
 
-import matplotlib
-import matplotlib.pyplot as plt
-import rclpy
-from orca_msgs.msg import Control
-from rclpy.node import Node
-
 NUM_MESSAGES = 200
+
+
+def get_yaw(q: Quaternion) -> float:
+    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
+    rpy = xf.euler_from_matrix(m)
+    return rpy[2]
 
 
 def cost_function(pos_neg, off_on, on):
@@ -25,7 +56,7 @@ def cost_function(pos_neg, off_on, on):
     :param on: count of on states, cost=0
     :return: cost
     """
-    return 10 * pos_neg + 5 * off_on # + on
+    return 10 * pos_neg + 5 * off_on  # + on
 
 
 class PlotControlNode(Node):
@@ -54,10 +85,10 @@ class PlotControlNode(Node):
         # Plot error
         error_axes = [axex, axey, axez, axew]
         error_names = ['error x', 'error y', 'error z', 'error yaw']
-        error_values = [[msg.error.x for msg in self._control_msgs],
-                        [msg.error.y for msg in self._control_msgs],
-                        [msg.error.z for msg in self._control_msgs],
-                        [msg.error.yaw for msg in self._control_msgs]]
+        error_values = [[msg.error.position.x for msg in self._control_msgs],
+                        [msg.error.position.y for msg in self._control_msgs],
+                        [msg.error.position.z for msg in self._control_msgs],
+                        [get_yaw(msg.error.orientation) for msg in self._control_msgs]]
         for ax, name, values in zip(error_axes, error_names, error_values):
             ax.set_title(name)
             ax.set_ylim(-0.3, 0.3)
@@ -129,30 +160,6 @@ class PlotControlNode(Node):
 
 
 def main(args=None):
-    """
-    Updating plots is tricky.
-
-    Method 1 (failed):
-    -- turn interactive mode on using plt.ion()
-    -- call plt.pause(0.01) to allow/force an update
-
-    Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend. This brings the Qt5Agg window
-    to the front and grabs focus, interrupting anything else you're doing. This is annoying.
-
-    Method 2 (current):
-    -- use the PDF backend to write plots to PDF files
-    -- view the files using `evince fig.pdf`
-
-    Evince watches the file and reloads whenever it changes. The downside is that the plot is a static image, so
-    resizing the window doesn't do what you expect.
-
-    Perhaps worth investigating:
-    -- custom mypause function that doesn't call activateWindow()
-    -- matplotlib animations
-    """
-
-    print('backend was', plt.get_backend())
-    matplotlib.use('pdf')
     print('backend is', plt.get_backend())
 
     # Set figure size (inches)

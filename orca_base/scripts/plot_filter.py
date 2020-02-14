@@ -182,10 +182,10 @@ class PlotFilterNode(Node):
               (axproll, axppitch, axpyaw), (axtroll, axtpitch, axtyaw)) = plt.subplots(4, 3)
 
         # Build lists of items to plot
-        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]
-        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]
-        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]
-        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]
+        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
+        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]      # Pre-filter pose messages
+        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]    # Pose-filter pose messages
+        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]        # Ground truth messages
 
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']

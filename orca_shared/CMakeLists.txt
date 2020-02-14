@@ -45,6 +45,7 @@ add_library(
   ${ORCA_SHARED_LIB} SHARED
   src/baro.cpp
   src/geometry.cpp
+  src/model.cpp
   src/util.cpp
 )
 

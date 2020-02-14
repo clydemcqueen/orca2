@@ -118,7 +118,7 @@ namespace gazebo
       // Initialize model from parameters
       // Angular drag is a wild guess, but should be non-zero
       orca_model_.fluid_density_ = fluid_density;
-      linear_drag_ = {orca_model_.linear_drag_x(), orca_model_.linear_drag_y(), orca_model_.linear_drag_z()};
+      linear_drag_ = {orca_model_.linear_drag_f(), orca_model_.linear_drag_s(), orca_model_.linear_drag_z()};
       angular_drag_ = {orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw()};
       tether_drag_ = orca_model_.tether_drag();
 

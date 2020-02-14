@@ -146,22 +146,22 @@ namespace orca_base
 
   void LocalPlanner::add_vertical_segment(FPStamped &plan, double z)
   {
-    segments_.push_back(PoseSegment::make_vertical(logger_, cxt_, plan, z));
+    segments_.push_back(TrapVelo::make_vertical(logger_, cxt_, plan, z));
   }
 
   void LocalPlanner::add_rotate_segment(FPStamped &plan, double yaw)
   {
-    segments_.push_back(PoseSegment::make_rotate(logger_, cxt_, plan, yaw));
+    segments_.push_back(TrapVelo::make_rotate(logger_, cxt_, plan, yaw));
   }
 
   void LocalPlanner::add_line_segment(FPStamped &plan, double x, double y)
   {
-    segments_.push_back(PoseSegment::make_line(logger_, cxt_, plan, x, y));
+    segments_.push_back(TrapVelo::make_line(logger_, cxt_, plan, x, y));
   }
 
   void LocalPlanner::add_pose_segment(FPStamped &plan, const FP &goal)
   {
-    segments_.push_back(PoseSegment::make_pose(logger_, cxt_, plan, goal));
+    segments_.push_back(TrapVelo::make_pose(logger_, cxt_, plan, goal));
   }
 
   bool LocalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
@@ -203,12 +203,12 @@ namespace orca_base
     // Rotate to face the marker
     plan = goal;
     goal.yaw = 0;
-    segments_.push_back(std::make_shared<RotateToMarkerSegment>(logger_, cxt_, plan, goal));
+    segments_.push_back(std::make_shared<RotateToMarker>(logger_, cxt_, plan, goal));
 
     // Move toward the marker
     plan = goal;
     goal.distance = 1;
-    segments_.push_back(std::make_shared<MoveToMarkerSegment>(logger_, cxt_, plan, goal));
+    segments_.push_back(std::make_shared<MoveToMarker>(logger_, cxt_, plan, goal));
 
     // Start
     segments_[segment_idx_]->log_info();

@@ -342,6 +342,11 @@ namespace orca_base
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
   {
+    // Ignore until we have a good map
+    if (!map_.ok()) {
+      return;
+    }
+
     rclcpp::Time prev_time = estimate_.t;
     rclcpp::Time curr_time = obs_msg->header.stamp;
 

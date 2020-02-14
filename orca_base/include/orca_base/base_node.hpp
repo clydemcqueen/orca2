@@ -156,7 +156,7 @@ namespace orca_base
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
     // Move-to-marker operation
-    std::shared_ptr<MoveToMarkerSegment> mtm_segment_;
+    std::shared_ptr<MoveToMarker> mtm_segment_;
     std::shared_ptr<MoveToMarkerController> mtm_controller_;
 
     // Outputs
