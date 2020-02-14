@@ -100,6 +100,7 @@ namespace orca_base
 
   //=====================================================================================
   // Use a trapezoidal velocity planner to plan motion in x, y, z, yaw
+  // There are 3 velocity trapezoids: xy motion, z motion and yaw motion
   //=====================================================================================
 
   class TrapVelo : public PoseSegmentBase
@@ -111,6 +112,10 @@ namespace orca_base
     orca::Acceleration drag_;           // Acceleration due to drag
     orca::Twist twist_;                 // Velocity
 
+    // Start time
+    rclcpp::Time start_{0, 0, RCL_ROS_TIME};
+
+    // Time to change from one phase to another
     rclcpp::Time xy_run_{0, 0, RCL_ROS_TIME};
     rclcpp::Time xy_decel_{0, 0, RCL_ROS_TIME};
     rclcpp::Time xy_stop_{0, 0, RCL_ROS_TIME};
@@ -127,6 +132,9 @@ namespace orca_base
 
     TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
              const orca::FP &goal);
+
+    // Return time required to complete all motion
+    rclcpp::Duration duration() const;
 
     void log_info() override;
 

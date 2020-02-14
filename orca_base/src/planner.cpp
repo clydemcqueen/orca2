@@ -112,29 +112,27 @@ namespace orca_base
     // Pause
     add_keep_station_segment(plan, 5);
 
-    // Keep station at the last target
-    if (keep_station_) {
-      add_keep_station_segment(plan, 1e6);
-    }
+    // Create a path message to this target for diagnostics
+    local_path_.header.frame_id = cxt_.map_frame_;
+    local_path_.poses.clear();
 
-    // Create a path to this target for diagnostics
-    if (!segments_.empty()) {
+    geometry_msgs::msg::PoseStamped pose_msg;
+    for (auto &i : segments_) {
       local_path_.header.frame_id = cxt_.map_frame_;
-      local_path_.poses.clear();
-
-      geometry_msgs::msg::PoseStamped pose_msg;
-      for (auto &i : segments_) {
-        local_path_.header.frame_id = cxt_.map_frame_;
-        i->plan().fp.pose.pose.to_msg(pose_msg.pose);
-        local_path_.poses.push_back(pose_msg);
-      }
-
-      // Add last goal pose
-      segments_.back()->goal().pose.pose.to_msg(pose_msg.pose);
+      i->plan().fp.pose.pose.to_msg(pose_msg.pose);
       local_path_.poses.push_back(pose_msg);
     }
 
-    assert(!segments_.empty());
+    // Add last goal pose to path message
+    segments_.back()->goal().pose.pose.to_msg(pose_msg.pose);
+    local_path_.poses.push_back(pose_msg);
+
+    if (keep_station_) {
+      // Keep station at the last target
+      add_keep_station_segment(plan, 1e6);
+    }
+
+    RCLCPP_INFO(logger_, "planned duration %g seconds", (plan.t - start.t).seconds());
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
     segments_[0]->log_info();
   }

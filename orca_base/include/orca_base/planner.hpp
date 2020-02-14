@@ -54,6 +54,7 @@ namespace orca_base
     std::shared_ptr<PoseController> controller_;                // Motion controller
     nav_msgs::msg::Path local_path_;                            // Path to next target
 
+    // Add a trajectory segment and update plan
     void add_keep_station_segment(orca::FPStamped &plan, double seconds);
 
     void add_vertical_segment(orca::FPStamped &plan, double z);

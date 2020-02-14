@@ -110,7 +110,7 @@ namespace orca_base
 
   TrapVelo::TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
                      const orca::FP &goal) :
-    PoseSegmentBase{logger, cxt, start, goal}, angle_to_goal_{0}
+    PoseSegmentBase{logger, cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
   {
     // Distance is always >= 0
     double distance_xy = plan_.fp.distance_xy(goal_);
@@ -124,7 +124,7 @@ namespace orca_base
       initial_accel_.x = cos(angle_to_goal_) * cxt_.auv_xy_accel_;
       initial_accel_.y = sin(angle_to_goal_) * cxt_.auv_xy_accel_;
     } else {
-      xy_run_ = xy_decel_ = xy_stop_ = plan_.t;
+      xy_run_ = xy_decel_ = xy_stop_ = start_;
     }
 
     if (distance_z > 0) {
@@ -132,7 +132,7 @@ namespace orca_base
       plan_trap_velo(cxt_.auv_z_accel_, cxt_.auv_z_velo_, distance_z, plan_.t, z_run_, z_decel_, z_stop_);
       initial_accel_.z = goal_.pose.pose.z > plan_.fp.pose.pose.z ? cxt_.auv_z_accel_ : -cxt_.auv_z_accel_;
     } else {
-      z_run_ = z_decel_ = z_stop_ = plan_.t;
+      z_run_ = z_decel_ = z_stop_ = start_;
     }
 
     if (distance_yaw > 0) {
@@ -141,11 +141,26 @@ namespace orca_base
       initial_accel_.yaw = norm_angle(goal_.pose.pose.yaw - plan_.fp.pose.pose.yaw) > 0 ?
                            cxt_.auv_yaw_accel_ : -cxt_.auv_yaw_accel_;
     } else {
-      yaw_run_ = yaw_decel_ = yaw_stop_ = plan_.t;
+      yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
 
     // Start phase 1: accelerate to target velocity
     accel_ = initial_accel_;
+  }
+
+  rclcpp::Duration TrapVelo::duration() const
+  {
+    auto result = xy_stop_ - start_;
+
+    if (z_stop_ - start_ > result) {
+      result = z_stop_ - start_;
+    }
+
+    if (yaw_stop_ - start_ > result) {
+      result = yaw_stop_ - start_;
+    }
+
+    return result;
   }
 
   bool TrapVelo::advance(const rclcpp::Duration &d)
@@ -238,9 +253,9 @@ namespace orca_base
 
   void TrapVelo::log_info()
   {
-    auto xy_seconds = (xy_stop_ - plan_.t).seconds();
-    auto z_seconds = (z_stop_ - plan_.t).seconds();
-    auto yaw_seconds = (yaw_stop_ - plan_.t).seconds();
+    auto xy_seconds = (xy_stop_ - start_).seconds();
+    auto z_seconds = (z_stop_ - start_).seconds();
+    auto yaw_seconds = (yaw_stop_ - start_).seconds();
 
     RCLCPP_INFO_STREAM(logger_, std::fixed << std::setprecision(4)
       << "cv xy_seconds: " << xy_seconds
@@ -256,6 +271,7 @@ namespace orca_base
     goal.pose.pose.z = z;
     auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
     plan.fp = goal;
+    plan.t = plan.t + result->duration();
     return result;
   }
 
@@ -266,6 +282,7 @@ namespace orca_base
     goal.pose.pose.yaw = yaw;
     auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
     plan.fp = goal;
+    plan.t = plan.t + result->duration();
     return result;
   }
 
@@ -278,6 +295,7 @@ namespace orca_base
     goal.pose.pose.y = y;
     auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
     plan.fp = goal;
+    plan.t = plan.t + result->duration();
     return result;
   }
 
@@ -287,6 +305,7 @@ namespace orca_base
   {
     auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
     plan.fp = goal;
+    plan.t = plan.t + result->duration();
     return result;
   }
 
