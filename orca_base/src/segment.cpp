@@ -8,11 +8,10 @@ namespace orca_base
 {
 
   // Run some numerical approximations
-  constexpr int NUM_MAX_TICKS = 100;    // Max number of ticks
-  constexpr double NUM_DT = 0.1;        // Time step for each tick
-  constexpr double END_VELO_XY = 0.1;   // When xy velo is < this, end the simulation
-  constexpr double END_VELO_Z = 0.1;    // When z velo is < this, end the simulation
-  constexpr double END_VELO_YAW = 0.1;  // When yaw velo is < this, end the simulation
+  constexpr int NUM_MAX_TICKS = 100;    // Max number of ticks TODO param
+  constexpr double NUM_DT = 0.1;        // Time step for each tick TODO param
+  constexpr double END_VELO_XY = 0.1;   // When xy velo is < this, end the simulation TODO param
+  constexpr double END_VELO_YAW = 0.1;  // When yaw velo is < this, end the simulation TODO param
 
   //=====================================================================================
   // SegmentBase
@@ -313,6 +312,7 @@ namespace orca_base
   // MoveToMarker
   //=====================================================================================
 
+#if 0
   // Compute the deceleration (glide) distance
   double deceleration_distance_forward(const BaseContext &cxt, double velo_x)
   {
@@ -337,6 +337,7 @@ namespace orca_base
     std::cout << "deceleration_distance_forward failed" << std::endl;
     return 0;
   }
+#endif
 
   MoveToMarker::MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
                              const orca::Observation &start, const orca::Observation &goal) :
@@ -391,6 +392,31 @@ namespace orca_base
   // RotateToMarker
   //=====================================================================================
 
+  // Compute the deceleration (glide) distance
+  double deceleration_distance_yaw(const BaseContext &cxt, double velo_yaw)
+  {
+    double yaw = 0;
+
+    for (int ticks = 0; ticks < NUM_MAX_TICKS; ++ticks) {
+      // Compute drag force
+      double accel_drag_yaw = Model::torque_to_accel_yaw(-cxt.model_.drag_torque_yaw(velo_yaw));
+
+      // Update velocity
+      velo_yaw -= accel_drag_yaw * NUM_DT;
+
+      // Update distance
+      yaw = norm_angle(yaw + velo_yaw * NUM_DT);
+
+      if (std::abs(velo_yaw) < END_VELO_YAW) {
+        // Close enough
+        return std::abs(yaw);
+      }
+    }
+
+    std::cout << "deceleration_distance_yaw failed" << std::endl;
+    return 0;
+  }
+
   RotateToMarker::RotateToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
                                  const orca::Observation &start, const orca::Observation &goal) :
     ObservationSegmentBase(logger, cxt, start, goal)
@@ -414,7 +440,7 @@ namespace orca_base
   {
     double distance_remaining = std::abs(norm_angle(goal_.yaw - plan_.yaw));
     if (distance_remaining > EPSILON_PLAN_YAW) {
-#if 0
+#if 1
       if (distance_remaining - deceleration_distance_yaw(cxt_, twist_.yaw) < EPSILON_PLAN_YAW) {
         // Decelerate
         ff_.yaw = 0;

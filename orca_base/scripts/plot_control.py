@@ -3,7 +3,9 @@
 """
 Analyze and plot orca_msgs/msg/Control messages
 
-Usage: ros2 run orca_base plot_control.py
+Usage:
+ros2 run orca_base plot_control.py
+ros2 run orca_base plot_control.py 200
 
 Updating plots is tricky.
 
@@ -36,10 +38,9 @@ import matplotlib.pyplot as plt
 from orca_msgs.msg import Control
 import rclpy
 from rclpy.node import Node
+import sys
 import transformations as xf
 from typing import List
-
-NUM_MESSAGES = 200
 
 
 def get_yaw(q: Quaternion) -> float:
@@ -61,14 +62,15 @@ def cost_function(pos_neg, off_on, on):
 
 class PlotControlNode(Node):
 
-    def __init__(self):
+    def __init__(self, num_messages):
         super().__init__('plot_control')
         self._control_msgs: List[Control] = []
         self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
+        self._num_messages = num_messages
 
     def control_callback(self, msg: Control):
         self._control_msgs.append(msg)
-        if len(self._control_msgs) >= NUM_MESSAGES:
+        if len(self._control_msgs) >= self._num_messages:
             self.plot_msgs()
             self._control_msgs.clear()
 
@@ -112,7 +114,7 @@ class PlotControlNode(Node):
                     pos_neg += 1
 
             ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
-            ax.set_ylim(-0.3, 0.3)
+            ax.set_ylim(-0.55, 0.55)
             ax.set_xticklabels([])
             ax.plot(values)
 
@@ -137,7 +139,7 @@ class PlotControlNode(Node):
             total_cost += cost
 
             ax.set_title('T{}: pos_neg={}, off_on={}, on={}, cost={}'.format(i, pos_neg, off_on, on, cost))
-            ax.set_ylim(1400, 1600)
+            ax.set_ylim(1200, 1800)
             ax.set_xticklabels([])
             ax.plot(pwm_values)
 
@@ -150,7 +152,7 @@ class PlotControlNode(Node):
         axol.plot(odom_lag_values)
 
         # Set figure title
-        fig.suptitle('{} messages, total cost={}'.format(NUM_MESSAGES, total_cost))
+        fig.suptitle('{} messages, total cost={}'.format(self._num_messages, total_cost))
 
         # [Over]write PDF to disk
         plt.savefig('plot_control.pdf')
@@ -159,14 +161,19 @@ class PlotControlNode(Node):
         plt.close(fig)
 
 
-def main(args=None):
+def main():
     print('backend is', plt.get_backend())
+
+    num_messages = 100
+    if len(sys.argv) > 1:
+        num_messages = int(sys.argv[1])
+    print('num messages =', num_messages)
 
     # Set figure size (inches)
     plt.rcParams['figure.figsize'] = [24., 12.]
 
-    rclpy.init(args=args)
-    node = PlotControlNode()
+    rclpy.init()
+    node = PlotControlNode(num_messages)
 
     try:
         rclpy.spin(node)

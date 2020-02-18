@@ -33,8 +33,10 @@ namespace orca
     constexpr Pose() : x{0}, y{0}, z{0}, yaw{0}
     {}
 
-    void to_msg(geometry_msgs::msg::Pose &msg) const
+    geometry_msgs::msg::Pose to_msg() const
     {
+      geometry_msgs::msg::Pose msg;
+
       msg.position.x = x;
       msg.position.y = y;
       msg.position.z = z;
@@ -43,6 +45,8 @@ namespace orca
       tf2::Quaternion q;
       q.setRPY(0, 0, yaw);
       msg.orientation = tf2::toMsg(q);
+
+      return msg;
     }
 
     void from_msg(const geometry_msgs::msg::Pose &msg)
@@ -96,16 +100,6 @@ namespace orca
     {
       return std::abs(norm_angle(yaw - get_yaw(msg.pose.pose.orientation)));
     }
-
-    Pose error(const Pose &that) const
-    {
-      Pose e;
-      e.x = x - that.x;
-      e.y = y - that.y;
-      e.z = z - that.z;
-      e.yaw = norm_angle(yaw - that.yaw);
-      return e;
-    }
   };
 
   std::ostream &operator<<(std::ostream &os, Pose const &pose);
@@ -119,10 +113,14 @@ namespace orca
     rclcpp::Time t;
     Pose pose;
 
-    void to_msg(geometry_msgs::msg::PoseStamped &msg) const
+    geometry_msgs::msg::PoseStamped to_msg() const
     {
+      geometry_msgs::msg::PoseStamped msg;
+
       msg.header.stamp = t;
-      pose.to_msg(msg.pose);
+      msg.pose = pose.to_msg();
+
+      return msg;
     }
 
     void from_msg(const geometry_msgs::msg::PoseStamped &msg)
@@ -145,8 +143,7 @@ namespace orca
 
     void add_to_path(nav_msgs::msg::Path &path) const
     {
-      geometry_msgs::msg::PoseStamped msg;
-      to_msg(msg);
+      auto msg = to_msg();
       msg.header.frame_id = path.header.frame_id;
       path.poses.push_back(msg);
     }
@@ -347,12 +344,16 @@ namespace orca
       set_yaw(yaw_ * factor);
     }
 
-    void to_msg(orca_msgs::msg::Efforts &msg) const
+    orca_msgs::msg::Efforts to_msg() const
     {
+      orca_msgs::msg::Efforts msg;
+
       msg.forward = forward_;
       msg.strafe = strafe_;
       msg.vertical = vertical_;
       msg.yaw = yaw_;
+
+      return msg;
     }
 
     void from_msg(const orca_msgs::msg::Efforts &msg)
@@ -385,6 +386,8 @@ namespace orca
     {}
 
     void estimate_distance_and_yaw_from_corners(double marker_length, double hfov, double hres);
+
+    void estimate_corners_from_distance_and_yaw(double marker_length, double hfov, double hres, double vres);
 
     void from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
                   double marker_length, double hfov, double hres);

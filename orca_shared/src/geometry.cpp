@@ -83,10 +83,33 @@ namespace orca
 
     distance = marker_length / sin(longest_side / hres * hfov);
 
-    // Center of marker
-    double x = (c0.x + c1.x + c2.x + c3.x) / 4;
+    double center_x = (c0.x + c1.x + c2.x + c3.x) / 4;
 
-    yaw = hfov / 2 - x * hfov / hres;
+    yaw = hfov / 2 - center_x * hfov / hres;
+  }
+
+  void Observation::estimate_corners_from_distance_and_yaw(double marker_length, double hfov, double hres, double vres)
+  {
+    // Same assumptions as above, plus:
+    // -- marker is facing the camera
+    // -- camera and marker are at the same height
+
+    assert(distance > 0);
+
+    double longest_side = hres / hfov * asin(marker_length / distance);
+
+    double center_x = hres * (0.5 - yaw / hfov);
+    double center_y = vres / 2;
+
+    c0.x = center_x - longest_side / 2;
+    c1.x = center_x + longest_side / 2;
+    c2.x = center_x + longest_side / 2;
+    c3.x = center_x - longest_side / 2;
+
+    c0.y = center_y - longest_side / 2;
+    c1.y = center_y - longest_side / 2;
+    c2.y = center_y + longest_side / 2;
+    c3.y = center_y + longest_side / 2;
   }
 
   void Observation::from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
@@ -194,7 +217,7 @@ namespace orca
     geometry_msgs::msg::PoseStamped msg;
     msg.header.stamp = t;
     msg.header.frame_id = path.header.frame_id;
-    fp.pose.pose.to_msg(msg.pose);
+    msg.pose = fp.pose.pose.to_msg();
     path.poses.push_back(msg);
   }
 

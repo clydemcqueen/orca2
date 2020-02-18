@@ -12,8 +12,8 @@ namespace orca_base
   // Constants
   //=====================================================================================
 
-  constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m)
-  constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r)
+  constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m) TODO param
+  constexpr double EPSILON_PLAN_YAW = M_PI / 90;  // Close enough for yaw motion (r) TODO param
 
   //=====================================================================================
   // Segments describe a trajectory from start to goal over time
@@ -130,7 +130,7 @@ namespace orca_base
 
   public:
 
-    TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+    explicit TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
              const orca::FP &goal);
 
     // Return time required to complete all motion

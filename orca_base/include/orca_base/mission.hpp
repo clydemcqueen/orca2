@@ -28,14 +28,12 @@ namespace orca_base
             std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
             std::shared_ptr<MissionPlanner> planner, const orca::FPStamped &start);
 
-//    const nav_msgs::msg::Path &planned_path() const
-//    { return planner_->planned_path(); }
-
     const MissionPlanner &planner() const
     { return *planner_; }
 
     // Advance the plan, return true to continue
-    bool advance(rclcpp::Duration d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Efforts &efforts);
+    bool advance(rclcpp::Duration d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Pose &error,
+                 orca::Efforts &efforts);
 
     // Abort the mission
     void abort();

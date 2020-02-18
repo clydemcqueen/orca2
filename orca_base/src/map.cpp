@@ -3,9 +3,6 @@
 namespace orca_base
 {
 
-  // Max dead reckoning distance in meters
-  constexpr double MAX_DEAD_RECKONING_DISTANCE = 9;
-
   // Pseudo marker IDs
   constexpr astar::node_type START_ID = -1;
   constexpr astar::node_type DESTINATION_ID = -2;
@@ -85,8 +82,7 @@ namespace orca_base
       return false;
     }
 
-    // Ignore markers that are not facing the camera
-    // TODO
+    // Ignore markers that are not facing the camera TODO
 
     // Project corners onto the image plane
     obs.c0 = cam_model.project3dToPixel(tf_to_cv(corner0_f_cam));
@@ -156,7 +152,7 @@ namespace orca_base
     for (auto i = poses.begin(); i != poses.end(); ++i) {
       for (auto j = std::next(i); j != poses.end(); ++j) {
         auto distance = i->second.distance_xy(j->second);
-        if (distance < MAX_DEAD_RECKONING_DISTANCE) {
+        if (distance < cxt_.planner_max_dead_reckon_dist_) {
           short_paths.emplace_back(i->first, j->first, distance);
         }
       }

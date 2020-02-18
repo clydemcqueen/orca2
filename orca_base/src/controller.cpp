@@ -13,27 +13,32 @@ namespace orca_base
     yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
   {}
 
-  void PoseController::calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate,
-                            const Acceleration &ff, orca::Efforts &efforts)
+  void PoseController::calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate,
+                            const orca::Acceleration &ff, orca::Pose &error, orca::Efforts &efforts)
   {
 #if 1
     auto dt = d.seconds();
     auto u_bar = ff;
+    error = {};
 
     // Trust x, y and yaw if the covar is low and we have a fairly close observation
     if (estimate.good_pose()) {
+      error.x = estimate.pose.pose.x - plan.pose.pose.x;
       x_controller_.set_target(plan.pose.pose.x);
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
 
+      error.y = estimate.pose.pose.y - plan.pose.pose.y;
       y_controller_.set_target(plan.pose.pose.y);
       u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
 
+      error.yaw = norm_angle( estimate.pose.pose.yaw - plan.pose.pose.yaw);
       yaw_controller_.set_target(plan.pose.pose.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     }
 
     // Trust z if we're getting it from baro
     if (estimate.good_z()) {
+      error.z = estimate.pose.pose.z - plan.pose.pose.z;
       z_controller_.set_target(plan.pose.pose.z);
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     }
@@ -201,33 +206,34 @@ namespace orca_base
   }
 #endif
 
-  MoveToMarkerController::MoveToMarkerController(const BaseContext &cxt) :
+  ObservationController::ObservationController(const BaseContext &cxt) :
     cxt_{cxt},
-    forward_controller_{false, 0.04, 0, 0},
     vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
-    yaw_controller_{true, 0.5, 0, 0}
+    yaw_controller_{true, cxt_.auv_yaw_pid_ku_, cxt_.auv_yaw_pid_tu_}
   {}
 
-  void MoveToMarkerController::calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
-                                    const orca::Observation &estimate, double estimate_z,
-                                    const orca::AccelerationBody &ff, orca::Efforts &efforts)
+  void ObservationController::calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
+                                   const orca::Observation &estimate, double estimate_z,
+                                   const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts)
   {
     auto dt = d.seconds();
     auto u_bar = ff;
 
-    // If we have an observation, run the PID controller(s)
-    if (estimate.id != orca::NOT_A_MARKER) {
-      forward_controller_.set_target(plan.distance);
-      yaw_controller_.set_target(plan.yaw);
+    // Error is in world frame, so we only know the z component
+    error = {};
 
-      // The distance calculation is quite noisy, so just use the ff for now
-      // Re-visit this if obs.destination is filtered
-//    u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.forward;
-      u_bar.forward = ff.forward;
+    // Run forward at a constant pace
+    u_bar.forward = ff.forward;
+
+    // If we have an observation, run the yaw PID controller
+    // It's possible to miss some observations and still do a decent job moving to the marker
+    if (estimate.id != orca::NOT_A_MARKER) {
+      yaw_controller_.set_target(plan.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
     }
 
     // Always run the vertical PID controller
+    error.z = plan_z - estimate_z;
     vertical_controller_.set_target(plan_z);
     u_bar.vertical = vertical_controller_.calc(estimate_z, dt) + ff.vertical;
 

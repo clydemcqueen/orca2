@@ -1,6 +1,8 @@
-# Goal, see constants in Control.msg
+# Goal, see constants in Control.msg for mode
 
 uint8 mode
+
+geometry_msgs/Pose[] poses
 
 ---
 

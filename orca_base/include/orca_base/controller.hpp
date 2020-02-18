@@ -27,8 +27,8 @@ namespace orca_base
 
     explicit PoseController(const BaseContext &cxt);
 
-    void calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate,
-              const orca::Acceleration &ff, orca::Efforts &efforts);
+    void calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate, const orca::Acceleration &ff,
+              orca::Pose &error, orca::Efforts &efforts);
   };
 
 #if 0
@@ -133,26 +133,28 @@ namespace orca_base
 #endif
 
   //=====================================================================================
-  // Experimental "move to marker" controller uses fiducial_vlam observations, not poses
+  // Observation controller uses fiducial_vlam observations, not poses
   // Observations are in the body frame, not the world frame
+  // The distance calculation is quite noisy, so don't use a forward_controller_
+  // Re-visit this if obs.destination is filtered
   //=====================================================================================
 
-  class MoveToMarkerController
+  class ObservationController
   {
     const BaseContext &cxt_;
 
     // PID controllers
-    pid::Controller forward_controller_;
     pid::Controller vertical_controller_;
     pid::Controller yaw_controller_;
 
   public:
 
-    explicit MoveToMarkerController(const BaseContext &cxt);
+    explicit ObservationController(const BaseContext &cxt);
 
-    void calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
-              const orca::Observation &estimate, double estimate_z,
-              const orca::AccelerationBody &ff, orca::Efforts &efforts);
+    // The observation is pretty noisy for z, so pass in z data from the barometer
+    void
+    calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z, const orca::Observation &estimate,
+         double estimate_z, const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts);
   };
 
 } // namespace orca_base

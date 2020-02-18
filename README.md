@@ -61,9 +61,19 @@ A few of the XBox controls:
 * X: start AUV "keep station" mission (mode 3). All AUV missions use camera(s) and ArUco markers to localize
 * Y: start AUV "go to all markers in a random pattern" mission (mode 6)
 
-Starting a mission from the ros2 CLI:
+You can also use the ros2 action CLI to start missions. E.g., start mode 6:
 ~~~
 ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 6}' 
+~~~
+
+Or move through one or more poses (mode 7):
+~~~
+ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 7, poses: [ 
+{position: {x: 6.5, y: 0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
+{position: {x: 6.5, y: -0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
+{position: {x: 6.5, y: 0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
+{position: {x: 6.5, y: -0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
+]}'
 ~~~
 
 All of the AUV missions use cameras and ArUco markers to localize.

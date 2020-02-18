@@ -28,38 +28,10 @@
 #include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
 
-using namespace std::chrono_literals;
+//using namespace std::chrono_literals;
 
 namespace orca_base
 {
-
-  //=============================================================================
-  // Utils
-  //=============================================================================
-
-  constexpr bool is_disarmed_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode == Control::DISARMED;
-  }
-
-  constexpr bool is_hold_pressure_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode == Control::ROV_HOLD_PRESSURE;
-  }
-
-  constexpr bool is_rov_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode == Control::ROV || mode == Control::ROV_HOLD_PRESSURE;
-  }
-
-  constexpr bool is_auv_mode(uint8_t mode)
-  {
-    using orca_msgs::msg::Control;
-    return mode >= Control::AUV_KEEP_STATION;
-  }
 
   //=============================================================================
   // Thrusters
@@ -82,12 +54,6 @@ namespace orca_base
   class BaseNode : public rclcpp::Node
   {
   private:
-    // Constants
-    const rclcpp::Duration JOY_TIMEOUT{RCL_S_TO_NS(1)};   // ROV: disarm if we lose communication
-    const rclcpp::Duration ODOM_TIMEOUT{RCL_S_TO_NS(1)};  // AUV: disarm if we lose odometry
-    const rclcpp::Duration OBS_TIMEOUT{RCL_S_TO_NS(1)};   // AUV obs: disarm if we lose observations
-    const rclcpp::Duration BARO_TIMEOUT{RCL_S_TO_NS(1)};  // Holding z: disarm if we lose barometer
-    const std::chrono::milliseconds SPIN_PERIOD{50ms};   // Spin at 20Hz
 
     // Thrusters, order must match the order of the <thruster> tags in the URDF
     const std::vector<Thruster> THRUSTERS = {
@@ -120,6 +86,12 @@ namespace orca_base
 
     // Parameters and dynamics model
     BaseContext cxt_;
+
+    // Timeouts will be set by parameters
+    rclcpp::Duration baro_timeout_{0};
+    rclcpp::Duration fp_timeout_{0};
+    rclcpp::Duration joy_timeout_{0};
+    std::chrono::milliseconds spin_period_{0};
 
     // Parsed URDF
     orca_description::Parser parser_;
@@ -155,10 +127,6 @@ namespace orca_base
     Map map_;                                     // Map of fiducial markers
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
-    // Move-to-marker operation
-    std::shared_ptr<MoveToMarker> mtm_segment_;
-    std::shared_ptr<MoveToMarkerController> mtm_controller_;
-
     // Outputs
     int tilt_{};                                  // Camera tilt
     int brightness_{};                            // Lights
@@ -188,6 +156,23 @@ namespace orca_base
 
     // Validate parameters
     void validate_parameters();
+
+    // State testers
+    bool holding_pressure();
+
+    bool rov_mode();
+
+    bool auv_mode();
+
+    bool baro_ok(const rclcpp::Time &t);
+
+    bool joy_ok(const rclcpp::Time &t);
+
+    bool fp_ok(const rclcpp::Time &t);
+
+    bool cam_info_ok();
+
+    bool ready_to_start_mission();
 
     // Timer callback
     void spin_once();
@@ -225,9 +210,9 @@ namespace orca_base
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr fcam_predicted_obs_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr esimated_path_pub_;   // Actual path
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_;    // Planned path to next target
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;     // Planned path with all targets
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr esimated_path_pub_;             // Actual path
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr planned_pose_pub_;  // Planned pose
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;               // Planned path
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
 
@@ -245,7 +230,7 @@ namespace orca_base
 
     void rov_advance(const rclcpp::Time &stamp);
 
-    void auv_advance(const rclcpp::Duration &d);
+    void auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d);
 
     void all_stop(const rclcpp::Time &msg_time);
 
@@ -254,30 +239,10 @@ namespace orca_base
     void disarm(const rclcpp::Time &msg_time);
 
     void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::FP &goal = {},
+                  const std::vector<geometry_msgs::msg::Pose> &msgs = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
     void write_status(cv::Mat &image);
-
-    bool disarmed()
-    { return is_disarmed_mode(mode_); }
-
-    bool holding_pressure()
-    { return is_hold_pressure_mode(mode_); }
-
-    bool rov_mode()
-    { return is_rov_mode(mode_); }
-
-    bool auv_mode()
-    { return is_auv_mode(mode_); }
-
-    bool baro_ok(const rclcpp::Time &t)
-    { return baro_cb_.receiving() && t - baro_cb_.prev() < BARO_TIMEOUT; }
-
-    bool joy_ok(const rclcpp::Time &t)
-    { return joy_cb_.receiving() && t - joy_cb_.prev() < JOY_TIMEOUT; }
-
-    bool fp_ok(const rclcpp::Time &t)
-    { return monotonic::valid(estimate_.t) && t - estimate_.t < ODOM_TIMEOUT; }
 
   public:
     explicit BaseNode();
