@@ -194,7 +194,7 @@ namespace orca_base
     // -- have a recent fiducial pose (pose and observation)
     // -- the pose or the observation is good
     return !auv_mode() && map_.ok() && cam_info_ok() && fp_ok(now()) &&
-           (estimate_.fp.good_pose() || estimate_.fp.closest_obs() < cxt_.planner_max_good_obs_dist_);
+           (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.closest_obs() < cxt_.good_obs_dist_);
   }
 
   // New barometer reading
@@ -433,8 +433,8 @@ namespace orca_base
     toMsg(t_map_base, base_f_map.pose.pose);
     base_f_map.pose.covariance = fcam_msg->pose.covariance;  // TODO rotate covariance
 
-    // Publish tf TODO make this optional
-    if (tf_pub_->get_subscription_count() > 0) {
+    // Publish tf
+    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
       // Build transform message
       geometry_msgs::msg::TransformStamped transform;
       transform.header.stamp = fcam_msg->header.stamp;
@@ -449,8 +449,8 @@ namespace orca_base
       tf_pub_->publish(tf_message);
     }
 
-    // Save the observations and pose TODO constants
-    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), 1.4, 800);
+    // Save the observations and pose
+    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
 
     if (cxt_.sensor_loop_ && auv_mode()) {
       // Skip the first message -- the dt will be too large
@@ -528,7 +528,7 @@ namespace orca_base
     estimate_.fp.pose.z_valid = true;
 
     // Publish estimated path
-    if (estimate_.fp.good_pose() && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
+    if (estimate_.fp.good_pose(cxt_.good_pose_dist_) && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
       if (estimated_path_.poses.size() > cxt_.keep_poses_) {
         estimated_path_.poses.clear();
       }

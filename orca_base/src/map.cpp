@@ -66,8 +66,8 @@ namespace orca_base
     corner3_f_map = t_map_marker * corner3_f_marker;
   }
 
-  bool Marker::predict_observation(const image_geometry::PinholeCameraModel &cam_model, const tf2::Transform &t_cam_map,
-                                   Observation &obs) const
+  bool Marker::predict_observation(const BaseContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
+                                   const tf2::Transform &t_cam_map, Observation &obs) const
   {
     // Camera frame: x right, y down, z forward
 
@@ -100,8 +100,8 @@ namespace orca_base
       return false;
     }
 
-    // Estimate distance and yaw TODO constants
-    obs.estimate_distance_and_yaw_from_corners(marker_length, 1.4, 800);
+    // Estimate distance and yaw
+    obs.estimate_distance_and_yaw(marker_length, cxt.fcam_hfov_, cxt.fcam_hres_);
 
     return true;
   }

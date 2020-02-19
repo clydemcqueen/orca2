@@ -29,9 +29,9 @@ namespace orca_base
     Observation() : id{NOT_A_MARKER}, distance{0}, yaw{0}, z{0}
     {}
 
-    void estimate_distance_and_yaw_from_corners(double marker_length, double hfov, double hres);
+    void estimate_distance_and_yaw(double marker_length, double hfov, double hres);
 
-    void estimate_corners_from_distance_and_yaw(double marker_length, double hfov, double hres, double vres);
+    void estimate_corners(double marker_length, double hfov, double hres, double vres);
 
     void from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
                   double marker_length, double hfov, double hres);
@@ -63,17 +63,12 @@ namespace orca_base
     orca::PoseWithCovariance pose;
     std::vector<Observation> observations;
 
-    // TODO naming is confusing -- fix
+    // True if z is good
+    bool good_z() const
+    { return pose.good_z(); }
 
-    // Get the closest observation and return the distance
-    double closest_obs(Observation &obs) const;
-
-    // Return the distance of the closest observation
-    double closest_obs() const;
-
-    // True if pose is good
-    bool good_pose() const
-    { return pose.good_pose() && closest_obs() < 1.8; }
+    // True if entire pose is good
+    bool good_pose(double max_pose_dist) const;
 
     // True if there is at least one good observation
     bool good_obs() const
@@ -83,12 +78,15 @@ namespace orca_base
     bool good_obs(int id) const;
 
     // Get the observation of a particular marker, return true if successful
-    bool get_obs(int id, Observation &obs) const;
+    bool good_obs(int id, Observation &obs) const;
 
-    // True if z is good
-    bool good_z() const
-    { return pose.good_z(); }
+    // Return the distance of the closest observation
+    double closest_obs() const;
 
+    // Get the closest observation and return the distance
+    double closest_obs(Observation &obs) const;
+
+    // Initialize from messages
     void from_msgs(
       const fiducial_vlam_msgs::msg::Observations &obs,
       const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
@@ -123,6 +121,9 @@ namespace orca_base
   {
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
     FP fp;
+
+    // Get the observation of a particular marker, return true if successful
+    bool good_obs(int id, ObservationStamped &obs) const;
 
     // Get the closest observation and return the distance
     double closest_obs(ObservationStamped &obs) const;

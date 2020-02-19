@@ -24,7 +24,7 @@ namespace orca_base
     error = {};
 
     // Trust x, y and yaw if the covar is low and we have a fairly close observation
-    if (estimate.good_pose()) {
+    if (estimate.good_pose(cxt_.good_pose_dist_)) {
       error.x = estimate.pose.pose.x - plan.pose.pose.x;
       x_controller_.set_target(plan.pose.pose.x);
       u_bar.x = x_controller_.calc(estimate.pose.pose.x, dt) + ff.x;
@@ -217,8 +217,7 @@ namespace orca_base
   // Observations are in the camera_link frame, not the base_link frame
   // This means that the sub is ~20cm further away than obs.distance, and obs.yaw is exaggerated
   // In practice we can ignore this
-  void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
-                                   const Observation &estimate, double estimate_z,
+  void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, const Observation &estimate,
                                    const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts)
   {
     auto dt = d.seconds();
@@ -238,9 +237,9 @@ namespace orca_base
     }
 
     // Always run the vertical PID controller
-    error.z = plan_z - estimate_z;
-    vertical_controller_.set_target(plan_z);
-    u_bar.vertical = vertical_controller_.calc(estimate_z, dt) + ff.vertical;
+    error.z = plan.z - estimate.z;
+    vertical_controller_.set_target(plan.z);
+    u_bar.vertical = vertical_controller_.calc(estimate.z, dt) + ff.vertical;
 
     // Compute efforts
     efforts.set_forward(Model::accel_to_effort_xy(u_bar.forward));

@@ -27,8 +27,8 @@ namespace orca_base
 
     Marker(int id, const geometry_msgs::msg::Pose &_marker_f_map, double marker_length);
 
-    bool predict_observation(const image_geometry::PinholeCameraModel &cam_model, const tf2::Transform &t_cam_map,
-                             Observation &obs) const;
+    bool predict_observation(const BaseContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
+                             const tf2::Transform &t_cam_map, Observation &obs) const;
   };
 
   class Map

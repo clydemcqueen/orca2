@@ -12,8 +12,6 @@ using namespace orca;
 namespace orca_base
 {
 
-  constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m) TODO param
-
   //=====================================================================================
   // Utilities
   //=====================================================================================
@@ -94,7 +92,7 @@ namespace orca_base
         // Ascend/descend to target z
         add_vertical_segment(plan, waypoint.z);
 
-        if (plan.fp.pose.pose.distance_xy(waypoint.x, waypoint.y) > EPSILON_PLAN_XYZ) {
+        if (plan.fp.pose.pose.distance_xy(waypoint.x, waypoint.y) > cxt_.planner_epsilon_xyz_) {
           // Point in the direction of travel
           add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
 
@@ -237,10 +235,9 @@ namespace orca_base
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
-    // TODO get plan_z from map -- fix for ft3
     Observation estimate_obs;
-    estimate.fp.get_obs(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[segment_idx_]->plan().o, -0.5, estimate_obs, estimate.fp.pose.pose.z,
+    estimate.fp.good_obs(marker_id_, estimate_obs);
+    controller_->calc(d, segments_[segment_idx_]->plan().o, estimate_obs,
                       segments_[segment_idx_]->ff(), error, efforts);
 
     return true;
@@ -293,7 +290,7 @@ namespace orca_base
     auto markers = map_.markers();
     for (const auto &marker : markers) {
       Observation obs;
-      if (marker.predict_observation(fcam_model_, t_fcam_map, obs)) {
+      if (marker.predict_observation(cxt_, fcam_model_, t_fcam_map, obs)) {
         ++num_observations;
         plan.observations.push_back(obs);
       }
@@ -323,12 +320,12 @@ namespace orca_base
   {
     // Bootstrap
     if (!local_planner_ && !recovery_planner_) {
-      if (estimate.fp.good_pose()) {
+      if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
         RCLCPP_INFO(logger_, "start local plan from good pose");
         start_local_plan(estimate);
       } else {
         ObservationStamped closest_observation;
-        if (estimate.closest_obs(closest_observation) < cxt_.planner_max_good_obs_dist_) {
+        if (estimate.closest_obs(closest_observation) < cxt_.good_obs_dist_) {
           RCLCPP_INFO(logger_, "start recovery plan from good observation");
           start_recovery_plan(closest_observation);
         } else {
@@ -347,7 +344,7 @@ namespace orca_base
         predict_observations(plan.fp);
 
         // Is there a good pose?
-        if (estimate.fp.good_pose()) {
+        if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
 
           // Good pose, make sure the plan & estimate are reasonably close
           if (estimate.distance_xy(plan) > cxt_.planner_max_pose_xy_error_) {
@@ -366,21 +363,19 @@ namespace orca_base
           // First check: if we expect to see the target marker, and we do see the target marker,
           // and the yaw error is high, we can execute a move-to-marker strategy
           // This should keep the marker visible until we're close enough to get a good pose
-          Observation plan_target_obs, estimate_target_obs;
+          Observation plan_target_obs;
+          ObservationStamped estimate_target_obs;
 
-          if (plan.fp.get_obs(targets_[target_idx_].marker_id, plan_target_obs) &&
-              estimate.fp.get_obs(targets_[target_idx_].marker_id, estimate_target_obs)) {
+          if (plan.fp.good_obs(targets_[target_idx_].marker_id, plan_target_obs) &&
+              estimate.good_obs(targets_[target_idx_].marker_id, estimate_target_obs)) {
 
-            double err_yaw = std::abs(plan_target_obs.yaw - estimate_target_obs.yaw);
+            double err_yaw = std::abs(plan_target_obs.yaw - estimate_target_obs.o.yaw);
 
-            if (plan_target_obs.distance < cxt_.planner_max_good_obs_dist_ &&
-                estimate_target_obs.distance < cxt_.planner_max_good_obs_dist_ &&
+            if (plan_target_obs.distance < cxt_.good_obs_dist_ &&
+                estimate_target_obs.o.distance < cxt_.good_obs_dist_ &&
                 err_yaw > cxt_.planner_max_obs_yaw_error_) {
               RCLCPP_INFO(logger_, "poor pose, target marker in view but yaw error is high, recover");
-              ObservationStamped estimate_target_obs_stamped{}; // TODO simplify
-              estimate_target_obs_stamped.o = estimate_target_obs;
-              estimate_target_obs_stamped.t = estimate.t;
-              start_recovery_plan(estimate_target_obs_stamped);
+              start_recovery_plan(estimate_target_obs);
               return AdvanceRC::CONTINUE;
             }
           }
@@ -394,7 +389,7 @@ namespace orca_base
           RCLCPP_INFO_STREAM(logger_, "next target: " << targets_[target_idx_]);
           send_feedback(target_idx_, targets_.size());
 
-          if (estimate.fp.good_pose()) {
+          if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
             // Known good pose, plan immediately
             start_local_plan(estimate);
           } else {
@@ -410,7 +405,7 @@ namespace orca_base
     } else {
 
       // In recovery. Success?
-      if (estimate.fp.good_pose()) {
+      if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
         RCLCPP_INFO(logger_, "recovery succeeded");
 
         // Known good pose right now... re-plan immediately
@@ -426,9 +421,8 @@ namespace orca_base
         assert(plan.fp.observations.size() == 1);
 
         // Estimate the marker corners from the planned yaw and distance -- just for grins
-        // TODO constants
-        plan.fp.observations[0].estimate_corners_from_distance_and_yaw(map_.marker_length(),
-                                                                       1.4, 800, 600);
+        plan.fp.observations[0].estimate_corners(map_.marker_length(),
+                                                 cxt_.fcam_hfov_, cxt_.fcam_hres_, cxt_.fcam_vres_);
       }
     }
 

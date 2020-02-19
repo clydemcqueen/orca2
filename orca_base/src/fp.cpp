@@ -9,7 +9,7 @@ namespace orca_base
   // Observation -- observation of a marker from a camera
   //=====================================================================================
 
-  void Observation::estimate_distance_and_yaw_from_corners(double marker_length, double hfov, double hres)
+  void Observation::estimate_distance_and_yaw(double marker_length, double hfov, double hres)
   {
     // Assumptions:
     // -- camera is pointed forward
@@ -41,7 +41,7 @@ namespace orca_base
     yaw = hfov / 2 - center_x * hfov / hres;
   }
 
-  void Observation::estimate_corners_from_distance_and_yaw(double marker_length, double hfov, double hres, double vres)
+  void Observation::estimate_corners(double marker_length, double hfov, double hres, double vres)
   {
     // Same assumptions as above, plus:
     // -- marker is facing the camera
@@ -77,7 +77,7 @@ namespace orca_base
     c1.y = msg.y1;
     c2.y = msg.y2;
     c3.y = msg.y3;
-    estimate_distance_and_yaw_from_corners(marker_length, hfov, hres);
+    estimate_distance_and_yaw(marker_length, hfov, hres);
   }
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs)
@@ -105,24 +105,9 @@ namespace orca_base
   // Fiducial pose (FP) -- pose and observations
   //=====================================================================================
 
-  double FP::closest_obs(Observation &obs) const
+  bool FP::good_pose(double max_pose_dist) const
   {
-    double closest = std::numeric_limits<double>::max();
-
-    for (const auto &i : observations) {
-      if (i.distance < closest) {
-        closest = i.distance;
-        obs = i;
-      }
-    }
-
-    return closest;
-  }
-
-  double FP::closest_obs() const
-  {
-    Observation obs;
-    return closest_obs(obs);
+    return pose.good_pose() && closest_obs() < max_pose_dist;
   }
 
   bool FP::good_obs(int id) const
@@ -136,7 +121,7 @@ namespace orca_base
     return false;
   }
 
-  bool FP::get_obs(int id, Observation &obs) const
+  bool FP::good_obs(int id, Observation &obs) const
   {
     for (const auto &i : observations) {
       if (i.id == id) {
@@ -146,6 +131,26 @@ namespace orca_base
     }
 
     return false;
+  }
+
+  double FP::closest_obs() const
+  {
+    Observation obs;
+    return closest_obs(obs);
+  }
+
+  double FP::closest_obs(Observation &obs) const
+  {
+    double closest = std::numeric_limits<double>::max();
+
+    for (const auto &i : observations) {
+      if (i.distance < closest) {
+        closest = i.distance;
+        obs = i;
+      }
+    }
+
+    return closest;
   }
 
   void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
@@ -170,6 +175,12 @@ namespace orca_base
   //=====================================================================================
   // FPStamped -- pose and observations with timestamp
   //=====================================================================================
+
+  bool FPStamped::good_obs(int id, ObservationStamped &obs) const
+  {
+    obs.t = t;
+    return fp.good_obs(id, obs.o);
+  }
 
   double FPStamped::closest_obs(ObservationStamped &obs) const
   {

@@ -16,10 +16,14 @@ namespace orca_base
   CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
   CXT_MACRO_MEMBER(sensor_loop, bool, false)                  /* false: timer loop, true: sensor loop  */ \
+  CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* true: publish t_map_base  */ \
   CXT_MACRO_MEMBER(auto_start, int, 0)                        /* Auto-start AUV mission if > 0  */ \
   \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
+  CXT_MACRO_MEMBER(fcam_hfov, double, 1.4)                    /* Forward camera horiz field of view in radians  */ \
+  CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
+  CXT_MACRO_MEMBER(fcam_vres, double, 600)                    /* Forward camera vertical resolution in pixels  */ \
   \
   CXT_MACRO_MEMBER(inc_pressure, double, 2000)                /* Pressure trim increment  */ \
   CXT_MACRO_MEMBER(inc_tilt, int, 5)                          /* Tilt increment  */ \
@@ -65,10 +69,13 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_jerk_z, double, 0.1)                   /* Slow controller jerk z  */ \
   CXT_MACRO_MEMBER(auv_jerk_yaw, double, 0.2)                 /* Slow controller jerk yaw  */ \
   \
+  CXT_MACRO_MEMBER(good_pose_dist, double, 1.8)               /* Good pose if marker < 1.8m away  */ \
+  CXT_MACRO_MEMBER(good_obs_dist, double, 10)                 /* Good observation if marker < 10m away  */ \
+  \
   CXT_MACRO_MEMBER(planner_look_for_waypoints, bool, false)   /* Use A* to find waypoints  */ \
+  CXT_MACRO_MEMBER(planner_epsilon_xyz, double, 0.05)         /* If xyz distance < epsilon, skip this segment  */ \
   CXT_MACRO_MEMBER(planner_max_pose_xy_error, double, 0.6)    /* Replan if xy distance > max  */ \
   CXT_MACRO_MEMBER(planner_max_short_plan_xy, double, 2)      /* Build a long plan if xy distance > max  */ \
-  CXT_MACRO_MEMBER(planner_max_good_obs_dist, double, 10)     /* Don't trust observation if distance > max  */ \
   CXT_MACRO_MEMBER(planner_max_obs_yaw_error, double, 0.2)    /* Start recovery if observation yaw error is > max  */ \
   CXT_MACRO_MEMBER(planner_max_dead_reckon_dist, double, 9)   /* Max allowable dead reckoning distance  */ \
   \
