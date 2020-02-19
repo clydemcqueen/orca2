@@ -7,7 +7,7 @@ namespace orca_base
 
   Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<MissionPlanner> planner, const FPStamped &start) :
+                   std::shared_ptr<GlobalPlanner> planner, const FPStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
@@ -21,7 +21,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(rclcpp::Duration d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Pose &error,
+  bool Mission::advance(rclcpp::Duration d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
                         orca::Efforts &efforts)
   {
     // Cancel this mission?

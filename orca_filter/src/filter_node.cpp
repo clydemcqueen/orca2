@@ -2,6 +2,8 @@
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
+#include "orca_shared/util.hpp"
+
 using namespace orca;
 
 namespace orca_filter

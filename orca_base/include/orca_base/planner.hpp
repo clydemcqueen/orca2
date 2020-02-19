@@ -26,12 +26,12 @@ namespace orca_base
   struct Target
   {
     int marker_id;
-    orca::FP fp; // Hmmm... I think we can get by with just an orca::Pose
+    FP fp; // Hmmm... I think we can get by with just an orca::Pose
 
-    Target() : marker_id{orca::NOT_A_MARKER}
+    Target() : marker_id{NOT_A_MARKER}
     {}
 
-    Target(int _marker_id, orca::FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
+    Target(int _marker_id, FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
     {}
   };
 
@@ -55,22 +55,22 @@ namespace orca_base
     nav_msgs::msg::Path local_path_;                            // Path to next target
 
     // Add a trajectory segment and update plan
-    void add_keep_station_segment(orca::FPStamped &plan, double seconds);
+    void add_keep_station_segment(FPStamped &plan, double seconds);
 
-    void add_vertical_segment(orca::FPStamped &plan, double z);
+    void add_vertical_segment(FPStamped &plan, double z);
 
-    void add_rotate_segment(orca::FPStamped &plan, double yaw);
+    void add_rotate_segment(FPStamped &plan, double yaw);
 
-    void add_line_segment(orca::FPStamped &plan, double x, double y);
+    void add_line_segment(FPStamped &plan, double x, double y);
 
-    void add_pose_segment(orca::FPStamped &plan, const orca::FP &goal);
+    void add_pose_segment(FPStamped &plan, const FP &goal);
 
   public:
 
-    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start, Target target,
+    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, Target target,
                  Map map, bool keep_station);
 
-    bool advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Pose &error,
+    bool advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
                  orca::Efforts &efforts, const std::function<void(double completed, double total)> &send_feedback);
 
     const Target &target() const
@@ -96,9 +96,9 @@ namespace orca_base
 
   public:
 
-    MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::Observation &start);
+    MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const ObservationStamped &start);
 
-    bool advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Pose &error,
+    bool advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
                  orca::Efforts &efforts, const std::function<void(double completed, double total)> &send_feedback);
 
     int marker_id() const
@@ -106,10 +106,10 @@ namespace orca_base
   };
 
   //=====================================================================================
-  // MissionPlanner -- orchestrate planning to reach a list of targets
+  // GlobalPlanner -- orchestrate planning to reach a list of targets
   //=====================================================================================
 
-  class MissionPlanner
+  class GlobalPlanner
   {
     rclcpp::Logger logger_;
     const BaseContext &cxt_;
@@ -126,20 +126,20 @@ namespace orca_base
     std::shared_ptr<MoveToMarkerPlanner> recovery_planner_;   // ... recovery planner
 
     // Given a planned pose, predict the marker observations for the forward camera
-    void predict_observations(orca::FP &plan) const;
+    void predict_observations(FP &plan) const;
 
     // Create a local_planner_
-    void start_local_plan(const orca::FPStamped &start);
+    void start_local_plan(const FPStamped &start);
 
     // Create a recovery_planner_
-    void start_recovery_plan(const orca::Observation &start);
+    void start_recovery_plan(const ObservationStamped &start);
 
   public:
 
-    explicit MissionPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
-                            orca_description::Parser parser,
-                            const image_geometry::PinholeCameraModel &fcam_model, bool keep_station,
-                            std::vector<Target> targets);
+    explicit GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
+                           orca_description::Parser parser,
+                           const image_geometry::PinholeCameraModel &fcam_model, bool keep_station,
+                           std::vector<Target> targets);
 
     const std::vector<Target> &targets() const
     { return targets_; }
@@ -148,40 +148,40 @@ namespace orca_base
     { return global_path_; }
 
     int target_marker_id() const
-    { return targets_.empty() ? orca::NOT_A_MARKER : targets_[target_idx_].marker_id; }
+    { return targets_.empty() ? NOT_A_MARKER : targets_[target_idx_].marker_id; }
 
     bool in_recovery() const
     { return recovery_planner_ != nullptr; }
 
     int recovery_marker_id() const
-    { return recovery_planner_ == nullptr ? orca::NOT_A_MARKER : recovery_planner_->marker_id(); }
+    { return recovery_planner_ == nullptr ? NOT_A_MARKER : recovery_planner_->marker_id(); }
 
     // Advance the plan by dt, return AdvanceRC
-    int advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate, orca::Pose &error,
+    int advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
                 orca::Efforts &efforts, const std::function<void(double completed, double total)> &send_feedback);
 
     // Factory: move to a pose and optionally keep station
-    static std::shared_ptr<MissionPlanner>
+    static std::shared_ptr<GlobalPlanner>
     plan_pose(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
               const orca_description::Parser &parser,
-              const image_geometry::PinholeCameraModel &fcam_model, const orca::FP &fp, bool keep_station);
+              const image_geometry::PinholeCameraModel &fcam_model, const FP &fp, bool keep_station);
 
     // Factory: visit all markers in sequence or at random
     // Markers must be on the floor, facing up, and there must be a down-facing camera
-    static std::shared_ptr<MissionPlanner>
+    static std::shared_ptr<GlobalPlanner>
     plan_floor_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
                        const orca_description::Parser &parser,
                        const image_geometry::PinholeCameraModel &fcam_model, bool random);
 
     // Factory: visit all markers in sequence or at random
     // Markers must be on the wall and there must be a forward-facing camera
-    static std::shared_ptr<MissionPlanner>
+    static std::shared_ptr<GlobalPlanner>
     plan_wall_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
                       const orca_description::Parser &parser,
                       const image_geometry::PinholeCameraModel &fcam_model, bool random);
 
     // Factory: move through a series of poses
-    static std::shared_ptr<MissionPlanner>
+    static std::shared_ptr<GlobalPlanner>
     plan_msgs(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
               const orca_description::Parser &parser,
               const image_geometry::PinholeCameraModel &fcam_model, const std::vector<geometry_msgs::msg::Pose> &msgs,

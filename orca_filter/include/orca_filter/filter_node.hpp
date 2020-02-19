@@ -2,6 +2,7 @@
 #define ORCA_FILTER_FILTER_NODE_HPP
 
 #include "urdf/model.h"
+#include "tf2/LinearMath/Transform.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_msgs/msg/barometer.hpp"

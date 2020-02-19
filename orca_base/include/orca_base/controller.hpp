@@ -4,6 +4,7 @@
 #include "orca_shared/geometry.hpp"
 
 #include "orca_base/base_context.hpp"
+#include "orca_base/fp.hpp"
 #include "orca_base/pid.hpp"
 
 namespace orca_base
@@ -27,7 +28,7 @@ namespace orca_base
 
     explicit PoseController(const BaseContext &cxt);
 
-    void calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate, const orca::Acceleration &ff,
+    void calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate, const orca::Acceleration &ff,
               orca::Pose &error, orca::Efforts &efforts);
   };
 
@@ -46,7 +47,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override
     { u_bar = ff; }
   };
@@ -65,7 +66,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -87,7 +88,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -109,7 +110,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -127,7 +128,7 @@ namespace orca_base
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const orca::FP &plan, const orca::FP &estimate,
+    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 #endif
@@ -153,7 +154,7 @@ namespace orca_base
 
     // The observation is pretty noisy for z, so pass in z data from the barometer
     void
-    calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z, const orca::Observation &estimate,
+    calc(const rclcpp::Duration &d, const Observation &plan, double plan_z, const Observation &estimate,
          double estimate_z, const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts);
   };
 

@@ -2,16 +2,12 @@
 
 #include <iomanip>
 
+#include "orca_shared/util.hpp"
+
 using namespace orca;
 
 namespace orca_base
 {
-
-  // Run some numerical approximations
-  constexpr int NUM_MAX_TICKS = 100;    // Max number of ticks TODO param
-  constexpr double NUM_DT = 0.1;        // Time step for each tick TODO param
-  constexpr double END_VELO_XY = 0.1;   // When xy velo is < this, end the simulation TODO param
-  constexpr double END_VELO_YAW = 0.1;  // When yaw velo is < this, end the simulation TODO param
 
   //=====================================================================================
   // SegmentBase
@@ -27,8 +23,7 @@ namespace orca_base
   // PoseSegmentBase
   //=====================================================================================
 
-  PoseSegmentBase::PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                   orca::FPStamped start, orca::FP goal) :
+  PoseSegmentBase::PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped start, FP goal) :
     SegmentBase{logger, cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -42,7 +37,7 @@ namespace orca_base
   //=====================================================================================
 
   ObservationSegmentBase::ObservationSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                                 orca::Observation start, orca::Observation goal) :
+                                                 ObservationStamped start, Observation goal) :
     SegmentBase{logger, cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -55,7 +50,7 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
-  Pause::Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+  Pause::Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start,
                const rclcpp::Duration &d) :
     PoseSegmentBase{logger, cxt, start, start.fp}, d_{d}
   {}
@@ -107,8 +102,7 @@ namespace orca_base
     stop = decel + rclcpp::Duration::from_seconds(ramp_seconds);
   }
 
-  TrapVelo::TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
-                     const orca::FP &goal) :
+  TrapVelo::TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, const FP &goal) :
     PoseSegmentBase{logger, cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
   {
     // Distance is always >= 0
@@ -241,7 +235,7 @@ namespace orca_base
     twist_.z += accel_.z * dt;
     twist_.yaw += accel_.yaw * dt;
 
-    // Pose
+    // Plan
     plan_.fp.pose.pose.x += twist_.x * dt;
     plan_.fp.pose.pose.y += twist_.y * dt;
     plan_.fp.pose.pose.z += twist_.z * dt;
@@ -257,14 +251,14 @@ namespace orca_base
     auto yaw_seconds = (yaw_stop_ - start_).seconds();
 
     RCLCPP_INFO_STREAM(logger_, std::fixed << std::setprecision(4)
-      << "cv xy_seconds: " << xy_seconds
-      << ", z_seconds: " << z_seconds
-      << ", yaw_seconds: " << yaw_seconds
-      << ", initial_accel_: " << initial_accel_);
+                                           << "cv xy_seconds: " << xy_seconds
+                                           << ", z_seconds: " << z_seconds
+                                           << ", yaw_seconds: " << yaw_seconds
+                                           << ", initial_accel_: " << initial_accel_);
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double z)
+  TrapVelo::make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double z)
   {
     FP goal = plan.fp;
     goal.pose.pose.z = z;
@@ -275,7 +269,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double yaw)
+  TrapVelo::make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double yaw)
   {
     FP goal = plan.fp;
     goal.pose.pose.yaw = yaw;
@@ -286,8 +280,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_line(const rclcpp::Logger &logger, const BaseContext &cxt, orca::FPStamped &plan, double x,
-                      double y)
+  TrapVelo::make_line(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double x, double y)
   {
     FP goal = plan.fp;
     goal.pose.pose.x = x;
@@ -299,8 +292,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan,
-                      const orca::FP &goal)
+  TrapVelo::make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, const FP &goal)
   {
     auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
     plan.fp = goal;
@@ -309,126 +301,25 @@ namespace orca_base
   }
 
   //=====================================================================================
-  // MoveToMarker
-  //=====================================================================================
-
-#if 0
-  // Compute the deceleration (glide) distance
-  double deceleration_distance_forward(const BaseContext &cxt, double velo_x)
-  {
-    double x = 0;
-
-    for (int ticks = 0; ticks < NUM_MAX_TICKS; ++ticks) {
-      // Compute drag force
-      double accel_drag_x = Model::force_to_accel(-cxt.model_.drag_force_f(velo_x));  // TODO f or x???
-
-      // Update velocity
-      velo_x -= accel_drag_x * NUM_DT;
-
-      // Update distance
-      x += velo_x * NUM_DT;
-
-      if (velo_x < END_VELO_XY) {
-        // Close enough
-        return x;
-      }
-    }
-
-    std::cout << "deceleration_distance_forward failed" << std::endl;
-    return 0;
-  }
-#endif
-
-  MoveToMarker::MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
-                             const orca::Observation &start, const orca::Observation &goal) :
-    ObservationSegmentBase(logger, cxt, start, goal)
-  {
-    // Forward acceleration
-    ff_.forward = Model::force_to_accel(-cxt_.model_.drag_force_f(cxt_.auv_xy_velo_));
-
-    // Counteract buoyancy
-    ff_.vertical = cxt_.model_.hover_accel_z();
-  }
-
-  void MoveToMarker::log_info()
-  {
-    RCLCPP_INFO_STREAM(logger_, "move to marker start: " << plan_ << ", goal: " << goal_);
-  }
-
-  bool MoveToMarker::advance(const rclcpp::Duration &d)
-  {
-    // Moving forward is +x but -distance
-    double distance_remaining = plan_.distance - goal_.distance;
-
-    if (distance_remaining > EPSILON_PLAN_XYZ) {
-#if 0
-      if (distance_remaining - deceleration_distance_forward(cxt_, twist_.forward) < EPSILON_PLAN_XYZ) {
-        // Decelerate
-        ff_.forward = 0;
-      }
-#endif
-
-      // Compute acceleration due to drag
-      double accel_drag_x = Model::force_to_accel(-cxt_.model_.drag_force_f(twist_.forward));  // TODO f or x???
-
-      auto dt = d.seconds();
-
-      // Update velocity
-      twist_.forward += (ff_.forward - accel_drag_x) * dt;
-
-      // Update plan
-      plan_.distance -= twist_.forward * dt;
-
-      return true;
-    } else {
-      plan_ = goal_;
-      plan_ = goal_;
-      twist_ = TwistBody{};
-      return false;
-    }
-  }
-
-  //=====================================================================================
   // RotateToMarker
   //=====================================================================================
 
-  // Compute the deceleration (glide) distance
-  double deceleration_distance_yaw(const BaseContext &cxt, double velo_yaw)
-  {
-    double yaw = 0;
-
-    for (int ticks = 0; ticks < NUM_MAX_TICKS; ++ticks) {
-      // Compute drag force
-      double accel_drag_yaw = Model::torque_to_accel_yaw(-cxt.model_.drag_torque_yaw(velo_yaw));
-
-      // Update velocity
-      velo_yaw -= accel_drag_yaw * NUM_DT;
-
-      // Update distance
-      yaw = norm_angle(yaw + velo_yaw * NUM_DT);
-
-      if (std::abs(velo_yaw) < END_VELO_YAW) {
-        // Close enough
-        return std::abs(yaw);
-      }
-    }
-
-    std::cout << "deceleration_distance_yaw failed" << std::endl;
-    return 0;
-  }
-
   RotateToMarker::RotateToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                 const orca::Observation &start, const orca::Observation &goal) :
+                                 const ObservationStamped &start, const Observation &goal) :
     ObservationSegmentBase(logger, cxt, start, goal)
   {
-    // Target velocity
-    double velo_yaw = norm_angle(goal.yaw - start.yaw) > 0 ? cxt.auv_yaw_velo_ : -cxt.auv_yaw_velo_;
+    double distance_yaw = std::abs(norm_angle(plan_.o.yaw - goal_.yaw));
 
-    // Drag torque => thrust torque => acceleration => feedforward
-    ff_.yaw = Model::torque_to_accel_yaw(-cxt.model_.drag_torque_yaw(velo_yaw));
+    if (distance_yaw > 0) {
+      // Plan yaw motion, start phase 1
+      plan_trap_velo(cxt_.auv_yaw_accel_, cxt_.auv_yaw_velo_, distance_yaw, plan_.t, yaw_run_, yaw_decel_, yaw_stop_);
+      initial_accel_.yaw = norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.auv_yaw_accel_ : -cxt_.auv_yaw_accel_;
+    } else {
+      yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
+    }
 
-    // Counteract buoyancy
-    ff_.vertical = cxt_.model_.hover_accel_z();
+    // Start phase 1: accelerate to target velocity
+    accel_ = initial_accel_;
   }
 
   void RotateToMarker::log_info()
@@ -438,30 +329,117 @@ namespace orca_base
 
   bool RotateToMarker::advance(const rclcpp::Duration &d)
   {
-    double distance_remaining = std::abs(norm_angle(goal_.yaw - plan_.yaw));
-    if (distance_remaining > EPSILON_PLAN_YAW) {
-#if 1
-      if (distance_remaining - deceleration_distance_yaw(cxt_, twist_.yaw) < EPSILON_PLAN_YAW) {
-        // Decelerate
-        ff_.yaw = 0;
-      }
-#endif
+    // Update time
+    plan_.t = plan_.t + d;
 
-      // Compute acceleration due to drag
-      double accel_drag_yaw = Model::torque_to_accel_yaw(-cxt_.model_.drag_torque_yaw(twist_.yaw));
-
-      auto dt = d.seconds();
-
-      // Update velocity
-      twist_.yaw += (ff_.yaw - accel_drag_yaw) * dt;
-
-      // Update plan
-      plan_.yaw = norm_angle(plan_.yaw + twist_.yaw * dt);
-
-      return true;
-    } else {
+    // Check for exit condition
+    if (plan_.t > yaw_stop_) {
       return false;
     }
+
+    // Update yaw motion phase
+    if (plan_.t > yaw_stop_) {
+      // Stop
+      accel_.yaw = 0;
+      twist_.yaw = 0;
+    } else if (plan_.t > yaw_decel_) {
+      // Start phase 3: decelerate
+      accel_.yaw = -initial_accel_.yaw;
+    } else if (plan_.t > yaw_run_) {
+      // Start phase 2: run at constant velocity
+      accel_.yaw = 0;
+    }
+
+    // Acceleration due to drag
+    drag_.yaw = cxt_.model_.drag_accel_yaw(twist_.yaw);
+
+    // Acceleration due to thrust
+    // ff_.vertical = accel_.vertical - drag_.vertical + cxt_.model_.hover_accel_z();
+    ff_.vertical = cxt_.model_.hover_accel_z();
+    ff_.yaw = accel_.yaw - drag_.yaw;
+
+    // std::cout << std::fixed << std::setprecision(4) << "ff_: " << ff_ << std::endl;
+
+    auto dt = d.seconds();
+
+    // Twist
+    twist_.yaw += accel_.yaw * dt;
+
+    // Plan
+    plan_.o.yaw = norm_angle(plan_.o.yaw + twist_.yaw * dt);
+
+    return true;
+  }
+
+  //=====================================================================================
+  // MoveToMarker
+  //=====================================================================================
+
+  MoveToMarker::MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
+                             const ObservationStamped &start, const Observation &goal) :
+    ObservationSegmentBase(logger, cxt, start, goal)
+  {
+    double distance_fwd = std::abs(plan_.o.distance - goal_.distance);
+
+    if (distance_fwd > 0) {
+      // Plan forward motion, start phase 1
+      plan_trap_velo(cxt_.auv_xy_accel_, cxt_.auv_xy_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
+      initial_accel_.forward = cxt_.auv_xy_accel_; // Always moving foward, so always +accel to start
+    } else {
+      f_run_ = f_decel_ = f_stop_ = start_;
+    }
+
+    // Start phase 1: accelerate to target velocity
+    accel_ = initial_accel_;
+  }
+
+  void MoveToMarker::log_info()
+  {
+    RCLCPP_INFO_STREAM(logger_, "move to marker start: " << plan_ << ", goal: " << goal_);
+  }
+
+  bool MoveToMarker::advance(const rclcpp::Duration &d)
+  {
+    // Update time
+    plan_.t = plan_.t + d;
+
+    // Check for exit condition
+    if (plan_.t > f_stop_) {
+      return false;
+    }
+
+    // Update forward motion phase
+    if (plan_.t > f_stop_) {
+      // Stop
+      accel_.forward = 0;
+      twist_.forward = 0;
+    } else if (plan_.t > f_decel_) {
+      // Start phase 3: decelerate
+      accel_.forward = -initial_accel_.forward;
+    } else if (plan_.t > f_run_) {
+      // Start phase 2: run at constant velocity
+      accel_.forward = 0;
+    }
+
+    // Acceleration due to drag
+    drag_.forward = cxt_.model_.drag_accel_f(twist_.forward);
+
+    // Acceleration due to thrust
+    // ff_.vertical = accel_.vertical - drag_.vertical + cxt_.model_.hover_accel_z();
+    ff_.vertical = cxt_.model_.hover_accel_z();
+    ff_.forward = accel_.forward - drag_.forward;
+
+    // std::cout << std::fixed << std::setprecision(4) << "ff_: " << ff_ << std::endl;
+
+    auto dt = d.seconds();
+
+    // Twist
+    twist_.forward += accel_.forward * dt;
+
+    // Plan
+    plan_.o.distance = plan_.o.distance - twist_.forward * dt;
+
+    return true;
   }
 
 } // namespace orca_base

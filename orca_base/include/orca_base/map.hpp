@@ -3,18 +3,22 @@
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "image_geometry/pinhole_camera_model.h"
+#include "rclcpp/logger.hpp"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2/LinearMath/Vector3.h"
 
 #include "orca_shared/geometry.hpp"
 
 #include "orca_base/astar.hpp"
 #include "orca_base/base_context.hpp"
+#include "orca_base/fp.hpp"
 
 namespace orca_base
 {
   struct Marker
   {
     double marker_length;
-    int id{orca::NOT_A_MARKER};
+    int id{NOT_A_MARKER};
     geometry_msgs::msg::Pose marker_f_map;
     tf2::Vector3 corner0_f_map;
     tf2::Vector3 corner1_f_map;
@@ -24,7 +28,7 @@ namespace orca_base
     Marker(int id, const geometry_msgs::msg::Pose &_marker_f_map, double marker_length);
 
     bool predict_observation(const image_geometry::PinholeCameraModel &cam_model, const tf2::Transform &t_cam_map,
-                             orca::Observation &obs) const;
+                             Observation &obs) const;
   };
 
   class Map

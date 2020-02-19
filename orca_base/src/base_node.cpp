@@ -1,6 +1,7 @@
 #include "orca_base/base_node.hpp"
 
 #include "cv_bridge/cv_bridge.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include "orca_shared/pwm.hpp"
 
@@ -190,9 +191,10 @@ namespace orca_base
     // -- not currently in a mission
     // -- have a map
     // -- have camera info
-    // -- have a recent pose
-    // -- the pose is good
-    return !auv_mode() && map_.ok() && cam_info_ok() && fp_ok(now()) && estimate_.fp.good_pose();
+    // -- have a recent fiducial pose (pose and observation)
+    // -- the pose or the observation is good
+    return !auv_mode() && map_.ok() && cam_info_ok() && fp_ok(now()) &&
+           (estimate_.fp.good_pose() || estimate_.fp.closest_obs() < cxt_.planner_max_good_obs_dist_);
   }
 
   // New barometer reading
@@ -245,7 +247,7 @@ namespace orca_base
     draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
   }
 
-  void draw_observations(cv::Mat &image, const std::vector<orca::Observation> &observations, cv::Scalar color)
+  void draw_observations(cv::Mat &image, const std::vector<Observation> &observations, cv::Scalar color)
   {
     for (const auto &obs : observations) {
       // Draw marker name
@@ -391,6 +393,8 @@ namespace orca_base
     map_.set_vlam_map(msg);
   }
 
+  // Get a synchronized set of messages from vlam: pose from SolvePnP and raw marker observations
+  // Built for the non-filter case TODO also handle the filter case
   void BaseNode::fiducial_callback(
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
@@ -429,7 +433,7 @@ namespace orca_base
     toMsg(t_map_base, base_f_map.pose.pose);
     base_f_map.pose.covariance = fcam_msg->pose.covariance;  // TODO rotate covariance
 
-    // Publish tf
+    // Publish tf TODO make this optional
     if (tf_pub_->get_subscription_count() > 0) {
       // Build transform message
       geometry_msgs::msg::TransformStamped transform;
@@ -445,10 +449,10 @@ namespace orca_base
       tf_pub_->publish(tf_message);
     }
 
-    // Save the observations and pose
+    // Save the observations and pose TODO constants
     estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), 1.4, 800);
 
-    if (cxt_.sensor_loop_) {
+    if (cxt_.sensor_loop_ && auv_mode()) {
       // Skip the first message -- the dt will be too large
       if (first) {
         return;
@@ -461,9 +465,7 @@ namespace orca_base
       }
 
       // Continue mission
-      if (auv_mode()) {
-        auv_advance(estimate_.t, d);
-      }
+      auv_advance(estimate_.t, d);
     }
   }
 
@@ -521,7 +523,7 @@ namespace orca_base
 
   void BaseNode::auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d)
   {
-    // Slam in z TODO handle filter vs no filter case
+    // Slam in z TODO handle filter case
     estimate_.fp.pose.pose.z = z_;
     estimate_.fp.pose.z_valid = true;
 
@@ -664,23 +666,23 @@ namespace orca_base
     } else if (is_auv_mode(new_mode)) {
 
       // Create planner, will build a global and local plan
-      std::shared_ptr<MissionPlanner> planner;
+      std::shared_ptr<GlobalPlanner> planner;
       switch (new_mode) {
         case Control::AUV_GOAL:
-          planner = MissionPlanner::plan_pose(get_logger(), cxt_, map_, parser_, fcam_model_, goal, true);
+          planner = GlobalPlanner::plan_pose(get_logger(), cxt_, map_, parser_, fcam_model_, goal, true);
           break;
         case Control::AUV_MSGS:
-          planner = MissionPlanner::plan_msgs(get_logger(), cxt_, map_, parser_, fcam_model_, msgs, false);
+          planner = GlobalPlanner::plan_msgs(get_logger(), cxt_, map_, parser_, fcam_model_, msgs, false);
           break;
         case Control::AUV_MARKER_SEQUENCE:
-          planner = MissionPlanner::plan_wall_markers(get_logger(), cxt_, map_, parser_, fcam_model_, false);
+          planner = GlobalPlanner::plan_wall_markers(get_logger(), cxt_, map_, parser_, fcam_model_, false);
           break;
         case Control::AUV_MARKER_RANDOM:
-          planner = MissionPlanner::plan_wall_markers(get_logger(), cxt_, map_, parser_, fcam_model_, true);
+          planner = GlobalPlanner::plan_wall_markers(get_logger(), cxt_, map_, parser_, fcam_model_, true);
           break;
         case Control::AUV_KEEP_STATION:
         default:
-          planner = MissionPlanner::plan_pose(get_logger(), cxt_, map_, parser_, fcam_model_, estimate_.fp, true);
+          planner = GlobalPlanner::plan_pose(get_logger(), cxt_, map_, parser_, fcam_model_, estimate_.fp, true);
           break;
       }
 

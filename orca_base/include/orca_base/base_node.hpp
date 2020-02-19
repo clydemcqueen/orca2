@@ -114,10 +114,10 @@ namespace orca_base
     image_geometry::PinholeCameraModel fcam_model_;
 
     // Plan
-    orca::FPStamped plan_;
+    FPStamped plan_;
 
     // Observations and pose estimate
-    orca::FPStamped estimate_;
+    FPStamped estimate_;
 
     // ROV operation
     std::shared_ptr<pid::Controller> pressure_hold_pid_;
@@ -238,7 +238,7 @@ namespace orca_base
 
     void disarm(const rclcpp::Time &msg_time);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const orca::FP &goal = {},
+    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const FP &goal = {},
                   const std::vector<geometry_msgs::msg::Pose> &msgs = {},
                   const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 

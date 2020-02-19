@@ -37,6 +37,7 @@ from geometry_msgs.msg import Quaternion
 import matplotlib.pyplot as plt
 from orca_msgs.msg import Control
 import rclpy
+import rclpy.time
 from rclpy.node import Node
 import sys
 import transformations as xf
@@ -80,9 +81,9 @@ class PlotControlNode(Node):
         # 4 for efforts in the body frame
         # 6 for thruster PMW values
         # 1 for odom lag
-        # 1 blank
+        # 1 for dt
         fig, ((axex, axey, axez, axew), (axff, axfs, axfv, axfw), (axt0, axt1, axt2, axt3),
-              (axt4, axt5, axol, blank)) = plt.subplots(4, 4)
+              (axt4, axt5, axol, axdt)) = plt.subplots(4, 4)
 
         # Plot error
         error_axes = [axex, axey, axez, axew]
@@ -150,6 +151,19 @@ class PlotControlNode(Node):
         axol.set_ylim(-0.1, 0.1)
         axol.set_xticklabels([])
         axol.plot(odom_lag_values)
+
+        # Plot dt
+        # Also might be dicey in a simulation
+        dt_values = []
+        prev_t = rclpy.time.Time.from_msg(self._control_msgs[0].header.stamp)
+        for msg in self._control_msgs[1:]:
+            msg_t = rclpy.time.Time.from_msg(msg.header.stamp)
+            dt_values.append((msg_t - prev_t).nanoseconds / 1000000)
+            prev_t = msg_t
+        axdt.set_title('dt (ms), ave={0:.3f}'.format(sum(dt_values) / len(dt_values)))
+        axdt.set_ylim(-1, 200)
+        axdt.set_xticklabels([])
+        axdt.plot(dt_values)
 
         # Set figure title
         fig.suptitle('{} messages, total cost={}'.format(self._num_messages, total_cost))

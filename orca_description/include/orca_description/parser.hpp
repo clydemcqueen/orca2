@@ -11,6 +11,8 @@ namespace orca_description
   constexpr const char *filename = "install/orca_description/share/orca_description/urdf/orca.urdf";
   constexpr const char *base_link = "base_link";
   constexpr const char *barometer_joint = "baro_joint";
+
+  // Note that these are x_camera_FRAME_joint, not x_camera_joint
   constexpr const char *forward_camera_joint = "forward_camera_frame_joint";
   constexpr const char *left_camera_joint = "left_camera_frame_joint";
   constexpr const char *right_camera_joint = "right_camera_frame_joint";

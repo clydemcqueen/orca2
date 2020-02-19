@@ -49,6 +49,7 @@ add_executable(
   base_node
   src/astar.cpp
   src/base_node.cpp
+  src/fp.cpp
   src/map.cpp
   src/mission.cpp
   src/planner.cpp

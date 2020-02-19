@@ -1,5 +1,7 @@
 #include "orca_base/map.hpp"
 
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+
 namespace orca_base
 {
 
@@ -65,7 +67,7 @@ namespace orca_base
   }
 
   bool Marker::predict_observation(const image_geometry::PinholeCameraModel &cam_model, const tf2::Transform &t_cam_map,
-                                   orca::Observation &obs) const
+                                   Observation &obs) const
   {
     // Camera frame: x right, y down, z forward
 
@@ -98,7 +100,7 @@ namespace orca_base
       return false;
     }
 
-    // Estimate distance and yaw
+    // Estimate distance and yaw TODO constants
     obs.estimate_distance_and_yaw_from_corners(marker_length, 1.4, 800);
 
     return true;

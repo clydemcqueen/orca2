@@ -3,20 +3,26 @@
 #include <random>
 #include <utility>
 
+#include "orca_shared/util.hpp"
+
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+
 using namespace orca;
 
 namespace orca_base
 {
+
+  constexpr double EPSILON_PLAN_XYZ = 0.05;       // Close enough for xyz motion (m) TODO param
 
   //=====================================================================================
   // Utilities
   //=====================================================================================
 
 #if 0
-  std::vector<std::pair<orca::Observation, orca::Observation>>
-  find_common(std::vector<orca::Observation> o1, std::vector<orca::Observation> o2)
+  std::vector<std::pair<Observation, Observation>>
+  find_common(std::vector<Observation> o1, std::vector<Observation> o2)
   {
-    std::vector<std::pair<orca::Observation, orca::Observation>> r;
+    std::vector<std::pair<Observation, Observation>> r;
 
     auto compare = [](const Observation &a, const Observation &b)
     {
@@ -53,7 +59,7 @@ namespace orca_base
   // LocalPlanner -- build a local plan to a target
   //=====================================================================================
 
-  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const orca::FPStamped &start,
+  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start,
                              Target target, Map map, bool keep_station) :
     logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
     segment_idx_{0}, controller_{std::make_shared<PoseController>(cxt_)}
@@ -156,7 +162,7 @@ namespace orca_base
     segments_.push_back(TrapVelo::make_pose(logger_, cxt_, plan, goal));
   }
 
-  bool LocalPlanner::advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate,
+  bool LocalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
                              orca::Pose &error, orca::Efforts &efforts,
                              const std::function<void(double completed, double total)> &send_feedback)
   {
@@ -186,20 +192,23 @@ namespace orca_base
   //=====================================================================================
 
   MoveToMarkerPlanner::MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                           const Observation &start) :
-    logger_{logger}, cxt_{cxt}, marker_id_{start.id}, segment_idx_{0},
+                                           const ObservationStamped &start) :
+    logger_{logger}, cxt_{cxt}, marker_id_{start.o.id}, segment_idx_{0},
     controller_{std::make_shared<ObservationController>(cxt_)}
   {
-    Observation plan, goal;
-    goal = start;
+    // Start observation
+    ObservationStamped plan = start;
+
+    // Goal observation
+    Observation goal;
+    goal = start.o;
 
     // Rotate to face the marker
-    plan = goal;
     goal.yaw = 0;
     segments_.push_back(std::make_shared<RotateToMarker>(logger_, cxt_, plan, goal));
+    plan.o = goal;
 
     // Move toward the marker
-    plan = goal;
     goal.distance = 1;
     segments_.push_back(std::make_shared<MoveToMarker>(logger_, cxt_, plan, goal));
 
@@ -207,7 +216,7 @@ namespace orca_base
     segments_[segment_idx_]->log_info();
   }
 
-  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate,
+  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
                                     orca::Pose &error, orca::Efforts &efforts,
                                     const std::function<void(double completed, double total)> &send_feedback)
   {
@@ -224,26 +233,26 @@ namespace orca_base
 
     // Share plan with caller (useful for diagnostics)
     plan = {};
-    plan.fp.observations.push_back(segments_[segment_idx_]->plan());
+    plan.fp.observations.push_back(segments_[segment_idx_]->plan().o);
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     // TODO get plan_z from map -- fix for ft3
-    orca::Observation estimate_obs;
+    Observation estimate_obs;
     estimate.fp.get_obs(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[segment_idx_]->plan(), -0.5, estimate_obs, estimate.fp.pose.pose.z,
+    controller_->calc(d, segments_[segment_idx_]->plan().o, -0.5, estimate_obs, estimate.fp.pose.pose.z,
                       segments_[segment_idx_]->ff(), error, efforts);
 
     return true;
   }
 
   //=====================================================================================
-  // MissionPlanner
+  // GlobalPlanner
   //=====================================================================================
 
-  MissionPlanner::MissionPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
-                                 orca_description::Parser parser, const image_geometry::PinholeCameraModel &fcam_model,
-                                 bool keep_station, std::vector<Target> targets) :
+  GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
+                               orca_description::Parser parser, const image_geometry::PinholeCameraModel &fcam_model,
+                               bool keep_station, std::vector<Target> targets) :
     logger_{logger}, cxt_{cxt}, map_{std::move(map)}, parser_{std::move(parser)}, fcam_model_{fcam_model},
     targets_{std::move(targets)}, keep_station_{keep_station}, target_idx_{0}
   {
@@ -263,7 +272,7 @@ namespace orca_base
     }
   }
 
-  void MissionPlanner::predict_observations(orca::FP &plan) const
+  void GlobalPlanner::predict_observations(FP &plan) const
   {
     // Get t_fcam_map
     // This method works whether or not t_base_map is published
@@ -293,7 +302,7 @@ namespace orca_base
     // RCLCPP_INFO(logger_, "Predicted %d observation(s)", num_observations);
   }
 
-  void MissionPlanner::start_local_plan(const orca::FPStamped &start)
+  void GlobalPlanner::start_local_plan(const FPStamped &start)
   {
     recovery_planner_ = nullptr;
 
@@ -301,16 +310,16 @@ namespace orca_base
                                                     target_idx_ == targets_.size() - 1 ? keep_station_ : false);
   }
 
-  void MissionPlanner::start_recovery_plan(const orca::Observation &start)
+  void GlobalPlanner::start_recovery_plan(const ObservationStamped &start)
   {
     local_planner_ = nullptr;
 
     recovery_planner_ = std::make_shared<MoveToMarkerPlanner>(logger_, cxt_, start);
   }
 
-  int MissionPlanner::advance(const rclcpp::Duration &d, orca::FPStamped &plan, const orca::FPStamped &estimate,
-                              orca::Pose &error, orca::Efforts &efforts,
-                              const std::function<void(double completed, double total)> &send_feedback)
+  int GlobalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
+                             orca::Pose &error, orca::Efforts &efforts,
+                             const std::function<void(double completed, double total)> &send_feedback)
   {
     // Bootstrap
     if (!local_planner_ && !recovery_planner_) {
@@ -318,8 +327,8 @@ namespace orca_base
         RCLCPP_INFO(logger_, "start local plan from good pose");
         start_local_plan(estimate);
       } else {
-        orca::Observation closest_observation;
-        if (estimate.fp.closest_obs(closest_observation) < cxt_.planner_max_good_obs_dist_) {
+        ObservationStamped closest_observation;
+        if (estimate.closest_obs(closest_observation) < cxt_.planner_max_good_obs_dist_) {
           RCLCPP_INFO(logger_, "start recovery plan from good observation");
           start_recovery_plan(closest_observation);
         } else {
@@ -368,7 +377,10 @@ namespace orca_base
                 estimate_target_obs.distance < cxt_.planner_max_good_obs_dist_ &&
                 err_yaw > cxt_.planner_max_obs_yaw_error_) {
               RCLCPP_INFO(logger_, "poor pose, target marker in view but yaw error is high, recover");
-              start_recovery_plan(estimate_target_obs);
+              ObservationStamped estimate_target_obs_stamped{}; // TODO simplify
+              estimate_target_obs_stamped.o = estimate_target_obs;
+              estimate_target_obs_stamped.t = estimate.t;
+              start_recovery_plan(estimate_target_obs_stamped);
               return AdvanceRC::CONTINUE;
             }
           }
@@ -424,23 +436,23 @@ namespace orca_base
     return AdvanceRC::CONTINUE;
   }
 
-  std::shared_ptr<MissionPlanner>
-  MissionPlanner::plan_pose(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                            const orca_description::Parser &parser,
-                            const image_geometry::PinholeCameraModel &fcam_model,
-                            const orca::FP &fp, bool keep_station)
+  std::shared_ptr<GlobalPlanner>
+  GlobalPlanner::plan_pose(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                           const orca_description::Parser &parser,
+                           const image_geometry::PinholeCameraModel &fcam_model,
+                           const FP &fp, bool keep_station)
   {
     std::vector<Target> targets;
 
-    targets.emplace_back(orca::NOT_A_MARKER, fp);
+    targets.emplace_back(NOT_A_MARKER, fp);
 
-    return std::make_shared<MissionPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
   }
 
-  std::shared_ptr<MissionPlanner>
-  MissionPlanner::plan_floor_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                                     const orca_description::Parser &parser,
-                                     const image_geometry::PinholeCameraModel &fcam_model, bool random)
+  std::shared_ptr<GlobalPlanner>
+  GlobalPlanner::plan_floor_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                                    const orca_description::Parser &parser,
+                                    const image_geometry::PinholeCameraModel &fcam_model, bool random)
   {
     std::vector<Target> targets;
 
@@ -460,13 +472,13 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<MissionPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
   }
 
-  std::shared_ptr<MissionPlanner>
-  MissionPlanner::plan_wall_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                                    const orca_description::Parser &parser,
-                                    const image_geometry::PinholeCameraModel &fcam_model, bool random)
+  std::shared_ptr<GlobalPlanner>
+  GlobalPlanner::plan_wall_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                                   const orca_description::Parser &parser,
+                                   const image_geometry::PinholeCameraModel &fcam_model, bool random)
   {
     std::vector<Target> targets;
 
@@ -493,15 +505,15 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<MissionPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
   }
 
-  std::shared_ptr<MissionPlanner>
-  MissionPlanner::plan_msgs(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                            const orca_description::Parser &parser,
-                            const image_geometry::PinholeCameraModel &fcam_model,
-                            const std::vector<geometry_msgs::msg::Pose> &msgs,
-                            bool keep_station)
+  std::shared_ptr<GlobalPlanner>
+  GlobalPlanner::plan_msgs(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                           const orca_description::Parser &parser,
+                           const image_geometry::PinholeCameraModel &fcam_model,
+                           const std::vector<geometry_msgs::msg::Pose> &msgs,
+                           bool keep_station)
   {
     std::vector<Target> targets;
 
@@ -512,7 +524,7 @@ namespace orca_base
       targets.push_back(target);
     }
 
-    return std::make_shared<MissionPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
   }
 
 } // namespace orca_base

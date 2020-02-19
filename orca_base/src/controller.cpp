@@ -1,5 +1,7 @@
 #include "orca_base/controller.hpp"
 
+#include "orca_shared/util.hpp"
+
 using namespace orca;
 
 namespace orca_base
@@ -13,7 +15,7 @@ namespace orca_base
     yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
   {}
 
-  void PoseController::calc(const rclcpp::Duration &d, const orca::FP &plan, const orca::FP &estimate,
+  void PoseController::calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate,
                             const orca::Acceleration &ff, orca::Pose &error, orca::Efforts &efforts)
   {
 #if 1
@@ -31,7 +33,7 @@ namespace orca_base
       y_controller_.set_target(plan.pose.pose.y);
       u_bar.y = y_controller_.calc(estimate.pose.pose.y, dt) + ff.y;
 
-      error.yaw = norm_angle( estimate.pose.pose.yaw - plan.pose.pose.yaw);
+      error.yaw = norm_angle(estimate.pose.pose.yaw - plan.pose.pose.yaw);
       yaw_controller_.set_target(plan.pose.pose.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.pose.pose.yaw, dt) + ff.yaw;
     }
@@ -212,8 +214,11 @@ namespace orca_base
     yaw_controller_{true, cxt_.auv_yaw_pid_ku_, cxt_.auv_yaw_pid_tu_}
   {}
 
-  void ObservationController::calc(const rclcpp::Duration &d, const orca::Observation &plan, double plan_z,
-                                   const orca::Observation &estimate, double estimate_z,
+  // Observations are in the camera_link frame, not the base_link frame
+  // This means that the sub is ~20cm further away than obs.distance, and obs.yaw is exaggerated
+  // In practice we can ignore this
+  void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
+                                   const Observation &estimate, double estimate_z,
                                    const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts)
   {
     auto dt = d.seconds();
@@ -227,7 +232,7 @@ namespace orca_base
 
     // If we have an observation, run the yaw PID controller
     // It's possible to miss some observations and still do a decent job moving to the marker
-    if (estimate.id != orca::NOT_A_MARKER) {
+    if (estimate.id != NOT_A_MARKER) {
       yaw_controller_.set_target(plan.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
     }
