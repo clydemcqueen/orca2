@@ -138,8 +138,8 @@ namespace orca_base
 
     explicit GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
                            orca_description::Parser parser,
-                           const image_geometry::PinholeCameraModel &fcam_model, bool keep_station,
-                           std::vector<Target> targets);
+                           const image_geometry::PinholeCameraModel &fcam_model,
+                           std::vector<Target> targets, bool keep_station);
 
     const std::vector<Target> &targets() const
     { return targets_; }
@@ -160,32 +160,18 @@ namespace orca_base
     int advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
                 orca::Efforts &efforts, const std::function<void(double completed, double total)> &send_feedback);
 
-    // Factory: move to a pose and optionally keep station
+    // Factory: visit a list markers, if list is empty all markers will be visited
     static std::shared_ptr<GlobalPlanner>
-    plan_pose(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-              const orca_description::Parser &parser,
-              const image_geometry::PinholeCameraModel &fcam_model, const FP &fp, bool keep_station);
+    plan_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                 const orca_description::Parser &parser,
+                 const image_geometry::PinholeCameraModel &fcam_model,
+                 const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station);
 
-    // Factory: visit all markers in sequence or at random
-    // Markers must be on the floor, facing up, and there must be a down-facing camera
+    // Factory: visit a list of poses, list cannot be empty
     static std::shared_ptr<GlobalPlanner>
-    plan_floor_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                       const orca_description::Parser &parser,
-                       const image_geometry::PinholeCameraModel &fcam_model, bool random);
-
-    // Factory: visit all markers in sequence or at random
-    // Markers must be on the wall and there must be a forward-facing camera
-    static std::shared_ptr<GlobalPlanner>
-    plan_wall_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                      const orca_description::Parser &parser,
-                      const image_geometry::PinholeCameraModel &fcam_model, bool random);
-
-    // Factory: move through a series of poses
-    static std::shared_ptr<GlobalPlanner>
-    plan_msgs(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-              const orca_description::Parser &parser,
-              const image_geometry::PinholeCameraModel &fcam_model, const std::vector<geometry_msgs::msg::Pose> &msgs,
-              bool keep_station);
+    plan_poses(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+               const orca_description::Parser &parser, const image_geometry::PinholeCameraModel &fcam_model,
+               const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat, bool keep_station);
   };
 
 } // namespace orca_base

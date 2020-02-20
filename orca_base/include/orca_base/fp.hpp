@@ -68,7 +68,7 @@ namespace orca_base
     { return pose.good_z(); }
 
     // True if entire pose is good
-    bool good_pose(double max_pose_dist) const;
+    bool good_pose(double good_pose_dist) const;
 
     // True if there is at least one good observation
     bool good_obs() const

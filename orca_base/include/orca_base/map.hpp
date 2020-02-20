@@ -17,13 +17,15 @@ namespace orca_base
 {
   struct Marker
   {
-    double marker_length;
+    double marker_length{0};
     int id{NOT_A_MARKER};
     geometry_msgs::msg::Pose marker_f_map;
     tf2::Vector3 corner0_f_map;
     tf2::Vector3 corner1_f_map;
     tf2::Vector3 corner2_f_map;
     tf2::Vector3 corner3_f_map;
+
+    Marker() = default;
 
     Marker(int id, const geometry_msgs::msg::Pose &_marker_f_map, double marker_length);
 
@@ -65,6 +67,9 @@ namespace orca_base
     // Use A* to generate a path from start_pose to destination_pose that stays close to the markers
     bool get_waypoints(const orca::Pose &start_pose, const orca::Pose &destination_pose,
                        std::vector<orca::Pose> &waypoints) const;
+
+    // Find a marker by id, return true if found
+    bool find_marker(int marker_id, Marker &result) const;
   };
 
 } // namespace orca_base

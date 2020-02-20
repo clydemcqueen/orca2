@@ -58,17 +58,27 @@ A few of the XBox controls:
 * menu button: arm (enable all buttons, go to ROV mode). Use the joystick to move around in ROV mode.
 * A: go to ROV mode
 * B: go to ROV mode, and hold depth using the barometer
-* X: start AUV "keep station" mission (mode 3). All AUV missions use camera(s) and ArUco markers to localize
-* Y: start AUV "go to all markers in a random pattern" mission (mode 6)
+* X: autonomously keep station at current pose
+* Y: autonomously visit all markers in a random pattern
 
-You can also use the ros2 action CLI to start missions. E.g., start mode 6:
+You can also use the ros2 action CLI to start missions. E.g., to visit all markers in sequence:
 ~~~
-ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 6}' 
+ros2 action send_goal /mission orca_msgs/action/Mission '{}'
 ~~~
 
-Or move through one or more poses (mode 7):
+To visit markers 1, 2 and 3 in random order:
 ~~~
-ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 7, poses: [ 
+ros2 action send_goal /mission orca_msgs/action/Mission '{marker_ids: [1, 2, 3], random: true}'
+~~~
+
+To keep station at the current pose (requires a good pose):
+~~~
+ros2 action send_goal /mission orca_msgs/action/Mission '{pose_targets: true, keep_station: true}'
+~~~
+
+To move through 4 poses:
+~~~
+ros2 action send_goal /mission orca_msgs/action/Mission '{pose_targets: true, poses: [ 
 {position: {x: 6.5, y: 0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
 {position: {x: 6.5, y: -0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
 {position: {x: 6.5, y: 0.5, z: -0.5}, orientation: {x: 0, y: 0, z: 0, w: 1}},
@@ -76,7 +86,11 @@ ros2 action send_goal /mission orca_msgs/action/Mission '{mode: 7, poses: [
 ]}'
 ~~~
 
-All of the AUV missions use cameras and ArUco markers to localize.
+See Mission.action for more details.
+
+Orca uses camera(s) and ArUco markers to localize.
+Make sure the camera has a good view of a marker before starting a mission.
+If the mission fails to start there might be no marker in view, or the closest marker might be too far away.
 
 ## Hardware modifications
 

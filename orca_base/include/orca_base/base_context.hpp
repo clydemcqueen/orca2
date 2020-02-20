@@ -17,7 +17,6 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(sensor_loop, bool, false)                  /* false: timer loop, true: sensor loop  */ \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* true: publish t_map_base  */ \
-  CXT_MACRO_MEMBER(auto_start, int, 0)                        /* Auto-start AUV mission if > 0  */ \
   \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \

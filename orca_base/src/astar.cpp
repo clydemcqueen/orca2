@@ -95,7 +95,7 @@ namespace astar
       }
 
       // Loop through neighbors
-      std::vector<Neighbor> neighbors = graph_.get_neighbors(current.node);
+      auto neighbors = graph_.get_neighbors(current.node);
       // std::cout << "considering " << neighbors.size() << " neighbors" << std::endl;
       for (auto neighbor : neighbors) {
         // tentative_g_score is the distance from start through current to the neighbor

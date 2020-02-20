@@ -116,7 +116,6 @@ namespace orca_base
 
     geometry_msgs::msg::PoseStamped pose_msg;
     for (auto &i : segments_) {
-      local_path_.header.frame_id = cxt_.map_frame_;
       pose_msg.pose = i->plan().fp.pose.pose.to_msg();
       local_path_.poses.push_back(pose_msg);
     }
@@ -249,7 +248,7 @@ namespace orca_base
 
   GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
                                orca_description::Parser parser, const image_geometry::PinholeCameraModel &fcam_model,
-                               bool keep_station, std::vector<Target> targets) :
+                               std::vector<Target> targets, bool keep_station) :
     logger_{logger}, cxt_{cxt}, map_{std::move(map)}, parser_{std::move(parser)}, fcam_model_{fcam_model},
     targets_{std::move(targets)}, keep_station_{keep_station}, target_idx_{0}
   {
@@ -263,7 +262,6 @@ namespace orca_base
     global_path_.poses.clear();
     geometry_msgs::msg::PoseStamped pose_msg;
     for (auto &i : targets_) {
-      global_path_.header.frame_id = cxt_.map_frame_;
       pose_msg.pose = i.fp.pose.pose.to_msg();
       global_path_.poses.push_back(pose_msg);
     }
@@ -430,66 +428,61 @@ namespace orca_base
     return AdvanceRC::CONTINUE;
   }
 
-  std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_pose(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                           const orca_description::Parser &parser,
-                           const image_geometry::PinholeCameraModel &fcam_model,
-                           const FP &fp, bool keep_station)
+  // Floor == true: markers must be on the floor facing up, and there must be a down-facing camera
+  // Floor == false: markers must be on the wall, and there must be a forward-facing camera
+  Target marker_to_target(const BaseContext &cxt, const Marker &marker, bool floor)
   {
-    std::vector<Target> targets;
+    Target target;
+    target.marker_id = marker.id;
+    target.fp.pose.pose.from_msg(marker.marker_f_map);
 
-    targets.emplace_back(NOT_A_MARKER, fp);
+    if (floor) {
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
-  }
-
-  std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_floor_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                                    const orca_description::Parser &parser,
-                                    const image_geometry::PinholeCameraModel &fcam_model, bool random)
-  {
-    std::vector<Target> targets;
-
-    // Targets are directly above the markers
-    for (const auto &marker : map.markers()) {
-      Target target;
-      target.marker_id = marker.id;
-      target.fp.pose.pose.from_msg(marker.marker_f_map);
+      // Target is directly above the marker
       target.fp.pose.pose.z = cxt.auv_z_target_;
-      targets.push_back(target);
-    }
 
-    if (random) {
-      // Shuffle targets
-      std::random_device rd;
-      std::mt19937 g(rd());
-      std::shuffle(targets.begin(), targets.end(), g);
-    }
-
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
-  }
-
-  std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_wall_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                                   const orca_description::Parser &parser,
-                                   const image_geometry::PinholeCameraModel &fcam_model, bool random)
-  {
-    std::vector<Target> targets;
-
-    for (const auto &marker : map.markers()) {
-      Target target;
-      // Target == marker
-      target.marker_id = marker.id;
-      target.fp.pose.pose.from_msg(marker.marker_f_map);
-
+    } else {
       // Target is in front of the marker
       target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;
       target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;
 
       // Face the marker to get a good pose
       target.fp.pose.pose.yaw = norm_angle(target.fp.pose.pose.yaw + M_PI_2);
+    }
 
-      targets.push_back(target);
+    return target;
+  }
+
+  std::shared_ptr<GlobalPlanner>
+  GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                              const orca_description::Parser &parser,
+                              const image_geometry::PinholeCameraModel &fcam_model,
+                              const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station)
+  {
+    // TODO repeat
+
+    std::vector<Target> targets;
+
+    if (markers_ids.empty()) {
+      // Use all of the markers in the map
+      for (const auto &marker : map.markers()) {
+        targets.push_back(marker_to_target(cxt, marker, false));
+      }
+    } else {
+      // Use just the markers in the list
+      for (const auto marker_id : markers_ids) {
+        Marker marker;
+        if (map.find_marker(marker_id, marker)) {
+          targets.push_back(marker_to_target(cxt, marker, false));
+        } else {
+          RCLCPP_WARN(logger, "marker %d is not in the map, skipping", marker_id);
+        }
+      }
+    }
+
+    if (targets.empty()) {
+      RCLCPP_ERROR(logger, "no targets, abort mission");
+      return nullptr;
     }
 
     if (random) {
@@ -499,26 +492,45 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, false, targets);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, targets, keep_station);
+  }
+
+  Target pose_to_target(const geometry_msgs::msg::Pose &pose)
+  {
+    Target target;
+    target.marker_id = NOT_A_MARKER;
+    target.fp.pose.pose.from_msg(pose);
+    return target;
   }
 
   std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_msgs(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
-                           const orca_description::Parser &parser,
-                           const image_geometry::PinholeCameraModel &fcam_model,
-                           const std::vector<geometry_msgs::msg::Pose> &msgs,
-                           bool keep_station)
+  GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+                            const orca_description::Parser &parser,
+                            const image_geometry::PinholeCameraModel &fcam_model,
+                            const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat,
+                            bool keep_station)
   {
+    // TODO repeat
+
     std::vector<Target> targets;
 
-    for (auto msg : msgs) {
-      Target target;
-      target.marker_id = NOT_A_MARKER;
-      target.fp.pose.pose.from_msg(msg);
-      targets.push_back(target);
+    if (poses.empty()) {
+      RCLCPP_ERROR(logger, "no poses, abort mission");
+      return nullptr;
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, keep_station, targets);
+    for (auto pose : poses) {
+      targets.push_back(pose_to_target(pose));
+    }
+
+    if (random) {
+      // Shuffle targets
+      std::random_device rd;
+      std::mt19937 g(rd());
+      std::shuffle(targets.begin(), targets.end(), g);
+    }
+
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, targets, keep_station);
   }
 
 } // namespace orca_base

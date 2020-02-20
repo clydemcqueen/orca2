@@ -179,4 +179,16 @@ namespace orca_base
     }
   }
 
+  bool Map::find_marker(int marker_id, Marker &result) const
+  {
+    for (const auto &marker : markers_) {
+      if (marker.id == marker_id) {
+        result = marker;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 } // namespace orca_base

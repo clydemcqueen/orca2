@@ -105,9 +105,9 @@ namespace orca_base
   // Fiducial pose (FP) -- pose and observations
   //=====================================================================================
 
-  bool FP::good_pose(double max_pose_dist) const
+  bool FP::good_pose(double good_pose_dist) const
   {
-    return pose.good_pose() && closest_obs() < max_pose_dist;
+    return pose.good_pose() && closest_obs() < good_pose_dist;
   }
 
   bool FP::good_obs(int id) const

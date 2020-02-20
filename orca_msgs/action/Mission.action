@@ -1,8 +1,36 @@
-# Goal, see constants in Control.msg for mode
+# Goal
 
-uint8 mode
+# Targets are either markers or poses
+bool pose_targets false
 
+# List of target markers, if empty visit all markers on the map
+int32[] marker_ids
+
+# List of target poses, if empty use the current pose (default is empty)
 geometry_msgs/Pose[] poses
+
+# Randomize the list of targets (default is empty)
+bool random false
+
+# Repeat the mission forever
+bool repeat false
+
+# Keep station at the last target (not compatible with repeat)
+bool keep_station false
+
+######
+# EXAMPLES
+#
+# To visit all of the markers in the map in a random pattern:
+#     random = true
+#
+# To visit markers 0, 1 and 3 in order:
+#     marker_ids = [0, 1, 2]
+#
+# To keep station at the current pose:
+#     pose_targets = true
+#     keep_station = true
+######
 
 ---
 

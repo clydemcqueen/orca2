@@ -28,8 +28,6 @@
 #include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
 
-//using namespace std::chrono_literals;
-
 namespace orca_base
 {
 
@@ -238,9 +236,16 @@ namespace orca_base
 
     void disarm(const rclcpp::Time &msg_time);
 
-    void set_mode(const rclcpp::Time &msg_time, uint8_t new_mode, const FP &goal = {},
-                  const std::vector<geometry_msgs::msg::Pose> &msgs = {},
-                  const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
+    void start_rov(const rclcpp::Time &msg_time);
+
+    void start_hold_pressure(const rclcpp::Time &msg_time);
+
+    void start_mission(const rclcpp::Time &msg_time,
+                       bool pose_targets = false,
+                       const std::vector<int> &markers = {},
+                       std::vector<geometry_msgs::msg::Pose> poses = {},
+                       bool random = false, bool repeat = false, bool keep_station = false,
+                       const std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> &goal_handle = nullptr);
 
     void write_status(cv::Mat &image);
 
