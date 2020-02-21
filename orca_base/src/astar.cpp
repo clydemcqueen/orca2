@@ -1,11 +1,14 @@
 #include "orca_base/astar.hpp"
 
+#include <iomanip>
+
 namespace astar
 {
 
   std::ostream &operator<<(std::ostream &os, CandidateNode const &c)
   {
-    return os << "{marker: " << c.node << ", g_score: " << c.g_score << ", f_score: " << c.f_score << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{marker: " << c.node << ", g_score: " << c.g_score << ", f_score: " << c.f_score << "}";
   }
 
   // Return the neighbors of this node

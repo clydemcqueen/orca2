@@ -68,7 +68,6 @@ def generate_launch_description():
              node_name='base_node', parameters=[{
                 'use_sim_time': use_sim_time,
                 'param_fluid_density': 997.0,
-                'auv_z_target': -0.5,
             }], remappings=[
                 ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
                 ('fcam_image', '/' + forward_camera_name + '/image_raw'),

@@ -20,21 +20,27 @@ namespace orca_base
 
   struct Observation
   {
-    int id;                       // Marker ID
+    int id{NOT_A_MARKER};         // Marker ID
     cv::Point2d c0, c1, c2, c3;   // Corners
-    double distance;              // Estimated distance to marker
-    double yaw;                   // Yaw to center of marker
-    double z;                     // Vertical position
+    double distance{0};           // Estimated distance to marker
+    double yaw{0};                // Yaw to center of marker
 
-    Observation() : id{NOT_A_MARKER}, distance{0}, yaw{0}, z{0}
-    {}
+    Observation()
+    = default;
 
-    void estimate_distance_and_yaw(double marker_length, double hfov, double hres);
+    // Construct from vlam observation and z
+    Observation(const fiducial_vlam_msgs::msg::Observation &msg,
+                double marker_length, double hfov, double hres);
+
+    // Construct from id, corners and z
+    Observation(int _id, const cv::Point2d &_c0, const cv::Point2d &_c1, const cv::Point2d &_c2, const cv::Point2d &_c3,
+                double marker_length, double hfov, double hres);
 
     void estimate_corners(double marker_length, double hfov, double hres, double vres);
 
-    void from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
-                  double marker_length, double hfov, double hres);
+  private:
+
+    void estimate_distance_and_yaw(double marker_length, double hfov, double hres);
   };
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs);
@@ -47,9 +53,6 @@ namespace orca_base
   {
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
     Observation o;
-
-    void from_msg(const rclcpp::Time &stamp, const fiducial_vlam_msgs::msg::Observation &msg,
-                  double marker_length, double hfov, double hres);
   };
 
   std::ostream &operator<<(std::ostream &os, ObservationStamped const &obs);
@@ -86,11 +89,10 @@ namespace orca_base
     // Get the closest observation and return the distance
     double closest_obs(Observation &obs) const;
 
-    // Initialize from messages
-    void from_msgs(
-      const fiducial_vlam_msgs::msg::Observations &obs,
-      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-      double marker_length, double hfov, double hres);
+    // Could be a constructor
+    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
+                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
+                   double hfov, double hres);
 
     // XY distance between 2 poses
     double distance_xy(const FP &that) const
@@ -128,10 +130,10 @@ namespace orca_base
     // Get the closest observation and return the distance
     double closest_obs(ObservationStamped &obs) const;
 
-    void from_msgs(
-      const fiducial_vlam_msgs::msg::Observations &obs,
-      const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-      double marker_length, double hfov, double hres);
+    // Could be a constructor
+    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
+                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
+                   double hfov, double hres);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
 

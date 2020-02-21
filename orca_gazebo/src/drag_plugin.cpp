@@ -36,9 +36,6 @@ namespace gazebo
 
   class OrcaDragPlugin : public ModelPlugin
   {
-    // Orca model
-    orca::Model orca_model_;
-
     physics::LinkPtr base_link_;
 
     // Drag force will be applied to the center_of_mass_ (body frame)
@@ -115,12 +112,15 @@ namespace gazebo
         }
       }
 
-      // Initialize model from parameters
+      // Initialize Orca model from parameters
+      orca::Model orca_;
+      orca_.fluid_density_ = fluid_density;
+
+      // Get drag constants
       // Angular drag is a wild guess, but should be non-zero
-      orca_model_.fluid_density_ = fluid_density;
-      linear_drag_ = {orca_model_.linear_drag_f(), orca_model_.linear_drag_s(), orca_model_.linear_drag_z()};
-      angular_drag_ = {orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw(), orca_model_.angular_drag_yaw()};
-      tether_drag_ = orca_model_.tether_drag();
+      linear_drag_ = {orca_.drag_const_f(), orca_.drag_const_s(), orca_.drag_const_z()};
+      angular_drag_ = {orca_.drag_const_yaw(), orca_.drag_const_yaw(), orca_.drag_const_yaw()};
+      tether_drag_ = orca_.tether_drag_const();
 
       base_link_ = model->GetLink(link_name);
       GZ_ASSERT(base_link_ != nullptr, "Missing link");

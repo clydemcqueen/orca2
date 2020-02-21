@@ -71,8 +71,6 @@ namespace orca_base
   {
     // Camera frame: x right, y down, z forward
 
-    obs.id = id;
-
     // Transform corners from map frame to camera frame
     auto corner0_f_cam = t_cam_map * corner0_f_map;
     auto corner1_f_cam = t_cam_map * corner1_f_map;
@@ -87,21 +85,20 @@ namespace orca_base
     // Ignore markers that are not facing the camera TODO
 
     // Project corners onto the image plane
-    obs.c0 = cam_model.project3dToPixel(tf_to_cv(corner0_f_cam));
-    obs.c1 = cam_model.project3dToPixel(tf_to_cv(corner1_f_cam));
-    obs.c2 = cam_model.project3dToPixel(tf_to_cv(corner2_f_cam));
-    obs.c3 = cam_model.project3dToPixel(tf_to_cv(corner3_f_cam));
+    auto c0 = cam_model.project3dToPixel(tf_to_cv(corner0_f_cam));
+    auto c1 = cam_model.project3dToPixel(tf_to_cv(corner1_f_cam));
+    auto c2 = cam_model.project3dToPixel(tf_to_cv(corner2_f_cam));
+    auto c3 = cam_model.project3dToPixel(tf_to_cv(corner3_f_cam));
 
     // Ignore markers that are outside of the visible frame
-    if (!in_frame(obs.c0, cam_model.cx(), cam_model.cy()) ||
-        !in_frame(obs.c1, cam_model.cx(), cam_model.cy()) ||
-        !in_frame(obs.c2, cam_model.cx(), cam_model.cy()) ||
-        !in_frame(obs.c3, cam_model.cx(), cam_model.cy())) {
+    if (!in_frame(c0, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(c1, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(c2, cam_model.cx(), cam_model.cy()) ||
+        !in_frame(c3, cam_model.cx(), cam_model.cy())) {
       return false;
     }
 
-    // Estimate distance and yaw
-    obs.estimate_distance_and_yaw(marker_length, cxt.fcam_hfov_, cxt.fcam_hres_);
+    obs = Observation(id, c0, c1, c2, c3, marker_length, cxt.fcam_hfov_, cxt.fcam_hres_);
 
     return true;
   }

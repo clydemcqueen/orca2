@@ -210,13 +210,13 @@ namespace orca_base
     }
 
     // X and Y drag depend on yaw and direction of motion
-    double linear_drag_x, linear_drag_y;
-    cxt_.model_.linear_drag_world(plan_.fp.pose.pose.yaw, angle_to_goal_, linear_drag_x, linear_drag_y);
+    double drag_const_x, drag_const_y;
+    cxt_.model_.drag_const_world(plan_.fp.pose.pose.yaw, angle_to_goal_, drag_const_x, drag_const_y);
 
     // Acceleration due to drag
-    drag_.x = cxt_.model_.drag_accel(twist_.x, linear_drag_x);
-    drag_.y = cxt_.model_.drag_accel(twist_.y, linear_drag_y);
-    drag_.z = cxt_.model_.drag_accel(twist_.z, cxt_.model_.linear_drag_z());
+    drag_.x = cxt_.model_.drag_accel(twist_.x, drag_const_x);
+    drag_.y = cxt_.model_.drag_accel(twist_.y, drag_const_y);
+    drag_.z = cxt_.model_.drag_accel(twist_.z, cxt_.model_.drag_const_z());
     drag_.yaw = cxt_.model_.drag_accel_yaw(twist_.yaw);
 
     // Acceleration due to thrust
@@ -354,11 +354,9 @@ namespace orca_base
     drag_.yaw = cxt_.model_.drag_accel_yaw(twist_.yaw);
 
     // Acceleration due to thrust
-    // ff_.vertical = accel_.vertical - drag_.vertical + cxt_.model_.hover_accel_z();
-    ff_.vertical = cxt_.model_.hover_accel_z();
     ff_.yaw = accel_.yaw - drag_.yaw;
 
-    // std::cout << std::fixed << std::setprecision(4) << "ff_: " << ff_ << std::endl;
+    // std::cout << std::fixed << std::setprecision(2) << "ff_: " << ff_ << std::endl;
 
     auto dt = d.seconds();
 
@@ -425,11 +423,9 @@ namespace orca_base
     drag_.forward = cxt_.model_.drag_accel_f(twist_.forward);
 
     // Acceleration due to thrust
-    // ff_.vertical = accel_.vertical - drag_.vertical + cxt_.model_.hover_accel_z();
-    ff_.vertical = cxt_.model_.hover_accel_z();
     ff_.forward = accel_.forward - drag_.forward;
 
-    // std::cout << std::fixed << std::setprecision(4) << "ff_: " << ff_ << std::endl;
+    // std::cout << std::fixed << std::setprecision(2) << "ff_: " << ff_ << std::endl;
 
     auto dt = d.seconds();
 

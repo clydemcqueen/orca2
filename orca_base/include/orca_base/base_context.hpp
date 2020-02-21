@@ -13,7 +13,12 @@ namespace orca_base
 {
 
 #define BASE_NODE_ALL_PARAMS \
-  CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(fluid_density, double, 997)                /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(drag_coef_f, double, 0.8)                  /* Forward drag, 1.0 is a box  */ \
+  CXT_MACRO_MEMBER(drag_coef_s, double, 0.95)                 /* Strafe drag  */ \
+  CXT_MACRO_MEMBER(drag_coef_z, double, 0.95)                 /* Vertical drag  */ \
+  CXT_MACRO_MEMBER(drag_coef_tether, double, 1.1)             /* Tether drag, 1.2 for unfaired tether  */ \
+  CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.002)     /* Yaw drag, wild guess  */ \
   \
   CXT_MACRO_MEMBER(sensor_loop, bool, false)                  /* false: timer loop, true: sensor loop  */ \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* true: publish t_map_base  */ \
@@ -49,7 +54,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_pid_ku, double, 1)                 /* AUV yaw pid Ziegler–Nichols ku  */ \
   CXT_MACRO_MEMBER(auv_yaw_pid_tu, double, 6)                 /* AUV yaw pid Ziegler–Nichols tu  */ \
   \
-  CXT_MACRO_MEMBER(auv_z_target, double, -0.25)               /* AUV path target z position  */ \
+  CXT_MACRO_MEMBER(auv_z_target, double, -0.5)                /* AUV path target z position  */ \
   CXT_MACRO_MEMBER(auv_xy_distance, double, 1)                /* AUV distance in front of marker  */ \
   \
   CXT_MACRO_MEMBER(auv_xy_accel, double, 0.25)                /* AUV acceleration in the xy plane  */ \

@@ -154,8 +154,9 @@ namespace orca_base
 
     // The observation is pretty noisy for z, so pass in z data from the barometer
     void
-    calc(const rclcpp::Duration &d, const Observation &plan, const Observation &estimate,
-         const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts);
+    calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
+         const Observation &estimate, double estimate_z, const orca::AccelerationBody &ff,
+         orca::Pose &error, orca::Efforts &efforts);
   };
 
 } // namespace orca_base

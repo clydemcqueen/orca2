@@ -1,6 +1,7 @@
 #include "orca_base/fp.hpp"
 
 #include <iostream>
+#include <iomanip>
 
 namespace orca_base
 {
@@ -8,6 +9,32 @@ namespace orca_base
   //=====================================================================================
   // Observation -- observation of a marker from a camera
   //=====================================================================================
+
+  Observation::Observation(const fiducial_vlam_msgs::msg::Observation &msg,
+                           double marker_length, double hfov, double hres)
+  {
+    id = msg.id;
+    c0.x = msg.x0;
+    c1.x = msg.x1;
+    c2.x = msg.x2;
+    c3.x = msg.x3;
+    c0.y = msg.y0;
+    c1.y = msg.y1;
+    c2.y = msg.y2;
+    c3.y = msg.y3;
+    estimate_distance_and_yaw(marker_length, hfov, hres);
+  }
+
+  Observation::Observation(int _id, const cv::Point2d &_c0, const cv::Point2d &_c1, const cv::Point2d &_c2,
+                           const cv::Point2d &_c3, double marker_length, double hfov, double hres)
+  {
+    id = _id;
+    c0 = _c0;
+    c1 = _c1;
+    c2 = _c2;
+    c3 = _c3;
+    estimate_distance_and_yaw(marker_length, hfov, hres);
+  }
 
   void Observation::estimate_distance_and_yaw(double marker_length, double hfov, double hres)
   {
@@ -65,36 +92,15 @@ namespace orca_base
     c3.y = center_y + longest_side / 2;
   }
 
-  void Observation::from_msg(const fiducial_vlam_msgs::msg::Observation &msg,
-                             double marker_length, double hfov, double hres)
-  {
-    id = msg.id;
-    c0.x = msg.x0;
-    c1.x = msg.x1;
-    c2.x = msg.x2;
-    c3.x = msg.x3;
-    c0.y = msg.y0;
-    c1.y = msg.y1;
-    c2.y = msg.y2;
-    c3.y = msg.y3;
-    estimate_distance_and_yaw(marker_length, hfov, hres);
-  }
-
   std::ostream &operator<<(std::ostream &os, Observation const &obs)
   {
-    return os << "{marker: " << obs.id << ", distance: " << obs.distance << ", yaw: " << obs.yaw << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{marker: " << obs.id << ", distance: " << obs.distance << ", yaw: " << obs.yaw << "}";
   }
 
   //=====================================================================================
   // ObservationStamped -- observation with a timestamp
   //=====================================================================================
-
-  void ObservationStamped::from_msg(const rclcpp::Time &stamp, const fiducial_vlam_msgs::msg::Observation &msg,
-                                    double marker_length, double hfov, double hres)
-  {
-    t = stamp;
-    o.from_msg(msg, marker_length, hfov, hres);
-  }
 
   std::ostream &operator<<(std::ostream &os, ObservationStamped const &obs)
   {
@@ -154,16 +160,18 @@ namespace orca_base
   }
 
   void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z,
                      double marker_length, double hfov, double hres)
   {
     pose.from_msg(fcam_msg.pose);
 
+    // Override the z value
+    pose.pose.z = z;
+    pose.z_valid = true;
+
     observations.clear();
     for (const auto &r : obs.observations) {
-      Observation observation;
-      observation.from_msg(r, marker_length, hfov, hres);
-      observations.push_back(observation);
+      observations.emplace_back(r, marker_length, hfov, hres);
     }
   }
 
@@ -189,13 +197,14 @@ namespace orca_base
   }
 
   void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-                            double marker_length, double hfov, double hres)
+                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z,
+                            double marker_length,
+                            double hfov, double hres)
   {
     assert(obs.header.stamp == fcam_msg.header.stamp);
 
     t = obs.header.stamp;
-    fp.from_msgs(obs, fcam_msg, marker_length, hfov, hres);
+    fp.from_msgs(obs, fcam_msg, z, marker_length, hfov, hres);
   }
 
   void FPStamped::add_to_path(nav_msgs::msg::Path &path) const

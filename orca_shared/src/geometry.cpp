@@ -1,5 +1,7 @@
 #include "orca_shared/geometry.hpp"
 
+#include <iomanip>
+
 #include "orca_shared/model.hpp"
 #include "orca_shared/util.hpp"
 
@@ -82,7 +84,8 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, Pose const &pose)
   {
-    return os << "{" << pose.x << ", " << pose.y << ", " << pose.z << ", " << pose.yaw << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{" << pose.x << ", " << pose.y << ", " << pose.z << ", " << pose.yaw << "}";
   }
 
   //=====================================================================================
@@ -143,7 +146,8 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, Twist const &t)
   {
-    return os << "{" << t.x << ", " << t.y << ", " << t.z << ", " << t.yaw << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{" << t.x << ", " << t.y << ", " << t.z << ", " << t.yaw << "}";
   }
 
   //=====================================================================================
@@ -152,7 +156,8 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, Acceleration const &a)
   {
-    return os << "{" << a.x << ", " << a.y << ", " << a.z << ", " << a.yaw << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{" << a.x << ", " << a.y << ", " << a.z << ", " << a.yaw << "}";
   }
 
   //=====================================================================================
@@ -235,7 +240,8 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, Efforts const &e)
   {
-    return os << "{" << e.forward() << ", " << e.strafe() << ", " << e.vertical() << ", " << e.yaw() << "}";
+    return os << std::fixed << std::setprecision(2)
+              << "{" << e.forward() << ", " << e.strafe() << ", " << e.vertical() << ", " << e.yaw() << "}";
   }
 
 } // namespace orca

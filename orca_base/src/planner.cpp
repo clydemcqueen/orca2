@@ -2,6 +2,7 @@
 
 #include <random>
 #include <utility>
+#include <iomanip>
 
 #include "orca_shared/util.hpp"
 
@@ -50,7 +51,8 @@ namespace orca_base
 
   std::ostream &operator<<(std::ostream &os, Target const &target)
   {
-    os << "{marker: " << target.marker_id << ", pose: " << target.fp.pose.pose << "}";
+    os << std::fixed << std::setprecision(2)
+       << "{marker: " << target.marker_id << ", pose: " << target.fp.pose.pose << "}";
   }
 
   //=====================================================================================
@@ -236,7 +238,7 @@ namespace orca_base
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     Observation estimate_obs;
     estimate.fp.good_obs(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[segment_idx_]->plan().o, estimate_obs,
+    controller_->calc(d, segments_[segment_idx_]->plan().o, cxt_.auv_z_target_, estimate_obs, estimate.fp.pose.pose.z,
                       segments_[segment_idx_]->ff(), error, efforts);
 
     return true;
@@ -436,12 +438,10 @@ namespace orca_base
     target.marker_id = marker.id;
     target.fp.pose.pose.from_msg(marker.marker_f_map);
 
-    if (floor) {
+    // Set plan.z from parameters
+    target.fp.pose.pose.z = cxt.auv_z_target_;
 
-      // Target is directly above the marker
-      target.fp.pose.pose.z = cxt.auv_z_target_;
-
-    } else {
+    if (!floor) {
       // Target is in front of the marker
       target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;
       target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;

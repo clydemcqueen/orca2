@@ -62,18 +62,6 @@ namespace orca
     static constexpr double MAX_TORQUE_YAW = 0.18 * 2.0 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
     //=====================================================================================
-    // Drag coefficients, in the body frame (x forward, y left, z up)
-    //
-    // -- the drag coefficient for a box is 1.0
-    // -- the drag coefficient for an unfaired tether is 1.2
-    //=====================================================================================
-
-    static constexpr double DRAG_COEFFICIENT_F = 0.8;         // Estimated
-    static constexpr double DRAG_COEFFICIENT_S = 0.95;        // Estimated
-    static constexpr double DRAG_COEFFICIENT_Z = 0.95;        // Estimated
-    static constexpr double TETHER_DRAG_COEFFICIENT = 1.1;    // Estimated
-
-    //=====================================================================================
     // Dynamics
     //=====================================================================================
 
@@ -138,6 +126,19 @@ namespace orca
     // Fluid density, 997 for freshwater or 1029 for seawater
     double fluid_density_ = 997;
 
+    // Drag coefficients, in the body frame: f forward, s strafe (+left), z up
+    // From the literature: drag coefficient for a box is 1.0
+    double drag_coef_f_ = 0.8;
+    double drag_coef_s_ = 0.95;
+    double drag_coef_z_ = 0.95;
+
+    // Drag coefficient for the tether
+    // From the literature: drag coefficient for an unfaired tether is 1.2
+    double drag_coef_tether_ = 1.1;
+
+    // Angular drag is a different thing altogether, provide a partial const
+    double drag_partial_const_yaw_ = 0.002;
+
     //=====================================================================================
     // Values which depend on the parameters
     //=====================================================================================
@@ -159,32 +160,29 @@ namespace orca
     { return weight_in_water() / MASS; }
 
     //=====================================================================================
-    // Drag in the body frame (x forward, y left, z up)
-    //
-    // drag = 0.5 * density * area * velocity^2 * coefficient
+    // Drag in the body frame (x forward, y left, z up) = 0.5 * density * area * velocity^2 * coefficient
     //
     // The ROV constants below capture all but velocity:
-    //    constant = 0.5 * density * area * coefficient
+    //    drag constant = 0.5 * density * area * coefficient
     //
     // The tether constant below captures all but depth and velocity:
-    //    constant = 0.5 * density * width * coefficient
+    //    drag constant = 0.5 * density * width * coefficient
     //=====================================================================================
 
-    double linear_drag_f() const
-    { return 0.5 * fluid_density_ * ROV_AREA_BOW * DRAG_COEFFICIENT_F; }
+    double drag_const_f() const
+    { return 0.5 * fluid_density_ * ROV_AREA_BOW * drag_coef_f_; }
 
-    double linear_drag_s() const
-    { return 0.5 * fluid_density_ * ROV_AREA_PORT * DRAG_COEFFICIENT_S; }
+    double drag_const_s() const
+    { return 0.5 * fluid_density_ * ROV_AREA_PORT * drag_coef_s_; }
 
-    double linear_drag_z() const
-    { return 0.5 * fluid_density_ * ROV_AREA_TOP * DRAG_COEFFICIENT_Z; }
+    double drag_const_z() const
+    { return 0.5 * fluid_density_ * ROV_AREA_TOP * drag_coef_z_; }
 
-    // Estimate angular drag
-    double angular_drag_yaw() const
-    { return 0.02 * (linear_drag_f() + linear_drag_s()); }
+    double drag_const_yaw() const
+    { return fluid_density_ * drag_partial_const_yaw_; }
 
-    double tether_drag() const
-    { return 0.5 * fluid_density_ * TETHER_DIAM * TETHER_DRAG_COEFFICIENT; }
+    double tether_drag_const() const
+    { return 0.5 * fluid_density_ * TETHER_DIAM * drag_coef_tether_; }
 
     //=====================================================================================
     // Drag force, and acceleration-due-to-drag, in the body frame (x forward, y left, z up)
@@ -193,16 +191,16 @@ namespace orca
     // Velocity => drag force / torque
     // Motion works in all 4 quadrants, note the use of abs()
     double drag_force_f(double velo_f) const
-    { return velo_f * std::abs(velo_f) * -linear_drag_f(); }
+    { return velo_f * std::abs(velo_f) * -drag_const_f(); }
 
     double drag_force_s(double velo_s) const
-    { return velo_s * std::abs(velo_s) * -linear_drag_s(); }
+    { return velo_s * std::abs(velo_s) * -drag_const_s(); }
 
     double drag_force_z(double velo_z) const
-    { return velo_z * std::abs(velo_z) * -linear_drag_z(); }
+    { return velo_z * std::abs(velo_z) * -drag_const_z(); }
 
     double drag_torque_yaw(double velo_yaw) const
-    { return velo_yaw * std::abs(velo_yaw) * -angular_drag_yaw(); }
+    { return velo_yaw * std::abs(velo_yaw) * -drag_const_yaw(); }
 
     // Velocity => acceleration due to drag
     double drag_accel_f(double velo_f) const
@@ -218,16 +216,16 @@ namespace orca
     { return torque_to_accel_yaw(drag_torque_yaw(velo_yaw)); }
 
     //=====================================================================================
-    // Drag constants in the world frame: linear_drag_x, linear_drag_y
+    // Drag constants in the world frame: drag_const_x, drag_const_y
     //    yaw is the orientation of the body in the world frame
     //    motion_world is the direction of motion in the world frame
     //
     // Example: if yaw == direction_of_motion, the body is moving forward, therefore:
-    //    linear_drag_x = linear_drag_f()
-    //    linear_drag_y = linear_drag_s()
+    //    drag_const_x = drag_const_f()
+    //    drag_const_y = drag_const_s()
     //=====================================================================================
 
-    void linear_drag_world(double yaw, double motion_world, double &linear_drag_x, double &linear_drag_y);
+    void drag_const_world(double yaw, double motion_world, double &drag_const_x, double &drag_const_y);
 
     double drag_force(double velo, double drag_constant) const
     { return velo * std::abs(velo) * -drag_constant; }

@@ -1,5 +1,7 @@
 #include "orca_base/base_node.hpp"
 
+#include <iomanip>
+
 #include "cv_bridge/cv_bridge.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
@@ -151,7 +153,12 @@ namespace orca_base
     BASE_NODE_ALL_PARAMS
 
     // Update model from new parameters
-    cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
+    cxt_.model_.fluid_density_ = cxt_.fluid_density_;
+    cxt_.model_.drag_coef_f_ = cxt_.drag_coef_f_;
+    cxt_.model_.drag_coef_s_ = cxt_.drag_coef_s_;
+    cxt_.model_.drag_coef_z_ = cxt_.drag_coef_z_;
+    cxt_.model_.drag_coef_tether_ = cxt_.drag_coef_tether_;
+    cxt_.model_.drag_partial_const_yaw_ = cxt_.drag_partial_const_yaw_;
 
     // Update timeouts
     baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
@@ -221,7 +228,7 @@ namespace orca_base
   {
     cv::Point2d p{10, 20};
     std::stringstream ss;
-    ss.precision(3);
+    ss << std::fixed << std::setprecision(2);
 
     if (mode_ == orca_msgs::msg::Control::DISARMED) {
       ss << "DISARMED";
@@ -233,16 +240,21 @@ namespace orca_base
       ss << "MISSION target m" << mission_->planner().target_marker_id();
       if (mission_->planner().in_recovery()) {
         ss << " RECOVERY move to m" << mission_->planner().recovery_marker_id();
+      } else {
+        ss << " plan z=" << plan_.fp.pose.pose.z;
       }
     } else {
       ss << "ERROR";
     }
+
     draw_text(image, ss.str(), p, CV_RGB(255, 0, 0));
 
     p.y += 20;
     ss.str("");
 
     ss << estimate_.fp.observations.size() << " observation(s)";
+    ss << " estimate z=" << z_;
+
     draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
   }
 
@@ -253,7 +265,7 @@ namespace orca_base
       cv::Point2d p = obs.c3;
       p.y += 30;
       std::stringstream ss;
-      ss.precision(3);
+      ss << std::fixed << std::setprecision(2);
 
       ss << "m" << obs.id << " d=" << obs.distance;
       draw_text(image, ss.str(), p, color);
@@ -449,7 +461,8 @@ namespace orca_base
     }
 
     // Save the observations and pose
-    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+    // The z value from the barometer is much more accurate TODO handle filter case
+    estimate_.from_msgs(*obs_msg, base_f_map, z_, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
 
     if (cxt_.sensor_loop_ && auv_mode()) {
       // Skip the first message -- the dt will be too large
@@ -522,10 +535,6 @@ namespace orca_base
 
   void BaseNode::auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d)
   {
-    // Slam in z TODO handle filter case
-    estimate_.fp.pose.pose.z = z_;
-    estimate_.fp.pose.z_valid = true;
-
     // Publish estimated path
     if (estimate_.fp.good_pose(cxt_.good_pose_dist_) && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
       if (estimated_path_.poses.size() > cxt_.keep_poses_) {

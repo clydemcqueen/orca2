@@ -217,8 +217,9 @@ namespace orca_base
   // Observations are in the camera_link frame, not the base_link frame
   // This means that the sub is ~20cm further away than obs.distance, and obs.yaw is exaggerated
   // In practice we can ignore this
-  void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, const Observation &estimate,
-                                   const orca::AccelerationBody &ff, orca::Pose &error, orca::Efforts &efforts)
+  void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
+                                   const Observation &estimate, double estimate_z, const orca::AccelerationBody &ff,
+                                   orca::Pose &error, orca::Efforts &efforts)
   {
     auto dt = d.seconds();
     auto u_bar = ff;
@@ -237,9 +238,9 @@ namespace orca_base
     }
 
     // Always run the vertical PID controller
-    error.z = plan.z - estimate.z;
-    vertical_controller_.set_target(plan.z);
-    u_bar.vertical = vertical_controller_.calc(estimate.z, dt) + ff.vertical;
+    error.z = estimate_z - plan_z;
+    vertical_controller_.set_target(plan_z);
+    u_bar.vertical = vertical_controller_.calc(estimate_z, dt) + ff.vertical;
 
     // Compute efforts
     efforts.set_forward(Model::accel_to_effort_xy(u_bar.forward));
