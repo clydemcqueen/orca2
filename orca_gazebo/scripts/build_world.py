@@ -2,9 +2,7 @@
 
 """
 Build Gazebo world and fiducial_vlam map files from a list of markers and poses
-Usage:
-    cd src/orca2/orca_gazebo/worlds
-    python3 build_world.py
+Run by CMake -- see CMakeLists.txt
 
 Marker format: [marker_num, x, y, z, roll, pitch, yaw]
 
@@ -22,13 +20,14 @@ Also:
 
 import math
 import transformations as xf
+import sys
 
 # SDF and fiducial_vlam have different coordinate models
 t_world_map = xf.quaternion_matrix([math.sqrt(0.5), 0, 0, -math.sqrt(0.5)])
 
 
-def build_world(name, markers):
-    world_file = open(name, 'w')
+def build_world(dir, name, markers):
+    world_file = open(dir + '/' + name, 'w')
     world_file.write("""<?xml version="1.0"?>
 
 <sdf version="1.6">
@@ -53,8 +52,8 @@ def build_world(name, markers):
     world_file.close()
 
 
-def build_map(name, markers):
-    map_file = open(name, 'w')
+def build_map(dir, name, markers):
+    map_file = open(dir + '/' + name, 'w')
     map_file.write("""# All marker locations are fixed (f: 1)
 
 marker_length: 0.1778
@@ -203,6 +202,8 @@ worlds = [
     ['simple.world', 'simple_map.yaml', small_simple],
 ]
 
+dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
+
 for world in worlds:
-    build_world(world[0], world[2])
-    build_map(world[1], world[2])
+    build_world(dir, world[0], world[2])
+    build_map(dir, world[1], world[2])
