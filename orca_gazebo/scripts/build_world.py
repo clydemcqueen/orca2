@@ -26,8 +26,8 @@ import sys
 t_world_map = xf.quaternion_matrix([math.sqrt(0.5), 0, 0, -math.sqrt(0.5)])
 
 
-def build_world(dir, name, markers):
-    world_file = open(dir + '/' + name, 'w')
+def build_world(output_dir, name, markers):
+    world_file = open(output_dir + '/' + name, 'w')
     world_file.write("""<?xml version="1.0"?>
 
 <sdf version="1.6">
@@ -52,8 +52,8 @@ def build_world(dir, name, markers):
     world_file.close()
 
 
-def build_map(dir, name, markers):
-    map_file = open(dir + '/' + name, 'w')
+def build_map(output_dir, name, markers):
+    map_file = open(output_dir + '/' + name, 'w')
     map_file.write("""# All marker locations are fixed (f: 1)
 
 marker_length: 0.1778
@@ -177,8 +177,8 @@ def gen_ring_of_markers(num_markers, radius, z):
         angle += inc
 
 
-# Pool test #2: 4m diameter x 1m deep, markers on walls
-pt2 = list(gen_ring_of_markers(num_markers=12, radius=3.51/2, z=-0.5))
+# Field test #3: 12' diameter pool x 3' deep, markers on walls
+ft3 = list(gen_ring_of_markers(num_markers=12, radius=3.6/2, z=-0.5))
 
 medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
 
@@ -196,14 +196,15 @@ worlds = [
     ['large.world', 'large_map.yaml', large_pool],
     ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],
-    ['pt2.world', 'pt2_map.yaml', pt2],
+    ['ft3.world', 'ft3_map.yaml', ft3],
     ['medium_ring.world', 'medium_ring_map.yaml', medium_ring],
     ['large_ring.world', 'large_ring_map.yaml', large_ring],
     ['simple.world', 'simple_map.yaml', small_simple],
 ]
 
-dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
+
+output_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
 
 for world in worlds:
-    build_world(dir, world[0], world[2])
-    build_map(dir, world[1], world[2])
+    build_world(output_dir, world[0], world[2])
+    build_map(output_dir, world[1], world[2])
