@@ -85,7 +85,6 @@ namespace orca_base
     planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", 1);
     target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", 1);
     tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 1);
-    thrust_marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("thrust_markers", 1);
 
     // Camera info may be published with a different QoS
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
@@ -602,41 +601,6 @@ namespace orca_base
     control_msg.stability = stability_;
     control_msg.odom_lag = (now() - msg_time).seconds();
     control_pub_->publish(control_msg);
-
-    // Publish rviz thrust markers
-    if (count_subscribers(thrust_marker_pub_->get_topic_name()) > 0) {
-      visualization_msgs::msg::MarkerArray markers_msg;
-      for (unsigned long i = 0; i < thruster_efforts.size(); ++i) {
-        int32_t action =
-          thruster_efforts[i] == 0.0 ? visualization_msgs::msg::Marker::DELETE : visualization_msgs::msg::Marker::ADD;
-        double scale = (THRUSTERS[i].ccw ? -thruster_efforts[i] : thruster_efforts[i]) / 5.0;
-        double offset = scale > 0 ? -0.1 : 0.1;
-
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = THRUSTERS[i].frame_id;
-        marker.header.stamp = msg_time;
-        marker.ns = "thruster";
-        marker.id = i;
-        marker.type = visualization_msgs::msg::Marker::ARROW;
-        marker.action = action;
-        marker.pose.position.x = 0;
-        marker.pose.position.y = 0;
-        marker.pose.position.z = offset;
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.7071068;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 0.7071068;
-        marker.scale.x = scale;
-        marker.scale.y = 0.01;
-        marker.scale.z = 0.01;
-        marker.color.a = 1.0;
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        markers_msg.markers.push_back(marker);
-      }
-      thrust_marker_pub_->publish(markers_msg);
-    }
   }
 
   void BaseNode::disarm(const rclcpp::Time &msg_time)

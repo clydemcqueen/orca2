@@ -12,7 +12,6 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
-#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "orca_description/parser.hpp"
 #include "orca_msgs/action/mission.hpp"
@@ -212,7 +211,6 @@ namespace orca_base
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr planned_pose_pub_;  // Planned pose
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;               // Planned path
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thrust_marker_pub_;
 
     // Mission server
     rclcpp_action::Server<orca_msgs::action::Mission>::SharedPtr mission_server_;
