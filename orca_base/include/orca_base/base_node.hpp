@@ -230,7 +230,7 @@ namespace orca_base
 
     void all_stop(const rclcpp::Time &msg_time);
 
-    void publish_control(const rclcpp::Time &msg_time, const orca::Pose &error, const orca::Efforts &efforts);
+    void publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts);
 
     void disarm(const rclcpp::Time &msg_time);
 

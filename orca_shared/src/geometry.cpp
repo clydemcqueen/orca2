@@ -144,6 +144,26 @@ namespace orca
   // Twist in the world frame
   //=====================================================================================
 
+  void Twist::from_msg(const geometry_msgs::msg::Twist &msg)
+  {
+    x = msg.linear.x;
+    y = msg.linear.y;
+    z = msg.linear.z;
+    yaw = msg.angular.z;
+  }
+
+  geometry_msgs::msg::Twist Twist::to_msg() const
+  {
+    geometry_msgs::msg::Twist msg;
+
+    msg.linear.x = x;
+    msg.linear.y = y;
+    msg.linear.z = z;
+    msg.angular.z = yaw;
+
+    return msg;
+  }
+
   std::ostream &operator<<(std::ostream &os, Twist const &t)
   {
     return os << std::fixed << std::setprecision(2)

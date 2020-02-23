@@ -43,7 +43,7 @@ namespace orca_base
   constexpr bool is_auv_mode(uint8_t mode)
   {
     using orca_msgs::msg::Control;
-    return mode > Control::ROV_HOLD_PRESSURE;
+    return mode == Control::AUV;
   }
 
   //=============================================================================
@@ -236,9 +236,9 @@ namespace orca_base
     } else if (mode_ == orca_msgs::msg::Control::ROV_HOLD_PRESSURE) {
       ss << "HOLD PRESSURE z=" << z_;
     } else if (mission_) {
-      ss << "MISSION target m" << mission_->planner().target_marker_id();
-      if (mission_->planner().in_recovery()) {
-        ss << " RECOVERY move to m" << mission_->planner().recovery_marker_id();
+      ss << "MISSION target m" << mission_->status().target_marker_id;
+      if (mission_->status().planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
+        ss << " RECOVERY move to m" << mission_->status().target_marker_id;
       } else {
         ss << " plan z=" << plan_.fp.pose.pose.z;
       }
@@ -529,7 +529,7 @@ namespace orca_base
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
 
-    publish_control(stamp, {}, efforts);
+    publish_control(stamp, efforts);
   }
 
   void BaseNode::auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d)
@@ -544,13 +544,13 @@ namespace orca_base
     }
 
     // Advance plan and compute efforts
-    Pose error;
     Efforts efforts;
-    if (mission_->advance(d, plan_, estimate_, error, efforts)) {
+    if (mission_->advance(d, plan_, estimate_, efforts)) {
       // Publish control message
-      publish_control(msg_time, error, efforts);
+      publish_control(msg_time, efforts);
 
-      if (!mission_->planner().in_recovery() && count_subscribers(planned_pose_pub_->get_topic_name()) > 0) {
+      if (mission_->status().planner == orca_msgs::msg::Control::PLAN_LOCAL &&
+          count_subscribers(planned_pose_pub_->get_topic_name()) > 0) {
         // Publish planned pose for visualization
         geometry_msgs::msg::PoseStamped pose_msg;
         pose_msg.header.frame_id = cxt_.map_frame_;
@@ -567,10 +567,10 @@ namespace orca_base
 
   void BaseNode::all_stop(const rclcpp::Time &msg_time)
   {
-    publish_control(msg_time, {}, {});
+    publish_control(msg_time, {});
   }
 
-  void BaseNode::publish_control(const rclcpp::Time &msg_time, const Pose &error, const Efforts &efforts)
+  void BaseNode::publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts)
   {
     // Combine joystick efforts to get thruster efforts.
     std::vector<double> thruster_efforts;
@@ -590,16 +590,37 @@ namespace orca_base
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
-    control_msg.error = error.to_msg();
+    control_msg.estimate_pose = estimate_.fp.pose.pose.to_msg();
     control_msg.efforts = efforts.to_msg();
+    control_msg.stability = stability_;
+    control_msg.odom_lag = (now() - msg_time).seconds();
     control_msg.mode = mode_;
+    if (mission_) {
+      // TODO control_msg.plan_pose
+      // TODO control_msg.plan_twist
+      control_msg.targets_total = mission_->status().targets_total;
+      control_msg.target_idx = mission_->status().target_idx;
+      control_msg.target_marker_id = mission_->status().target_marker_id;
+      control_msg.planner = mission_->status().planner;
+      control_msg.segments_total = mission_->status().segments_total;
+      control_msg.segment_idx = mission_->status().segment_idx;
+      control_msg.segment_info = mission_->status().segment_info;
+    } else {
+      control_msg.plan_pose = geometry_msgs::msg::Pose{};
+      control_msg.plan_twist = geometry_msgs::msg::Twist{};
+      control_msg.targets_total = 0;
+      control_msg.target_idx = 0;
+      control_msg.target_marker_id = 0;
+      control_msg.planner = orca_msgs::msg::Control::PLAN_NONE;
+      control_msg.segments_total = 0;
+      control_msg.segment_idx = 0;
+      control_msg.segment_info = "";
+    }
     control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
     control_msg.brightness_pwm = brightness_to_pwm(brightness_);
     for (double thruster_effort : thruster_efforts) {
       control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
     }
-    control_msg.stability = stability_;
-    control_msg.odom_lag = (now() - msg_time).seconds();
     control_pub_->publish(control_msg);
   }
 

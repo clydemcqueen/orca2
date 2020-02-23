@@ -110,13 +110,9 @@ namespace orca
     constexpr Twist() : x{0}, y{0}, z{0}, yaw{0}
     {}
 
-    void from_msg(const geometry_msgs::msg::Twist &msg)
-    {
-      x = msg.linear.x;
-      y = msg.linear.y;
-      z = msg.linear.z;
-      yaw = msg.angular.z;
-    }
+    void from_msg(const geometry_msgs::msg::Twist &msg);
+
+    geometry_msgs::msg::Twist to_msg() const;
   };
 
   std::ostream &operator<<(std::ostream &os, Twist const &t);

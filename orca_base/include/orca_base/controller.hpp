@@ -29,7 +29,7 @@ namespace orca_base
     explicit PoseController(const BaseContext &cxt);
 
     void calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate, const orca::Acceleration &ff,
-              orca::Pose &error, orca::Efforts &efforts);
+              orca::Efforts &efforts);
   };
 
 #if 0
@@ -154,9 +154,8 @@ namespace orca_base
 
     // The observation is pretty noisy for z, so pass in z data from the barometer
     void
-    calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
-         const Observation &estimate, double estimate_z, const orca::AccelerationBody &ff,
-         orca::Pose &error, orca::Efforts &efforts);
+    calc(const rclcpp::Duration &d, const Observation &plan, double plan_z, const Observation &estimate,
+         double estimate_z, const orca::AccelerationBody &ff, orca::Efforts &efforts);
   };
 
 } // namespace orca_base

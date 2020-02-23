@@ -21,8 +21,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(rclcpp::Duration d, FPStamped &plan, const FPStamped &estimate, orca::Pose &error,
-                        orca::Efforts &efforts)
+  bool Mission::advance(rclcpp::Duration d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -64,7 +63,7 @@ namespace orca_base
         }
       };
 
-      auto rc = planner_->advance(d, plan, estimate, error, efforts, send_feedback);
+      auto rc = planner_->advance(d, plan, estimate, efforts, send_feedback);
       if (rc == AdvanceRC::FAILURE) {
         abort();
         return false;
