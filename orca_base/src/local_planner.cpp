@@ -1,5 +1,7 @@
 #include "orca_base/local_planner.hpp"
 
+#include "rclcpp/logging.hpp"
+
 #include "orca_msgs/msg/control.hpp"
 
 using namespace orca;
@@ -86,42 +88,44 @@ namespace orca_base
 
     RCLCPP_INFO(logger_, "planned duration %g seconds", (plan.t - start.t).seconds());
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
-    segments_[0]->log_info();
 
     // Update status
     status.planner = orca_msgs::msg::Control::PLAN_LOCAL;
     status.segments_total = segments_.size();
     status.segment_idx = 0;
-    status.segment_info = ""; // TODO
+    status.segment_info = segments_[0]->to_str();
+    status.pose = segments_[0]->plan();
+    status.twist = segments_[0]->twist();
+    RCLCPP_INFO(logger_, status.segment_info);
   }
 
   void LocalPlanner::add_keep_station_segment(FPStamped &plan, double seconds)
   {
-    segments_.push_back(std::make_shared<Pause>(logger_, cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
+    segments_.push_back(std::make_shared<Pause>(cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
   }
 
   void LocalPlanner::add_vertical_segment(FPStamped &plan, double z)
   {
-    segments_.push_back(TrapVelo::make_vertical(logger_, cxt_, plan, z));
+    segments_.push_back(TrapVelo::make_vertical(cxt_, plan, z));
   }
 
   void LocalPlanner::add_rotate_segment(FPStamped &plan, double yaw)
   {
-    segments_.push_back(TrapVelo::make_rotate(logger_, cxt_, plan, yaw));
+    segments_.push_back(TrapVelo::make_rotate(cxt_, plan, yaw));
   }
 
   void LocalPlanner::add_line_segment(FPStamped &plan, double x, double y)
   {
-    segments_.push_back(TrapVelo::make_line(logger_, cxt_, plan, x, y));
+    segments_.push_back(TrapVelo::make_line(cxt_, plan, x, y));
   }
 
   void LocalPlanner::add_pose_segment(FPStamped &plan, const FP &goal)
   {
-    segments_.push_back(TrapVelo::make_pose(logger_, cxt_, plan, goal));
+    segments_.push_back(TrapVelo::make_pose(cxt_, plan, goal));
   }
 
-  bool LocalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
-                             orca::Efforts &efforts, PlannerStatus &status)
+  bool LocalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                             PlannerStatus &status)
   {
     // Update the plan
     if (segments_[status.segment_idx]->advance(d)) {
@@ -129,17 +133,21 @@ namespace orca_base
     } else if (++status.segment_idx < segments_.size()) {
       // Move to the next segment
       RCLCPP_INFO(logger_, "segment %d of %d", status.segment_idx + 1, segments_.size());
-      segments_[status.segment_idx]->log_info();
+
+      // Update status
+      status.segment_info = segments_[status.segment_idx]->to_str();
+      RCLCPP_INFO(logger_, status.segment_info);
     } else {
       // Local plan is complete
       return false;
     }
 
-    // Share plan with caller (useful for diagnostics)
-    plan = segments_[status.segment_idx]->plan();
+    // Update pose and twist
+    status.pose = segments_[status.segment_idx]->plan();
+    status.twist = segments_[status.segment_idx]->twist();
 
     // Run PID controller and calculate efforts
-    controller_->calc(d, plan.fp, estimate.fp, segments_[status.segment_idx]->ff(), efforts);
+    controller_->calc(d, status.pose.fp, estimate.fp, segments_[status.segment_idx]->ff(), efforts);
 
     return true;
   }

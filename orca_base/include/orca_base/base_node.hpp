@@ -110,9 +110,6 @@ namespace orca_base
     // Camera model
     image_geometry::PinholeCameraModel fcam_model_;
 
-    // Plan
-    FPStamped plan_;
-
     // Observations and pose estimate
     FPStamped estimate_;
 

@@ -1,8 +1,6 @@
 #ifndef ORCA_BASE_SEGMENT_HPP
 #define ORCA_BASE_SEGMENT_HPP
 
-#include "rclcpp/rclcpp.hpp"
-
 #include "orca_base/base_context.hpp"
 #include "orca_base/fp.hpp"
 
@@ -17,15 +15,14 @@ namespace orca_base
   {
   protected:
 
-    rclcpp::Logger logger_;
     BaseContext cxt_;
 
   public:
 
-    SegmentBase(const rclcpp::Logger &logger, BaseContext cxt);
+    explicit SegmentBase(BaseContext cxt);
 
-    // Write contents to RCLCPP_INFO
-    virtual void log_info() = 0;
+    // Return a string suitable for logging
+    virtual std::string to_str() = 0;
 
     // Advance the motion plan by dt seconds, return true to continue, false if we're done
     virtual bool advance(const rclcpp::Duration &d) = 0;
@@ -46,7 +43,7 @@ namespace orca_base
     orca::Acceleration ff_; // Acceleration in the world frame
 
   public:
-    PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped start, FP goal);
+    PoseSegmentBase(const BaseContext &cxt, FPStamped start, FP goal);
 
     const FPStamped &plan() const
     { return plan_; }
@@ -79,14 +76,10 @@ namespace orca_base
     orca::AccelerationBody ff_; // Acceleration in the body frame
 
   public:
-    ObservationSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, ObservationStamped start,
-                           Observation goal);
+    ObservationSegmentBase(const BaseContext &cxt, ObservationStamped start, Observation goal);
 
     const ObservationStamped &plan() const
     { return plan_; }
-
-    const Observation &goal() const
-    { return goal_; }
 
     const orca::TwistBody &twist() const
     { return twist_; }
@@ -107,7 +100,6 @@ namespace orca_base
     orca::Acceleration initial_accel_;  // Initial total acceleration, not modified
     orca::Acceleration accel_;          // Total acceleration, accel_ = drag_ + ff_
     orca::Acceleration drag_;           // Acceleration due to drag
-    orca::Twist twist_;                 // Velocity
 
     // Start time
     rclcpp::Time start_{0, 0, RCL_ROS_TIME};
@@ -127,27 +119,27 @@ namespace orca_base
 
   public:
 
-    explicit TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, const FP &goal);
+    explicit TrapVelo(const BaseContext &cxt, const FPStamped &start, const FP &goal);
 
     // Return time required to complete all motion
     rclcpp::Duration duration() const;
 
-    void log_info() override;
+    std::string to_str() override;
 
     bool advance(const rclcpp::Duration &d) override;
 
     // Factory methods: make a segment that gets from plan to goal, and update plan
     static std::shared_ptr<TrapVelo>
-    make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double z);
+    make_vertical(const BaseContext &cxt, FPStamped &plan, double z);
 
     static std::shared_ptr<TrapVelo>
-    make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double yaw);
+    make_rotate(const BaseContext &cxt, FPStamped &plan, double yaw);
 
     static std::shared_ptr<TrapVelo>
-    make_line(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double x, double y);
+    make_line(const BaseContext &cxt, FPStamped &plan, double x, double y);
 
     static std::shared_ptr<TrapVelo>
-    make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, const FP &goal);
+    make_pose(const BaseContext &cxt, FPStamped &plan, const FP &goal);
   };
 
   //=====================================================================================
@@ -160,12 +152,9 @@ namespace orca_base
 
   public:
 
-    Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, const rclcpp::Duration &d);
+    Pause(const BaseContext &cxt, const FPStamped &start, const rclcpp::Duration &d);
 
-    void log_info() override;
-
-    const rclcpp::Duration &time_remaining() const
-    { return d_; }
+    std::string to_str() override;
 
     bool advance(const rclcpp::Duration &d) override;
   };
@@ -190,10 +179,9 @@ namespace orca_base
 
   public:
 
-    RotateToMarker(const rclcpp::Logger &logger, const BaseContext &cxt, const ObservationStamped &start,
-                   const Observation &goal);
+    RotateToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal);
 
-    void log_info() override;
+    std::string to_str() override;
 
     bool advance(const rclcpp::Duration &d) override;
   };
@@ -218,10 +206,9 @@ namespace orca_base
 
   public:
 
-    MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt, const ObservationStamped &start,
-                 const Observation &goal);
+    MoveToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal);
 
-    void log_info() override;
+    std::string to_str() override;
 
     bool advance(const rclcpp::Duration &d) override;
   };

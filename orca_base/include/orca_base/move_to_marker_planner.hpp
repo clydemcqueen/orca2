@@ -29,8 +29,7 @@ namespace orca_base
     MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const ObservationStamped &start,
                         PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
-                 orca::Efforts &efforts, PlannerStatus &status);
+    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);
   };
 
 } // namespace orca_base

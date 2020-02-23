@@ -1,5 +1,7 @@
 #include "orca_base/move_to_marker_planner.hpp"
 
+#include "rclcpp/logging.hpp"
+
 #include "orca_msgs/msg/control.hpp"
 
 using namespace orca;
@@ -26,40 +28,48 @@ namespace orca_base
 
     // Rotate to face the marker
     goal.yaw = 0;
-    segments_.push_back(std::make_shared<RotateToMarker>(logger_, cxt_, plan, goal));
+    segments_.push_back(std::make_shared<RotateToMarker>(cxt_, plan, goal));
     plan.o = goal;
 
     // Move toward the marker
     goal.distance = 1;
-    segments_.push_back(std::make_shared<MoveToMarker>(logger_, cxt_, plan, goal));
+    segments_.push_back(std::make_shared<MoveToMarker>(cxt_, plan, goal));
 
-    // Start
-    segments_[0]->log_info();
+    RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
 
     // Update status
     status.planner = orca_msgs::msg::Control::PLAN_RECOVERY_MTM;
     status.segments_total = segments_.size();
     status.segment_idx = 0;
-    status.segment_info = ""; // TODO
+    status.segment_info = segments_[0]->to_str();
+    status.pose = {};
+    status.pose.fp.observations.push_back(segments_[0]->plan().o);
+    status.twist = {}; // TODO convert TwistBody to Twist
+    RCLCPP_INFO(logger_, status.segment_info);
   }
 
-  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate,
-                                    orca::Efforts &efforts, PlannerStatus &status)
+  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                                    PlannerStatus &status)
   {
     // Advance the plan
     if (segments_[status.segment_idx]->advance(d)) {
       // Continue in this segment
     } else if (++status.segment_idx < segments_.size()) {
       // Move to next segment
-      segments_[status.segment_idx]->log_info();
+      RCLCPP_INFO(logger_, "segment %d of %d", status.segment_idx + 1, segments_.size());
+
+      // Update status
+      status.segment_info = segments_[status.segment_idx]->to_str();
+      RCLCPP_INFO(logger_, status.segment_info);
     } else {
       // Recovery action is complete
       return false;
     }
 
-    // Share plan with caller (useful for diagnostics)
-    plan = {};
-    plan.fp.observations.push_back(segments_[status.segment_idx]->plan().o);
+    // Update pose and twist
+    status.pose = {};
+    status.pose.fp.observations.push_back(segments_[status.segment_idx]->plan().o);
+    status.twist = {}; // TODO convert TwistBody to Twist
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs

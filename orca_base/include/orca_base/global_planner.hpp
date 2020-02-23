@@ -30,10 +30,6 @@ namespace orca_base
 
     // State
     PlannerStatus status_;                                    // Planner status
-#if 0
-    FPStamped plan_pose_;                                     // Planned pose
-    orca::Twist plan_twist_;                                  // Planned twist
-#endif
 
     // Given a planned pose, predict the marker observations for the forward camera
     void predict_observations(FP &plan) const;
@@ -54,19 +50,11 @@ namespace orca_base
     const PlannerStatus &status() const
     { return status_; }
 
-#if 0
-    const FPStamped &plan_pose() const
-    { return plan_pose_; }
-
-    const orca::Twist &plan_twist() const
-    { return plan_twist_; }
-#endif
-
     const nav_msgs::msg::Path &global_path() const
     { return global_path_; }
 
     // Advance the plan by dt, return AdvanceRC
-    int advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
+    int advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
                 const std::function<void(double completed, double total)> &send_feedback);
 
     // Factory: visit a list markers, if list is empty all markers will be visited

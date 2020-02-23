@@ -13,8 +13,7 @@ namespace orca_base
   // SegmentBase
   //=====================================================================================
 
-  SegmentBase::SegmentBase(const rclcpp::Logger &logger, BaseContext cxt) :
-    logger_{logger},
+  SegmentBase::SegmentBase(BaseContext cxt) :
     cxt_{std::move(cxt)}
   {
   }
@@ -23,8 +22,8 @@ namespace orca_base
   // PoseSegmentBase
   //=====================================================================================
 
-  PoseSegmentBase::PoseSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped start, FP goal) :
-    SegmentBase{logger, cxt},
+  PoseSegmentBase::PoseSegmentBase(const BaseContext &cxt, FPStamped start, FP goal) :
+    SegmentBase{cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
   {
@@ -36,9 +35,8 @@ namespace orca_base
   // ObservationSegmentBase
   //=====================================================================================
 
-  ObservationSegmentBase::ObservationSegmentBase(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                                 ObservationStamped start, Observation goal) :
-    SegmentBase{logger, cxt},
+  ObservationSegmentBase::ObservationSegmentBase(const BaseContext &cxt, ObservationStamped start, Observation goal) :
+    SegmentBase{cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
   {
@@ -50,14 +48,15 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
-  Pause::Pause(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start,
-               const rclcpp::Duration &d) :
-    PoseSegmentBase{logger, cxt, start, start.fp}, d_{d}
+  Pause::Pause(const BaseContext &cxt, const FPStamped &start, const rclcpp::Duration &d) :
+    PoseSegmentBase{cxt, start, start.fp}, d_{d}
   {}
 
-  void Pause::log_info()
+  std::string Pause::to_str()
   {
-    RCLCPP_INFO(logger_, "pause for %g seconds", d_.seconds());
+    std::stringstream ss;
+    ss << "pause for " << d_.seconds() << " seconds";
+    return ss.str();
   }
 
   bool Pause::advance(const rclcpp::Duration &d)
@@ -102,8 +101,8 @@ namespace orca_base
     stop = decel + rclcpp::Duration::from_seconds(ramp_seconds);
   }
 
-  TrapVelo::TrapVelo(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, const FP &goal) :
-    PoseSegmentBase{logger, cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
+  TrapVelo::TrapVelo(const BaseContext &cxt, const FPStamped &start, const FP &goal) :
+    PoseSegmentBase{cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
   {
     // Distance is always >= 0
     double distance_xy = plan_.fp.distance_xy(goal_);
@@ -244,57 +243,59 @@ namespace orca_base
     return true;
   }
 
-  void TrapVelo::log_info()
+  std::string TrapVelo::to_str()
   {
     auto xy_seconds = (xy_stop_ - start_).seconds();
     auto z_seconds = (z_stop_ - start_).seconds();
     auto yaw_seconds = (yaw_stop_ - start_).seconds();
 
-    RCLCPP_INFO_STREAM(logger_, std::fixed << std::setprecision(4)
-                                           << "cv xy_seconds: " << xy_seconds
-                                           << ", z_seconds: " << z_seconds
-                                           << ", yaw_seconds: " << yaw_seconds
-                                           << ", initial_accel_: " << initial_accel_);
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(4)
+       << "cv xy_seconds: " << xy_seconds
+       << ", z_seconds: " << z_seconds
+       << ", yaw_seconds: " << yaw_seconds
+       << ", initial_accel_: " << initial_accel_;
+    return ss.str();
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_vertical(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double z)
+  TrapVelo::make_vertical(const BaseContext &cxt, FPStamped &plan, double z)
   {
     FP goal = plan.fp;
     goal.pose.pose.z = z;
-    auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_rotate(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double yaw)
+  TrapVelo::make_rotate(const BaseContext &cxt, FPStamped &plan, double yaw)
   {
     FP goal = plan.fp;
     goal.pose.pose.yaw = yaw;
-    auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_line(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, double x, double y)
+  TrapVelo::make_line(const BaseContext &cxt, FPStamped &plan, double x, double y)
   {
     FP goal = plan.fp;
     goal.pose.pose.x = x;
     goal.pose.pose.y = y;
-    auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_pose(const rclcpp::Logger &logger, const BaseContext &cxt, FPStamped &plan, const FP &goal)
+  TrapVelo::make_pose(const BaseContext &cxt, FPStamped &plan, const FP &goal)
   {
-    auto result = std::make_shared<TrapVelo>(logger, cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
@@ -304,9 +305,8 @@ namespace orca_base
   // RotateToMarker
   //=====================================================================================
 
-  RotateToMarker::RotateToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
-                                 const ObservationStamped &start, const Observation &goal) :
-    ObservationSegmentBase(logger, cxt, start, goal)
+  RotateToMarker::RotateToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal) :
+    ObservationSegmentBase(cxt, start, goal)
   {
     double distance_yaw = std::abs(norm_angle(plan_.o.yaw - goal_.yaw));
 
@@ -322,9 +322,11 @@ namespace orca_base
     accel_ = initial_accel_;
   }
 
-  void RotateToMarker::log_info()
+  std::string RotateToMarker::to_str()
   {
-    RCLCPP_INFO_STREAM(logger_, "rotate to marker start: " << plan_ << ", goal: " << goal_);
+    std::stringstream ss;
+    ss << "rotate to marker start: " << plan_ << ", goal: " << goal_;
+    return ss.str();
   }
 
   bool RotateToMarker::advance(const rclcpp::Duration &d)
@@ -373,9 +375,8 @@ namespace orca_base
   // MoveToMarker
   //=====================================================================================
 
-  MoveToMarker::MoveToMarker(const rclcpp::Logger &logger, const BaseContext &cxt,
-                             const ObservationStamped &start, const Observation &goal) :
-    ObservationSegmentBase(logger, cxt, start, goal)
+  MoveToMarker::MoveToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal) :
+    ObservationSegmentBase(cxt, start, goal)
   {
     double distance_fwd = std::abs(plan_.o.distance - goal_.distance);
 
@@ -391,9 +392,11 @@ namespace orca_base
     accel_ = initial_accel_;
   }
 
-  void MoveToMarker::log_info()
+  std::string MoveToMarker::to_str()
   {
-    RCLCPP_INFO_STREAM(logger_, "move to marker start: " << plan_ << ", goal: " << goal_);
+    std::stringstream ss;
+    ss << "move to marker start: " << plan_ << ", goal: " << goal_;
+    return ss.str();
   }
 
   bool MoveToMarker::advance(const rclcpp::Duration &d)

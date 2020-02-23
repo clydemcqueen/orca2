@@ -32,6 +32,9 @@ namespace orca_base
     int segments_total{};         // Number of segments in local plan
     int segment_idx{};            // Current segment index
     std::string segment_info;     // Current segment info string
+
+    FPStamped pose;               // Planned pose
+    orca::Twist twist;            // Planned twist
   };
 
   //=====================================================================================

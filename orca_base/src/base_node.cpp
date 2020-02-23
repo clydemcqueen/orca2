@@ -240,7 +240,7 @@ namespace orca_base
       if (mission_->status().planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
         ss << " RECOVERY move to m" << mission_->status().target_marker_id;
       } else {
-        ss << " plan z=" << plan_.fp.pose.pose.z;
+        ss << " plan z=" << mission_->status().pose.fp.pose.pose.z;
       }
     } else {
       ss << "ERROR";
@@ -283,7 +283,9 @@ namespace orca_base
       cv_bridge::CvImagePtr marked;
       marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
-      draw_observations(marked->image, plan_.fp.observations, CV_RGB(255, 0, 0));
+      if (mission_) {
+        draw_observations(marked->image, mission_->status().pose.fp.observations, CV_RGB(255, 0, 0));
+      }
       draw_observations(marked->image, estimate_.fp.observations, CV_RGB(0, 255, 0));
       write_status(marked->image);
 
@@ -545,7 +547,7 @@ namespace orca_base
 
     // Advance plan and compute efforts
     Efforts efforts;
-    if (mission_->advance(d, plan_, estimate_, efforts)) {
+    if (mission_->advance(d, estimate_, efforts)) {
       // Publish control message
       publish_control(msg_time, efforts);
 
@@ -554,13 +556,12 @@ namespace orca_base
         // Publish planned pose for visualization
         geometry_msgs::msg::PoseStamped pose_msg;
         pose_msg.header.frame_id = cxt_.map_frame_;
-        pose_msg.pose = plan_.fp.pose.pose.to_msg();
+        pose_msg.pose = mission_->status().pose.fp.pose.pose.to_msg();
         planned_pose_pub_->publish(pose_msg);
       }
     } else {
       // Mission is over, clean up
       mission_ = nullptr;
-      plan_ = {};
       disarm(msg_time);
     }
   }
@@ -596,15 +597,16 @@ namespace orca_base
     control_msg.odom_lag = (now() - msg_time).seconds();
     control_msg.mode = mode_;
     if (mission_) {
-      // TODO control_msg.plan_pose
-      // TODO control_msg.plan_twist
-      control_msg.targets_total = mission_->status().targets_total;
-      control_msg.target_idx = mission_->status().target_idx;
-      control_msg.target_marker_id = mission_->status().target_marker_id;
-      control_msg.planner = mission_->status().planner;
-      control_msg.segments_total = mission_->status().segments_total;
-      control_msg.segment_idx = mission_->status().segment_idx;
-      control_msg.segment_info = mission_->status().segment_info;
+      auto status = mission_->status();
+      control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
+      control_msg.plan_twist = status.twist.to_msg();
+      control_msg.targets_total = status.targets_total;
+      control_msg.target_idx = status.target_idx;
+      control_msg.target_marker_id = status.target_marker_id;
+      control_msg.planner = status.planner;
+      control_msg.segments_total = status.segments_total;
+      control_msg.segment_idx = status.segment_idx;
+      control_msg.segment_info = status.segment_info;
     } else {
       control_msg.plan_pose = geometry_msgs::msg::Pose{};
       control_msg.plan_twist = geometry_msgs::msg::Twist{};

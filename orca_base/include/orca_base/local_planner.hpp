@@ -44,8 +44,7 @@ namespace orca_base
     LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, Target target, Map map,
                  bool keep_station, PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
-                 PlannerStatus &status);
+    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);
 
     // TODO publish local path
     const nav_msgs::msg::Path &local_path() const

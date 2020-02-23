@@ -47,6 +47,8 @@ namespace orca_base
     status_.segments_total = 0;
     status_.segment_idx = 0;
     status_.segment_info = "";
+    status_.pose = {};
+    status_.twist = {};
 
     // Write global_path_
     global_path_.header.frame_id = cxt_.map_frame_;
@@ -58,6 +60,7 @@ namespace orca_base
     }
   }
 
+  // TODO move this to map.cpp
   void GlobalPlanner::predict_observations(FP &plan) const
   {
     // Get t_fcam_map
@@ -105,7 +108,7 @@ namespace orca_base
   }
 
   int
-  GlobalPlanner::advance(const rclcpp::Duration &d, FPStamped &plan, const FPStamped &estimate, orca::Efforts &efforts,
+  GlobalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
                          const std::function<void(double completed, double total)> &send_feedback)
   {
     // Bootstrap
@@ -128,16 +131,16 @@ namespace orca_base
     if (local_planner_) {
 
       // Advance the local plan
-      if (local_planner_->advance(d, plan, estimate, efforts, status_)) {
+      if (local_planner_->advance(d, estimate, efforts, status_)) {
 
         // Predict observations from the planned pose
-        predict_observations(plan.fp);
+        predict_observations(status_.pose.fp);
 
         // Is there a good pose?
         if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
 
           // Good pose, make sure the plan & estimate are reasonably close
-          if (estimate.distance_xy(plan) > cxt_.planner_max_pose_xy_error_) {
+          if (estimate.distance_xy(status_.pose) > cxt_.planner_max_pose_xy_error_) {
             RCLCPP_INFO(logger_, "large pose error, re-plan");
             start_local_plan(estimate);
             return AdvanceRC::CONTINUE;
@@ -156,7 +159,7 @@ namespace orca_base
           Observation plan_target_obs;
           ObservationStamped estimate_target_obs;
 
-          if (plan.fp.good_obs(targets_[status_.target_idx].marker_id, plan_target_obs) &&
+          if (status_.pose.fp.good_obs(targets_[status_.target_idx].marker_id, plan_target_obs) &&
               estimate.good_obs(targets_[status_.target_idx].marker_id, estimate_target_obs)) {
 
             double err_yaw = std::abs(plan_target_obs.yaw - estimate_target_obs.o.yaw);
@@ -200,17 +203,17 @@ namespace orca_base
         start_local_plan(estimate);
       } else {
         // Advance the recovery plan
-        if (!recovery_planner_->advance(d, plan, estimate, efforts, status_)) {
+        if (!recovery_planner_->advance(d, estimate, efforts, status_)) {
           RCLCPP_INFO(logger_, "recovery complete, no good pose, giving up");
           return AdvanceRC::FAILURE;
         }
 
         // plan is a FiducialPose with a single planned observation -- the marker we're following
-        assert(plan.fp.observations.size() == 1);
+        assert(status_.pose.fp.observations.size() == 1);
 
         // Estimate the marker corners from the planned yaw and distance -- just for grins
-        plan.fp.observations[0].estimate_corners(map_.marker_length(),
-                                                 cxt_.fcam_hfov_, cxt_.fcam_hres_, cxt_.fcam_vres_);
+        status_.pose.fp.observations[0].estimate_corners(map_.marker_length(),
+                                                         cxt_.fcam_hfov_, cxt_.fcam_hres_, cxt_.fcam_vres_);
       }
     }
 
