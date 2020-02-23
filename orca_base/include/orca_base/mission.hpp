@@ -6,7 +6,7 @@
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "orca_msgs/action/mission.hpp"
 
-#include "orca_base/planner.hpp"
+#include "orca_base/global_planner.hpp"
 #include "orca_base/segment.hpp"
 
 namespace orca_base

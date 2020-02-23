@@ -50,9 +50,11 @@ add_executable(
   src/astar.cpp
   src/base_node.cpp
   src/fp.cpp
+  src/local_planner.cpp
   src/map.cpp
+  src/move_to_marker_planner.cpp
   src/mission.cpp
-  src/planner.cpp
+  src/global_planner.cpp
   src/segment.cpp
   src/controller.cpp
 )
