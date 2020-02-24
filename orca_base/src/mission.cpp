@@ -5,7 +5,7 @@ using namespace orca;
 namespace orca_base
 {
 
-  Mission::Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
+  Mission::Mission(const rclcpp::Logger &logger, const AUVContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
                    std::shared_ptr<GlobalPlanner> planner, const FPStamped &start) :
     logger_{logger},

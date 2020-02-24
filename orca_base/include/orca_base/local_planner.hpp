@@ -3,7 +3,7 @@
 
 #include "rclcpp/logger.hpp"
 
-#include "orca_base/base_context.hpp"
+#include "orca_base/auv_context.hpp"
 #include "orca_base/controller.hpp"
 #include "orca_base/map.hpp"
 #include "orca_base/planner_common.hpp"
@@ -19,7 +19,7 @@ namespace orca_base
   class LocalPlanner
   {
     rclcpp::Logger logger_;
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
     Map map_;
 
     Target target_;                                             // Target
@@ -41,7 +41,7 @@ namespace orca_base
 
   public:
 
-    LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start, Target target, Map map,
+    LocalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start, Target target, Map map,
                  bool keep_station, PlannerStatus &status);
 
     bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);

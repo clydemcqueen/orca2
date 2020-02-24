@@ -3,7 +3,7 @@
 
 #include "rclcpp/logger.hpp"
 
-#include "orca_base/base_context.hpp"
+#include "orca_base/auv_context.hpp"
 #include "orca_base/controller.hpp"
 #include "orca_base/planner_common.hpp"
 #include "orca_base/segment.hpp"
@@ -18,7 +18,7 @@ namespace orca_base
   class MoveToMarkerPlanner
   {
     rclcpp::Logger logger_;
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
 
     int marker_id_;                                                   // Target
     std::vector<std::shared_ptr<ObservationSegmentBase>> segments_;   // Motion segments
@@ -26,7 +26,7 @@ namespace orca_base
 
   public:
 
-    MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const ObservationStamped &start,
+    MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const ObservationStamped &start,
                         PlannerStatus &status);
 
     bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);

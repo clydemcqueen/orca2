@@ -15,7 +15,7 @@ namespace orca_base
   class Mission
   {
     rclcpp::Logger logger_;                               // ROS logger
-    const BaseContext &cxt_;                              // Parameters
+    const AUVContext &cxt_;                               // Parameters
     std::shared_ptr<GlobalPlanner> planner_;              // Global planner
 
     // Mission action state
@@ -24,7 +24,7 @@ namespace orca_base
 
   public:
 
-    Mission(const rclcpp::Logger &logger, const BaseContext &cxt,
+    Mission(const rclcpp::Logger &logger, const AUVContext &cxt,
             std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
             std::shared_ptr<GlobalPlanner> planner, const FPStamped &start);
 

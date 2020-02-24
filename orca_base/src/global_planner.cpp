@@ -27,7 +27,7 @@ namespace orca_base
   // GlobalPlanner
   //=====================================================================================
 
-  GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
+  GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, Map map,
                                orca_description::Parser parser,
                                const image_geometry::PinholeCameraModel &fcam_model, std::vector<Target> targets,
                                bool keep_station) :
@@ -223,7 +223,7 @@ namespace orca_base
 
   // Floor == true: markers must be on the floor facing up, and there must be a down-facing camera
   // Floor == false: markers must be on the wall, and there must be a forward-facing camera
-  Target marker_to_target(const BaseContext &cxt, const Marker &marker, bool floor)
+  Target marker_to_target(const AUVContext &cxt, const Marker &marker, bool floor)
   {
     Target target;
     target.marker_id = marker.id;
@@ -245,7 +245,7 @@ namespace orca_base
   }
 
   std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+  GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const Map &map,
                               const orca_description::Parser &parser,
                               const image_geometry::PinholeCameraModel &fcam_model,
                               const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station)
@@ -295,7 +295,7 @@ namespace orca_base
   }
 
   std::shared_ptr<GlobalPlanner>
-  GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+  GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const Map &map,
                             const orca_description::Parser &parser,
                             const image_geometry::PinholeCameraModel &fcam_model,
                             const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat,

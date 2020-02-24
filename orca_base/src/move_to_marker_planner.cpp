@@ -13,7 +13,7 @@ namespace orca_base
   // MoveToMarkerPlanner -- a recovery strategy
   //=====================================================================================
 
-  MoveToMarkerPlanner::MoveToMarkerPlanner(const rclcpp::Logger &logger, const BaseContext &cxt,
+  MoveToMarkerPlanner::MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt,
                                            const ObservationStamped &start,
                                            PlannerStatus &status) :
     logger_{logger}, cxt_{cxt}, marker_id_{start.o.id},

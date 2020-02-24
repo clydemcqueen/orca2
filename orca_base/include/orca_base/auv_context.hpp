@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_BASE_CONTEXT_HPP
-#define ORCA_BASE_BASE_CONTEXT_HPP
+#ifndef ORCA_BASE_AUV_CONTEXT_HPP
+#define ORCA_BASE_AUV_CONTEXT_HPP
 
 #include <cmath>
 #include <string>
@@ -12,7 +12,7 @@
 namespace orca_base
 {
 
-#define BASE_NODE_ALL_PARAMS \
+#define AUV_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(fluid_density, double, 997)                /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   CXT_MACRO_MEMBER(drag_coef_f, double, 0.8)                  /* Forward drag, 1.0 is a box  */ \
   CXT_MACRO_MEMBER(drag_coef_s, double, 0.95)                 /* Strafe drag  */ \
@@ -29,18 +29,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
   CXT_MACRO_MEMBER(fcam_vres, double, 600)                    /* Forward camera vertical resolution in pixels  */ \
   \
-  CXT_MACRO_MEMBER(inc_pressure, double, 2000)                /* Pressure trim increment  */ \
-  CXT_MACRO_MEMBER(inc_tilt, int, 5)                          /* Tilt increment  */ \
-  CXT_MACRO_MEMBER(inc_lights, int, 20)                       /* Lights increment  */ \
-  \
-  CXT_MACRO_MEMBER(input_dead_band, float, 0.05f)             /* Ignore small joystick inputs  */ \
-  CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Attenuate joystick inputs  */ \
-  CXT_MACRO_MEMBER(yaw_gain, double, 0.1)                     /* Attenuate joystick inputs  */ \
-  CXT_MACRO_MEMBER(vertical_gain, double, 0.5)                /* Attenuate joystick inputs  */ \
-  \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024)      /* ROV hold pressure pid Kp  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015)      /* ROV hold pressure pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000096)     /* ROV hold pressure pid Kd  */ \
+  CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Limit fwd/strafe motion, rest is yaw  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_ku, double, 1)                   /* AUV x pid Ziegler–Nichols ku  */ \
   CXT_MACRO_MEMBER(auv_x_pid_tu, double, 6)                   /* AUV x pid Ziegler–Nichols tu  */ \
@@ -85,7 +74,6 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_fp_ms, int, 200)                   /* Fiducial pose message timeout in ms  */ \
-  CXT_MACRO_MEMBER(timeout_joy_ms, int, 1000)                 /* Joy message timeout in ms  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
 
 /* End of list */
@@ -93,9 +81,9 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-  struct BaseContext
+  struct AUVContext
   {
-    BASE_NODE_ALL_PARAMS
+    AUV_NODE_ALL_PARAMS
 
     // Orca model
     orca::Model model_{};
@@ -103,4 +91,4 @@ namespace orca_base
 
 } // namespace orca_base
 
-#endif // ORCA_BASE_BASE_CONTEXT_HPP
+#endif //ORCA_BASE_AUV_CONTEXT_HPP

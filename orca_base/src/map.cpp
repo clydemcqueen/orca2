@@ -66,7 +66,7 @@ namespace orca_base
     corner3_f_map = t_map_marker * corner3_f_marker;
   }
 
-  bool Marker::predict_observation(const BaseContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
+  bool Marker::predict_observation(const AUVContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
                                    const tf2::Transform &t_cam_map, Observation &obs) const
   {
     // Camera frame: x right, y down, z forward

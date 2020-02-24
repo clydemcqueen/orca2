@@ -7,7 +7,7 @@ using namespace orca;
 namespace orca_base
 {
 
-  PoseController::PoseController(const BaseContext &cxt) :
+  PoseController::PoseController(const AUVContext &cxt) :
     cxt_{cxt},
     x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
     y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
@@ -80,7 +80,7 @@ namespace orca_base
     return next - previous < 0 ? previous - diff : previous + diff;
   }
 
-  void JerkController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+  void JerkController::calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -108,7 +108,7 @@ namespace orca_base
     u_bar.add(ff);
   }
 
-  void BestController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+  void BestController::calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
                             const Acceleration &ff, Acceleration &u_bar)
   {
     // Set targets
@@ -152,7 +152,7 @@ namespace orca_base
     u_bar.add(ff);
   }
 
-  void DepthController::calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+  void DepthController::calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
                              const Acceleration &ff, Acceleration &u_bar)
   {
     u_bar = ff;
@@ -162,7 +162,7 @@ namespace orca_base
   }
 #endif
 
-  ObservationController::ObservationController(const BaseContext &cxt) :
+  ObservationController::ObservationController(const AUVContext &cxt) :
     cxt_{cxt},
     vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
     yaw_controller_{true, cxt_.auv_yaw_pid_ku_, cxt_.auv_yaw_pid_tu_}

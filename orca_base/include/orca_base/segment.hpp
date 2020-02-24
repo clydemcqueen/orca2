@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_SEGMENT_HPP
 #define ORCA_BASE_SEGMENT_HPP
 
-#include "orca_base/base_context.hpp"
+#include "orca_base/auv_context.hpp"
 #include "orca_base/fp.hpp"
 
 namespace orca_base
@@ -15,11 +15,11 @@ namespace orca_base
   {
   protected:
 
-    BaseContext cxt_;
+    AUVContext cxt_;
 
   public:
 
-    explicit SegmentBase(BaseContext cxt);
+    explicit SegmentBase(AUVContext cxt);
 
     // Return a string suitable for logging
     virtual std::string to_str() = 0;
@@ -43,7 +43,7 @@ namespace orca_base
     orca::Acceleration ff_; // Acceleration in the world frame
 
   public:
-    PoseSegmentBase(const BaseContext &cxt, FPStamped start, FP goal);
+    PoseSegmentBase(const AUVContext &cxt, FPStamped start, FP goal);
 
     const FPStamped &plan() const
     { return plan_; }
@@ -76,7 +76,7 @@ namespace orca_base
     orca::AccelerationBody ff_; // Acceleration in the body frame
 
   public:
-    ObservationSegmentBase(const BaseContext &cxt, ObservationStamped start, Observation goal);
+    ObservationSegmentBase(const AUVContext &cxt, ObservationStamped start, Observation goal);
 
     const ObservationStamped &plan() const
     { return plan_; }
@@ -119,7 +119,7 @@ namespace orca_base
 
   public:
 
-    explicit TrapVelo(const BaseContext &cxt, const FPStamped &start, const FP &goal);
+    explicit TrapVelo(const AUVContext &cxt, const FPStamped &start, const FP &goal);
 
     // Return time required to complete all motion
     rclcpp::Duration duration() const;
@@ -130,16 +130,16 @@ namespace orca_base
 
     // Factory methods: make a segment that gets from plan to goal, and update plan
     static std::shared_ptr<TrapVelo>
-    make_vertical(const BaseContext &cxt, FPStamped &plan, double z);
+    make_vertical(const AUVContext &cxt, FPStamped &plan, double z);
 
     static std::shared_ptr<TrapVelo>
-    make_rotate(const BaseContext &cxt, FPStamped &plan, double yaw);
+    make_rotate(const AUVContext &cxt, FPStamped &plan, double yaw);
 
     static std::shared_ptr<TrapVelo>
-    make_line(const BaseContext &cxt, FPStamped &plan, double x, double y);
+    make_line(const AUVContext &cxt, FPStamped &plan, double x, double y);
 
     static std::shared_ptr<TrapVelo>
-    make_pose(const BaseContext &cxt, FPStamped &plan, const FP &goal);
+    make_pose(const AUVContext &cxt, FPStamped &plan, const FP &goal);
   };
 
   //=====================================================================================
@@ -152,7 +152,7 @@ namespace orca_base
 
   public:
 
-    Pause(const BaseContext &cxt, const FPStamped &start, const rclcpp::Duration &d);
+    Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &d);
 
     std::string to_str() override;
 
@@ -179,7 +179,7 @@ namespace orca_base
 
   public:
 
-    RotateToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal);
+    RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal);
 
     std::string to_str() override;
 
@@ -206,7 +206,7 @@ namespace orca_base
 
   public:
 
-    MoveToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal);
+    MoveToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal);
 
     std::string to_str() override;
 

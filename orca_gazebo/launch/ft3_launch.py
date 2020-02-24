@@ -59,9 +59,16 @@ def generate_launch_description():
                 'dev': '/dev/input/js0'  # Update as required
             }]),
 
+        # ROV controller
+        Node(package='orca_base', node_executable='rov_node', output='screen',
+             node_name='rov_node', parameters=[{
+                'use_sim_time': use_sim_time,
+            }], remappings=[
+            ]),
+
         # AUV controller
-        Node(package='orca_base', node_executable='base_node', output='screen',
-             node_name='base_node', parameters=[{
+        Node(package='orca_base', node_executable='auv_node', output='screen',
+             node_name='auv_node', parameters=[{
                 'use_sim_time': use_sim_time,
                 'param_fluid_density': 997.0,
                 'publish_tf': True,

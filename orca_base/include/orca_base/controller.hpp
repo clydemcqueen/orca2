@@ -3,7 +3,7 @@
 
 #include "orca_shared/geometry.hpp"
 
-#include "orca_base/base_context.hpp"
+#include "orca_base/auv_context.hpp"
 #include "orca_base/fp.hpp"
 #include "orca_base/pid.hpp"
 
@@ -16,7 +16,7 @@ namespace orca_base
 
   class PoseController
   {
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
 
     // PID controllers
     pid::Controller x_controller_;
@@ -26,7 +26,7 @@ namespace orca_base
 
   public:
 
-    explicit PoseController(const BaseContext &cxt);
+    explicit PoseController(const AUVContext &cxt);
 
     void calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate, const orca::Acceleration &ff,
               orca::Efforts &efforts);
@@ -41,13 +41,13 @@ namespace orca_base
   {
   public:
 
-    explicit IgnoreEstimateController(const BaseContext &cxt) : ControllerBase{cxt}
+    explicit IgnoreEstimateController(const AUVContext &cxt) : ControllerBase{cxt}
     {}
 
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+    void calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override
     { u_bar = ff; }
   };
@@ -60,13 +60,13 @@ namespace orca_base
   {
   public:
 
-    explicit DeadzoneController(const BaseContext &cxt) : ControllerBase{cxt}
+    explicit DeadzoneController(const AUVContext &cxt) : ControllerBase{cxt}
     {}
 
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+    void calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -82,13 +82,13 @@ namespace orca_base
 
   public:
 
-    explicit JerkController(const BaseContext &cxt) : ControllerBase{cxt}
+    explicit JerkController(const AUVContext &cxt) : ControllerBase{cxt}
     {}
 
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+    void calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -104,13 +104,13 @@ namespace orca_base
 
   public:
 
-    explicit BestController(const BaseContext &cxt) : ControllerBase{cxt}
+    explicit BestController(const AUVContext &cxt) : ControllerBase{cxt}
     {}
 
     bool dead_reckoning() override
     { return false; }
 
-    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+    void calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 
@@ -122,13 +122,13 @@ namespace orca_base
   {
   public:
 
-    explicit DepthController(const BaseContext &cxt) : ControllerBase{cxt}
+    explicit DepthController(const AUVContext &cxt) : ControllerBase{cxt}
     {}
 
     bool dead_reckoning() override
     { return true; }
 
-    void calc(const BaseContext &cxt, double dt, const FP &plan, const FP &estimate,
+    void calc(const AUVContext &cxt, double dt, const FP &plan, const FP &estimate,
               const orca::Acceleration &ff, orca::Acceleration &u_bar) override;
   };
 #endif
@@ -142,7 +142,7 @@ namespace orca_base
 
   class ObservationController
   {
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
 
     // PID controllers
     pid::Controller vertical_controller_;
@@ -150,7 +150,7 @@ namespace orca_base
 
   public:
 
-    explicit ObservationController(const BaseContext &cxt);
+    explicit ObservationController(const AUVContext &cxt);
 
     // The observation is pretty noisy for z, so pass in z data from the barometer
     void

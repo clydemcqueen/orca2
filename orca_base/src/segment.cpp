@@ -13,7 +13,7 @@ namespace orca_base
   // SegmentBase
   //=====================================================================================
 
-  SegmentBase::SegmentBase(BaseContext cxt) :
+  SegmentBase::SegmentBase(AUVContext cxt) :
     cxt_{std::move(cxt)}
   {
   }
@@ -22,7 +22,7 @@ namespace orca_base
   // PoseSegmentBase
   //=====================================================================================
 
-  PoseSegmentBase::PoseSegmentBase(const BaseContext &cxt, FPStamped start, FP goal) :
+  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, FPStamped start, FP goal) :
     SegmentBase{cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -35,7 +35,7 @@ namespace orca_base
   // ObservationSegmentBase
   //=====================================================================================
 
-  ObservationSegmentBase::ObservationSegmentBase(const BaseContext &cxt, ObservationStamped start, Observation goal) :
+  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, ObservationStamped start, Observation goal) :
     SegmentBase{cxt},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -48,7 +48,7 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
-  Pause::Pause(const BaseContext &cxt, const FPStamped &start, const rclcpp::Duration &d) :
+  Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &d) :
     PoseSegmentBase{cxt, start, start.fp}, d_{d}
   {}
 
@@ -101,7 +101,7 @@ namespace orca_base
     stop = decel + rclcpp::Duration::from_seconds(ramp_seconds);
   }
 
-  TrapVelo::TrapVelo(const BaseContext &cxt, const FPStamped &start, const FP &goal) :
+  TrapVelo::TrapVelo(const AUVContext &cxt, const FPStamped &start, const FP &goal) :
     PoseSegmentBase{cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
   {
     // Distance is always >= 0
@@ -259,7 +259,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_vertical(const BaseContext &cxt, FPStamped &plan, double z)
+  TrapVelo::make_vertical(const AUVContext &cxt, FPStamped &plan, double z)
   {
     FP goal = plan.fp;
     goal.pose.pose.z = z;
@@ -270,7 +270,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_rotate(const BaseContext &cxt, FPStamped &plan, double yaw)
+  TrapVelo::make_rotate(const AUVContext &cxt, FPStamped &plan, double yaw)
   {
     FP goal = plan.fp;
     goal.pose.pose.yaw = yaw;
@@ -281,7 +281,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_line(const BaseContext &cxt, FPStamped &plan, double x, double y)
+  TrapVelo::make_line(const AUVContext &cxt, FPStamped &plan, double x, double y)
   {
     FP goal = plan.fp;
     goal.pose.pose.x = x;
@@ -293,7 +293,7 @@ namespace orca_base
   }
 
   std::shared_ptr<TrapVelo>
-  TrapVelo::make_pose(const BaseContext &cxt, FPStamped &plan, const FP &goal)
+  TrapVelo::make_pose(const AUVContext &cxt, FPStamped &plan, const FP &goal)
   {
     auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
     plan.fp = goal;
@@ -305,7 +305,7 @@ namespace orca_base
   // RotateToMarker
   //=====================================================================================
 
-  RotateToMarker::RotateToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal) :
+  RotateToMarker::RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
     ObservationSegmentBase(cxt, start, goal)
   {
     double distance_yaw = std::abs(norm_angle(plan_.o.yaw - goal_.yaw));
@@ -375,7 +375,7 @@ namespace orca_base
   // MoveToMarker
   //=====================================================================================
 
-  MoveToMarker::MoveToMarker(const BaseContext &cxt, const ObservationStamped &start, const Observation &goal) :
+  MoveToMarker::MoveToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
     ObservationSegmentBase(cxt, start, goal)
   {
     double distance_fwd = std::abs(plan_.o.distance - goal_.distance);

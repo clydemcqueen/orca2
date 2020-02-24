@@ -34,7 +34,6 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(ukf REQUIRED)
 find_package(urdf REQUIRED)
-find_package(visualization_msgs REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
 include_directories(
@@ -42,13 +41,13 @@ include_directories(
 )
 
 #=============
-# Base node
+# AUV node
 #=============
 
 add_executable(
-  base_node
+  auv_node
   src/astar.cpp
-  src/base_node.cpp
+  src/auv_node.cpp
   src/fp.cpp
   src/local_planner.cpp
   src/map.cpp
@@ -60,9 +59,10 @@ add_executable(
 )
 
 ament_target_dependencies(
-  base_node
+  auv_node
   cv_bridge
   fiducial_vlam_msgs
+  geometry_msgs
   image_geometry
   nav_msgs
   orca_description
@@ -74,7 +74,26 @@ ament_target_dependencies(
   sensor_msgs
   tf2
   tf2_ros
-  visualization_msgs
+)
+
+#=============
+# ROV node
+#=============
+
+add_executable(
+  rov_node
+  src/rov_node.cpp
+)
+
+ament_target_dependencies(
+  rov_node
+  geometry_msgs
+  orca_msgs
+  orca_shared
+  rclcpp
+  rclcpp_action
+  ros2_shared
+  sensor_msgs
 )
 
 #=============
@@ -98,7 +117,7 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS base_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS auv_node rov_node DESTINATION lib/${PROJECT_NAME})
 
 # Install Python nodes
 # PROGRAMS sets execute bits, FILES clears them

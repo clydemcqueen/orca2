@@ -16,7 +16,7 @@ namespace orca_base
   class GlobalPlanner
   {
     rclcpp::Logger logger_;
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
     Map map_;
     orca_description::Parser parser_;
     image_geometry::PinholeCameraModel fcam_model_;
@@ -42,7 +42,7 @@ namespace orca_base
 
   public:
 
-    explicit GlobalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, Map map,
+    explicit GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, Map map,
                            orca_description::Parser parser,
                            const image_geometry::PinholeCameraModel &fcam_model, std::vector<Target> targets,
                            bool keep_station);
@@ -59,14 +59,14 @@ namespace orca_base
 
     // Factory: visit a list markers, if list is empty all markers will be visited
     static std::shared_ptr<GlobalPlanner>
-    plan_markers(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+    plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const Map &map,
                  const orca_description::Parser &parser,
                  const image_geometry::PinholeCameraModel &fcam_model,
                  const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station);
 
     // Factory: visit a list of poses, list cannot be empty
     static std::shared_ptr<GlobalPlanner>
-    plan_poses(const rclcpp::Logger &logger, const BaseContext &cxt, const Map &map,
+    plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const Map &map,
                const orca_description::Parser &parser, const image_geometry::PinholeCameraModel &fcam_model,
                const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat, bool keep_station);
   };

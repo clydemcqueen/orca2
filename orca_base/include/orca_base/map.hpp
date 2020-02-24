@@ -10,7 +10,7 @@
 #include "orca_shared/geometry.hpp"
 
 #include "orca_base/astar.hpp"
-#include "orca_base/base_context.hpp"
+#include "orca_base/auv_context.hpp"
 #include "orca_base/fp.hpp"
 
 namespace orca_base
@@ -29,14 +29,14 @@ namespace orca_base
 
     Marker(int id, const geometry_msgs::msg::Pose &_marker_f_map, double marker_length);
 
-    bool predict_observation(const BaseContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
+    bool predict_observation(const AUVContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
                              const tf2::Transform &t_cam_map, Observation &obs) const;
   };
 
   class Map
   {
     rclcpp::Logger logger_;
-    const BaseContext &cxt_;
+    const AUVContext &cxt_;
 
     // Marker map from vlam
     fiducial_vlam_msgs::msg::Map::SharedPtr vlam_map_;
@@ -46,7 +46,7 @@ namespace orca_base
 
   public:
 
-    explicit Map(const rclcpp::Logger &logger, const BaseContext &cxt) : logger_{logger}, cxt_{cxt}
+    explicit Map(const rclcpp::Logger &logger, const AUVContext &cxt) : logger_{logger}, cxt_{cxt}
     {}
 
     // Initialize or update the map

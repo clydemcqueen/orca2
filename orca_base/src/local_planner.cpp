@@ -13,7 +13,7 @@ namespace orca_base
   // LocalPlanner -- build a local plan to a target
   //=====================================================================================
 
-  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const BaseContext &cxt, const FPStamped &start,
+  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start,
                              Target target, Map map,
                              bool keep_station, PlannerStatus &status) :
     logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
