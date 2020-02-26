@@ -50,6 +50,7 @@ namespace orca_base
     FPStamped estimate_;
 
     // AUV operation
+    int global_plan_idx_{-1};                     // Count of global plans, starts at 0
     std::shared_ptr<Mission> mission_;            // The mission we're running
     Map map_;                                     // Map of fiducial markers
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
@@ -136,10 +137,6 @@ namespace orca_base
     rclcpp_action::CancelResponse mission_cancel(std::shared_ptr<MissionHandle> goal_handle);
 
     void mission_accepted(std::shared_ptr<MissionHandle> goal_handle);
-
-    void start_mission(const rclcpp::Time &msg_time, bool pose_targets, const std::vector<int> &markers,
-                       std::vector<geometry_msgs::msg::Pose> poses, bool random, bool repeat, bool keep_station,
-                       const std::shared_ptr<MissionHandle> &goal_handle);
 
     void abort_mission(const rclcpp::Time &msg_time);
 

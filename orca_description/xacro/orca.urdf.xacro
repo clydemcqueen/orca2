@@ -332,10 +332,7 @@
             <link name="base_link">
                 <center_of_mass>0 0 ${MASS_Z}</center_of_mass>
                 <center_of_volume>0 0 ${VOLUME_Z}</center_of_volume>
-                <tether_attach>-0.25 0 ${THRUSTER_Z}</tether_attach>
-                <xacro:unless value="${HAS_TETHER}">
-                    <tether_drag>0</tether_drag>
-                </xacro:unless>
+                <angular_drag>4 4 4</angular_drag>
             </link>
         </plugin>
     </gazebo>

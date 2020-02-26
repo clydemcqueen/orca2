@@ -38,14 +38,14 @@ namespace orca_base
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
 
     // Update status
-    status.planner = orca_msgs::msg::Control::PLAN_RECOVERY_MTM;
-    status.segments_total = segments_.size();
-    status.segment_idx = 0;
-    status.segment_info = segments_[0]->to_str();
+    status.first_segment(orca_msgs::msg::Control::PLAN_RECOVERY_MTM, segments_.size(),
+                         segments_[0]->to_str(), segments_[0]->type());
+    RCLCPP_INFO(logger_, status.segment_info);
+
+    // Set initial pose and twist
     status.pose = {};
     status.pose.fp.observations.push_back(segments_[0]->plan().o);
     status.twist = {}; // TODO convert TwistBody to Twist
-    RCLCPP_INFO(logger_, status.segment_info);
   }
 
   bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
@@ -59,7 +59,7 @@ namespace orca_base
       RCLCPP_INFO(logger_, "segment %d of %d", status.segment_idx + 1, segments_.size());
 
       // Update status
-      status.segment_info = segments_[status.segment_idx]->to_str();
+      status.next_segment(segments_[status.segment_idx]->to_str(), segments_[status.segment_idx]->type());
       RCLCPP_INFO(logger_, status.segment_info);
     } else {
       // Recovery action is complete

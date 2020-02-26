@@ -4,7 +4,6 @@ using namespace orca;
 
 namespace orca_base
 {
-
   Mission::Mission(const rclcpp::Logger &logger, const AUVContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
                    std::shared_ptr<GlobalPlanner> planner, const FPStamped &start) :
@@ -93,7 +92,7 @@ namespace orca_base
 
   void Mission::complete()
   {
-    RCLCPP_INFO(logger_, "mission completed");
+    RCLCPP_INFO(logger_, "mission succeeded");
 
     if (goal_handle_) {
       auto result = std::make_shared<orca_msgs::action::Mission::Result>();

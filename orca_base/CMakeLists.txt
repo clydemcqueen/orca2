@@ -54,6 +54,7 @@ add_executable(
   src/move_to_marker_planner.cpp
   src/mission.cpp
   src/global_planner.cpp
+  src/planner_common.cpp
   src/segment.cpp
   src/controller.cpp
 )

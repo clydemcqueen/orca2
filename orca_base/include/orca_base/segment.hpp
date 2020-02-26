@@ -16,16 +16,22 @@ namespace orca_base
   protected:
 
     AUVContext cxt_;
+    uint8_t type_;
 
   public:
 
-    explicit SegmentBase(AUVContext cxt);
+    explicit SegmentBase(AUVContext cxt, uint8_t type);
 
     // Return a string suitable for logging
     virtual std::string to_str() = 0;
 
     // Advance the motion plan by dt seconds, return true to continue, false if we're done
     virtual bool advance(const rclcpp::Duration &d) = 0;
+
+    __uint8_t type()
+    { return type_;}
+
+    std::string type_name();
   };
 
   //=====================================================================================
@@ -43,7 +49,7 @@ namespace orca_base
     orca::Acceleration ff_; // Acceleration in the world frame
 
   public:
-    PoseSegmentBase(const AUVContext &cxt, FPStamped start, FP goal);
+    PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal);
 
     const FPStamped &plan() const
     { return plan_; }
@@ -76,7 +82,7 @@ namespace orca_base
     orca::AccelerationBody ff_; // Acceleration in the body frame
 
   public:
-    ObservationSegmentBase(const AUVContext &cxt, ObservationStamped start, Observation goal);
+    ObservationSegmentBase(const AUVContext &cxt, uint8_t type, ObservationStamped start, Observation goal);
 
     const ObservationStamped &plan() const
     { return plan_; }
@@ -119,7 +125,7 @@ namespace orca_base
 
   public:
 
-    explicit TrapVelo(const AUVContext &cxt, const FPStamped &start, const FP &goal);
+    explicit TrapVelo(const AUVContext &cxt, uint8_t type, const FPStamped &start, const FP &goal);
 
     // Return time required to complete all motion
     rclcpp::Duration duration() const;

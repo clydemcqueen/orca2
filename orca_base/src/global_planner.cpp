@@ -1,7 +1,6 @@
 #include "orca_base/global_planner.hpp"
 
 #include <random>
-#include <iomanip>
 
 #include "orca_msgs/msg/control.hpp"
 #include "orca_shared/util.hpp"
@@ -12,20 +11,6 @@ using namespace orca;
 
 namespace orca_base
 {
-
-  //=====================================================================================
-  // Utilities
-  //=====================================================================================
-
-  std::ostream &operator<<(std::ostream &os, Target const &target)
-  {
-    os << std::fixed << std::setprecision(2)
-       << "{marker: " << target.marker_id << ", pose: " << target.fp.pose.pose << "}";
-  }
-
-  //=====================================================================================
-  // GlobalPlanner
-  //=====================================================================================
 
   GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, Map map,
                                orca_description::Parser parser,
@@ -39,16 +24,8 @@ namespace orca_base
       RCLCPP_INFO_STREAM(logger_, i);
     }
 
-    // Initialize planner status
-    status_.targets_total = targets_.size();
-    status_.target_idx = 0;
-    status_.target_marker_id = targets_[0].marker_id;
-    status_.planner = orca_msgs::msg::Control::PLAN_NONE;
-    status_.segments_total = 0;
-    status_.segment_idx = 0;
-    status_.segment_info = "";
-    status_.pose = {};
-    status_.twist = {};
+    // Init status
+    status_.first_target(targets_.size(), targets_[0].marker_id);
 
     // Write global_path_
     global_path_.header.frame_id = cxt_.map_frame_;
@@ -95,9 +72,9 @@ namespace orca_base
   {
     recovery_planner_ = nullptr;
 
+    auto keep_station = status_.target_idx == targets_.size() - 1 ? keep_station_ : false;
     local_planner_ = std::make_shared<LocalPlanner>(logger_, cxt_, start, targets_[status_.target_idx], map_,
-                                                    status_.target_idx == targets_.size() - 1 ? keep_station_ : false,
-                                                    status_);
+                                                    keep_station, status_);
   }
 
   void GlobalPlanner::start_recovery_plan(const ObservationStamped &start)
@@ -183,7 +160,7 @@ namespace orca_base
           send_feedback(status_.target_idx, targets_.size());
 
           // Update status
-          status_.target_marker_id = targets_[status_.target_idx].marker_id;
+          status_.next_target(targets_[status_.target_idx].marker_id);
 
           // Build a local plan
           start_local_plan(estimate);

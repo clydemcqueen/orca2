@@ -18,7 +18,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(drag_coef_s, double, 0.95)                 /* Strafe drag  */ \
   CXT_MACRO_MEMBER(drag_coef_z, double, 0.95)                 /* Vertical drag  */ \
   CXT_MACRO_MEMBER(drag_coef_tether, double, 1.1)             /* Tether drag, 1.2 for unfaired tether  */ \
-  CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.002)     /* Yaw drag, wild guess  */ \
+  CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.004)     /* Yaw drag, wild guess  */ \
   \
   CXT_MACRO_MEMBER(sensor_loop, bool, false)                  /* false: timer loop, true: sensor loop  */ \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* true: publish t_map_base  */ \

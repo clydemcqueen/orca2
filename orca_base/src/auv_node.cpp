@@ -24,7 +24,7 @@ namespace orca_base
     putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, 1, std::move(color));
   }
 
-  void draw_observations(cv::Mat &image, const std::vector<Observation> &observations, const cv::Scalar& color)
+  void draw_observations(cv::Mat &image, const std::vector<Observation> &observations, const cv::Scalar &color)
   {
     for (const auto &obs : observations) {
       // Draw marker name
@@ -359,15 +359,6 @@ namespace orca_base
     return rclcpp_action::CancelResponse::ACCEPT;
   }
 
-  void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
-  {
-    // Start the mission
-    RCLCPP_INFO(get_logger(), "execute mission");
-    auto action = goal_handle->get_goal();
-    start_mission(now(), action->pose_targets, action->marker_ids, action->poses, action->random, action->repeat,
-                  action->keep_station, goal_handle);
-  }
-
   // Start a mission. There are lots of options! Here are some default cases:
   //
   // If !pose_targets, then look to markers for a list of markers.
@@ -376,28 +367,33 @@ namespace orca_base
   // If pose_targets, then look to poses for a list of poses.
   // If poses.empty(), then try to provide the current pose.
   // This only works if we have a good pose. It's only useful if keep_station is true.
-  void AUVNode::start_mission(const rclcpp::Time &msg_time, bool pose_targets, const std::vector<int> &markers,
-                              std::vector<geometry_msgs::msg::Pose> poses,
-                              bool random, bool repeat, bool keep_station,
-                              const std::shared_ptr<MissionHandle> &goal_handle)
+  void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
   {
-    // Abort a previous mission
-    abort_mission(msg_time);
+    auto action = goal_handle->get_goal();
 
     RCLCPP_INFO(get_logger(), "start mission, pose_targets=%d, %d marker(s), %d pose(s), random=%d, repeat=%d, keep=%d",
-                pose_targets, markers.size(), poses.size(), random, repeat, keep_station);
+                action->pose_targets, action->marker_ids.size(), action->poses.size(), action->random, action->repeat,
+                action->keep_station);
 
-    if (pose_targets && poses.empty() && keep_station && estimate_.fp.good_pose(cxt_.good_pose_dist_)) {
-      RCLCPP_INFO(get_logger(), "keeping station at current pose");
-      poses.push_back(estimate_.fp.pose.pose.to_msg());
+    // Create a global planner
+    ++global_plan_idx_;
+    std::shared_ptr<GlobalPlanner> planner;
+    if (action->pose_targets) {
+      // If poses.empty() then go to the current pose
+      if (action->poses.empty() && action->keep_station && estimate_.fp.good_pose(cxt_.good_pose_dist_)) {
+        RCLCPP_INFO(get_logger(), "keeping station at current pose");
+        std::vector<geometry_msgs::msg::Pose> poses;
+        poses.push_back(estimate_.fp.pose.pose.to_msg());
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, poses,
+                                            action->random, action->repeat, action->keep_station);
+      } else {
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, action->poses,
+                                            action->random, action->repeat, action->keep_station);
+      }
+    } else {
+      planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, parser_, fcam_model_, action->marker_ids,
+                                            action->random, action->repeat, action->keep_station);
     }
-
-    // Create planner, will build a global and local plan
-    auto planner = pose_targets ?
-                   GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, poses,
-                                             random, repeat, keep_station) :
-                   GlobalPlanner::plan_markers(get_logger(), cxt_, map_, parser_, fcam_model_, markers,
-                                               random, repeat, keep_station);
 
     if (!planner) {
       // Failed to build a global plan, abort mission
@@ -417,7 +413,7 @@ namespace orca_base
     mission_ = std::make_shared<Mission>(get_logger(), cxt_, goal_handle, planner, estimate_);
 
     // Init estimated path
-    estimated_path_.header.stamp = msg_time;
+    estimated_path_.header.stamp = now();
     estimated_path_.header.frame_id = cxt_.map_frame_;
     estimated_path_.poses.clear();
   }
@@ -490,27 +486,20 @@ namespace orca_base
     control_msg.stability = 1.0;
     control_msg.odom_lag = (now() - msg_time).seconds();
     control_msg.mode = orca_msgs::msg::Control::AUV;
+    control_msg.global_plan_idx = global_plan_idx_;
     if (mission_) {
       auto status = mission_->status();
-      control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
-      control_msg.plan_twist = status.twist.to_msg();
       control_msg.targets_total = status.targets_total;
       control_msg.target_idx = status.target_idx;
       control_msg.target_marker_id = status.target_marker_id;
       control_msg.planner = status.planner;
+      control_msg.local_plan_idx = status.local_plan_idx;
       control_msg.segments_total = status.segments_total;
       control_msg.segment_idx = status.segment_idx;
       control_msg.segment_info = status.segment_info;
-    } else {
-      control_msg.plan_pose = geometry_msgs::msg::Pose{};
-      control_msg.plan_twist = geometry_msgs::msg::Twist{};
-      control_msg.targets_total = 0;
-      control_msg.target_idx = 0;
-      control_msg.target_marker_id = 0;
-      control_msg.planner = orca_msgs::msg::Control::PLAN_NONE;
-      control_msg.segments_total = 0;
-      control_msg.segment_idx = 0;
-      control_msg.segment_info = "";
+      control_msg.segment_type = status.segment_type;
+      control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
+      control_msg.plan_twist = status.twist.to_msg();
     }
     control_msg.camera_tilt_pwm = tilt_to_pwm(0);
     control_msg.brightness_pwm = brightness_to_pwm(0);

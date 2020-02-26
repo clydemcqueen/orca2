@@ -287,6 +287,7 @@ namespace orca_base
   {
     switch (result.code) {
       case rclcpp_action::ResultCode::SUCCEEDED:
+        RCLCPP_INFO(get_logger(), "mission succeeded");
         break;
       case rclcpp_action::ResultCode::ABORTED:
         RCLCPP_ERROR(get_logger(), "mission aborted");
@@ -299,7 +300,6 @@ namespace orca_base
         return;
     }
 
-    RCLCPP_INFO(get_logger(), "mission complete");
     disarm(now());
   }
 
@@ -422,9 +422,11 @@ namespace orca_base
       case Mission::GO_TO_POSE:
         goal_msg.pose_targets = true;
         goal_msg.poses.push_back(pose);
+        RCLCPP_INFO(get_logger(), "go to pose");
         break;
       case Mission::RANDOM_MARKERS:
         goal_msg.random = true;
+        RCLCPP_INFO(get_logger(), "visit all markers in a random order");
         break;
     }
 

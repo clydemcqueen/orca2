@@ -77,26 +77,12 @@ class PlotControlNode(Node):
 
     def plot_msgs(self):
         # Create a figure and 16 subplots:
-        # 4 for error in the world frame
         # 4 for efforts in the body frame
         # 6 for thruster PMW values
         # 1 for odom lag
         # 1 for dt
-        fig, ((axex, axey, axez, axew), (axff, axfs, axfv, axfw), (axt0, axt1, axt2, axt3),
-              (axt4, axt5, axol, axdt)) = plt.subplots(4, 4)
-
-        # Plot error
-        error_axes = [axex, axey, axez, axew]
-        error_names = ['error x', 'error y', 'error z', 'error yaw']
-        error_values = [[msg.error.position.x for msg in self._control_msgs],
-                        [msg.error.position.y for msg in self._control_msgs],
-                        [msg.error.position.z for msg in self._control_msgs],
-                        [get_yaw(msg.error.orientation) for msg in self._control_msgs]]
-        for ax, name, values in zip(error_axes, error_names, error_values):
-            ax.set_title(name)
-            ax.set_ylim(-0.3, 0.3)
-            ax.set_xticklabels([])
-            ax.plot(values)
+        fig, ((axff, axfs, axfv, axfw), (axt0, axt1, axt2, axt3),
+              (axt4, axt5, axol, axdt)) = plt.subplots(3, 4)
 
         # Plot efforts
         effort_axes = [axff, axfs, axfv, axfw]
@@ -115,7 +101,7 @@ class PlotControlNode(Node):
                     pos_neg += 1
 
             ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
-            ax.set_ylim(-0.55, 0.55)
+            ax.set_ylim(-0.3, 0.3)
             ax.set_xticklabels([])
             ax.plot(values)
 
@@ -140,7 +126,7 @@ class PlotControlNode(Node):
             total_cost += cost
 
             ax.set_title('T{}: pos_neg={}, off_on={}, on={}, cost={}'.format(i, pos_neg, off_on, on, cost))
-            ax.set_ylim(1200, 1800)
+            ax.set_ylim(1400, 1600)
             ax.set_xticklabels([])
             ax.plot(pwm_values)
 

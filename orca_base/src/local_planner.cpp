@@ -90,13 +90,13 @@ namespace orca_base
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
 
     // Update status
-    status.planner = orca_msgs::msg::Control::PLAN_LOCAL;
-    status.segments_total = segments_.size();
-    status.segment_idx = 0;
-    status.segment_info = segments_[0]->to_str();
-    status.pose = segments_[0]->plan();
-    status.twist = segments_[0]->twist();
+    status.first_segment(orca_msgs::msg::Control::PLAN_LOCAL, segments_.size(),
+      segments_[0]->to_str(), segments_[0]->type());
     RCLCPP_INFO(logger_, status.segment_info);
+
+    // Set initial pose and twist
+    status.pose = segments_[status.segment_idx]->plan();
+    status.twist = segments_[status.segment_idx]->twist();
   }
 
   void LocalPlanner::add_keep_station_segment(FPStamped &plan, double seconds)
@@ -135,7 +135,7 @@ namespace orca_base
       RCLCPP_INFO(logger_, "segment %d of %d", status.segment_idx + 1, segments_.size());
 
       // Update status
-      status.segment_info = segments_[status.segment_idx]->to_str();
+      status.next_segment(segments_[status.segment_idx]->to_str(), segments_[status.segment_idx]->type());
       RCLCPP_INFO(logger_, status.segment_info);
     } else {
       // Local plan is complete

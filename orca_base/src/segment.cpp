@@ -2,6 +2,7 @@
 
 #include <iomanip>
 
+#include "orca_msgs/msg/control.hpp"
 #include "orca_shared/util.hpp"
 
 using namespace orca;
@@ -13,17 +14,38 @@ namespace orca_base
   // SegmentBase
   //=====================================================================================
 
-  SegmentBase::SegmentBase(AUVContext cxt) :
-    cxt_{std::move(cxt)}
+  SegmentBase::SegmentBase(AUVContext cxt, uint8_t type) :
+    cxt_{std::move(cxt)}, type_{type}
   {
+  }
+
+  std::string SegmentBase::type_name()
+  {
+    if (type_ == orca_msgs::msg::Control::PAUSE) {
+      return "pause";
+    } else if (type_ == orca_msgs::msg::Control::POSE_VERTICAL) {
+      return "pose_vertical";
+    } else if (type_ == orca_msgs::msg::Control::POSE_ROTATE) {
+      return "pose_rotate";
+    } else if (type_ == orca_msgs::msg::Control::POSE_LINE) {
+      return "pose_line";
+    } else if (type_ == orca_msgs::msg::Control::POSE_COMBO) {
+      return "pose_combo";
+    } else if (type_ == orca_msgs::msg::Control::OBS_RTM) {
+      return "obs_rtm";
+    } else if (type_ == orca_msgs::msg::Control::OBS_MTM) {
+      return "obs_mtm";
+    } else if (type_ == orca_msgs::msg::Control::POSE_LINE) {
+      return "no_segment";
+    }
   }
 
   //=====================================================================================
   // PoseSegmentBase
   //=====================================================================================
 
-  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, FPStamped start, FP goal) :
-    SegmentBase{cxt},
+  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal) :
+    SegmentBase{cxt, type},
     plan_{std::move(start)},
     goal_{std::move(goal)}
   {
@@ -35,8 +57,9 @@ namespace orca_base
   // ObservationSegmentBase
   //=====================================================================================
 
-  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, ObservationStamped start, Observation goal) :
-    SegmentBase{cxt},
+  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, uint8_t type, ObservationStamped start,
+                                                 Observation goal) :
+    SegmentBase{cxt, type},
     plan_{std::move(start)},
     goal_{std::move(goal)}
   {
@@ -49,7 +72,7 @@ namespace orca_base
   //=====================================================================================
 
   Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &d) :
-    PoseSegmentBase{cxt, start, start.fp}, d_{d}
+    PoseSegmentBase{cxt, orca_msgs::msg::Control::PAUSE, start, start.fp}, d_{d}
   {}
 
   std::string Pause::to_str()
@@ -101,8 +124,8 @@ namespace orca_base
     stop = decel + rclcpp::Duration::from_seconds(ramp_seconds);
   }
 
-  TrapVelo::TrapVelo(const AUVContext &cxt, const FPStamped &start, const FP &goal) :
-    PoseSegmentBase{cxt, start, goal}, angle_to_goal_{0}, start_{start.t}
+  TrapVelo::TrapVelo(const AUVContext &cxt, uint8_t type, const FPStamped &start, const FP &goal) :
+    PoseSegmentBase{cxt, type, start, goal}, angle_to_goal_{0}, start_{start.t}
   {
     // Distance is always >= 0
     double distance_xy = plan_.fp.distance_xy(goal_);
@@ -250,8 +273,8 @@ namespace orca_base
     auto yaw_seconds = (yaw_stop_ - start_).seconds();
 
     std::stringstream ss;
-    ss << std::fixed << std::setprecision(4)
-       << "cv xy_seconds: " << xy_seconds
+    ss << std::fixed << std::setprecision(2)
+       << type_name() << ", xy_seconds: " << xy_seconds
        << ", z_seconds: " << z_seconds
        << ", yaw_seconds: " << yaw_seconds
        << ", initial_accel_: " << initial_accel_;
@@ -263,7 +286,7 @@ namespace orca_base
   {
     FP goal = plan.fp;
     goal.pose.pose.z = z;
-    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, orca_msgs::msg::Control::POSE_VERTICAL, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
@@ -274,7 +297,7 @@ namespace orca_base
   {
     FP goal = plan.fp;
     goal.pose.pose.yaw = yaw;
-    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, orca_msgs::msg::Control::POSE_ROTATE, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
@@ -286,7 +309,7 @@ namespace orca_base
     FP goal = plan.fp;
     goal.pose.pose.x = x;
     goal.pose.pose.y = y;
-    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, orca_msgs::msg::Control::POSE_LINE, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
@@ -295,7 +318,7 @@ namespace orca_base
   std::shared_ptr<TrapVelo>
   TrapVelo::make_pose(const AUVContext &cxt, FPStamped &plan, const FP &goal)
   {
-    auto result = std::make_shared<TrapVelo>(cxt, plan, goal);
+    auto result = std::make_shared<TrapVelo>(cxt, orca_msgs::msg::Control::POSE_COMBO, plan, goal);
     plan.fp = goal;
     plan.t = plan.t + result->duration();
     return result;
@@ -306,7 +329,7 @@ namespace orca_base
   //=====================================================================================
 
   RotateToMarker::RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
-    ObservationSegmentBase(cxt, start, goal)
+    ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_RTM, start, goal)
   {
     double distance_yaw = std::abs(norm_angle(plan_.o.yaw - goal_.yaw));
 
@@ -376,7 +399,7 @@ namespace orca_base
   //=====================================================================================
 
   MoveToMarker::MoveToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
-    ObservationSegmentBase(cxt, start, goal)
+    ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_MTM, start, goal)
   {
     double distance_fwd = std::abs(plan_.o.distance - goal_.distance);
 

@@ -21,20 +21,39 @@ namespace orca_base
   // PlannerStatus
   //=====================================================================================
 
+  // Capture [most of] the plan status in Control.msg
   struct PlannerStatus
   {
+    // Set by AUVNode:
+    // mode
+    // global_plan_idx
+
     int targets_total{};          // Number of targets in global plan
     int target_idx{};             // Current target index
     int target_marker_id{};       // Current target marker id
 
     uint8_t planner{};            // Local planner running, see Control.msg for values
+    int local_plan_idx{};         // Number of attempts at a local or recovery plan
 
     int segments_total{};         // Number of segments in local plan
     int segment_idx{};            // Current segment index
     std::string segment_info;     // Current segment info string
+    uint8_t segment_type{};       // Segment type, see Control.msg for values
 
     FPStamped pose;               // Planned pose
     orca::Twist twist;            // Planned twist
+
+    // New targets, called by GlobalPlanner()
+    void first_target(int num_targets, int first_marker_id);
+
+    // Next target
+    void next_target(int);
+
+    // New segments, called by LocalPlanner() and MoveToMarkerPlanner()
+    void first_segment(uint8_t _planner, int _segments_total, std::string _segment_info, uint8_t _segment_type);
+
+    // Next segment
+    void next_segment(std::string _segment_info, uint8_t _segment_type);
   };
 
   //=====================================================================================

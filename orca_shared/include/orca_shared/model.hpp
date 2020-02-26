@@ -137,7 +137,7 @@ namespace orca
     double drag_coef_tether_ = 1.1;
 
     // Angular drag is a different thing altogether, provide a partial const
-    double drag_partial_const_yaw_ = 0.002;
+    double drag_partial_const_yaw_ = 0.004;
 
     //=====================================================================================
     // Values which depend on the parameters
