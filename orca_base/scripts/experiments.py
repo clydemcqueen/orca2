@@ -86,7 +86,7 @@ class RunNode(Node):
         # Set up experiments
         self._experiments = [
             # Experiment(note='simple controller', mode=Control.AUV_MARKER_SEQUENCE, count=1, base_params=[
-            #     Parameter(name='auv_z_target',
+            #     Parameter(name='planner_z_target',
             #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5)),
             #     Parameter(name='auv_controller',
             #               value=ParameterValue(type=ParameterType.PARAMETER_INTEGER, integer_value=0)),
@@ -96,7 +96,7 @@ class RunNode(Node):
             # ]),
 
             Experiment(note='ignore estimate controller', mode=Control.AUV_MARKER_SEQUENCE, count=1, base_params=[
-                Parameter(name='auv_z_target',
+                Parameter(name='planner_z_target',
                           value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5)),
                 Parameter(name='auv_controller',
                           value=ParameterValue(type=ParameterType.PARAMETER_INTEGER, integer_value=1)),
@@ -106,7 +106,7 @@ class RunNode(Node):
             ]),
 
             # Experiment(note='six DoF filter', mode=Control.AUV_MARKER_SEQUENCE, count=10, base_params=[
-            #     Parameter(name='auv_z_target',
+            #     Parameter(name='planner_z_target',
             #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5))
             # ], filter_params=[
             #     Parameter(name='four_dof',
@@ -114,7 +114,7 @@ class RunNode(Node):
             # ]),
             #
             # Experiment(note='four DoF filter', mode=Control.AUV_MARKER_SEQUENCE, count=10, base_params=[
-            #     Parameter(name='auv_z_target',
+            #     Parameter(name='planner_z_target',
             #               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5))
             # ], filter_params=[
             #     Parameter(name='four_dof',
@@ -125,7 +125,7 @@ class RunNode(Node):
         # self._experiments = []
         # for step in range(1, 20, 1):
         #     self._experiments.append(Experiment(note='', mode=Control.AUV_MARKER_SEQUENCE, count=1, base_params=[
-        #                 Parameter(name='auv_z_target',
+        #                 Parameter(name='planner_z_target',
         #                           value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-(2. + step/10.)))
         #             ], filter_params=[]))
 

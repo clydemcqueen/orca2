@@ -75,7 +75,7 @@ namespace orca_base
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     Observation estimate_obs;
     estimate.fp.good_obs(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.auv_z_target_, estimate_obs,
+    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.planner_z_target_, estimate_obs,
                       estimate.fp.pose.pose.z, segments_[status.segment_idx]->ff(), efforts);
 
     return true;

@@ -93,6 +93,6 @@ namespace orca
   // True if a rclcpp::Time is valid (non-zero)
   bool valid_stamp(const rclcpp::Time &stamp);
 
-} // namespace orca_shared
+} // namespace orca
 
 #endif // ORCA_SHARED_UTIL_HPP

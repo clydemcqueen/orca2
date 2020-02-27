@@ -183,7 +183,7 @@ namespace orca_base
   {
     if (rov_mode()) {
       RCLCPP_INFO(get_logger(), "goal accepted");
-      msg->pose.position.z = cxt_.auv_z_target_;
+      msg->pose.position.z = cxt_.planner_z_target_;
       start_mission(msg->header.stamp, Mission::GO_TO_POSE, msg->pose);
     } else {
       RCLCPP_ERROR(get_logger(), "cannot start mission");

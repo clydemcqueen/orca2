@@ -130,19 +130,19 @@ namespace orca_base
 
     // Add start pose to map
     auto start_z_target = start_pose;
-    start_z_target.z = cxt_.auv_z_target_;
+    start_z_target.z = cxt_.planner_z_target_;
     poses[START_ID] = start_z_target;
 
     // Add destination pose to map
     auto destination_z_target = destination_pose;
-    destination_z_target.z = cxt_.auv_z_target_;
+    destination_z_target.z = cxt_.planner_z_target_;
     poses[DESTINATION_ID] = destination_z_target;
 
     // Add all of the markers to the map
     for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
       orca::Pose pose;
       pose.from_msg(vlam_map_->poses[i].pose);
-      pose.z = cxt_.auv_z_target_;
+      pose.z = cxt_.planner_z_target_;
       poses[vlam_map_->ids[i]] = pose;
     }
 

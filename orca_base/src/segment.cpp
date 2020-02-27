@@ -231,6 +231,18 @@ namespace orca_base
       accel_.yaw = 0;
     }
 
+#if 1
+    // Rotate x and y velocity into the body frame
+    double twist_forward, twist_strafe;
+    rotate_frame(twist_.x, twist_.y, plan_.fp.pose.pose.yaw, twist_forward, twist_strafe);
+
+    // Compute acceleration due to drag
+    auto drag_forward = cxt_.model_.drag_accel_f(twist_forward);
+    auto drag_strafe = cxt_.model_.drag_accel_s(twist_strafe);
+
+    // Rotate forward and strafe drag back into the world frame
+    rotate_frame(drag_forward, drag_strafe, -plan_.fp.pose.pose.yaw, drag_.x, drag_.y);
+#else
     // X and Y drag depend on yaw and direction of motion
     double drag_const_x, drag_const_y;
     cxt_.model_.drag_const_world(plan_.fp.pose.pose.yaw, angle_to_goal_, drag_const_x, drag_const_y);
@@ -238,6 +250,7 @@ namespace orca_base
     // Acceleration due to drag
     drag_.x = cxt_.model_.drag_accel(twist_.x, drag_const_x);
     drag_.y = cxt_.model_.drag_accel(twist_.y, drag_const_y);
+#endif
     drag_.z = cxt_.model_.drag_accel(twist_.z, cxt_.model_.drag_const_z());
     drag_.yaw = cxt_.model_.drag_accel_yaw(twist_.yaw);
 

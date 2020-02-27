@@ -30,7 +30,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015)      /* ROV hold pressure pid Ki  */ \
   CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000096)     /* ROV hold pressure pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_z_target, double, -0.5)                /* AUV path target z position  */ \
+  CXT_MACRO_MEMBER(planner_z_target, double, -0.5)            /* AUV path target z position  */ \
   \
   CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_joy_ms, int, 1000)                 /* Joy message timeout in ms  */ \

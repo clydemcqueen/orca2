@@ -207,12 +207,12 @@ namespace orca_base
     target.fp.pose.pose.from_msg(marker.marker_f_map);
 
     // Set plan.z from parameters
-    target.fp.pose.pose.z = cxt.auv_z_target_;
+    target.fp.pose.pose.z = cxt.planner_z_target_;
 
     if (!floor) {
       // Target is in front of the marker
-      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;
-      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.auv_xy_distance_;
+      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.planner_xy_distance_;
+      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.planner_xy_distance_;
 
       // Face the marker to get a good pose
       target.fp.pose.pose.yaw = norm_angle(target.fp.pose.pose.yaw + M_PI_2);

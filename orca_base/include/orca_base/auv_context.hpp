@@ -43,9 +43,6 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_pid_ku, double, 1)                 /* AUV yaw pid Ziegler–Nichols ku  */ \
   CXT_MACRO_MEMBER(auv_yaw_pid_tu, double, 6)                 /* AUV yaw pid Ziegler–Nichols tu  */ \
   \
-  CXT_MACRO_MEMBER(auv_z_target, double, -0.5)                /* AUV path target z position  */ \
-  CXT_MACRO_MEMBER(auv_xy_distance, double, 1)                /* AUV distance in front of marker  */ \
-  \
   CXT_MACRO_MEMBER(auv_xy_accel, double, 0.25)                /* AUV acceleration in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_xy_velo, double, 0.5)                  /* AUV velocity in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_z_accel, double, 0.15)                 /* AUV vertical acceleration  */ \
@@ -71,6 +68,8 @@ namespace orca_base
   CXT_MACRO_MEMBER(planner_max_short_plan_xy, double, 2)      /* Build a long plan if xy distance > max  */ \
   CXT_MACRO_MEMBER(planner_max_obs_yaw_error, double, 0.2)    /* Start recovery if observation yaw error is > max  */ \
   CXT_MACRO_MEMBER(planner_max_dead_reckon_dist, double, 9)   /* Max allowable dead reckoning distance  */ \
+  CXT_MACRO_MEMBER(planner_z_target, double, -0.5)            /* Target z position  */ \
+  CXT_MACRO_MEMBER(planner_xy_distance, double, 1)            /* Target distance in front of marker  */ \
   \
   CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_fp_ms, int, 200)                   /* Fiducial pose message timeout in ms  */ \
