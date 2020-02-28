@@ -204,26 +204,26 @@ namespace orca
     yaw_ = 0;
   }
 
-  void Efforts::from_acceleration(const double current_yaw, const Acceleration &u_bar)
+  void Efforts::from_acceleration(const orca::Model &model, const double current_yaw, const Acceleration &u_bar)
   {
     // Convert from world frame to body frame
-    double x_effort = Model::accel_to_effort_xy(u_bar.x);
-    double y_effort = Model::accel_to_effort_xy(u_bar.y);
+    double x_effort = model.accel_to_effort_xy(u_bar.x);
+    double y_effort = model.accel_to_effort_xy(u_bar.y);
     double forward, strafe;
     rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
 
     set_forward(forward);
     set_strafe(strafe);
-    set_vertical(Model::accel_to_effort_z(u_bar.z));
-    set_yaw(Model::accel_to_effort_yaw(u_bar.yaw));
+    set_vertical(model.accel_to_effort_z(u_bar.z));
+    set_yaw(model.accel_to_effort_yaw(u_bar.yaw));
   }
 
-  void Efforts::to_acceleration(const double current_yaw, Acceleration &u_bar)
+  void Efforts::to_acceleration(const orca::Model &model, const double current_yaw, Acceleration &u_bar)
   {
-    double forward_accel = Model::effort_to_accel_xy(forward_);
-    double strafe_accel = Model::effort_to_accel_xy(strafe_);
-    u_bar.z = Model::effort_to_accel_z(vertical_);
-    u_bar.yaw = Model::effort_to_accel_yaw(yaw_);
+    double forward_accel = model.effort_to_accel_xy(forward_);
+    double strafe_accel = model.effort_to_accel_xy(strafe_);
+    u_bar.z = model.effort_to_accel_z(vertical_);
+    u_bar.yaw = model.effort_to_accel_yaw(yaw_);
 
     // Convert from body frame to world frame
     rotate_frame(forward_accel, strafe_accel, -current_yaw, u_bar.x, u_bar.y);

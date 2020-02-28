@@ -13,6 +13,10 @@ namespace orca_base
 {
 
 #define AUV_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(bollard_force_xy, double, 137)             /* Newtons, bollard force xy or fs  */ \
+  CXT_MACRO_MEMBER(bollard_force_z, double, 88)               /* Newtons, bollard force z  */ \
+  CXT_MACRO_MEMBER(t200_max_pos_force, double, 50)            /* Newtons, max positive force for T200 thruster  */ \
+  CXT_MACRO_MEMBER(t200_max_neg_force, double, 44)            /* Newtons, max negative force for T200 thruster  */ \
   CXT_MACRO_MEMBER(fluid_density, double, 997)                /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   CXT_MACRO_MEMBER(drag_coef_f, double, 0.8)                  /* Forward drag, 1.0 is a box  */ \
   CXT_MACRO_MEMBER(drag_coef_s, double, 0.95)                 /* Strafe drag  */ \

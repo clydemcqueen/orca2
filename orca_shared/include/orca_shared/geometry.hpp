@@ -2,6 +2,7 @@
 #define ORCA_SHARED_GEOMETRY_HPP
 
 #include "orca_msgs/msg/efforts.hpp"
+#include "orca_shared/model.hpp"
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -220,9 +221,9 @@ namespace orca
 
     void all_stop();
 
-    void from_acceleration(const double current_yaw, const Acceleration &u_bar);
+    void from_acceleration(const orca::Model &model, const double current_yaw, const Acceleration &u_bar);
 
-    void to_acceleration(const double current_yaw, Acceleration &u_bar);
+    void to_acceleration(const orca::Model &model, const double current_yaw, Acceleration &u_bar);
 
     void scale(double factor);
 

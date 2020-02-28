@@ -50,16 +50,6 @@ namespace orca
     // Assume a uniform distribution of mass in the vehicle box
     static constexpr double MOMENT_OF_INERTIA_YAW = MASS / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
 
-    // From BlueRobotics specs, all forces are in Newtons
-    // BOLLARD_FORCE_XY could also be called BOLLARD_FORCE_FS
-    static constexpr double BOLLARD_FORCE_XY = 137;
-    static constexpr double BOLLARD_FORCE_Z = 88;
-    static constexpr double T200_MAX_POS_FORCE = 50;
-    static constexpr double T200_MAX_NEG_FORCE = 40;
-
-    // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
-    static constexpr double MAX_TORQUE_YAW = 0.18 * 2.0 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
-
     //=====================================================================================
     // Dynamics
     //=====================================================================================
@@ -71,26 +61,6 @@ namespace orca
     static constexpr double torque_to_accel_yaw(double torque_yaw)
     { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
 
-    // Force / torque => effort
-    static constexpr double force_to_effort_xy(double force_xy)
-    { return force_xy / BOLLARD_FORCE_XY; }
-
-    static constexpr double force_to_effort_z(double force_z)
-    { return force_z / BOLLARD_FORCE_Z; }
-
-    static constexpr double torque_to_effort_yaw(double torque_yaw)
-    { return torque_yaw / MAX_TORQUE_YAW; }
-
-    // Effort => force / torque
-    static constexpr double effort_to_force_xy(double effort_xy)
-    { return effort_xy * BOLLARD_FORCE_XY; }
-
-    static constexpr double effort_to_torque_yaw(double effort_yaw)
-    { return effort_yaw * MAX_TORQUE_YAW; }
-
-    static constexpr double effort_to_force_z(double effort_z)
-    { return effort_z * BOLLARD_FORCE_Z; }
-
     // Acceleration => force / torque
     static constexpr double accel_to_force(double accel)
     { return MASS * accel; }
@@ -98,29 +68,16 @@ namespace orca
     static constexpr double accel_to_torque_yaw(double accel_yaw)
     { return MOMENT_OF_INERTIA_YAW * accel_yaw; }
 
-    // Acceleration => effort
-    static constexpr double accel_to_effort_xy(double accel_xy)
-    { return force_to_effort_xy(accel_to_force(accel_xy)); }
-
-    static constexpr double accel_to_effort_z(double accel_z)
-    { return force_to_effort_z(accel_to_force(accel_z)); }
-
-    static constexpr double accel_to_effort_yaw(double accel_yaw)
-    { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
-
-    // Effort => acceleration
-    static constexpr double effort_to_accel_xy(double effort_xy)
-    { return force_to_accel(effort_to_force_xy(effort_xy)); }
-
-    static constexpr double effort_to_accel_z(double effort_z)
-    { return force_to_accel(effort_to_force_z(effort_z)); }
-
-    static constexpr double effort_to_accel_yaw(double effort_yaw)
-    { return torque_to_accel_yaw(effort_to_torque_yaw(effort_yaw)); }
-
     //=====================================================================================
     // Parameters, updated by validate_parameters
     //=====================================================================================
+
+    // From BlueRobotics specs, all forces are in Newtons
+    // bollard_force_xy_ could also be called bollard_force_fs_
+    double bollard_force_xy_ = 137;
+    double bollard_force_z_ = 88;
+    double t200_max_pos_force_ = 50;
+    double t200_max_neg_force_ = 44;
 
     // Fluid density, 997 for freshwater or 1029 for seawater
     double fluid_density_ = 997;
@@ -137,6 +94,53 @@ namespace orca
 
     // Angular drag is a different thing altogether, provide a partial const
     double drag_partial_const_yaw_ = 0.004;
+
+    //=====================================================================================
+    // Thrust efforts depend on bollard forces
+    //=====================================================================================
+
+    // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
+    double max_torque_yaw_ = 0.18 * 2.0 * (t200_max_pos_force_ + t200_max_neg_force_);
+
+    // Force / torque => effort
+    double force_to_effort_xy(double force_xy) const
+    { return force_xy / bollard_force_xy_; }
+
+    double force_to_effort_z(double force_z) const
+    { return force_z / bollard_force_z_; }
+
+    double torque_to_effort_yaw(double torque_yaw) const
+    { return torque_yaw / max_torque_yaw_; }
+
+    // Effort => force / torque
+    double effort_to_force_xy(double effort_xy) const
+    { return effort_xy * bollard_force_xy_; }
+
+    double effort_to_torque_yaw(double effort_yaw) const
+    { return effort_yaw * max_torque_yaw_; }
+
+    double effort_to_force_z(double effort_z) const
+    { return effort_z * bollard_force_z_; }
+
+    // Acceleration => effort
+    double accel_to_effort_xy(double accel_xy) const
+    { return force_to_effort_xy(accel_to_force(accel_xy)); }
+
+    double accel_to_effort_z(double accel_z) const
+    { return force_to_effort_z(accel_to_force(accel_z)); }
+
+    double accel_to_effort_yaw(double accel_yaw) const
+    { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
+
+    // Effort => acceleration
+    double effort_to_accel_xy(double effort_xy) const
+    { return force_to_accel(effort_to_force_xy(effort_xy)); }
+
+    double effort_to_accel_z(double effort_z) const
+    { return force_to_accel(effort_to_force_z(effort_z)); }
+
+    double effort_to_accel_yaw(double effort_yaw) const
+    { return torque_to_accel_yaw(effort_to_torque_yaw(effort_yaw)); }
 
     //=====================================================================================
     // Water pressure depends on fluid density

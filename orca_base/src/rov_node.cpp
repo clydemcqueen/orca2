@@ -116,6 +116,7 @@ namespace orca_base
 
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
+    cxt_.model_.bollard_force_z_ = cxt_.bollard_force_z_;
 
     // Update timeouts
     baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
@@ -314,7 +315,7 @@ namespace orca_base
 
     if (holding_pressure()) {
       efforts.set_vertical(
-        Model::accel_to_effort_z(-pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
+        cxt_.model_.accel_to_effort_z(-pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
     } else {
       efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }

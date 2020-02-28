@@ -197,9 +197,12 @@ namespace orca_filter
 
   void FilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg, bool first)
   {
+    // TODO must add force parameters to orca_filter to handle u_bar input
+#if 0
     Efforts e;
     e.from_msg(msg->efforts);
     e.to_acceleration(estimated_yaw_, u_bar_);
+#endif
   }
 
   void FilterNode::fcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)

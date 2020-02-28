@@ -143,6 +143,10 @@ namespace orca_base
 
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
+    cxt_.model_.bollard_force_xy_ = cxt_.bollard_force_xy_;
+    cxt_.model_.bollard_force_z_ = cxt_.bollard_force_z_;
+    cxt_.model_.t200_max_pos_force_ = cxt_.t200_max_pos_force_;
+    cxt_.model_.t200_max_neg_force_ = cxt_.t200_max_neg_force_;
     cxt_.model_.drag_coef_f_ = cxt_.drag_coef_f_;
     cxt_.model_.drag_coef_s_ = cxt_.drag_coef_s_;
     cxt_.model_.drag_coef_z_ = cxt_.drag_coef_z_;

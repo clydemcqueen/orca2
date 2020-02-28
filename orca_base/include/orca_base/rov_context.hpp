@@ -13,6 +13,7 @@ namespace orca_base
 {
 
 #define ROV_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(bollard_force_z, double, 88)               /* Newtons, bollard force z  */ \
   CXT_MACRO_MEMBER(fluid_density, double, 997)                /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \

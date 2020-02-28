@@ -39,7 +39,7 @@ namespace orca_base
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     }
 
-    efforts.from_acceleration(plan.pose.pose.yaw, u_bar);
+    efforts.from_acceleration(cxt_.model_, plan.pose.pose.yaw, u_bar);
   }
 
 #if 0
@@ -193,10 +193,10 @@ namespace orca_base
     u_bar.vertical = vertical_controller_.calc(estimate_z, dt) + ff.vertical;
 
     // Compute efforts
-    efforts.set_forward(Model::accel_to_effort_xy(u_bar.forward));
+    efforts.set_forward(cxt_.model_.accel_to_effort_xy(u_bar.forward));
     efforts.set_strafe(0);
-    efforts.set_vertical(Model::accel_to_effort_z(u_bar.vertical));
-    efforts.set_yaw(-Model::accel_to_effort_yaw(u_bar.yaw));
+    efforts.set_vertical(cxt_.model_.accel_to_effort_z(u_bar.vertical));
+    efforts.set_yaw(-cxt_.model_.accel_to_effort_yaw(u_bar.yaw));
   }
 
 }
