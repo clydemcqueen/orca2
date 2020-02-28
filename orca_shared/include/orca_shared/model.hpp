@@ -23,7 +23,6 @@ namespace orca
     //=====================================================================================
 
     static constexpr double GRAVITY = 9.8;                    // Gazebo default is 9.8, 9.80665 is a bit more accurate
-    static constexpr double ATMOSPHERIC_PRESSURE = 101300;    // Air pressure at the surface
 
     //=====================================================================================
     // Sensor constants
@@ -140,22 +139,24 @@ namespace orca
     double drag_partial_const_yaw_ = 0.004;
 
     //=====================================================================================
-    // Values which depend on the parameters
+    // Water pressure depends on fluid density
     //=====================================================================================
 
-    double pressure_to_z(double pressure) const
-    { return -(pressure - ATMOSPHERIC_PRESSURE) / (fluid_density_ * GRAVITY); }
+    double pressure_to_z(double atmospheric_pressure, double pressure) const
+    { return -(pressure - atmospheric_pressure) / (fluid_density_ * GRAVITY); }
 
-    double z_to_pressure(double z) const
-    { return fluid_density_ * GRAVITY * -z + ATMOSPHERIC_PRESSURE; }
+    double z_to_pressure(double atmospheric_pressure, double z) const
+    { return fluid_density_ * GRAVITY * -z + atmospheric_pressure; }
 
+    // Mass displaced by the volume, in kg
     double displaced_mass() const
     { return VOLUME * fluid_density_; }
 
+    // Weight in water, in Newtons (kg * m/s^2)
     double weight_in_water() const
     { return GRAVITY * (MASS - displaced_mass()); }
 
-    // Z acceleration required to hover
+    // Z acceleration required to hover, in m/s^2
     double hover_accel_z() const
     { return weight_in_water() / MASS; }
 

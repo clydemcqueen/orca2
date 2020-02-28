@@ -14,7 +14,7 @@
     <xacro:property name="TOTAL_VOLUME" value="0.01"/>
     <xacro:property name="LENGTH" value="0.457"/>
     <xacro:property name="WIDTH" value="0.338"/>
-    <xacro:property name="HEIGHT" value="0.254"/>
+    <xacro:property name="HEIGHT" value="0.25"/>
     <xacro:property name="IXX" value="${TOTAL_MASS / 12 * (WIDTH * WIDTH + HEIGHT * HEIGHT)}"/>
     <xacro:property name="IYY" value="${TOTAL_MASS / 12 * (LENGTH * LENGTH + HEIGHT * HEIGHT)}"/>
     <xacro:property name="IZZ" value="${TOTAL_MASS / 12 * (LENGTH * LENGTH + WIDTH * WIDTH)}"/>
@@ -29,7 +29,7 @@
     <xacro:property name="MASS_Z" value="0.011"/>
     <xacro:property name="VOLUME_Z" value="0.06"/>
     <xacro:property name="FORWARD_FORCE" value="50"/>
-    <xacro:property name="REVERSE_FORCE" value="40"/>
+    <xacro:property name="REVERSE_FORCE" value="44"/>
     <xacro:property name="HAS_TETHER" default="false"/>
     <xacro:property name="SURFACE" default="0"/>
 
@@ -184,10 +184,10 @@
         </collision>
     </link>
 
-    <!-- Barometer link TODO /tf too low -->
+    <!-- Barometer link -->
     <link name="baro_link">
         <visual>
-            <origin xyz="0 0 0.05" rpy="0 ${PI/2} 0"/>
+            <origin xyz="0 0 0" rpy="0 ${PI/2} 0"/>
             <geometry>
                 <cylinder length="0.01" radius="0.01"/>
             </geometry>
@@ -197,7 +197,7 @@
 
     <!-- Attach baro_link to base_link -->
     <joint name="baro_joint" type="fixed">
-        <origin xyz="-0.16 0 0" rpy="0 0 0"/>
+        <origin xyz="-0.16 0 0.05" rpy="0 0 0"/>
         <parent link="base_link"/>
         <child link="baro_link"/>
     </joint>

@@ -74,22 +74,21 @@ namespace orca_base
     bool good_pose(double good_pose_dist) const;
 
     // True if there is at least one good observation
-    bool good_obs() const
-    { return !observations.empty(); }
+    bool has_good_observation(double good_obs_dist) const;
 
-    // True if there is a good observation of a particular marker
-    bool good_obs(int id) const;
+    // Get the observation of a particular marker, return true if found
+    bool get_observation(int id, Observation &obs) const;
 
-    // Get the observation of a particular marker, return true if successful
-    bool good_obs(int id, Observation &obs) const;
+    // Get the observation of a particular marker, return true if found and the observation is good
+    bool get_good_observation(double good_obs_dist, int id, Observation &obs) const;
 
     // Return the distance of the closest observation
-    double closest_obs() const;
+    double closest_observation() const;
 
     // Get the closest observation and return the distance
-    double closest_obs(Observation &obs) const;
+    double get_closest_observation(Observation &obs) const;
 
-    // Could be a constructor
+    // (Could be a constructor)
     void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
                    const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
                    double hfov, double hres);
@@ -124,13 +123,13 @@ namespace orca_base
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
     FP fp;
 
-    // Get the observation of a particular marker, return true if successful
-    bool good_obs(int id, ObservationStamped &obs) const;
+    // Get the observation of a particular marker, return true if found and the observation is good
+    bool get_good_observation(double good_obs_dist, int id, ObservationStamped &obs) const;
 
     // Get the closest observation and return the distance
-    double closest_obs(ObservationStamped &obs) const;
+    double get_closest_observation(ObservationStamped &obs) const;
 
-    // Could be a constructor
+    // (Could be a constructor)
     void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
                    const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
                    double hfov, double hres);

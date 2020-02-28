@@ -129,10 +129,12 @@ namespace orca_filter
   }
 
   // New barometer reading
+  // TODO use orca_shared::Barometer instead
+  constexpr double ATMOSPHERIC_PRESSURE = 101300;     // Default air pressure at the surface of the water
   void FilterNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
   {
     // Calc depth from pressure, this assumes constant air pressure
-    double z = cxt_.model_.pressure_to_z(msg->pressure);
+    double z = cxt_.model_.pressure_to_z(ATMOSPHERIC_PRESSURE, msg->pressure);
 
     // Three ways to initialize the barometer:
     // cxt_.baro_init_ == 0:   Orca is in the air, so the first z reading is just air pressure

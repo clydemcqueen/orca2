@@ -40,8 +40,8 @@ namespace orca_base
     orca_description::Parser parser_;
 
     // Barometer state
-    orca::Barometer barometer_{0}; // Init at surface
-    double z_{};
+    orca::Barometer barometer_{};
+    double base_link_z_{};
 
     // Camera model
     image_geometry::PinholeCameraModel fcam_model_;

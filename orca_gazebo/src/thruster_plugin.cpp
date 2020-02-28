@@ -171,8 +171,8 @@ namespace gazebo
 #define WALL_TIME
 #ifdef WALL_TIME
       // Hack: use wall time
-      auto t = std::chrono::high_resolution_clock::now();
-      rclcpp::Time update_time{t.time_since_epoch().count(), RCL_ROS_TIME};
+      auto wall_time = std::chrono::high_resolution_clock::now();
+      rclcpp::Time update_time{wall_time.time_since_epoch().count(), RCL_ROS_TIME};
       if (valid(control_msg_time_) && update_time - control_msg_time_ > CONTROL_TIMEOUT) {
 #else
       if (valid(control_msg_time_) && node_->now() - control_msg_time_ > CONTROL_TIMEOUT) {

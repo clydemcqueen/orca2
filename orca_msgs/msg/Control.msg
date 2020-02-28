@@ -56,7 +56,9 @@ geometry_msgs/Twist plan_twist
 
 # Estimate in world frame
 geometry_msgs/Pose estimate_pose
-# TODO add estimate_good_pose
+bool good_pose
+bool good_z
+bool has_good_observation
 
 # Efforts in world frame, range [-1.0, 1.0]
 orca_msgs/Efforts efforts

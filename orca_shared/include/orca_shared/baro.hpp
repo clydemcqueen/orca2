@@ -8,22 +8,17 @@ namespace orca
 
   class Barometer
   {
-    // Three ways to initialize the barometer:
-    // init_method_ == 0:   Orca is in the air, so the first z reading is just air pressure
-    // init_method_ == 1:   Orca is floating at the surface in the water, the barometer is submerged ~5cm
-    // init_method_ == 2:   Future: wait for good odometry from fiducial_vlam and initialize barometer from the map
-    int init_method_;
-
+    double atmospheric_pressure_{0};
     bool initialized_{false};
-
-    double offset_{0};
 
   public:
 
-    Barometer(int init_method) : init_method_{init_method}
-    {}
+    bool initialized()
+    { return initialized_; }
 
-    double pressure_to_depth(const Model &model, double pressure);
+    // Given a pressure, return base_link.z
+    // The first reading must be air pressure at the surface
+    double pressure_to_base_link_z(const Model &model, double pressure);
   };
 
 } // namespace orca

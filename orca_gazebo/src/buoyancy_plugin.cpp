@@ -38,7 +38,7 @@ namespace gazebo
     double fluid_density_{997};                             // Fluid density of freshwater
     double volume_{0.01};                                   // base_link_ volume
     ignition::math::Vector3d center_of_volume_{0, 0, 0};    // base_link_ center of volume
-    double height_{0.254};                                  // base_link_ height
+    double height_{0.25};                                   // base_link_ height
 
   public:
 

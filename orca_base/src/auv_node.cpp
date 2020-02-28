@@ -160,7 +160,7 @@ namespace orca_base
   }
 
   bool AUVNode::baro_ok(const rclcpp::Time &t)
-  { return baro_cb_.receiving() && t - baro_cb_.prev() < baro_timeout_; }
+  { return barometer_.initialized() && baro_cb_.receiving() && t - baro_cb_.prev() < baro_timeout_; }
 
   bool AUVNode::fp_ok(const rclcpp::Time &t)
   { return monotonic::valid(estimate_.t) && t - estimate_.t < fp_timeout_; }
@@ -175,7 +175,7 @@ namespace orca_base
     // -- have camera info
     // -- have a good pose or a good observation
     return !mission_ && map_.ok() && cam_info_ok() && fp_ok(now()) &&
-           (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.closest_obs() < cxt_.good_obs_dist_);
+           (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
   }
 
   // Timer callback
@@ -208,7 +208,7 @@ namespace orca_base
   // New barometer reading
   void AUVNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
   {
-    z_ = barometer_.pressure_to_depth(cxt_.model_, msg->pressure);
+    base_link_z_ = barometer_.pressure_to_base_link_z(cxt_.model_, msg->pressure);
   }
 
   // New battery reading
@@ -262,8 +262,8 @@ namespace orca_base
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
   {
-    // Ignore until we have a good map
-    if (!map_.ok()) {
+    // Ignore until we have a good map and the barometer is initialized TODO filter case
+    if (!map_.ok() || !barometer_.initialized()) {
       return;
     }
 
@@ -314,7 +314,7 @@ namespace orca_base
 
     // Save the observations and pose
     // The z value from the barometer is much more accurate TODO handle filter case
-    estimate_.from_msgs(*obs_msg, base_f_map, z_, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+    estimate_.from_msgs(*obs_msg, base_f_map, base_link_z_, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
 
     if (cxt_.sensor_loop_ && mission_) {
       // Skip the first message -- the dt will be too large
@@ -477,14 +477,11 @@ namespace orca_base
               THRUST_FULL_REV, THRUST_FULL_FWD));
     }
 
-    // Publish control message
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
-    control_msg.estimate_pose = estimate_.fp.pose.pose.to_msg();
-    control_msg.efforts = efforts.to_msg();
-    control_msg.stability = 1.0;
-    control_msg.odom_lag = (now() - msg_time).seconds();
+
+    // Diagnostics
     control_msg.mode = orca_msgs::msg::Control::AUV;
     control_msg.global_plan_idx = global_plan_idx_;
     if (mission_) {
@@ -501,6 +498,15 @@ namespace orca_base
       control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
       control_msg.plan_twist = status.twist.to_msg();
     }
+    control_msg.estimate_pose = estimate_.fp.pose.pose.to_msg();
+    control_msg.good_pose = estimate_.fp.good_pose(cxt_.good_pose_dist_);
+    control_msg.good_z = estimate_.fp.good_z();
+    control_msg.has_good_observation = estimate_.fp.has_good_observation(cxt_.good_obs_dist_);
+    control_msg.efforts = efforts.to_msg();
+    control_msg.stability = 1.0;
+    control_msg.odom_lag = (now() - msg_time).seconds();
+
+    // Control
     control_msg.camera_tilt_pwm = tilt_to_pwm(0);
     control_msg.brightness_pwm = brightness_to_pwm(0);
     for (double thruster_effort : thruster_efforts) {
@@ -515,6 +521,7 @@ namespace orca_base
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2);
 
+    // Line 1: mission status
     if (mission_) {
       ss << "MISSION target m" << mission_->status().target_marker_id;
       if (mission_->status().planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
@@ -523,16 +530,23 @@ namespace orca_base
         ss << " plan z=" << mission_->status().pose.fp.pose.pose.z;
       }
     } else {
-      ss << "WAITING z=" << z_;
+      ss << "WAITING z=" << base_link_z_;
     }
-
     draw_text(image, ss.str(), p, CV_RGB(255, 0, 0));
 
+    // Line 2: pose estimate
     p.y += 20;
     ss.str("");
-
-    ss << estimate_.fp.observations.size() << " observation(s)";
-    ss << " estimate z=" << z_;
+    if (estimate_.fp.good_pose(cxt_.good_pose_dist_)) {
+      ss << "GOOD POSE";
+    } else if (estimate_.fp.has_good_observation(cxt_.good_obs_dist_)) {
+      ss << "GOOD OBSERVATION";
+    } else if (!estimate_.fp.observations.empty()) {
+      ss << "TOO FAR AWAY";
+    } else {
+      ss << "NO OBSERVATIONS";
+    }
+    ss << " z=" << base_link_z_;
 
     draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
   }

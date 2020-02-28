@@ -95,7 +95,7 @@ namespace orca_base
         start_local_plan(estimate);
       } else {
         ObservationStamped closest_observation;
-        if (estimate.closest_obs(closest_observation) < cxt_.good_obs_dist_) {
+        if (estimate.get_closest_observation(closest_observation) < cxt_.good_obs_dist_) {
           RCLCPP_INFO(logger_, "start recovery plan from good observation");
           start_recovery_plan(closest_observation);
         } else {
@@ -135,15 +135,12 @@ namespace orca_base
           // This should keep the marker visible until we're close enough to get a good pose
           Observation plan_target_obs;
           ObservationStamped estimate_target_obs;
+          auto target_id = targets_[status_.target_idx].marker_id;
 
-          if (status_.pose.fp.good_obs(targets_[status_.target_idx].marker_id, plan_target_obs) &&
-              estimate.good_obs(targets_[status_.target_idx].marker_id, estimate_target_obs)) {
+          if (status_.pose.fp.get_good_observation(cxt_.good_obs_dist_, target_id, plan_target_obs) &&
+              estimate.get_good_observation(cxt_.good_obs_dist_, target_id, estimate_target_obs)) {
 
-            double err_yaw = std::abs(plan_target_obs.yaw - estimate_target_obs.o.yaw);
-
-            if (plan_target_obs.distance < cxt_.good_obs_dist_ &&
-                estimate_target_obs.o.distance < cxt_.good_obs_dist_ &&
-                err_yaw > cxt_.planner_max_obs_yaw_error_) {
+            if (std::abs(plan_target_obs.yaw - estimate_target_obs.o.yaw) > cxt_.planner_max_obs_yaw_error_) {
               RCLCPP_INFO(logger_, "poor pose, target marker in view but yaw error is high, recover");
               start_recovery_plan(estimate_target_obs);
               return AdvanceRC::CONTINUE;

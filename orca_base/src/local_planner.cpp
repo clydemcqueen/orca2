@@ -14,8 +14,7 @@ namespace orca_base
   //=====================================================================================
 
   LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start,
-                             Target target, Map map,
-                             bool keep_station, PlannerStatus &status) :
+                             Target target, Map map, bool keep_station, PlannerStatus &status) :
     logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
     controller_{std::make_shared<PoseController>(cxt_)}
   {

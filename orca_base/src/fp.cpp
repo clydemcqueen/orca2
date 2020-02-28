@@ -113,21 +113,15 @@ namespace orca_base
 
   bool FP::good_pose(double good_pose_dist) const
   {
-    return pose.good_pose() && closest_obs() < good_pose_dist;
+    return pose.good_pose() && closest_observation() < good_pose_dist;
   }
 
-  bool FP::good_obs(int id) const
+  bool FP::has_good_observation(double good_obs_dist) const
   {
-    for (const auto &i : observations) {
-      if (i.id == id) {
-        return true;
-      }
-    }
-
-    return false;
+    return closest_observation() < good_obs_dist;
   }
 
-  bool FP::good_obs(int id, Observation &obs) const
+  bool FP::get_observation(int id, Observation &obs) const
   {
     for (const auto &i : observations) {
       if (i.id == id) {
@@ -139,13 +133,18 @@ namespace orca_base
     return false;
   }
 
-  double FP::closest_obs() const
+  bool FP::get_good_observation(double good_obs_dist, int id, Observation &obs) const
   {
-    Observation obs;
-    return closest_obs(obs);
+    return get_observation(id, obs) && obs.distance < good_obs_dist;
   }
 
-  double FP::closest_obs(Observation &obs) const
+  double FP::closest_observation() const
+  {
+    Observation obs;
+    return get_closest_observation(obs);
+  }
+
+  double FP::get_closest_observation(Observation &obs) const
   {
     double closest = std::numeric_limits<double>::max();
 
@@ -184,16 +183,16 @@ namespace orca_base
   // FPStamped -- pose and observations with timestamp
   //=====================================================================================
 
-  bool FPStamped::good_obs(int id, ObservationStamped &obs) const
+  bool FPStamped::get_good_observation(double good_obs_dist, int id, ObservationStamped &obs) const
   {
     obs.t = t;
-    return fp.good_obs(id, obs.o);
+    return fp.get_good_observation(good_obs_dist, id, obs.o);
   }
 
-  double FPStamped::closest_obs(ObservationStamped &obs) const
+  double FPStamped::get_closest_observation(ObservationStamped &obs) const
   {
     obs.t = t;
-    return fp.closest_obs(obs.o);
+    return fp.get_closest_observation(obs.o);
   }
 
   void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
