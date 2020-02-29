@@ -35,17 +35,21 @@ namespace orca_base
   \
   CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Limit fwd/strafe motion, rest is yaw  */ \
   \
-  CXT_MACRO_MEMBER(auv_x_pid_ku, double, 1)                   /* AUV x pid Ziegler–Nichols ku  */ \
-  CXT_MACRO_MEMBER(auv_x_pid_tu, double, 6)                   /* AUV x pid Ziegler–Nichols tu  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6)                 /* AUV x pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.2)                 /* AUV x pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_x_pid_kd, double, 0.45)                /* AUV x pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_y_pid_ku, double, 1)                   /* AUV y pid Ziegler–Nichols ku  */ \
-  CXT_MACRO_MEMBER(auv_y_pid_tu, double, 6)                   /* AUV y pid Ziegler–Nichols tu  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_kp, double, 0.6)                 /* AUV y pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_ki, double, 0.2)                 /* AUV y pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_y_pid_kd, double, 0.45)                /* AUV y pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_z_pid_ku, double, 1)                   /* AUV z pid Ziegler–Nichols ku  */ \
-  CXT_MACRO_MEMBER(auv_z_pid_tu, double, 6)                   /* AUV z pid Ziegler–Nichols tu  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_kp, double, 0.6)                 /* AUV z pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_ki, double, 0.2)                 /* AUV z pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.45)                /* AUV z pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_yaw_pid_ku, double, 1)                 /* AUV yaw pid Ziegler–Nichols ku  */ \
-  CXT_MACRO_MEMBER(auv_yaw_pid_tu, double, 6)                 /* AUV yaw pid Ziegler–Nichols tu  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 0.6)               /* AUV yaw pid Kp  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.2)               /* AUV yaw pid Ki  */ \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.45)              /* AUV yaw pid Kd  */ \
   \
   CXT_MACRO_MEMBER(auv_xy_accel, double, 0.25)                /* AUV acceleration in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_xy_velo, double, 0.5)                  /* AUV velocity in the xy plane  */ \

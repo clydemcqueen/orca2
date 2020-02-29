@@ -9,10 +9,10 @@ namespace orca_base
 
   PoseController::PoseController(const AUVContext &cxt) :
     cxt_{cxt},
-    x_controller_{false, cxt.auv_x_pid_ku_, cxt.auv_x_pid_tu_},
-    y_controller_{false, cxt.auv_y_pid_ku_, cxt.auv_y_pid_tu_},
-    z_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
-    yaw_controller_{true, cxt.auv_yaw_pid_ku_, cxt.auv_yaw_pid_tu_}
+    x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
+    y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
+    z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
+    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
   {}
 
   void PoseController::calc(const rclcpp::Duration &d, const FP &plan, const FP &estimate,
@@ -164,8 +164,8 @@ namespace orca_base
 
   ObservationController::ObservationController(const AUVContext &cxt) :
     cxt_{cxt},
-    vertical_controller_{false, cxt.auv_z_pid_ku_, cxt.auv_z_pid_tu_},
-    yaw_controller_{true, cxt_.auv_yaw_pid_ku_, cxt_.auv_yaw_pid_tu_}
+    vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
+    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
   {}
 
   // Observations are in the camera_link frame, not the base_link frame

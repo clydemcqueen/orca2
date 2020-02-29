@@ -46,9 +46,13 @@ namespace orca_base
       // Travel to each waypoint, breaking down z, yaw and xy phases
       for (auto &waypoint : waypoints) {
         // Ascend/descend to target z
-        add_vertical_segment(plan, waypoint.z);
+        if (plan.fp.pose.pose.distance_z(waypoint) > cxt_.planner_epsilon_xyz_) {
+          add_vertical_segment(plan, waypoint.z);
+        } else {
+          RCLCPP_INFO(logger_, "skip vertical");
+        }
 
-        if (plan.fp.pose.pose.distance_xy(waypoint.x, waypoint.y) > cxt_.planner_epsilon_xyz_) {
+        if (plan.fp.pose.pose.distance_xy(waypoint) > cxt_.planner_epsilon_xyz_) {
           // Point in the direction of travel
           add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
 

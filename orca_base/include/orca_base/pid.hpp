@@ -45,18 +45,10 @@ namespace pid
     {
       angle_ = angle;
 
-#ifdef CLASSIC
       // Classic
       Kp_ = 0.6 * Ku;
       Ki_ = 1.2 * Ku / Tu;
       Kd_ = 3 * Ku * Tu / 40;
-#else
-      // P controller
-      // This isn't perfect, but it's stable
-      Kp_ = 0.5 * Ku;
-      Ki_ = 0;
-      Kd_ = 0;
-#endif
     }
 
     // Set target
