@@ -36,7 +36,6 @@ namespace orca_base
   CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_joy_ms, int, 1000)                 /* Joy message timeout in ms  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
-
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

@@ -92,7 +92,7 @@ namespace orca_base
     (void) spin_timer_;
     (void) mission_server_;
 
-    // Get parameters
+    // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
     CXT_MACRO_INIT_PARAMETERS(AUV_NODE_ALL_PARAMS, validate_parameters)
@@ -101,6 +101,11 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), AUV_NODE_ALL_PARAMS, validate_parameters)
+
+    // Log parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    AUV_NODE_ALL_PARAMS
 
     // Publications
     control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 5);
@@ -161,12 +166,6 @@ namespace orca_base
 
   void AUVNode::validate_parameters()
   {
-    std::cout << "VALIDATING PARAMS" << std::endl; // TODO use latest macros
-
-#undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
-    AUV_NODE_ALL_PARAMS
-
     // Sync subscriptions
     if (cxt_.filtered_odom_) {
       // Message filter subscriptions

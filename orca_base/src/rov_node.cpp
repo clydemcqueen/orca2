@@ -59,7 +59,7 @@ namespace orca_base
     (void) leak_sub_;
     (void) spin_timer_;
 
-    // Get parameters
+    // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
     CXT_MACRO_INIT_PARAMETERS(ROV_NODE_ALL_PARAMS, validate_parameters)
@@ -68,6 +68,11 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), ROV_NODE_ALL_PARAMS, validate_parameters)
+
+    // Log parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    ROV_NODE_ALL_PARAMS
 
     // ROV PID controller
     pressure_hold_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
@@ -110,10 +115,6 @@ namespace orca_base
 
   void ROVNode::validate_parameters()
   {
-#undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
-    ROV_NODE_ALL_PARAMS
-
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
     cxt_.model_.bollard_force_z_ = cxt_.bollard_force_z_;

@@ -64,10 +64,6 @@ namespace orca_filter
     // Validate parameters
     void validate_parameters()
     {
-#undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
-      DEPTH_NODE_ALL_PARAMS
-
       // Update model
       cxt_.model_.fluid_density_ = cxt_.fluid_density_;
     }
@@ -76,7 +72,7 @@ namespace orca_filter
 
     explicit DepthNode() : Node{"depth_node"}
     {
-      // Get parameters
+      // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
       CXT_MACRO_INIT_PARAMETERS(DEPTH_NODE_ALL_PARAMS, validate_parameters)
@@ -85,6 +81,11 @@ namespace orca_filter
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
       CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), DEPTH_NODE_ALL_PARAMS, validate_parameters)
+
+      // Log parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+      DEPTH_NODE_ALL_PARAMS
 
       // Subscribe
       baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
