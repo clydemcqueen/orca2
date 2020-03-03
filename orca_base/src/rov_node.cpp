@@ -280,7 +280,9 @@ namespace orca_base
 
   void ROVNode::feedback_callback(MissionHandle::SharedPtr,
                                   const std::shared_ptr<const MissionAction::Feedback> feedback)
-  {}
+  {
+    RCLCPP_INFO(get_logger(), "feedback: %d out of %d", feedback->targets_completed, feedback->targets_total);
+  }
 
   void ROVNode::result_callback(const MissionHandle::WrappedResult &result)
   {

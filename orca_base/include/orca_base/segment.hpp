@@ -154,11 +154,11 @@ namespace orca_base
 
   class Pause : public PoseSegmentBase
   {
-    rclcpp::Duration d_;    // Time remaining
+    rclcpp::Duration pause_duration_;     // Time remaining
 
   public:
 
-    Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &d);
+    Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration);
 
     std::string to_str() override;
 

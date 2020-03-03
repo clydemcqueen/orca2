@@ -16,7 +16,7 @@ namespace orca_filter
   FilterNode::FilterNode() : Node{"filter_node"}
   {
     // Suppress IDE warnings
-    (void) baro_sub_;
+    (void) depth_sub_;
     (void) control_sub_;
     (void) fcam_sub_;
     (void) lcam_sub_;
@@ -32,27 +32,8 @@ namespace orca_filter
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), FILTER_NODE_ALL_PARAMS, validate_parameters)
 
-    // Publications
+    // Publication(s)
     filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", 1);
-    depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
-    fcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("fcam_f_base", 1);
-    lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("lcam_f_base", 1);
-    rcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("rcam_f_base", 1);
-    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 1);
-
-    // Monotonic subscriptions
-    baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-      "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
-      { this->baro_cb_.call(msg); });
-    fcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "fcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
-      { this->fcam_cb_.call(msg); });
-    lcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "lcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
-      { this->lcam_cb_.call(msg); });
-    rcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "rcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
-      { this->rcam_cb_.call(msg); });
 
     RCLCPP_INFO(get_logger(), "filter_node ready");
   }
@@ -62,6 +43,53 @@ namespace orca_filter
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
     FILTER_NODE_ALL_PARAMS
+
+    // Set up additional publications and subscriptions
+    if (cxt_.filter_baro_) {
+      depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
+        "depth", 1, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
+        { this->depth_cb_.call(msg); });
+    } else {
+      depth_sub_ = nullptr;
+    }
+
+    if (cxt_.filter_fcam_) {
+      fcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "fcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
+        { this->fcam_cb_.call(msg); });
+      fcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("fcam_f_base", 1);
+
+    } else {
+      fcam_sub_ = nullptr;
+      fcam_pub_ = nullptr;
+    }
+
+    if (cxt_.filter_lcam_) {
+      lcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "lcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
+        { this->lcam_cb_.call(msg); });
+      lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("lcam_f_base", 1);
+
+    } else {
+      lcam_sub_ = nullptr;
+      lcam_pub_ = nullptr;
+    }
+
+    if (cxt_.filter_rcam_) {
+      rcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "rcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
+        { this->rcam_cb_.call(msg); });
+      rcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("rcam_f_base", 1);
+    } else {
+      rcam_sub_ = nullptr;
+      rcam_pub_ = nullptr;
+    }
+
+    if (cxt_.publish_tf_ || cxt_.publish_measurement_tf_) {
+      tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 1);
+    } else {
+      tf_pub_ = nullptr;
+    }
 
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
@@ -91,7 +119,6 @@ namespace orca_filter
   {
     urdf::Model model;
     if (model.initFile(cxt_.urdf_file_)) {
-      get_joint(model, cxt_.urdf_barometer_joint_, t_baro_base_);
       get_joint(model, cxt_.urdf_forward_camera_joint_, t_fcam_base_);
       get_joint(model, cxt_.urdf_left_camera_joint_, t_lcam_base_);
       get_joint(model, cxt_.urdf_right_camera_joint_, t_rcam_base_);
@@ -128,71 +155,34 @@ namespace orca_filter
     }
   }
 
-  // New barometer reading
-  // TODO use orca_shared::Barometer instead
-  constexpr double ATMOSPHERIC_PRESSURE = 101300;     // Default air pressure at the surface of the water
-  void FilterNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg, bool first)
+  // New depth reading
+  void FilterNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool first)
   {
-    // Calc depth from pressure, this assumes constant air pressure
-    double z = cxt_.model_.pressure_to_z(ATMOSPHERIC_PRESSURE, msg->pressure);
+    if (cxt_.filter_baro_) {
 
-    // Three ways to initialize the barometer:
-    // cxt_.baro_init_ == 0:   Orca is in the air, so the first z reading is just air pressure
-    // cxt_.baro_init_ == 1:   Orca is floating at the surface in the water, the barometer is submerged ~5cm
-    // cxt_.baro_init_ == 2:   Wait for good odometry from fiducial_vlam and initialize barometer from the map
-
-    // TODO pull these from the URDF
-    static const double z_top_to_baro_link = -0.05;
-    static const double z_baro_link_to_base_link = -0.085;
-
-    if (!z_valid_ && cxt_.baro_init_ == 0) {
-      z_offset_ = -z + z_top_to_baro_link + z_baro_link_to_base_link;
-      z_valid_ = true;
-      RCLCPP_INFO(get_logger(), "barometer init mode 0 (in air): adjustment %g", z_offset_);
-    } else if (!z_valid_ && cxt_.baro_init_ == 1) {
-      z_offset_ = -z + z_baro_link_to_base_link;
-      z_valid_ = true;
-      RCLCPP_INFO(get_logger(), "barometer init mode 1 (in water): adjustment %g", z_offset_);
-    }
-
-    if (z_valid_) {
-      // Adjust reading
-      z_ = z + z_offset_;
-
-      orca_msgs::msg::Depth depth_msg;
-      depth_msg.header = msg->header;
-      depth_msg.z = z_;
-      depth_msg.z_variance = Model::DEPTH_STDDEV * Model::DEPTH_STDDEV * 10; // Boost measurement uncertainty
-
-      // Publish depth, useful for diagnostics
-      if (depth_pub_->get_subscription_count() > 0) {
-        depth_pub_->publish(depth_msg);
-      }
-
-      if (cxt_.filter_baro_) {
-
-        // Still receiving poses?
-        if (receiving_poses_) {
-          rclcpp::Time stamp{depth_msg.header.stamp};
-          if (valid_stamp(last_pose_received_) && stamp - last_pose_received_ > OPEN_WATER_TIMEOUT) {
-            RCLCPP_INFO(get_logger(), "running in open water");
-            receiving_poses_ = false;
-            create_filter();
-          }
-        }
-
-        nav_msgs::msg::Odometry filtered_odom;
-        filtered_odom.header.frame_id = cxt_.frame_id_map_;
-        filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
-
-        if (filter_->process_message(depth_msg, u_bar_, filtered_odom)) {
-          // Save estimated yaw, used to rotate control messages
-          estimated_yaw_ = get_yaw(filtered_odom.pose.pose.orientation);
-
-          publish_odom(filtered_odom);
+      // If we've stopped receiving poses switch to a depth filter
+      if (receiving_poses_) {
+        rclcpp::Time stamp{msg->header.stamp};
+        if (valid_stamp(last_pose_received_) && stamp - last_pose_received_ > OPEN_WATER_TIMEOUT) {
+          RCLCPP_INFO(get_logger(), "running in open water");
+          receiving_poses_ = false;
+          create_filter();
         }
       }
+
+      nav_msgs::msg::Odometry filtered_odom;
+      filtered_odom.header.frame_id = cxt_.frame_id_map_;
+      filtered_odom.child_frame_id = cxt_.frame_id_base_link_;
+
+      // Run this message through the filter and publish odometry
+      if (filter_->process_message(*msg, u_bar_, filtered_odom)) {
+        // Save estimated yaw, used to rotate control messages
+        estimated_yaw_ = get_yaw(filtered_odom.pose.pose.orientation);
+
+        publish_odom(filtered_odom);
+      }
     }
+
   }
 
   void FilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg, bool first)
@@ -300,7 +290,7 @@ namespace orca_filter
     }
 
     // Publish filtered tf
-    if (cxt_.publish_filtered_tf_ && tf_pub_->get_subscription_count() > 0) {
+    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
       geometry_msgs::msg::TransformStamped geo_tf;
       geo_tf.header = odom.header;
       geo_tf.child_frame_id = cxt_.frame_id_base_link_;

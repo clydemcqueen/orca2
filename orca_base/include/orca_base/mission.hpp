@@ -32,7 +32,7 @@ namespace orca_base
     { return planner_->status(); }
 
     // Advance the plan, return true to continue
-    bool advance(rclcpp::Duration d, const FPStamped &estimate, orca::Efforts &efforts);
+    bool advance(const rclcpp::Duration& d, const FPStamped &estimate, orca::Efforts &efforts);
 
     // Abort the mission
     void abort();

@@ -48,11 +48,15 @@ namespace orca_base
   // AUVNode
   //=============================================================================
 
+  constexpr int TIMER_DRIVEN = 0;
+  constexpr int DEPTH_DRIVEN = 1;
+  constexpr int FIDUCIAL_DRIVEN = 2;
+
   AUVNode::AUVNode() : Node{"auv_node"}, map_{get_logger(), cxt_}
   {
     // Suppress IDE warnings
-    (void) baro_sub_;
     (void) battery_sub_;
+    (void) depth_sub_;
     (void) fcam_image_sub_;
     (void) fcam_info_sub_;
     (void) goal_sub_;
@@ -73,34 +77,34 @@ namespace orca_base
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), AUV_NODE_ALL_PARAMS, validate_parameters)
 
     // Publications
-    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
-    fcam_predicted_obs_pub_ = create_publisher<sensor_msgs::msg::Image>("fcam_predicted_obs", 1);
-    esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 1);
-    planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", 1);
-    target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", 1);
-    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 1);
+    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 5);
+    fcam_predicted_obs_pub_ = create_publisher<sensor_msgs::msg::Image>("fcam_predicted_obs", 5);
+    esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 5);
+    planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", 5);
+    target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", 5);
+    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 5);
 
     // Camera info may be published with a different QoS
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
 
     // Monotonic subscriptions
-    baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-      "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
-      { this->baro_cb_.call(msg); });
+    depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
+      "depth", 5, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
+      { this->depth_cb_.call(msg); });
     fcam_image_sub_ = create_subscription<sensor_msgs::msg::Image>(
-      "fcam_image", 1, [this](const sensor_msgs::msg::Image::SharedPtr msg) -> void
+      "fcam_image", 5, [this](const sensor_msgs::msg::Image::SharedPtr msg) -> void
       { this->fcam_image_cb_.call(msg); });
     fcam_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
       "fcam_info", camera_info_qos, [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) -> void
       { this->fcam_info_cb_.call(msg); });
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
-      "fiducial_map", 1, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
+      "fiducial_map", 5, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
 
     using namespace std::placeholders;
 
     // Sync subscriptions
-    fiducial_sync_.reset(new FiducialSync(FiducialPolicy(1), obs_sub_, fcam_pose_sub_));
+    fiducial_sync_.reset(new FiducialSync(FiducialPolicy(5), obs_sub_, fcam_pose_sub_));
     fiducial_sync_->registerCallback(std::bind(&AUVNode::fiducial_callback, this, _1, _2));
     obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
     fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Uses default qos
@@ -137,6 +141,8 @@ namespace orca_base
 
   void AUVNode::validate_parameters()
   {
+    std::cout << "VALIDATING PARAMS" << std::endl; // TODO use latest macros
+
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
     AUV_NODE_ALL_PARAMS
@@ -153,18 +159,19 @@ namespace orca_base
     cxt_.model_.drag_coef_tether_ = cxt_.drag_coef_tether_;
     cxt_.model_.drag_partial_const_yaw_ = cxt_.drag_partial_const_yaw_;
 
-    // Update timeouts
-    baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
-    fp_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_fp_ms_)};
+    // Update timer period and timeouts
     spin_period_ = std::chrono::milliseconds{cxt_.timer_period_ms_};
+    depth_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_depth_ms_)};
+    fp_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_fp_ms_)};
 
     // [Re-]start loop
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
-    spin_timer_ = create_wall_timer(spin_period_, std::bind(&AUVNode::spin_once, this));
+    spin_timer_ = create_wall_timer(spin_period_, [this]() -> void
+    { this->timer_cb_.call(); });
   }
 
-  bool AUVNode::baro_ok(const rclcpp::Time &t)
-  { return barometer_.initialized() && baro_cb_.receiving() && t - baro_cb_.prev() < baro_timeout_; }
+  bool AUVNode::depth_ok(const rclcpp::Time &t)
+  { return depth_cb_.receiving() && t - depth_cb_.prev() < depth_timeout_; }
 
   bool AUVNode::fp_ok(const rclcpp::Time &t)
   { return monotonic::valid(estimate_.t) && t - estimate_.t < fp_timeout_; }
@@ -177,42 +184,44 @@ namespace orca_base
     // -- not currently in a mission
     // -- have a map
     // -- have camera info
+    // -- getting depth and fiducial messages
     // -- have a good pose or a good observation
-    return !mission_ && map_.ok() && cam_info_ok() && fp_ok(now()) &&
+    return !mission_ && map_.ok() && cam_info_ok() && depth_ok(now()) && fp_ok(now()) &&
            (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
   }
 
   // Timer callback
-  void AUVNode::spin_once()
+  void AUVNode::timer_callback(bool first)
   {
-    // Ignore 0
-    auto spin_time = now();
-    if (spin_time.nanoseconds() <= 0) {
+    // Skip first time through the loop
+    if (first) {
       return;
     }
 
-    // Various timeouts
-    if (mission_ && !baro_ok(spin_time)) {
-      RCLCPP_ERROR(get_logger(), "lost barometer, abort mission");
-      abort_mission(spin_time);
+    auto curr_time = timer_cb_.curr();
+    auto prev_time = timer_cb_.prev();
+
+    // If we're expecting steady depth messages, but they stop, then abort the mission
+    if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(curr_time)) {
+      RCLCPP_ERROR(get_logger(), "lost depth readings, abort mission");
+      abort_mission(curr_time);
     }
 
-    if (!fp_ok(spin_time)) {
-      // We lost observations, nuke estimate_
+    // If we're expecting steady fiducial messages, but they stop, then abort the mission
+    if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN && !fp_ok(curr_time)) {
+      RCLCPP_ERROR(get_logger(), "lost fiducial readings, abort mission");
+      abort_mission(curr_time);
+    }
+
+    // If we lose observations, nuke estimate_
+    if (!fp_ok(curr_time)) {
       estimate_ = FPStamped{};
     }
 
-    // Mission loop is either timer-driven or sensor driven
-    // Note: control_msg.odom_lag will always be 0
-    if (!cxt_.sensor_loop_ && mission_) {
-      auv_advance(now(), spin_period_);
+    // Drive the AUV loop
+    if (mission_ && cxt_.loop_driver_ == TIMER_DRIVEN) {
+      auv_advance(curr_time, curr_time - prev_time);
     }
-  }
-
-  // New barometer reading
-  void AUVNode::baro_callback(const orca_msgs::msg::Barometer::SharedPtr msg)
-  {
-    base_link_z_ = barometer_.pressure_to_base_link_z(cxt_.model_, msg->pressure);
   }
 
   // New battery reading
@@ -224,6 +233,24 @@ namespace orca_base
     }
   }
 
+  // New depth reading
+  void AUVNode::depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first)
+  {
+    // Skip the first message
+    if (first) {
+      return;
+    }
+
+    // Save latest depth reading
+    base_link_z_ = msg->z;
+
+    // Drive the AUV loop
+    if (mission_ && cxt_.loop_driver_ == DEPTH_DRIVEN) {
+      auv_advance(depth_cb_.curr(), depth_cb_.d());
+    }
+  }
+
+  // New image from the camera
   void AUVNode::fcam_image_callback(sensor_msgs::msg::Image::SharedPtr msg)
   {
     if (fcam_predicted_obs_pub_->get_subscription_count() > 0) {
@@ -240,6 +267,7 @@ namespace orca_base
     }
   }
 
+  // New camera info message from the camera
   void AUVNode::fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg)
   {
     fcam_model_.fromCameraInfo(msg);
@@ -261,18 +289,26 @@ namespace orca_base
   }
 
   // Get a synchronized set of messages from vlam: pose from SolvePnP and raw marker observations
-  // Built for the non-filter case TODO also handle the filter case
   void AUVNode::fiducial_callback(
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
   {
-    // Ignore until we have a good map and the barometer is initialized TODO filter case
-    if (!map_.ok() || !barometer_.initialized()) {
+    // Keep track of the previous time
+    static rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
+
+    // Wait for at least 1 map and 1 depth message
+    if (!map_.ok() || !depth_cb_.receiving()) {
       return;
     }
 
-    rclcpp::Time prev_time = estimate_.t;
+    // The current time
     rclcpp::Time curr_time = obs_msg->header.stamp;
+
+    // Skip first message
+    if (!monotonic::valid(prev_time)) {
+      prev_time = curr_time;
+      return;
+    }
 
     // Ignore invalid timestamps
     if (!monotonic::valid(curr_time)) {
@@ -280,12 +316,10 @@ namespace orca_base
     }
 
     // Ignore duplicates, or time going backwards
+    // (Possible in simulation if we're running ROS time, see notes in orca_gazebo README)
     if (curr_time <= prev_time) {
       return;
     }
-
-    // First message?
-    bool first = !monotonic::valid(prev_time);
 
     // Convert pose to transform
     tf2::Transform t_map_sensor;
@@ -317,24 +351,15 @@ namespace orca_base
     }
 
     // Save the observations and pose
-    // The z value from the barometer is much more accurate TODO handle filter case
-    estimate_.from_msgs(*obs_msg, base_f_map, base_link_z_, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
 
-    if (cxt_.sensor_loop_ && mission_) {
-      // Skip the first message -- the dt will be too large
-      if (first) {
-        return;
-      }
-
-      // Reject large dt
-      auto d = curr_time - prev_time;
-      if (d.seconds() > 0.5) {
-        return;
-      }
-
-      // Continue mission
-      auv_advance(estimate_.t, d);
+    // Drive the AUV loop
+    if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
+      auv_advance(estimate_.t, curr_time - prev_time);
     }
+
+    // Update prev_time
+    prev_time = curr_time;
   }
 
   rclcpp_action::GoalResponse AUVNode::mission_goal(
@@ -363,14 +388,18 @@ namespace orca_base
     return rclcpp_action::CancelResponse::ACCEPT;
   }
 
-  // Start a mission. There are lots of options! Here are some default cases:
-  //
-  // If !pose_targets, then look to markers for a list of markers.
-  // If markers.empty(), then use all markers in the map
-  //
-  // If pose_targets, then look to poses for a list of poses.
-  // If poses.empty(), then try to provide the current pose.
-  // This only works if we have a good pose. It's only useful if keep_station is true.
+  /***********************************************************************************
+   * Start a mission. There are lots of options! Here are some default cases:
+   *
+   * If !pose_targets, then look to markers for a list of markers
+   * If markers.empty(), then use all markers in the map
+   *
+   * If pose_targets, then look to poses for a list of poses
+   * If poses.empty(), then try to provide the current pose
+   * This only works if we have a good pose. It's only useful if keep_station is true
+   *
+   * @param goal_handle Action goal
+   */
   void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
   {
     auto action = goal_handle->get_goal();
@@ -433,8 +462,51 @@ namespace orca_base
     }
   }
 
+  /**************************************************************************************
+   * Primary entry point for AUV operation. This calls Mission::advance(), etc.
+   *
+   * cxt_.loop_driver specifies one of 3 loop drivers:
+   *
+   * TIMER_DRIVEN         Called by timer_callback
+   *                      Pros:
+   *                      -- provides a consistent 20Hz rate (depends on cxt_.timer_period_ms_)
+   *
+   * DEPTH_DRIVEN         Called by depth_callback
+   *                      Pros:
+   *                      -- no lag between new depth data & controller response
+   *                      -- should provide a consistent 10Hz rate [but messages may be lost or delayed]
+   *
+   * FIDUCIAL_DRIVEN      Called by fiducial_callback
+   *                      Pros:
+   *                      -- no lag between new fiducial data & controller response
+   *                      -- if orca_filter is running upstream and fusing depth and fiducial data, should provide
+   *                         a consistent stream of messages at 10-40Hz [but messages may be lost or delayed]
+   *
+   * The gating factor for depth messages is the barometer driver in orca_driver: it takes at least 40ms
+   * to get a good reading. 10Hz seems like a reasonable rate.
+   *
+   * The image message rates depend on many factors, but 15-30Hz is typical.
+   *
+   * orca_filter runs at the sum of all of the sensor rates, so 1 camera at 15fps + 1 barometer at 10Hz
+   * should provide 25Hz when there's a marker in view, and 10Hz when there isn't.
+   *
+   * The planners require that curr_time = prev_time + d, so we can't limit d.
+   *
+   * @param msg_time Time of call, either sensor_msg.header.stamp or now()
+   * @param d dt since last call
+   */
   void AUVNode::auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d)
   {
+    if (d.seconds() > 0.2) {
+      RCLCPP_WARN(get_logger(), "auv loop d=%g seconds higher than expected", d.seconds());
+    }
+
+    // Fuse depth and fiducial messages
+    // Be sure to turn this off if there is upstream filter fusing this data
+    if (cxt_.fuse_depth_) {
+      estimate_.fp.set_good_z(base_link_z_);
+    }
+
     // Publish estimated path
     if (estimate_.fp.good_pose(cxt_.good_pose_dist_) && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
       if (estimated_path_.poses.size() > cxt_.keep_poses_) {
@@ -531,7 +603,7 @@ namespace orca_base
       if (mission_->status().planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
         ss << " RECOVERY move to m" << mission_->status().target_marker_id;
       } else {
-        ss << " plan z=" << mission_->status().pose.fp.pose.pose.z;
+        ss << " " << mission_->status().segment_info;
       }
     } else {
       ss << "WAITING z=" << base_link_z_;

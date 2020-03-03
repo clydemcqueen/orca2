@@ -88,11 +88,6 @@ namespace orca_base
     // Get the closest observation and return the distance
     double get_closest_observation(Observation &obs) const;
 
-    // (Could be a constructor)
-    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
-                   double hfov, double hres);
-
     // XY distance between 2 poses
     double distance_xy(const FP &that) const
     {
@@ -110,6 +105,13 @@ namespace orca_base
     {
       return pose.pose.distance_yaw(that.pose.pose);
     }
+
+    // (Could be a constructor)
+    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
+                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                   double marker_length, double hfov, double hres);
+
+    void set_good_z(double z);
   };
 
   std::ostream &operator<<(std::ostream &os, FP const &fp);
@@ -131,8 +133,8 @@ namespace orca_base
 
     // (Could be a constructor)
     void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z, double marker_length,
-                   double hfov, double hres);
+                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                   double marker_length, double hfov, double hres);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
 

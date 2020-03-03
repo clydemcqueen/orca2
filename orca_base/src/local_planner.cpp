@@ -48,6 +48,7 @@ namespace orca_base
         // Ascend/descend to target z
         if (plan.fp.pose.pose.distance_z(waypoint) > cxt_.planner_epsilon_xyz_) {
           add_vertical_segment(plan, waypoint.z);
+          add_keep_station_segment(plan, 1);
         } else {
           RCLCPP_INFO(logger_, "skip vertical");
         }
@@ -55,6 +56,7 @@ namespace orca_base
         if (plan.fp.pose.pose.distance_xy(waypoint) > cxt_.planner_epsilon_xyz_) {
           // Point in the direction of travel
           add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
+          add_keep_station_segment(plan, 1);
 
           // Travel
           add_line_segment(plan, waypoint.x, waypoint.y);
@@ -70,6 +72,7 @@ namespace orca_base
     // Pause
     add_keep_station_segment(plan, 5);
 
+#ifdef LOCAL_PATH
     // Create a path message to this target for diagnostics
     local_path_.header.frame_id = cxt_.map_frame_;
     local_path_.poses.clear();
@@ -83,6 +86,7 @@ namespace orca_base
     // Add last goal pose to path message
     pose_msg.pose = segments_.back()->goal().pose.pose.to_msg();
     local_path_.poses.push_back(pose_msg);
+#endif
 
     if (keep_station_) {
       // Keep station at the last target

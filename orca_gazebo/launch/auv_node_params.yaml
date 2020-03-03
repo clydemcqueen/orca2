@@ -1,0 +1,5 @@
+/auv_node:
+  ros__parameters:
+    publish_tf: true
+    param_fluid_density: 997.0
+    planner_max_short_plan_xy: 0.5

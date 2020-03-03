@@ -26,7 +26,10 @@ namespace orca_base
     bool keep_station_;                                         // True: keep station at target
     std::vector<std::shared_ptr<PoseSegmentBase>> segments_;    // Motion segments
     std::shared_ptr<PoseController> controller_;                // Motion controller
-    nav_msgs::msg::Path local_path_;                            // Path to next target
+#undef LOCAL_PATH
+#ifdef LOCAL_PATH
+    nav_msgs::msg::Path local_path_;                            // Path to next target, useful if there are waypoints
+#endif
 
     // Add a trajectory segment and update plan
     void add_keep_station_segment(FPStamped &plan, double seconds);
@@ -46,9 +49,10 @@ namespace orca_base
 
     bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);
 
-    // TODO publish local path
+#ifdef LOCAL_PATH
     const nav_msgs::msg::Path &local_path() const
     { return local_path_; }
+#endif
   };
 
 } // namespace orca_base

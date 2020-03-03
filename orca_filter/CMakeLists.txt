@@ -43,6 +43,23 @@ include_directories(
 #=============
 
 add_executable(
+  depth_node
+  src/depth_node.cpp
+)
+
+ament_target_dependencies(
+  depth_node
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+)
+
+#=============
+# Filter node
+#=============
+
+add_executable(
   filter_node
   src/filter_node.cpp
   src/filter_base.cpp
@@ -71,6 +88,6 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS filter_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS depth_node filter_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

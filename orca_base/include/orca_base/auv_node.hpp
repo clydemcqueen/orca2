@@ -8,11 +8,10 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_description/parser.hpp"
-#include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
+#include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/leak.hpp"
-#include "orca_shared/baro.hpp"
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/auv_context.hpp"
@@ -31,22 +30,23 @@ namespace orca_base
     // Parameters and dynamics model
     AUVContext cxt_;
 
-    // Timeouts will be set by parameters
-    rclcpp::Duration baro_timeout_{0};
-    rclcpp::Duration fp_timeout_{0};
+    // Timer period, set by parameter
     std::chrono::milliseconds spin_period_{0};
+
+    // Timeouts, set by parameters
+    rclcpp::Duration depth_timeout_{0};
+    rclcpp::Duration fp_timeout_{0};
 
     // Parsed URDF
     orca_description::Parser parser_;
 
-    // Barometer state
-    orca::Barometer barometer_{};
-    double base_link_z_{};
-
     // Camera model
     image_geometry::PinholeCameraModel fcam_model_;
 
-    // Observations and pose estimate
+    // Most recent depth message
+    double base_link_z_{};
+
+    // Most recent observations and pose estimate
     FPStamped estimate_;
 
     // AUV operation
@@ -56,8 +56,8 @@ namespace orca_base
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
     // Subscriptions
-    rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr fcam_image_sub_;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
@@ -80,7 +80,7 @@ namespace orca_base
     // Validate parameters
     void validate_parameters();
 
-    bool baro_ok(const rclcpp::Time &t);
+    bool depth_ok(const rclcpp::Time &t);
 
     bool fp_ok(const rclcpp::Time &t);
 
@@ -89,12 +89,12 @@ namespace orca_base
     bool ready_to_start_mission();
 
     // Timer callback
-    void spin_once();
+    void timer_callback(bool first);
 
     // Subscription callbacks
-    void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg);
-
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
+
+    void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
 
     void fcam_image_callback(sensor_msgs::msg::Image::SharedPtr msg);
 
@@ -109,12 +109,16 @@ namespace orca_base
       const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
 
     // Callback wrappers
-    monotonic::Valid<AUVNode *, orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &AUVNode::baro_callback};
-    monotonic::Valid<AUVNode *, sensor_msgs::msg::Image::SharedPtr> fcam_image_cb_{this,
-                                                                                   &AUVNode::fcam_image_callback};
-    monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr> fcam_info_cb_{this,
-                                                                                       &AUVNode::fcam_info_callback};
-    monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr> map_cb_{this, &AUVNode::map_callback};
+    monotonic::Timer<AUVNode *>
+      timer_cb_{this, &AUVNode::timer_callback};
+    monotonic::Monotonic<AUVNode *, orca_msgs::msg::Depth::SharedPtr>
+      depth_cb_{this, &AUVNode::depth_callback};
+    monotonic::Valid<AUVNode *, sensor_msgs::msg::Image::SharedPtr>
+      fcam_image_cb_{this, &AUVNode::fcam_image_callback};
+    monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr>
+      fcam_info_cb_{this, &AUVNode::fcam_info_callback};
+    monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr>
+      map_cb_{this, &AUVNode::map_callback};
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;

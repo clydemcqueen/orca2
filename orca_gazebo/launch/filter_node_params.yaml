@@ -1,0 +1,16 @@
+/filter_node:
+  ros__parameters:
+    param_fluid_density: 997.0
+    predict_accel: false
+    predict_accel_control: false
+    predict_accel_drag: false
+    predict_accel_buoyancy: false
+    filter_baro: true
+    filter_fcam: true
+    filter_lcam: false
+    filter_rcam: false
+    urdf_barometer_joint: 'baro_joint'
+    urdf_forward_camera_joint: 'forward_camera_frame_joint'
+    publish_tf: false
+    publish_measurement_tf: false
+

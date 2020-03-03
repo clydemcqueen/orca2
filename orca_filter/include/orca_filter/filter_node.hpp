@@ -5,7 +5,6 @@
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
-#include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
 
@@ -48,27 +47,20 @@ namespace orca_filter
 
     // Control state
     double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
-    orca::Acceleration u_bar_{};                        // Last control, used for filter predict step
+    orca::Acceleration u_bar_{};                  // Last control, used for filter predict step
 
-    // Barometer state
-    bool z_valid_{false};                         // True if z_ is valid
-    double z_offset_{};                           // Z offset, see baro_callback()
-    double z_{};                                  // Z from barometer
-
-    // Transform base_f_sensor_frame for all sensors
-    tf2::Transform t_baro_base_{};
+    // Transform base_f_sensor_frame for camera sensors
     tf2::Transform t_fcam_base_{};
     tf2::Transform t_lcam_base_{};
     tf2::Transform t_rcam_base_{};
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_pub_;
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
-    rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_sub_;
@@ -86,7 +78,7 @@ namespace orca_filter
     void get_joint(const urdf::Model &model, const std::string &name, tf2::Transform &t);
 
     // Callbacks
-    void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first);
+    void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
 
     void control_callback(orca_msgs::msg::Control::SharedPtr msg, bool first);
 
@@ -97,14 +89,16 @@ namespace orca_filter
     void rcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
 
     // Callback wrappers
-    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &FilterNode::baro_callback};
-    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr> control_cb_{this, &FilterNode::control_callback};
-    monotonic::Monotonic<FilterNode *,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> fcam_cb_{this, &FilterNode::fcam_callback};
-    monotonic::Monotonic<FilterNode *,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> lcam_cb_{this, &FilterNode::lcam_callback};
-    monotonic::Monotonic<FilterNode *,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> rcam_cb_{this, &FilterNode::rcam_callback};
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Depth::SharedPtr>
+      depth_cb_{this, &FilterNode::depth_callback};
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr>
+      control_cb_{this, &FilterNode::control_callback};
+    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
+      fcam_cb_{this, &FilterNode::fcam_callback};
+    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
+      lcam_cb_{this, &FilterNode::lcam_callback};
+    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
+      rcam_cb_{this, &FilterNode::rcam_callback};
 
     // Process a camera pose
     void process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,

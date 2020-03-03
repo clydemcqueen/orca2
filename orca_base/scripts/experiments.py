@@ -47,14 +47,14 @@ def param_to_str(p: Parameter):
 
 
 # Experiment description
+# TODO support all of the mission parameters
 class Experiment(object):
 
-    def __init__(self, note: str, mode: int, count: int, base_params: List[Parameter], filter_params: List[Parameter]):
+    def __init__(self, note: str, count: int, base_params: List[Parameter], filter_params: List[Parameter]):
         # Description
         self.note = note
 
         # Parameters
-        self.mode = mode
         self.count = count
         self.base_params = base_params
         self.filter_params = filter_params
@@ -63,9 +63,9 @@ class Experiment(object):
         self.results = []
 
     def print(self):
-        print('Experiment {}, mission={}, count={}'.format(self.note, self.mode, self.count))
+        print('Experiment {}, mission={}, count={}'.format(self.note, 'random markers', self.count))
         for p in self.base_params:
-            print('base_node::{}'.format(param_to_str(p)))
+            print('auv_node::{}'.format(param_to_str(p)))
         for p in self.filter_params:
             print('filter_node::{}'.format(param_to_str(p)))
         print('Results: {}'.format(self.results))
@@ -74,7 +74,7 @@ class Experiment(object):
 
 # Experiment runner
 # The control flow is buried in the callbacks. Each experiment does 3 things:
-# 1. sets parameters on base_node (set_base_node_params)
+# 1. sets parameters on auv_node (set_auv_node_params)
 # 2. sets parameters on filter_node (set_filter_node_params)
 # 3. start a mission (send_mission_goal)
 # 4. repeat (start_next_experiment)
@@ -82,6 +82,12 @@ class RunNode(Node):
 
     def __init__(self):
         super().__init__('experiments')
+
+        # Optionally record odom and gt, and calc NEES
+        self._calc_nees = False
+
+        # Optoinally support filter_node
+        self._filter_node_running = False
 
         # Set up experiments
         self._experiments = [
@@ -95,15 +101,7 @@ class RunNode(Node):
             #               value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
             # ]),
 
-            Experiment(note='ignore estimate controller', mode=Control.AUV_MARKER_SEQUENCE, count=1, base_params=[
-                Parameter(name='planner_z_target',
-                          value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-1.5)),
-                Parameter(name='auv_controller',
-                          value=ParameterValue(type=ParameterType.PARAMETER_INTEGER, integer_value=1)),
-            ], filter_params=[
-                Parameter(name='four_dof',
-                          value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
-            ]),
+            Experiment(note='ignore estimate controller', count=100, base_params=[], filter_params=[]),
 
             # Experiment(note='six DoF filter', mode=Control.AUV_MARKER_SEQUENCE, count=10, base_params=[
             #     Parameter(name='planner_z_target',
@@ -136,14 +134,14 @@ class RunNode(Node):
         self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_cb, 5)
 
         # Set parameter service clients
-        self._set_param_base_node_client = self.create_client(SetParameters, '/base_node/set_parameters')
+        self._set_param_auv_node_client = self.create_client(SetParameters, '/auv_node/set_parameters')
         self._set_param_filter_node_client = self.create_client(SetParameters, '/filter_node/set_parameters')
 
         # Mission action client
         self._mission_action_client = ActionClient(self, Mission, '/mission')
 
         # Futures manage the async state changes
-        self._set_base_node_params_future = None
+        self._set_auv_node_params_future = None
         self._set_filter_node_params_future = None
         self._send_goal_future = None
         self._get_result_future = None
@@ -156,7 +154,7 @@ class RunNode(Node):
         self.get_logger().info('starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
 
         # Step 1
-        self.set_base_node_params()
+        self.set_auv_node_params()
 
     def odom_cb(self, msg: Odometry):
         if self._odom_msgs is not None:
@@ -166,35 +164,41 @@ class RunNode(Node):
         if self._gt_msgs is not None:
             self._gt_msgs.append(msg)
 
-    def set_base_node_params(self):
-        self.get_logger().debug('waiting for /base_node/set_parameters server...')
-        self._set_param_base_node_client.wait_for_service()
+    def set_auv_node_params(self):
+        self.get_logger().debug('waiting for /auv_node/set_parameters server...')
+        self._set_param_auv_node_client.wait_for_service()
 
         request = SetParameters.Request()
         for param in self._experiments[self._idx].base_params:
             request.parameters.append(param)
 
-        self.get_logger().debug('setting base_node params...')
-        self._set_base_node_params_future = self._set_param_base_node_client.call_async(request)
-        self._set_base_node_params_future.add_done_callback(self.set_base_node_params_done_cb)
+        self.get_logger().debug('setting auv_node params...')
+        self._set_auv_node_params_future = self._set_param_auv_node_client.call_async(request)
+        self._set_auv_node_params_future.add_done_callback(self.set_auv_node_params_done_cb)
 
-    def set_base_node_params_done_cb(self, _):
-        self.get_logger().debug('base_node params set')
+    def set_auv_node_params_done_cb(self, _):
+        self.get_logger().debug('auv_node params set')
 
         # Step 2
         self.set_filter_node_params()
 
     def set_filter_node_params(self):
-        self.get_logger().debug('waiting for /filter_node/set_parameters server...')
-        self._set_param_filter_node_client.wait_for_service()
+        if self._filter_node_running:
 
-        request = SetParameters.Request()
-        for param in self._experiments[self._idx].filter_params:
-            request.parameters.append(param)
+            self.get_logger().debug('waiting for /filter_node/set_parameters server...')
+            self._set_param_filter_node_client.wait_for_service()
 
-        self.get_logger().debug('setting filter_node params...')
-        self._set_filter_node_params_future = self._set_param_filter_node_client.call_async(request)
-        self._set_filter_node_params_future.add_done_callback(self.set_filter_node_params_done_cb)
+            request = SetParameters.Request()
+            for param in self._experiments[self._idx].filter_params:
+                request.parameters.append(param)
+
+            self.get_logger().debug('setting filter_node params...')
+            self._set_filter_node_params_future = self._set_param_filter_node_client.call_async(request)
+            self._set_filter_node_params_future.add_done_callback(self.set_filter_node_params_done_cb)
+
+        else:
+
+            self.send_mission_goal()
 
     def set_filter_node_params_done_cb(self, _):
         self.get_logger().debug('filter_node params set')
@@ -208,7 +212,7 @@ class RunNode(Node):
 
         self.get_logger().debug('sending goal request...')
         goal_msg = Mission.Goal()
-        goal_msg.mode = self._experiments[self._idx].mode
+        goal_msg.random = True  # Random markers
         self._send_goal_future = self._mission_action_client.send_goal_async(goal_msg,
                                                                              feedback_callback=self.feedback_cb)
         self._send_goal_future.add_done_callback(self.goal_response_cb)
@@ -219,8 +223,9 @@ class RunNode(Node):
             self.get_logger().info('goal accepted')
 
             # Start recording messages
-            self._odom_msgs = []
-            self._gt_msgs = []
+            if self._calc_nees:
+                self._odom_msgs = []
+                self._gt_msgs = []
 
             # Get notified when the mission is complete
             self._get_result_future = goal_handle.get_result_async()
@@ -243,7 +248,8 @@ class RunNode(Node):
                 'goal succeeded, result: {0} out of {1}'.format(result.targets_completed, result.targets_total))
 
             # Calc and report NEES
-            self.report_nees()
+            if self._calc_nees:
+                self.report_nees()
 
             # Stop recording messages
             self._odom_msgs = None
@@ -285,7 +291,7 @@ class RunNode(Node):
         self._count += 1
         if self._count < self._experiments[self._idx].count:
             self.get_logger().info('starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
-            self.set_base_node_params()
+            self.set_auv_node_params()
         else:
             # Next experiment
             self._idx += 1
@@ -295,7 +301,7 @@ class RunNode(Node):
                     self._idx, self._experiments[self._idx].note, self._experiments[self._idx].count))
                 self.get_logger().info('starting run {} of {}'.format(self._count + 1,
                                                                       self._experiments[self._idx].count))
-                self.set_base_node_params()
+                self.set_auv_node_params()
             else:
                 self.get_logger().info('DONE!')
                 self.print_results()
@@ -309,6 +315,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = RunNode()
+
+    node.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
     try:
         rclpy.spin(node)

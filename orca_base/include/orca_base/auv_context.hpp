@@ -24,11 +24,16 @@ namespace orca_base
   CXT_MACRO_MEMBER(drag_coef_tether, double, 1.1)             /* Tether drag, 1.2 for unfaired tether  */ \
   CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.004)     /* Yaw drag, wild guess  */ \
   \
-  CXT_MACRO_MEMBER(sensor_loop, bool, false)                  /* false: timer loop, true: sensor loop  */ \
-  CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* true: publish t_map_base  */ \
+  CXT_MACRO_MEMBER(loop_driver, int, 0)                       /* What drives auv_advance? 0: timer, 1: depth msg, 2: fiducial msg  */ \
+  CXT_MACRO_MEMBER(fuse_depth, bool, true)                    /* Fuse depth and fiducial messages  */ \
+  CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
+  CXT_MACRO_MEMBER(timeout_depth_ms, int, 250)                /* Depth message timeout in ms  */ \
+  CXT_MACRO_MEMBER(timeout_fp_ms, int, 250)                   /* Fiducial pose message timeout in ms  */ \
   \
+  CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
+  \
   CXT_MACRO_MEMBER(fcam_hfov, double, 1.4)                    /* Forward camera horiz field of view in radians  */ \
   CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
   CXT_MACRO_MEMBER(fcam_vres, double, 600)                    /* Forward camera vertical resolution in pixels  */ \
@@ -51,12 +56,12 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.2)               /* AUV yaw pid Ki  */ \
   CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.45)              /* AUV yaw pid Kd  */ \
   \
-  CXT_MACRO_MEMBER(auv_xy_accel, double, 0.25)                /* AUV acceleration in the xy plane  */ \
-  CXT_MACRO_MEMBER(auv_xy_velo, double, 0.5)                  /* AUV velocity in the xy plane  */ \
+  CXT_MACRO_MEMBER(auv_xy_accel, double, 0.2)                 /* AUV acceleration in the xy plane  */ \
+  CXT_MACRO_MEMBER(auv_xy_velo, double, 0.4)                  /* AUV velocity in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_z_accel, double, 0.15)                 /* AUV vertical acceleration  */ \
   CXT_MACRO_MEMBER(auv_z_velo, double, 0.3)                   /* AUV vertical velocity  */ \
-  CXT_MACRO_MEMBER(auv_yaw_accel, double, M_PI_4 / 4)         /* AUV rotation acceleration  */ \
-  CXT_MACRO_MEMBER(auv_yaw_velo, double, M_PI_4 / 2)          /* AUV rotation velocity  */ \
+  CXT_MACRO_MEMBER(auv_yaw_accel, double, 0.2)                /* AUV rotation acceleration  */ \
+  CXT_MACRO_MEMBER(auv_yaw_velo, double, 0.4)                 /* AUV rotation velocity  */ \
   \
   CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
@@ -78,11 +83,6 @@ namespace orca_base
   CXT_MACRO_MEMBER(planner_max_dead_reckon_dist, double, 9)   /* Max allowable dead reckoning distance  */ \
   CXT_MACRO_MEMBER(planner_z_target, double, -0.5)            /* Target z position  */ \
   CXT_MACRO_MEMBER(planner_xy_distance, double, 1)            /* Target distance in front of marker  */ \
-  \
-  CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
-  CXT_MACRO_MEMBER(timeout_fp_ms, int, 200)                   /* Fiducial pose message timeout in ms  */ \
-  CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
-
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

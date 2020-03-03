@@ -30,6 +30,8 @@ def generate_launch_description():
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
     world_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3.world')
     map_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3_map.yaml')
+    auv_node_params_path = os.path.join(orca_gazebo_path, 'launch', 'auv_node_params.yaml')
+    filter_node_params_path = os.path.join(orca_gazebo_path, 'launch', 'filter_node_params.yaml')
 
     return LaunchDescription([
         # Launch Gazebo, loading orca.world
@@ -66,13 +68,17 @@ def generate_launch_description():
             }], remappings=[
             ]),
 
+        # Depth node, turns /barometer messages into /depth messages
+        Node(package='orca_filter', node_executable='depth_node', output='screen',
+             node_name='depth_node', parameters=[{
+                'use_sim_time': use_sim_time,
+                'fluid_density': 997.0,
+            }]),
+
         # AUV controller
         Node(package='orca_base', node_executable='auv_node', output='screen',
-             node_name='auv_node', parameters=[{
+             node_name='auv_node', parameters=[auv_node_params_path, {
                 'use_sim_time': use_sim_time,
-                'param_fluid_density': 997.0,
-                'publish_tf': True,
-                'planner_max_short_plan_xy': 0.5,
             }], remappings=[
                 ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
                 ('fcam_image', '/' + forward_camera_name + '/image_raw'),
@@ -81,27 +87,11 @@ def generate_launch_description():
 
         # Filter
         # Node(package='orca_filter', node_executable='filter_node', output='screen',
-        #      node_name='filter_node', parameters=[{
+        #      node_name='filter_node', parameters=[filter_node_params_path, {
         #         'use_sim_time': use_sim_time,
-        #         'param_fluid_density': 997.0,
-        #         'baro_init': 0,  # Init in-air
-        #         'predict_accel': False,
-        #         'predict_accel_control': False,
-        #         'predict_accel_drag': False,
-        #         'predict_accel_buoyancy': False,
-        #         'filter_baro': True,
-        #         'filter_fcam': True,
-        #         'filter_lcam': False,
-        #         'filter_rcam': False,
         #         'urdf_file': urdf_path,
-        #         'urdf_barometer_joint': 'baro_joint',
-        #         'urdf_forward_camera_joint': 'forward_camera_frame_joint',
-        #         'urdf_left_camera_joint': 'left_camera_frame_joint',
-        #         'urdf_right_camera_joint': 'right_camera_frame_joint',
         #     }], remappings=[
         #         ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-        #         ('lcam_f_map', '/' + left_camera_name + '/camera_pose'),
-        #         ('rcam_f_map', '/' + right_camera_name + '/camera_pose'),
         #     ]),
 
         # Load and publish a known map
@@ -118,7 +108,7 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[{
                 'use_sim_time': use_sim_time,
-                'publish_tfs': 0,
+                'publish_tfs': 0,  # Don't publish t_map_base, do this in filter_node or auv_node
                 'publish_tfs_per_marker': 0,  # Turn off per-marker TFs, too noisy
                 'sub_camera_info_best_effort_not_reliable': 1,
                 'publish_camera_pose': 1,

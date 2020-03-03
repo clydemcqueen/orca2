@@ -71,14 +71,14 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
-  Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &d) :
-    PoseSegmentBase{cxt, orca_msgs::msg::Control::PAUSE, start, start.fp}, d_{d}
+  Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration) :
+    PoseSegmentBase{cxt, orca_msgs::msg::Control::PAUSE, start, start.fp}, pause_duration_{pause_duration}
   {}
 
   std::string Pause::to_str()
   {
     std::stringstream ss;
-    ss << "pause for " << d_.seconds() << " seconds";
+    ss << "pause for " << pause_duration_.seconds() << " seconds";
     return ss.str();
   }
 
@@ -88,9 +88,9 @@ namespace orca_base
     plan_.t = plan_.t + d;
 
     // Count down time remaining
-    d_ = d_ - d;
+    pause_duration_ = pause_duration_ - d;
 
-    return d_.nanoseconds() > 0;
+    return pause_duration_.nanoseconds() > 0;
   }
 
   //=====================================================================================
@@ -104,7 +104,7 @@ namespace orca_base
   //
   // If the distance is short skip the run phase
 
-  void plan_trap_velo(double accel, double max_velo, double distance,
+  void plan_trap_velo(const double accel, const double max_velo, const double distance,
                       const rclcpp::Time &start, rclcpp::Time &run, rclcpp::Time &decel, rclcpp::Time &stop)
   {
     auto ramp_seconds = max_velo / accel;
@@ -115,6 +115,7 @@ namespace orca_base
       run_seconds = (distance - 2 * ramp_distance) / max_velo;
     } else {
       // Distance too short, will not hit max_velo
+      // Note that distance = 2 * ramp_distance
       ramp_seconds = sqrt(distance / accel);
       run_seconds = 0;
     }
@@ -203,6 +204,8 @@ namespace orca_base
       // Start phase 2: run at constant velocity
       accel_.x = 0;
       accel_.y = 0;
+      twist_.x = cos(angle_to_goal_) * cxt_.auv_xy_velo_;
+      twist_.y = sin(angle_to_goal_) * cxt_.auv_xy_velo_;
     }
 
     // Same for z motion
@@ -216,6 +219,7 @@ namespace orca_base
     } else if (plan_.t > z_run_) {
       // Start phase 2: run at constant velocity
       accel_.z = 0;
+      twist_.z = initial_accel_.z > 0 ? cxt_.auv_z_velo_ : -cxt_.auv_z_velo_;
     }
 
     // Same for yaw motion
@@ -229,6 +233,7 @@ namespace orca_base
     } else if (plan_.t > yaw_run_) {
       // Start phase 2: run at constant velocity
       accel_.yaw = 0;
+      twist_.yaw = initial_accel_.yaw > 0 ? cxt_.auv_yaw_velo_ : -cxt_.auv_yaw_velo_;
     }
 
 #if 1
@@ -281,16 +286,15 @@ namespace orca_base
 
   std::string TrapVelo::to_str()
   {
-    auto xy_seconds = (xy_stop_ - start_).seconds();
-    auto z_seconds = (z_stop_ - start_).seconds();
-    auto yaw_seconds = (yaw_stop_ - start_).seconds();
+    auto xy_dt = (xy_stop_ - start_).seconds();
+    auto z_dt = (z_stop_ - start_).seconds();
+    auto yaw_dt = (yaw_stop_ - start_).seconds();
 
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2)
-       << type_name() << ", xy_seconds: " << xy_seconds
-       << ", z_seconds: " << z_seconds
-       << ", yaw_seconds: " << yaw_seconds
-       << ", initial_accel_: " << initial_accel_;
+       << type_name() << ", xy dt: " << xy_dt
+       << ", z dt: " << z_dt
+       << ", yaw dt: " << yaw_dt;
     return ss.str();
   }
 

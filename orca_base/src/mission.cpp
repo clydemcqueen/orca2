@@ -20,7 +20,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(rclcpp::Duration d, const FPStamped &estimate, orca::Efforts &efforts)
+  bool Mission::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {
@@ -39,37 +39,22 @@ namespace orca_base
     // Sanity check: if we're in a mission action, make sure we're in a good state
     assert(!goal_handle_ || goal_handle_->is_executing());
 
-    int num_steps = 1;
-    auto MAX_STEP = rclcpp::Duration::from_seconds(0.1);
-
-    if (d > MAX_STEP) {
-      // The numerical approximation gets wonky if dt > 0.1. This might happen if the filter times out and restarts.
-      // Break a large dt into a number of smaller steps.
-      num_steps = std::ceil(d.seconds() / MAX_STEP.seconds());
-      assert(num_steps < 20);
-      RCLCPP_INFO(logger_, "break dt %g into %d steps", d.seconds(), num_steps);
-      d = rclcpp::Duration::from_seconds(d.seconds() / num_steps);
-    }
-
-    for (int i = 0; i < num_steps; ++i) {
-
-      auto send_feedback = [&](int completed, int total)
-      {
-        if (goal_handle_) {
-          feedback_->targets_completed = completed;
-          feedback_->targets_total = total;
-          goal_handle_->publish_feedback(feedback_);
-        }
-      };
-
-      auto rc = planner_->advance(d, estimate, efforts, send_feedback);
-      if (rc == AdvanceRC::FAILURE) {
-        abort();
-        return false;
-      } else if (rc == AdvanceRC::SUCCESS) {
-        complete();
-        return false;
+    auto send_feedback = [&](int completed, int total)
+    {
+      if (goal_handle_) {
+        feedback_->targets_completed = completed;
+        feedback_->targets_total = total;
+        goal_handle_->publish_feedback(feedback_);
       }
+    };
+
+    auto rc = planner_->advance(d, estimate, efforts, send_feedback);
+    if (rc == AdvanceRC::FAILURE) {
+      abort();
+      return false;
+    } else if (rc == AdvanceRC::SUCCESS) {
+      complete();
+      return false;
     }
 
     // The mission continues

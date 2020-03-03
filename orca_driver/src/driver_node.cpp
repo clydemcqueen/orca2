@@ -53,6 +53,8 @@ namespace orca_driver
     control_sub_ = create_subscription<orca_msgs::msg::Control>("control", 1, control_cb);
 
     // Spin timer
+    // TODO move to param
+    // TODO run at 100ms... or change how auv_advance works
     using namespace std::chrono_literals;
     spin_timer_ = create_wall_timer(500ms, std::bind(&DriverNode::timer_callback, this));
   }
@@ -150,7 +152,7 @@ namespace orca_driver
   // Read barometer sensor, return true if successful
   bool DriverNode::read_barometer()
   {
-    barometer_.read();
+    barometer_.read(); // Takes 40ms+
     barometer_msg_.header.stamp = now();
     barometer_msg_.pressure = barometer_.pressure() * 100; // Pascals
     barometer_msg_.temperature = barometer_.temperature(); // Celsius

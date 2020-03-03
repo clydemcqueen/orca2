@@ -159,19 +159,22 @@ namespace orca_base
   }
 
   void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z,
+                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
                      double marker_length, double hfov, double hres)
   {
     pose.from_msg(fcam_msg.pose);
-
-    // Override the z value
-    pose.pose.z = z;
-    pose.z_valid = true;
 
     observations.clear();
     for (const auto &r : obs.observations) {
       observations.emplace_back(r, marker_length, hfov, hres);
     }
+  }
+
+  void FP::set_good_z(double z)
+  {
+    // Override the z value
+    pose.pose.z = z;
+    pose.z_valid = true;
   }
 
   std::ostream &operator<<(std::ostream &os, FP const &fp)
@@ -196,14 +199,13 @@ namespace orca_base
   }
 
   void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg, double z,
-                            double marker_length,
-                            double hfov, double hres)
+                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                            double marker_length, double hfov, double hres)
   {
     assert(obs.header.stamp == fcam_msg.header.stamp);
 
     t = obs.header.stamp;
-    fp.from_msgs(obs, fcam_msg, z, marker_length, hfov, hres);
+    fp.from_msgs(obs, fcam_msg, marker_length, hfov, hres);
   }
 
   void FPStamped::add_to_path(nav_msgs::msg::Path &path) const
