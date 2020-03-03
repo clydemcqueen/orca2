@@ -11,6 +11,6 @@
     filter_rcam: false
     urdf_barometer_joint: 'baro_joint'
     urdf_forward_camera_joint: 'forward_camera_frame_joint'
-    publish_tf: false
+    publish_tf: true
     publish_measurement_tf: false
 

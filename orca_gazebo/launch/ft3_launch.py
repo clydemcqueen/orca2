@@ -86,13 +86,13 @@ def generate_launch_description():
             ]),
 
         # Filter
-        # Node(package='orca_filter', node_executable='filter_node', output='screen',
-        #      node_name='filter_node', parameters=[filter_node_params_path, {
-        #         'use_sim_time': use_sim_time,
-        #         'urdf_file': urdf_path,
-        #     }], remappings=[
-        #         ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-        #     ]),
+        Node(package='orca_filter', node_executable='filter_node', output='screen',
+             node_name='filter_node', parameters=[filter_node_params_path, {
+                'use_sim_time': use_sim_time,
+                'urdf_file': urdf_path,
+            }], remappings=[
+                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+            ]),
 
         # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

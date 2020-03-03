@@ -10,6 +10,32 @@
 
 #include "orca_base/thrusters.hpp"
 
+/*******************************************************************************************************
+ * There are several cxt_ options in auv_node and filter_node that interact. 2 examples:
+ *
+ * Without a filter:
+ *      Launch auv_node
+ *      AUVContext:
+ *          loop_driver = 0 (timer driven)
+ *          filtered_odom = false
+ *          fuse_depth = true
+ *          publish_tf = true
+ *
+ * With a filter:
+ *      Launch auv_node and filter_node
+ *      AUVContext:
+ *          loop_driver = 2 (fiducial driven)
+ *          filtered_odom = true
+ *          fuse_depth = false
+ *          publish_tf = false
+ *      FilterContext:
+ *          filter_baro = true
+ *          filter_fcam = true
+ *          publish_tf = true
+ *
+ * Other options are possible, e.g., filter_baro = false and fuse_depth = true
+ */
+
 using namespace orca;
 
 namespace orca_base
@@ -103,12 +129,6 @@ namespace orca_base
 
     using namespace std::placeholders;
 
-    // Sync subscriptions
-    fiducial_sync_.reset(new FiducialSync(FiducialPolicy(5), obs_sub_, fcam_pose_sub_));
-    fiducial_sync_->registerCallback(std::bind(&AUVNode::fiducial_callback, this, _1, _2));
-    obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
-    fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Uses default qos
-
     // Other subscriptions
     auto battery_cb = std::bind(&AUVNode::battery_callback, this, _1);
     battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
@@ -146,6 +166,35 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_DEBUG, get_logger(), cxt_, n, t, d)
     AUV_NODE_ALL_PARAMS
+
+    // Sync subscriptions
+    if (cxt_.filtered_odom_) {
+      // Message filter subscriptions
+      obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
+      fcam_pose_sub_.unsubscribe();
+      odom_sub_.subscribe(this, "odom"); // Uses default qos
+
+      // Stop raw sync
+      raw_sync_ = nullptr;
+
+      // Start filtered sync
+      using namespace std::placeholders;
+      filtered_sync_.reset(new FilteredSync(FilteredPolicy(5), obs_sub_, odom_sub_));
+      filtered_sync_->registerCallback(std::bind(&AUVNode::filtered_fiducial_callback, this, _1, _2));
+    } else {
+      // Message filter subscriptions
+      obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
+      fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Uses default qos
+      odom_sub_.unsubscribe();
+
+      // Stop filtered sync
+      filtered_sync_ = nullptr;
+
+      // Start raw sync
+      using namespace std::placeholders;
+      raw_sync_.reset(new RawSync(RawPolicy(5), obs_sub_, fcam_pose_sub_));
+      raw_sync_->registerCallback(std::bind(&AUVNode::raw_fiducial_callback, this, _1, _2));
+    }
 
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
@@ -288,8 +337,10 @@ namespace orca_base
     map_.set_vlam_map(msg);
   }
 
-  // Get a synchronized set of messages from vlam: pose from SolvePnP and raw marker observations
-  void AUVNode::fiducial_callback(
+  // Get a synchronized set of messages from vloc: pose from SolvePnP and raw marker observations
+  // Guard against invalid or duplicate timestamps
+  // vloc poses are sensor_f_map -- transform to base_f_map
+  void AUVNode::raw_fiducial_callback(
     const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
     const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
   {
@@ -338,7 +389,67 @@ namespace orca_base
     if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
       // Build transform message
       geometry_msgs::msg::TransformStamped transform;
-      transform.header.stamp = fcam_msg->header.stamp;
+      transform.header.stamp = curr_time;
+      transform.header.frame_id = cxt_.map_frame_;
+      transform.child_frame_id = cxt_.base_frame_;
+      transform.transform = toMsg(t_map_base);
+
+      // TF messages can have multiple transforms, we have just 1
+      tf2_msgs::msg::TFMessage tf_message;
+      tf_message.transforms.emplace_back(transform);
+
+      tf_pub_->publish(tf_message);
+    }
+
+    // Save the observations and pose
+    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+
+    // Drive the AUV loop
+    if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
+      auv_advance(estimate_.t, curr_time - prev_time);
+    }
+
+    // Update prev_time
+    prev_time = curr_time;
+  }
+
+  // Get a synchronized set of messages: raw marker observations from vloc and filtered odom from filter_node
+  // filter_node guarantees that all messages are monotonic, no need to guard against invalid or duplicate timestamps
+  // filter_node odom messages are base_f_map
+  void AUVNode::filtered_fiducial_callback(
+    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
+  {
+    // Keep track of the previous time
+    static rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
+
+    // Wait for at least 1 map and 1 depth message
+    if (!map_.ok() || !depth_cb_.receiving()) {
+      return;
+    }
+
+    // The current time
+    rclcpp::Time curr_time = obs_msg->header.stamp;
+
+    // Skip first message
+    if (!monotonic::valid(prev_time)) {
+      prev_time = curr_time;
+      return;
+    }
+
+    geometry_msgs::msg::PoseWithCovarianceStamped base_f_map;
+    base_f_map.header = odom_msg->header;
+    base_f_map.pose = odom_msg->pose;
+
+    // Publish tf
+    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
+      // Can't convert geometry_msgs::msg::Pose to geometry_msgs::msg::Transform, so go by way of tf2::Transform
+      tf2::Transform t_map_base;
+      tf2::fromMsg(odom_msg->pose.pose, t_map_base);
+
+      // Build transform message
+      geometry_msgs::msg::TransformStamped transform;
+      transform.header.stamp = curr_time;
       transform.header.frame_id = cxt_.map_frame_;
       transform.child_frame_id = cxt_.base_frame_;
       transform.transform = toMsg(t_map_base);

@@ -25,6 +25,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.004)     /* Yaw drag, wild guess  */ \
   \
   CXT_MACRO_MEMBER(loop_driver, int, 0)                       /* What drives auv_advance? 0: timer, 1: depth msg, 2: fiducial msg  */ \
+  CXT_MACRO_MEMBER(filtered_odom, bool, false)                /* Subscribe to filtered odom msg, vs raw pose  */ \
   CXT_MACRO_MEMBER(fuse_depth, bool, true)                    /* Fuse depth and fiducial messages  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
   CXT_MACRO_MEMBER(timeout_depth_ms, int, 250)                /* Depth message timeout in ms  */ \

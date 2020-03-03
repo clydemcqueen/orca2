@@ -64,15 +64,24 @@ namespace orca_base
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
-    // Sync pose + observations
-    // These will only be sent if markers were found
+    // Message filter subscriptions
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
     message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_pose_sub_;
-    using FiducialPolicy = message_filters::sync_policies::ExactTime<
+    message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
+
+    // Sync raw (unfiltered) pose + observations
+    using RawPolicy = message_filters::sync_policies::ExactTime<
       fiducial_vlam_msgs::msg::Observations,
       geometry_msgs::msg::PoseWithCovarianceStamped>;
-    using FiducialSync = message_filters::Synchronizer<FiducialPolicy>;
-    std::shared_ptr<FiducialSync> fiducial_sync_;
+    using RawSync = message_filters::Synchronizer<RawPolicy>;
+    std::shared_ptr<RawSync> raw_sync_;
+
+    // Sync filtered odom + observations
+    using FilteredPolicy = message_filters::sync_policies::ExactTime<
+      fiducial_vlam_msgs::msg::Observations,
+      nav_msgs::msg::Odometry>;
+    using FilteredSync = message_filters::Synchronizer<FilteredPolicy>;
+    std::shared_ptr<FilteredSync> filtered_sync_;
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
@@ -104,9 +113,13 @@ namespace orca_base
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
-    void fiducial_callback(
+    void raw_fiducial_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
       const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
+
+    void filtered_fiducial_callback(
+      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
 
     // Callback wrappers
     monotonic::Timer<AUVNode *>

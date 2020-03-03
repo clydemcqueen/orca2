@@ -116,9 +116,9 @@ class PlotFilterNode(Node):
 
         if plot_baro:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
-        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/fcam_f_base', self.pre_callback, 5)
-        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
-        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)
+        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_fcam_f_base', self.pre_callback, 5)
+        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_lcam_f_base', self.pre_callback, 5)
+        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_rcam_f_base', self.pre_callback, 5)
         self._post_sub = self.create_subscription(Odometry, '/odom', self.post_callback, 5)
         if plot_gt:
             self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_callback, 5)

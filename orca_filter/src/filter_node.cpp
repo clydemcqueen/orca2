@@ -57,7 +57,7 @@ namespace orca_filter
       fcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
         "fcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
         { this->fcam_cb_.call(msg); });
-      fcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("fcam_f_base", 1);
+      fcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("raw_fcam_f_base", 1);
 
     } else {
       fcam_sub_ = nullptr;
@@ -68,7 +68,7 @@ namespace orca_filter
       lcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
         "lcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
         { this->lcam_cb_.call(msg); });
-      lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("lcam_f_base", 1);
+      lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("raw_lcam_f_base", 1);
 
     } else {
       lcam_sub_ = nullptr;
@@ -79,7 +79,7 @@ namespace orca_filter
       rcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
         "rcam_f_map", 1, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
         { this->rcam_cb_.call(msg); });
-      rcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("rcam_f_base", 1);
+      rcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("raw_rcam_f_base", 1);
     } else {
       rcam_sub_ = nullptr;
       rcam_pub_ = nullptr;
