@@ -53,9 +53,13 @@ uint8 segment_type
 # Plan in world frame
 geometry_msgs/Pose plan_pose
 geometry_msgs/Twist plan_twist
+orca_msgs/Observation[] plan_observations
 
 # Estimate in world frame
 geometry_msgs/Pose estimate_pose
+orca_msgs/Observation[] estimate_observations
+
+# Summary of estimate
 bool good_pose
 bool good_z
 bool has_good_observation

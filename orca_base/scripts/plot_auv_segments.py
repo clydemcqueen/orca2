@@ -14,28 +14,13 @@ import matplotlib
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-from geometry_msgs.msg import Quaternion
 import matplotlib.pyplot as plt
-import math
 from orca_msgs.msg import Control
 import rclpy
 import rclpy.time
 from rclpy.node import Node
-import transformations as xf
 from typing import List
-
-
-def normalize_angle(x):
-    x = x % (2 * math.pi)  # force in range [0, 2 pi)
-    if x > math.pi:  # move to [-pi, pi)
-        x -= 2 * math.pi
-    return x
-
-
-def get_yaw(q: Quaternion) -> float:
-    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
-    rpy = xf.euler_from_matrix(m)
-    return rpy[2]
+from orca_util import normalize_angle, get_yaw, seconds
 
 
 class PlannerStatus(object):
@@ -132,19 +117,24 @@ class PlotControlNode(Node):
         # 4 for efforts in the body frame
         fig, ((axvx, axvy, axvz, axvw), (axex, axey, axez, axew), (axff, axfs, axfv, axfw)) = plt.subplots(3, 4)
 
+        # x axis for all plots == time
+        x_values = [seconds(msg.header.stamp) for msg in self._control_msgs]
+
         # Plot velocity
+        # TODO plot estimated velo as well
         velo_axes = [axvx, axvy, axvz, axvw]
         velo_names = ['velo x', 'velo y', 'velo z', 'velo yaw']
         velo_values = [[msg.plan_twist.linear.x for msg in self._control_msgs],
                        [msg.plan_twist.linear.y for msg in self._control_msgs],
                        [msg.plan_twist.linear.z for msg in self._control_msgs],
                        [msg.plan_twist.angular.z for msg in self._control_msgs]]
-        for ax, name, values in zip(velo_axes, velo_names, velo_values):
+        for ax, name, y_values in zip(velo_axes, velo_names, velo_values):
             ax.set_title(name)
             ax.set_ylim(-0.55, 0.55)
             ax.set_xticklabels([])
-            ax.plot(values)
+            ax.plot(x_values, y_values)
 
+        """
         # Plot error
         error_axes = [axex, axey, axez, axew]
         error_names = ['error x', 'error y', 'error z', 'error yaw']
@@ -153,11 +143,34 @@ class PlotControlNode(Node):
                         [msg.estimate_pose.position.z - msg.plan_pose.position.z for msg in self._control_msgs],
                         [normalize_angle(get_yaw(msg.estimate_pose.orientation) - get_yaw(msg.plan_pose.orientation))
                          for msg in self._control_msgs]]
-        for ax, name, values in zip(error_axes, error_names, error_values):
+        for ax, name, y_values in zip(error_axes, error_names, error_values):
             ax.set_title(name)
             ax.set_ylim(-0.3, 0.3)
             ax.set_xticklabels([])
-            ax.plot(values)
+            ax.plot(x_values, y_values)
+        """
+
+        # Plot plan vs estimate in the same graph
+        # TODO put a floor under ylim range -- don't exaggerate small errors
+        plan_est_axes = [axex, axey, axez, axew]
+        plan_names = ['plan x', 'plan y', 'plan z', 'plan yaw']
+        est_names = ['est x', 'est y', 'est z', 'est yaw']
+        plan_values = [[msg.plan_pose.position.x for msg in self._control_msgs],
+                       [msg.plan_pose.position.y for msg in self._control_msgs],
+                       [msg.plan_pose.position.z for msg in self._control_msgs],
+                       [get_yaw(msg.plan_pose.orientation) for msg in self._control_msgs]]
+        est_values = [[msg.estimate_pose.position.x for msg in self._control_msgs],
+                       [msg.estimate_pose.position.y for msg in self._control_msgs],
+                       [msg.estimate_pose.position.z for msg in self._control_msgs],
+                       [get_yaw(msg.estimate_pose.orientation) for msg in self._control_msgs]]
+        for ax, name, y_values in zip(plan_est_axes, plan_names, plan_values):
+            ax.set_title(name)
+            ax.set_xticklabels([])
+            ax.plot(x_values, y_values)
+        for ax, name, y_values in zip(plan_est_axes, est_names, est_values):
+            ax.set_title(name)
+            ax.set_xticklabels([])
+            ax.plot(x_values, y_values)
 
         # Plot efforts
         effort_axes = [axff, axfs, axfv, axfw]
@@ -166,10 +179,10 @@ class PlotControlNode(Node):
                          [msg.efforts.strafe for msg in self._control_msgs],
                          [msg.efforts.vertical for msg in self._control_msgs],
                          [msg.efforts.yaw for msg in self._control_msgs]]
-        for ax, name, values in zip(effort_axes, effort_names, effort_values):
+        for ax, name, y_values in zip(effort_axes, effort_names, effort_values):
             # Compute +/- transitions
             pos_neg = 0
-            for c, n in zip(values, values[1:]):
+            for c, n in zip(y_values, y_values[1:]):
                 if c > 0. > n:
                     pos_neg += 1
                 elif c < 0. < n:
@@ -178,7 +191,7 @@ class PlotControlNode(Node):
             ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
             ax.set_ylim(-0.1, 0.1)
             ax.set_xticklabels([])
-            ax.plot(values)
+            ax.plot(x_values, y_values)
 
         # Set figure title
         fig.suptitle(title)

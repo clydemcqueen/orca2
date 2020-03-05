@@ -3,6 +3,7 @@
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "opencv2/core/types.hpp"
+#include "orca_msgs/msg/observation.hpp"
 #include "orca_shared/geometry.hpp"
 #include "rclcpp/time.hpp"
 
@@ -37,6 +38,8 @@ namespace orca_base
                 double marker_length, double hfov, double hres);
 
     void estimate_corners(double marker_length, double hfov, double hres, double vres);
+
+    orca_msgs::msg::Observation to_msg() const;
 
   private:
 

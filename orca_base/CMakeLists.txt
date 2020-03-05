@@ -61,7 +61,6 @@ add_executable(
 
 ament_target_dependencies(
   auv_node
-  cv_bridge
   fiducial_vlam_msgs
   geometry_msgs
   image_geometry
@@ -72,7 +71,6 @@ ament_target_dependencies(
   rclcpp
   rclcpp_action
   ros2_shared
-  sensor_msgs
   tf2
   tf2_ros
 )
@@ -98,6 +96,24 @@ ament_target_dependencies(
 )
 
 #=============
+# Annotate Image node
+#=============
+
+add_executable(
+  annotate_image_node
+  src/annotate_image_node.cpp
+)
+
+ament_target_dependencies(
+  annotate_image_node
+  cv_bridge
+  orca_msgs
+  orca_shared
+  rclcpp
+  sensor_msgs
+)
+
+#=============
 # Test
 #=============
 
@@ -118,7 +134,13 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS auv_node rov_node DESTINATION lib/${PROJECT_NAME})
+install(
+  TARGETS
+  auv_node
+  rov_node
+  annotate_image_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Install Python nodes
 # PROGRAMS sets execute bits, FILES clears them

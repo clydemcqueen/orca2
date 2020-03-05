@@ -26,6 +26,7 @@ endif ()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
+find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -40,7 +41,8 @@ rosidl_generate_interfaces(
   msg/Depth.msg
   msg/Efforts.msg
   msg/Leak.msg
-  DEPENDENCIES geometry_msgs std_msgs
+  msg/Observation.msg
+  DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

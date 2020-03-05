@@ -1,13 +1,7 @@
 #include "orca_base/auv_node.hpp"
 
-#include <iomanip>
-#include <utility>
-
-#include "cv_bridge/cv_bridge.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
 #include "orca_shared/pwm.hpp"
-
 #include "orca_base/thrusters.hpp"
 
 /*******************************************************************************************************
@@ -42,35 +36,6 @@ namespace orca_base
 {
 
   //=============================================================================
-  // Utilities
-  //=============================================================================
-
-  void draw_text(cv::Mat &image, const std::string &s, const cv::Point2d &p, cv::Scalar color)
-  {
-    putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, 1, std::move(color));
-  }
-
-  void draw_observations(cv::Mat &image, const std::vector<Observation> &observations, const cv::Scalar &color)
-  {
-    for (const auto &obs : observations) {
-      // Draw marker name
-      cv::Point2d p = obs.c3;
-      p.y += 30;
-      std::stringstream ss;
-      ss << std::fixed << std::setprecision(2);
-
-      ss << "m" << obs.id << " d=" << obs.distance;
-      draw_text(image, ss.str(), p, color);
-
-      // Draw bounding box
-      cv::line(image, obs.c0, obs.c1, color);
-      cv::line(image, obs.c1, obs.c2, color);
-      cv::line(image, obs.c2, obs.c3, color);
-      cv::line(image, obs.c3, obs.c0, color);
-    }
-  }
-
-  //=============================================================================
   // AUVNode
   //=============================================================================
 
@@ -78,12 +43,13 @@ namespace orca_base
   constexpr int DEPTH_DRIVEN = 1;
   constexpr int FIDUCIAL_DRIVEN = 2;
 
+  constexpr int QUEUE_SIZE = 10;
+
   AUVNode::AUVNode() : Node{"auv_node"}, map_{get_logger(), cxt_}
   {
     // Suppress IDE warnings
     (void) battery_sub_;
     (void) depth_sub_;
-    (void) fcam_image_sub_;
     (void) fcam_info_sub_;
     (void) goal_sub_;
     (void) leak_sub_;
@@ -108,28 +74,24 @@ namespace orca_base
     AUV_NODE_ALL_PARAMS
 
     // Publications
-    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 5);
-    fcam_predicted_obs_pub_ = create_publisher<sensor_msgs::msg::Image>("fcam_predicted_obs", 5);
-    esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", 5);
-    planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", 5);
-    target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", 5);
-    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", 5);
+    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", QUEUE_SIZE);
+    esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", QUEUE_SIZE);
+    planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", QUEUE_SIZE);
+    target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", QUEUE_SIZE);
+    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QUEUE_SIZE);
 
     // Camera info may be published with a different QoS
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
 
     // Monotonic subscriptions
     depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
-      "depth", 5, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
+      "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
       { this->depth_cb_.call(msg); });
-    fcam_image_sub_ = create_subscription<sensor_msgs::msg::Image>(
-      "fcam_image", 5, [this](const sensor_msgs::msg::Image::SharedPtr msg) -> void
-      { this->fcam_image_cb_.call(msg); });
     fcam_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
       "fcam_info", camera_info_qos, [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) -> void
       { this->fcam_info_cb_.call(msg); });
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
-      "fiducial_map", 5, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
+      "fiducial_map", QUEUE_SIZE, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
 
     using namespace std::placeholders;
@@ -169,21 +131,21 @@ namespace orca_base
     // Sync subscriptions
     if (cxt_.filtered_odom_) {
       // Message filter subscriptions
-      obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
+      obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
       fcam_pose_sub_.unsubscribe();
-      odom_sub_.subscribe(this, "odom"); // Uses default qos
+      odom_sub_.subscribe(this, "odom"); // Default qos is reliable, queue=10
 
       // Stop raw sync
       raw_sync_ = nullptr;
 
       // Start filtered sync
       using namespace std::placeholders;
-      filtered_sync_.reset(new FilteredSync(FilteredPolicy(5), obs_sub_, odom_sub_));
+      filtered_sync_.reset(new FilteredSync(FilteredPolicy(QUEUE_SIZE), obs_sub_, odom_sub_));
       filtered_sync_->registerCallback(std::bind(&AUVNode::filtered_fiducial_callback, this, _1, _2));
     } else {
       // Message filter subscriptions
-      obs_sub_.subscribe(this, "fiducial_observations"); // Uses default qos
-      fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Uses default qos
+      obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
+      fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Default qos is reliable, queue=10
       odom_sub_.unsubscribe();
 
       // Stop filtered sync
@@ -191,7 +153,7 @@ namespace orca_base
 
       // Start raw sync
       using namespace std::placeholders;
-      raw_sync_.reset(new RawSync(RawPolicy(5), obs_sub_, fcam_pose_sub_));
+      raw_sync_.reset(new RawSync(RawPolicy(QUEUE_SIZE), obs_sub_, fcam_pose_sub_));
       raw_sync_->registerCallback(std::bind(&AUVNode::raw_fiducial_callback, this, _1, _2));
     }
 
@@ -238,7 +200,6 @@ namespace orca_base
            (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
   }
 
-  // Timer callback
   void AUVNode::timer_callback(bool first)
   {
     // Skip first time through the loop
@@ -261,18 +222,12 @@ namespace orca_base
       abort_mission(curr_time);
     }
 
-    // If we lose observations, nuke estimate_
-    if (!fp_ok(curr_time)) {
-      estimate_ = FPStamped{};
-    }
-
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == TIMER_DRIVEN) {
       auv_advance(curr_time, curr_time - prev_time);
     }
   }
 
-  // New battery reading
   void AUVNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
   {
     if (mission_ && msg->low_battery) {
@@ -281,7 +236,6 @@ namespace orca_base
     }
   }
 
-  // New depth reading
   void AUVNode::depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first)
   {
     // Skip the first message
@@ -298,30 +252,11 @@ namespace orca_base
     }
   }
 
-  // New image from the camera
-  void AUVNode::fcam_image_callback(sensor_msgs::msg::Image::SharedPtr msg)
-  {
-    if (fcam_predicted_obs_pub_->get_subscription_count() > 0) {
-      cv_bridge::CvImagePtr marked;
-      marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-
-      if (mission_) {
-        draw_observations(marked->image, mission_->status().pose.fp.observations, CV_RGB(255, 0, 0));
-      }
-      draw_observations(marked->image, estimate_.fp.observations, CV_RGB(0, 255, 0));
-      write_status(marked->image);
-
-      fcam_predicted_obs_pub_->publish(*marked->toImageMsg());
-    }
-  }
-
-  // New camera info message from the camera
   void AUVNode::fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg)
   {
     fcam_model_.fromCameraInfo(msg);
   }
 
-  // Leak detector
   void AUVNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
   {
     if (mission_ && msg->leak_detected) {
@@ -330,7 +265,6 @@ namespace orca_base
     }
   }
 
-  // New map available
   void AUVNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
     map_.set_vlam_map(msg);
@@ -683,8 +617,14 @@ namespace orca_base
       control_msg.segment_type = status.segment_type;
       control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
       control_msg.plan_twist = status.twist.to_msg();
+      for (auto &obs : status.pose.fp.observations) {
+        control_msg.plan_observations.push_back(obs.to_msg());
+      }
     }
     control_msg.estimate_pose = estimate_.fp.pose.pose.to_msg();
+    for (auto &obs : estimate_.fp.observations) {
+      control_msg.estimate_observations.push_back(obs.to_msg());
+    }
     control_msg.good_pose = estimate_.fp.good_pose(cxt_.good_pose_dist_);
     control_msg.good_z = estimate_.fp.good_z();
     control_msg.has_good_observation = estimate_.fp.has_good_observation(cxt_.good_obs_dist_);
@@ -699,42 +639,6 @@ namespace orca_base
       control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
     }
     control_pub_->publish(control_msg);
-  }
-
-  void AUVNode::write_status(cv::Mat &image)
-  {
-    cv::Point2d p{10, 20};
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2);
-
-    // Line 1: mission status
-    if (mission_) {
-      ss << "MISSION target m" << mission_->status().target_marker_id;
-      if (mission_->status().planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
-        ss << " RECOVERY move to m" << mission_->status().target_marker_id;
-      } else {
-        ss << " " << mission_->status().segment_info;
-      }
-    } else {
-      ss << "WAITING z=" << base_link_z_;
-    }
-    draw_text(image, ss.str(), p, CV_RGB(255, 0, 0));
-
-    // Line 2: pose estimate
-    p.y += 20;
-    ss.str("");
-    if (estimate_.fp.good_pose(cxt_.good_pose_dist_)) {
-      ss << "GOOD POSE";
-    } else if (estimate_.fp.has_good_observation(cxt_.good_obs_dist_)) {
-      ss << "GOOD OBSERVATION";
-    } else if (!estimate_.fp.observations.empty()) {
-      ss << "TOO FAR AWAY";
-    } else {
-      ss << "NO OBSERVATIONS";
-    }
-    ss << " z=" << base_link_z_;
-
-    draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
   }
 
 } // namespace orca_base

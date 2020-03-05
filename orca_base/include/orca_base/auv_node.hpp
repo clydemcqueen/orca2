@@ -4,7 +4,6 @@
 #include "image_geometry/pinhole_camera_model.h"
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/exact_time.h"
-#include "sensor_msgs/msg/image.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_description/parser.hpp"
@@ -58,7 +57,6 @@ namespace orca_base
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr fcam_image_sub_;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
@@ -105,8 +103,6 @@ namespace orca_base
 
     void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
 
-    void fcam_image_callback(sensor_msgs::msg::Image::SharedPtr msg);
-
     void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
     void leak_callback(orca_msgs::msg::Leak::SharedPtr msg);
@@ -126,8 +122,6 @@ namespace orca_base
       timer_cb_{this, &AUVNode::timer_callback};
     monotonic::Monotonic<AUVNode *, orca_msgs::msg::Depth::SharedPtr>
       depth_cb_{this, &AUVNode::depth_callback};
-    monotonic::Valid<AUVNode *, sensor_msgs::msg::Image::SharedPtr>
-      fcam_image_cb_{this, &AUVNode::fcam_image_callback};
     monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr>
       fcam_info_cb_{this, &AUVNode::fcam_info_callback};
     monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr>
@@ -135,7 +129,6 @@ namespace orca_base
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr fcam_predicted_obs_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr esimated_path_pub_;             // Actual path
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr planned_pose_pub_;  // Planned pose
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;               // Planned path
@@ -160,8 +153,6 @@ namespace orca_base
     void auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d);
 
     void publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts);
-
-    void write_status(cv::Mat &image);
 
   public:
 

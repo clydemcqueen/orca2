@@ -12,17 +12,10 @@ from typing import List
 import matplotlib
 import matplotlib.pyplot as plt
 import rclpy
-import transformations as xf
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 
 NUM_MESSAGES = 200
-
-
-def q_to_rpy(q):
-    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
-    rpy = xf.euler_from_matrix(m)
-    return rpy
 
 
 class PlotOdomNode(Node):

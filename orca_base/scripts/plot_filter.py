@@ -12,23 +12,17 @@ from typing import List
 
 import matplotlib
 import matplotlib.pyplot as plt
-import nees
 import numpy as np
 import rclpy
-import transformations as xf
-from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 from orca_msgs.msg import Depth
 from rclpy.node import Node
 
+import nees
+from orca_util import seconds, q_to_rpy
+
 QUEUE_FOR = 10.0  # Seconds
-
-
-def q_to_rpy(q):
-    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
-    rpy = xf.euler_from_matrix(m)
-    return rpy
 
 
 def diag_index(dim):
@@ -94,10 +88,6 @@ def plot_subplot(subplot, name,
             subplot.set_title('{}, post ({:.3f}, {:.3f})'.format(name, post_u, post_s))
     else:
         subplot.set_title('{}, no stats'.format(name))
-
-
-def seconds(stamp: Time) -> float:
-    return float(stamp.sec) + float(stamp.nanosec) / 1e9
 
 
 class PlotFilterNode(Node):
@@ -183,9 +173,9 @@ class PlotFilterNode(Node):
 
         # Build lists of items to plot
         depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
-        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]      # Pre-filter pose messages
-        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]    # Pose-filter pose messages
-        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]        # Ground truth messages
+        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]  # Pre-filter pose messages
+        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]  # Pose-filter pose messages
+        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]  # Ground truth messages
 
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']

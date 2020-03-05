@@ -323,6 +323,7 @@ def main(args=None):
     except KeyboardInterrupt:
         node.get_logger().info('ctrl-C detected, shutting down')
     finally:
+        # TODO add node.abort_action()
         node.destroy_node()
         rclpy.shutdown()
 

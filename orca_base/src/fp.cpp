@@ -92,6 +92,23 @@ namespace orca_base
     c3.y = center_y + longest_side / 2;
   }
 
+  orca_msgs::msg::Observation Observation::to_msg() const
+  {
+    orca_msgs::msg::Observation result;
+    result.vlam.id = id;
+    result.vlam.x0 = c0.x;
+    result.vlam.y0 = c0.y;
+    result.vlam.x1 = c1.x;
+    result.vlam.y1 = c1.y;
+    result.vlam.x2 = c2.x;
+    result.vlam.y2 = c2.y;
+    result.vlam.x3 = c3.x;
+    result.vlam.y3 = c3.y;
+    result.distance = distance;
+    result.yaw = yaw;
+    return result;
+  }
+
   std::ostream &operator<<(std::ostream &os, Observation const &obs)
   {
     return os << std::fixed << std::setprecision(2)

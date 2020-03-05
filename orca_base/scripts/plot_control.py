@@ -33,21 +33,13 @@ import matplotlib
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-from geometry_msgs.msg import Quaternion
 import matplotlib.pyplot as plt
 from orca_msgs.msg import Control
 import rclpy
 import rclpy.time
 from rclpy.node import Node
 import sys
-import transformations as xf
 from typing import List
-
-
-def get_yaw(q: Quaternion) -> float:
-    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
-    rpy = xf.euler_from_matrix(m)
-    return rpy[2]
 
 
 def cost_function(pos_neg, off_on, on):
