@@ -352,8 +352,8 @@ namespace orca_base
 
     if (distance_yaw > 0) {
       // Plan yaw motion, start phase 1
-      plan_trap_velo(cxt_.auv_yaw_accel_, cxt_.auv_yaw_velo_, distance_yaw, plan_.t, yaw_run_, yaw_decel_, yaw_stop_);
-      initial_accel_.yaw = norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.auv_yaw_accel_ : -cxt_.auv_yaw_accel_;
+      plan_trap_velo(cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t, yaw_run_, yaw_decel_, yaw_stop_);
+      initial_accel_.yaw = norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
@@ -422,8 +422,8 @@ namespace orca_base
 
     if (distance_fwd > 0) {
       // Plan forward motion, start phase 1
-      plan_trap_velo(cxt_.auv_xy_accel_, cxt_.auv_xy_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
-      initial_accel_.forward = cxt_.auv_xy_accel_; // Always moving foward, so always +accel to start
+      plan_trap_velo(cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
+      initial_accel_.forward = cxt_.mtm_fwd_accel_; // Always moving foward, so always +accel to start
     } else {
       f_run_ = f_decel_ = f_stop_ = start_;
     }

@@ -101,7 +101,7 @@ class RunNode(Node):
             #               value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
             # ]),
 
-            Experiment(note='ignore estimate controller', count=100, base_params=[], filter_params=[]),
+            Experiment(note='random markers', count=10, base_params=[], filter_params=[]),
 
             # Experiment(note='six DoF filter', mode=Control.AUV_MARKER_SEQUENCE, count=10, base_params=[
             #     Parameter(name='planner_z_target',

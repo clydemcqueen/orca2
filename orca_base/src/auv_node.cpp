@@ -222,6 +222,11 @@ namespace orca_base
       abort_mission(curr_time);
     }
 
+    // If we stopped getting fiducial messages, zero out estimate_
+    if (!fp_ok(curr_time)) {
+      estimate_ = {};
+    }
+
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == TIMER_DRIVEN) {
       auv_advance(curr_time, curr_time - prev_time);

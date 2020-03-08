@@ -30,6 +30,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
   CXT_MACRO_MEMBER(timeout_depth_ms, int, 250)                /* Depth message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_fp_ms, int, 250)                   /* Fiducial pose message timeout in ms  */ \
+  CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
@@ -57,6 +58,10 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.2)               /* AUV yaw pid Ki  */ \
   CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.45)              /* AUV yaw pid Kd  */ \
   \
+  CXT_MACRO_MEMBER(mtm_fwd_pid_kp, double, 0.4)               /* Move to marker forward pid Kp  */ \
+  CXT_MACRO_MEMBER(mtm_fwd_pid_ki, double, 0.0)               /* Move to marker forward pid Ki  */ \
+  CXT_MACRO_MEMBER(mtm_fwd_pid_kd, double, 0.0)               /* Move to marker forward pid Kd  */ \
+  \
   CXT_MACRO_MEMBER(auv_xy_accel, double, 0.2)                 /* AUV acceleration in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_xy_velo, double, 0.4)                  /* AUV velocity in the xy plane  */ \
   CXT_MACRO_MEMBER(auv_z_accel, double, 0.15)                 /* AUV vertical acceleration  */ \
@@ -64,7 +69,10 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_yaw_accel, double, 0.2)                /* AUV rotation acceleration  */ \
   CXT_MACRO_MEMBER(auv_yaw_velo, double, 0.4)                 /* AUV rotation velocity  */ \
   \
-  CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
+  CXT_MACRO_MEMBER(mtm_fwd_accel, double, 0.2)                /* Move to marker forward acceleration  */ \
+  CXT_MACRO_MEMBER(mtm_fwd_velo, double, 0.4)                 /* Move to marker forward velocity  */ \
+  CXT_MACRO_MEMBER(mtm_yaw_accel, double, 0.1)                /* Move to marker yaw acceleration  */ \
+  CXT_MACRO_MEMBER(mtm_yaw_velo, double, 0.2)                 /* Move to marker yaw velocity  */ \
   \
   CXT_MACRO_MEMBER(auv_epsilon_xy, double, 0.1)               /* Deadzone controller epsilon xy  */ \
   CXT_MACRO_MEMBER(auv_epsilon_z, double, 0.1)                /* Deadzone controller epsilon z  */ \
@@ -82,8 +90,11 @@ namespace orca_base
   CXT_MACRO_MEMBER(planner_max_short_plan_xy, double, 2)      /* Build a long plan if xy distance > max  */ \
   CXT_MACRO_MEMBER(planner_max_obs_yaw_error, double, 0.2)    /* Start recovery if observation yaw error is > max  */ \
   CXT_MACRO_MEMBER(planner_max_dead_reckon_dist, double, 9)   /* Max allowable dead reckoning distance  */ \
-  CXT_MACRO_MEMBER(planner_z_target, double, -0.5)            /* Target z position  */ \
-  CXT_MACRO_MEMBER(planner_xy_distance, double, 1)            /* Target distance in front of marker  */ \
+  CXT_MACRO_MEMBER(planner_target_z, double, -0.5)            /* Target z position  */ \
+  \
+  CXT_MACRO_MEMBER(local_planner_target_dist, double, 1)      /* Local planner: target distance in front of marker  */ \
+  \
+  CXT_MACRO_MEMBER(mtm_planner_target_dist, double, 1)        /* MTM planner: target distance from marker */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

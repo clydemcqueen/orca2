@@ -136,8 +136,6 @@ namespace orca_base
   //=====================================================================================
   // Observation controller uses fiducial_vlam observations, not poses
   // Observations are in the body frame, not the world frame
-  // The distance calculation is quite noisy, so don't use a forward_controller_
-  // Re-visit this if obs.destination is filtered
   //=====================================================================================
 
   class ObservationController
@@ -145,6 +143,7 @@ namespace orca_base
     const AUVContext &cxt_;
 
     // PID controllers
+    pid::Controller forward_controller_;
     pid::Controller vertical_controller_;
     pid::Controller yaw_controller_;
 

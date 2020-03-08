@@ -19,6 +19,8 @@ namespace orca_base
                             const orca::Acceleration &ff, orca::Efforts &efforts)
   {
     auto dt = d.seconds();
+
+    // Init u_bar to feedforward
     auto u_bar = ff;
 
     // Trust x, y and yaw if the covar is low and we have a fairly close observation
@@ -164,8 +166,9 @@ namespace orca_base
 
   ObservationController::ObservationController(const AUVContext &cxt) :
     cxt_{cxt},
-    vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
-    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
+    forward_controller_{false, cxt.mtm_fwd_pid_kp_, cxt.mtm_fwd_pid_ki_, cxt.mtm_fwd_pid_kd_},
+    vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_}, // Re-use auv_z
+    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_} // Re-us auv_yaw
   {}
 
   // Observations are in the camera_link frame, not the base_link frame
@@ -176,16 +179,19 @@ namespace orca_base
                                    orca::Efforts &efforts)
   {
     auto dt = d.seconds();
+
+    // Init u_bar to feedforward
     auto u_bar = ff;
 
-    // Run forward at a constant pace
-    u_bar.forward = ff.forward;
-
-    // If we have an observation, run the yaw PID controller
-    // It's possible to miss some observations and still do a decent job moving to the marker
-    if (estimate.id != NOT_A_MARKER) {
+    // If we have a fairly close observation run the PID controllers
+    // Running the PID controllers from too far away causes a lot of jerk
+    // TODO estimate yaw and distance uncertainty and use these to attenuate the PID controllers
+    if (estimate.id != NOT_A_MARKER && estimate.distance < 5 /* TODO param */) {
       yaw_controller_.set_target(plan.yaw);
       u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
+
+      forward_controller_.set_target(plan.distance);
+      u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.yaw;
     }
 
     // Always run the vertical PID controller

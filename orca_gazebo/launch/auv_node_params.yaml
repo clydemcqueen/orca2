@@ -1,8 +1,16 @@
 /auv_node:
   ros__parameters:
     loop_driver: 0
-    filtered_odom: true
-    fuse_depth: false
-    publish_tf: false
+    filtered_odom: false
+    fuse_depth: true
+    publish_tf: true
     param_fluid_density: 997.0
-    planner_max_short_plan_xy: 0.5
+
+    # If xy distance is > this, then build a long plan (rotate, run, rotate)
+    # Otherwise build a short plan (move in all DoF at once)
+    planner_max_short_plan_xy: 2.0
+
+    # Related values... how far in front of a marker is a good pose?
+    good_pose_dist: 1.8
+    planner_target_local_distance: 1.0
+    planner_target_mtm_distance: 1.5

@@ -22,6 +22,18 @@ from rclpy.node import Node
 from typing import List
 from orca_util import normalize_angle, get_yaw, seconds
 
+MIN_RANGE = 0.2
+
+
+# Set ylim to some reasonable values
+def set_ylim_with_min_range(ax):
+    limits = ax.get_ylim()
+    range = limits[1] - limits[0]
+
+    if range < MIN_RANGE:
+        adj = (MIN_RANGE - range) / 2.0
+        ax.set_ylim(limits[0] - adj, limits[1] + adj)
+
 
 class PlannerStatus(object):
 
@@ -96,7 +108,7 @@ class PlotControlNode(Node):
                 print(filename)
 
                 # Plot and save to a unique file
-                # self.plot_msgs('{} messages, {}'.format(len(self._control_msgs), filename), filename)
+                self.plot_msgs('{} messages, {}'.format(len(self._control_msgs), filename), filename)
 
                 # Plot and overwrite a single file
                 self.plot_msgs('{} messages, {}'.format(len(self._control_msgs), filename), 'plot_control.pdf')
@@ -113,76 +125,79 @@ class PlotControlNode(Node):
     def plot_msgs(self, title, filename):
         # Create a figure and 12 subplots:
         # 4 for velocity in the world frame
+        # 4 for plan vs est in the world frame
         # 4 for error in the world frame
         # 4 for efforts in the body frame
-        fig, ((axvx, axvy, axvz, axvw), (axex, axey, axez, axew), (axff, axfs, axfv, axfw)) = plt.subplots(3, 4)
+        fig, ((axvx, axvy, axvz, axvw), (axpx, axpy, axpz, axpw),
+              (axex, axey, axez, axew), (axff, axfs, axfv, axfw)) = plt.subplots(4, 4)
 
         # x axis for all plots == time
         x_values = [seconds(msg.header.stamp) for msg in self._control_msgs]
+
+        plan_names = ['plan x', 'plan y', 'plan z', 'plan yaw']
+        est_names = ['est x', 'est y', 'est z', 'est yaw']
 
         # Plot velocity
         # TODO plot estimated velo as well
         velo_axes = [axvx, axvy, axvz, axvw]
         velo_names = ['velo x', 'velo y', 'velo z', 'velo yaw']
-        velo_values = [[msg.plan_twist.linear.x for msg in self._control_msgs],
-                       [msg.plan_twist.linear.y for msg in self._control_msgs],
-                       [msg.plan_twist.linear.z for msg in self._control_msgs],
-                       [msg.plan_twist.angular.z for msg in self._control_msgs]]
-        for ax, name, y_values in zip(velo_axes, velo_names, velo_values):
+        plan_velo_valuess = [[msg.plan_twist.linear.x for msg in self._control_msgs],
+                             [msg.plan_twist.linear.y for msg in self._control_msgs],
+                             [msg.plan_twist.linear.z for msg in self._control_msgs],
+                             [msg.plan_twist.angular.z for msg in self._control_msgs]]
+        for ax, name, plan_velo_values in zip(velo_axes, velo_names, plan_velo_valuess):
             ax.set_title(name)
             ax.set_ylim(-0.55, 0.55)
             ax.set_xticklabels([])
-            ax.plot(x_values, y_values)
+            ax.plot(x_values, plan_velo_values)
 
-        """
+        # Plot plan vs estimate in the same graph
+        pose_axes = [axpx, axpy, axpz, axpw]
+        pose_names = ['pose x', 'pose y', 'pose z', 'pose yaw']
+        plan_pose_valuess = [[msg.plan_pose.position.x for msg in self._control_msgs],
+                             [msg.plan_pose.position.y for msg in self._control_msgs],
+                             [msg.plan_pose.position.z for msg in self._control_msgs],
+                             [get_yaw(msg.plan_pose.orientation) for msg in self._control_msgs]]
+        est_pose_valuess = [[msg.estimate_pose.position.x for msg in self._control_msgs],
+                            [msg.estimate_pose.position.y for msg in self._control_msgs],
+                            [msg.estimate_pose.position.z for msg in self._control_msgs],
+                            [get_yaw(msg.estimate_pose.orientation) for msg in self._control_msgs]]
+        for ax, pose_name, plan_name, est_name, plan_pose_values, est_pose_values in zip(pose_axes, pose_names,
+                                                                                         plan_names, est_names,
+                                                                                         plan_pose_valuess,
+                                                                                         est_pose_valuess):
+            ax.plot(x_values, plan_pose_values, label=plan_name)
+            ax.plot(x_values, est_pose_values, label=est_name)
+            ax.set_xticklabels([])
+            ax.set_title(pose_name)
+            ax.legend()
+            set_ylim_with_min_range(ax)
+
         # Plot error
         error_axes = [axex, axey, axez, axew]
         error_names = ['error x', 'error y', 'error z', 'error yaw']
-        error_values = [[msg.estimate_pose.position.x - msg.plan_pose.position.x for msg in self._control_msgs],
-                        [msg.estimate_pose.position.y - msg.plan_pose.position.y for msg in self._control_msgs],
-                        [msg.estimate_pose.position.z - msg.plan_pose.position.z for msg in self._control_msgs],
-                        [normalize_angle(get_yaw(msg.estimate_pose.orientation) - get_yaw(msg.plan_pose.orientation))
-                         for msg in self._control_msgs]]
-        for ax, name, y_values in zip(error_axes, error_names, error_values):
+        error_valuess = [[msg.estimate_pose.position.x - msg.plan_pose.position.x for msg in self._control_msgs],
+                         [msg.estimate_pose.position.y - msg.plan_pose.position.y for msg in self._control_msgs],
+                         [msg.estimate_pose.position.z - msg.plan_pose.position.z for msg in self._control_msgs],
+                         [normalize_angle(get_yaw(msg.estimate_pose.orientation) - get_yaw(msg.plan_pose.orientation))
+                          for msg in self._control_msgs]]
+        for ax, name, error_values in zip(error_axes, error_names, error_valuess):
             ax.set_title(name)
             ax.set_ylim(-0.3, 0.3)
             ax.set_xticklabels([])
-            ax.plot(x_values, y_values)
-        """
-
-        # Plot plan vs estimate in the same graph
-        # TODO put a floor under ylim range -- don't exaggerate small errors
-        plan_est_axes = [axex, axey, axez, axew]
-        plan_names = ['plan x', 'plan y', 'plan z', 'plan yaw']
-        est_names = ['est x', 'est y', 'est z', 'est yaw']
-        plan_values = [[msg.plan_pose.position.x for msg in self._control_msgs],
-                       [msg.plan_pose.position.y for msg in self._control_msgs],
-                       [msg.plan_pose.position.z for msg in self._control_msgs],
-                       [get_yaw(msg.plan_pose.orientation) for msg in self._control_msgs]]
-        est_values = [[msg.estimate_pose.position.x for msg in self._control_msgs],
-                       [msg.estimate_pose.position.y for msg in self._control_msgs],
-                       [msg.estimate_pose.position.z for msg in self._control_msgs],
-                       [get_yaw(msg.estimate_pose.orientation) for msg in self._control_msgs]]
-        for ax, name, y_values in zip(plan_est_axes, plan_names, plan_values):
-            ax.set_title(name)
-            ax.set_xticklabels([])
-            ax.plot(x_values, y_values)
-        for ax, name, y_values in zip(plan_est_axes, est_names, est_values):
-            ax.set_title(name)
-            ax.set_xticklabels([])
-            ax.plot(x_values, y_values)
+            ax.plot(x_values, error_values)
 
         # Plot efforts
         effort_axes = [axff, axfs, axfv, axfw]
         effort_names = ['forward', 'strafe', 'vertical', 'yaw']
-        effort_values = [[msg.efforts.forward for msg in self._control_msgs],
-                         [msg.efforts.strafe for msg in self._control_msgs],
-                         [msg.efforts.vertical for msg in self._control_msgs],
-                         [msg.efforts.yaw for msg in self._control_msgs]]
-        for ax, name, y_values in zip(effort_axes, effort_names, effort_values):
+        effort_valuess = [[msg.efforts.forward for msg in self._control_msgs],
+                          [msg.efforts.strafe for msg in self._control_msgs],
+                          [msg.efforts.vertical for msg in self._control_msgs],
+                          [msg.efforts.yaw for msg in self._control_msgs]]
+        for ax, name, effort_values in zip(effort_axes, effort_names, effort_valuess):
             # Compute +/- transitions
             pos_neg = 0
-            for c, n in zip(y_values, y_values[1:]):
+            for c, n in zip(effort_values, effort_values[1:]):
                 if c > 0. > n:
                     pos_neg += 1
                 elif c < 0. < n:
@@ -191,7 +206,7 @@ class PlotControlNode(Node):
             ax.set_title('{}: pos_neg={}'.format(name, pos_neg))
             ax.set_ylim(-0.1, 0.1)
             ax.set_xticklabels([])
-            ax.plot(x_values, y_values)
+            ax.plot(x_values, effort_values)
 
         # Set figure title
         fig.suptitle(title)
@@ -207,7 +222,7 @@ def main():
     print('backend is', plt.get_backend())
 
     # Set figure size (inches)
-    plt.rcParams['figure.figsize'] = [24., 12.]
+    plt.rcParams['figure.figsize'] = [24., 15.]
 
     rclpy.init()
     node = PlotControlNode()

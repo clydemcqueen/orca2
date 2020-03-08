@@ -11,6 +11,24 @@ namespace orca_base
 {
 
   //=============================================================================
+  // Perf testing
+  //=============================================================================
+
+#undef RUN_PERF
+#ifdef RUN_PERF
+  #define START_PERF()\
+auto __start__ = std::chrono::high_resolution_clock::now();
+
+#define STOP_PERF(msg)\
+auto __stop__ = std::chrono::high_resolution_clock::now();\
+std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>(__stop__ - __start__).count()\
+  << " microseconds" << std::endl;
+#else
+#define START_PERF()
+#define STOP_PERF(msg)
+#endif
+
+  //=============================================================================
   // Utilities
   //=============================================================================
 
@@ -42,7 +60,7 @@ namespace orca_base
   }
 
   //=============================================================================
-  // AnnotateNode TODO
+  // AnnotateNode TODO add some documentation
   //=============================================================================
 
   // Default queue size
@@ -74,6 +92,8 @@ namespace orca_base
 
     void image_callback(sensor_msgs::msg::Image::SharedPtr msg)
     {
+      START_PERF()
+
       // Wait for a valid control message
       if (!monotonic::valid(control_msg_.header.stamp)) {
         return;
@@ -91,6 +111,8 @@ namespace orca_base
 
         image_pub_->publish(*marked->toImageMsg());
       }
+
+      STOP_PERF("image_callback")
     }
 
     void write_status(cv::Mat &image)
@@ -103,7 +125,7 @@ namespace orca_base
       if (control_msg_.mode == orca_msgs::msg::Control::AUV) {
         ss << "AUV target m" << control_msg_.target_marker_id;
         if (control_msg_.planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
-          ss << " RECOVERY move to m" << control_msg_.target_marker_id;
+          ss << " RECOVERY move to marker"; // TODO add recovery_marker_id to orca_msgs::msg::Control
         } else {
           ss << " " << control_msg_.segment_info;
         }

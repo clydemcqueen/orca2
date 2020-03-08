@@ -32,7 +32,7 @@ namespace orca_base
     plan.o = goal;
 
     // Move toward the marker
-    goal.distance = 1;
+    goal.distance = cxt_.mtm_planner_target_dist_;
     segments_.push_back(std::make_shared<MoveToMarker>(cxt_, plan, goal));
 
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
@@ -45,7 +45,7 @@ namespace orca_base
     // Set initial pose and twist
     status.pose = {};
     status.pose.fp.observations.push_back(segments_[0]->plan().o);
-    status.twist = {}; // TODO convert TwistBody to Twist
+    status.twist = {}; // Don't know yaw in the world frame, so can't convert TwistBody into Twist
   }
 
   bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
@@ -69,13 +69,13 @@ namespace orca_base
     // Update pose and twist
     status.pose = {};
     status.pose.fp.observations.push_back(segments_[status.segment_idx]->plan().o);
-    status.twist = {}; // TODO convert TwistBody to Twist
+    status.twist = {}; // Don't know yaw in the world frame, so can't convert TwistBody into Twist
 
     // Run the PID controller(s) and calculate efforts
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     Observation estimate_obs;
     estimate.fp.get_observation(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.planner_z_target_, estimate_obs,
+    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.planner_target_z_, estimate_obs,
                       estimate.fp.pose.pose.z, segments_[status.segment_idx]->ff(), efforts);
 
     return true;

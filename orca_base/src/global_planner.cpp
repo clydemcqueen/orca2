@@ -84,9 +84,8 @@ namespace orca_base
     recovery_planner_ = std::make_shared<MoveToMarkerPlanner>(logger_, cxt_, start, status_);
   }
 
-  int
-  GlobalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
-                         const std::function<void(double completed, double total)> &send_feedback)
+  int GlobalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                             const std::function<void(double completed, double total)> &send_feedback)
   {
     // Bootstrap
     if (!local_planner_ && !recovery_planner_) {
@@ -169,6 +168,7 @@ namespace orca_base
 
     } else {
 
+#ifdef STOP_AT_GOOD_POSE
       // In recovery. Success?
       if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
         RCLCPP_INFO(logger_, "recovery succeeded");
@@ -182,13 +182,36 @@ namespace orca_base
           return AdvanceRC::FAILURE;
         }
 
-        // plan is a FiducialPose with a single planned observation -- the marker we're following
+        // status_.pose.fp is a FiducialPose with a single planned observation -- the marker we're following
         assert(status_.pose.fp.observations.size() == 1);
 
         // Estimate the marker corners from the planned yaw and distance -- just for grins
         status_.pose.fp.observations[0].estimate_corners(map_.marker_length(),
                                                          cxt_.fcam_hfov_, cxt_.fcam_hres_, cxt_.fcam_vres_);
       }
+#else
+      // Advance the recovery plan until it completes
+      // The controller will happily run w/o observations -- a bit like dead reckoning
+      // It's reasonable to miss a few observations, but not to lose the marker completely TODO add a timeout
+      if (recovery_planner_->advance(d, estimate, efforts, status_)) {
+        // status_.pose.fp is a FiducialPose with a single planned observation -- the marker we're following
+        assert(status_.pose.fp.observations.size() == 1);
+
+        // Estimate the marker corners from the planned yaw and distance -- just for grins
+        status_.pose.fp.observations[0].estimate_corners(map_.marker_length(),
+                                                         cxt_.fcam_hfov_, cxt_.fcam_hres_, cxt_.fcam_vres_);
+      } else {
+        if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
+          RCLCPP_INFO(logger_, "recovery succeeded");
+
+          // Known good pose right now... re-plan immediately
+          start_local_plan(estimate);
+        } else {
+          RCLCPP_WARN(logger_, "recovery complete, no good pose, giving up");
+          return AdvanceRC::FAILURE;
+        }
+      }
+#endif
     }
 
     // If we got this far, continue the mission
@@ -204,12 +227,12 @@ namespace orca_base
     target.fp.pose.pose.from_msg(marker.marker_f_map);
 
     // Set plan.z from parameters
-    target.fp.pose.pose.z = cxt.planner_z_target_;
+    target.fp.pose.pose.z = cxt.planner_target_z_;
 
     if (!floor) {
       // Target is in front of the marker
-      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.planner_xy_distance_;
-      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.planner_xy_distance_;
+      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.local_planner_target_dist_;
+      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.local_planner_target_dist_;
 
       // Face the marker to get a good pose
       target.fp.pose.pose.yaw = norm_angle(target.fp.pose.pose.yaw + M_PI_2);
