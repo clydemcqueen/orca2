@@ -18,6 +18,9 @@ namespace orca
   // Pose in world frame
   //=====================================================================================
 
+  struct Twist;
+  struct Acceleration;
+
   struct Pose
   {
     double x;
@@ -26,6 +29,9 @@ namespace orca
     double yaw;
 
     constexpr Pose() : x{0}, y{0}, z{0}, yaw{0}
+    {}
+
+    constexpr Pose(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
 
     geometry_msgs::msg::Pose to_msg() const;
@@ -50,6 +56,13 @@ namespace orca
     double distance_yaw(const Pose &that) const;
 
     double distance_yaw(const nav_msgs::msg::Odometry &msg) const;
+
+    // Project pose at time t to time t+d, given initial velocity v0 and acceleration a
+    Pose project(const rclcpp::Duration &d, const orca::Twist &v0, const orca::Acceleration &a) const;
+
+    Pose operator+(const Pose &that) const;
+
+    Pose operator-(const Pose &that) const;
   };
 
   std::ostream &operator<<(std::ostream &os, Pose const &pose);
@@ -73,6 +86,8 @@ namespace orca
 
     void add_to_path(nav_msgs::msg::Path &path) const;
   };
+
+  std::ostream &operator<<(std::ostream &os, const orca::PoseStamped &p);
 
   //=====================================================================================
   // PoseWithCovariance
@@ -111,9 +126,15 @@ namespace orca
     constexpr Twist() : x{0}, y{0}, z{0}, yaw{0}
     {}
 
+    constexpr Twist(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
+    {}
+
     void from_msg(const geometry_msgs::msg::Twist &msg);
 
     geometry_msgs::msg::Twist to_msg() const;
+
+    // Project twist at time t to time t+d, given acceleration a
+    Twist project(const rclcpp::Duration &d, const orca::Acceleration &a) const;
   };
 
   std::ostream &operator<<(std::ostream &os, Twist const &t);
@@ -150,13 +171,11 @@ namespace orca
     constexpr Acceleration(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
 
-    void add(const Acceleration &that)
-    {
-      x += that.x;
-      y += that.y;
-      z += that.z;
-      yaw += that.yaw;
-    }
+    Acceleration operator+(const Acceleration &that) const;
+
+    Acceleration operator-(const Acceleration &that) const;
+
+    Acceleration operator-() const;
   };
 
   std::ostream &operator<<(std::ostream &os, Acceleration const &a);

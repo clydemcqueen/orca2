@@ -48,15 +48,16 @@ add_executable(
   auv_node
   src/astar.cpp
   src/auv_node.cpp
+  src/controller.cpp
   src/fp.cpp
+  src/global_planner.cpp
   src/local_planner.cpp
   src/map.cpp
-  src/move_to_marker_planner.cpp
   src/mission.cpp
-  src/global_planner.cpp
+  src/move_to_marker_planner.cpp
   src/planner_common.cpp
   src/segment.cpp
-  src/controller.cpp
+  src/trap2_segment.cpp
 )
 
 ament_target_dependencies(
@@ -96,7 +97,7 @@ ament_target_dependencies(
 )
 
 #=============
-# Annotate Image node
+# Annotate image node
 #=============
 
 add_executable(
@@ -118,14 +119,23 @@ ament_target_dependencies(
 #=============
 
 add_executable(
-  astar_test
+  test_main
   src/astar.cpp
   src/astar_test.cpp
+  src/fp.cpp
+  src/segment.cpp
+  src/segment_test.cpp
+  src/test_main.cpp
+  src/trap2_segment.cpp
 )
 
 ament_target_dependencies(
-  astar_test
+  test_main
+  fiducial_vlam_msgs
+  orca_msgs
+  orca_shared
   rclcpp
+  ros2_shared
   sensor_msgs
 )
 

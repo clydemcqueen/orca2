@@ -2,6 +2,7 @@
 
 #include "rclcpp/logging.hpp"
 
+#include "orca_base/trap2_segment.hpp"
 #include "orca_msgs/msg/control.hpp"
 
 using namespace orca;
@@ -113,22 +114,22 @@ namespace orca_base
 
   void LocalPlanner::add_vertical_segment(FPStamped &plan, double z)
   {
-    segments_.push_back(TrapVelo::make_vertical(cxt_, plan, z));
+    segments_.push_back(Trap2::make_vertical(cxt_, plan, z));
   }
 
   void LocalPlanner::add_rotate_segment(FPStamped &plan, double yaw)
   {
-    segments_.push_back(TrapVelo::make_rotate(cxt_, plan, yaw));
+    segments_.push_back(Trap2::make_rotate(cxt_, plan, yaw));
   }
 
   void LocalPlanner::add_line_segment(FPStamped &plan, double x, double y)
   {
-    segments_.push_back(TrapVelo::make_line(cxt_, plan, x, y));
+    segments_.push_back(Trap2::make_line(cxt_, plan, x, y));
   }
 
   void LocalPlanner::add_pose_segment(FPStamped &plan, const FP &goal)
   {
-    segments_.push_back(TrapVelo::make_pose(cxt_, plan, goal));
+    segments_.push_back(Trap2::make_pose(cxt_, plan, goal));
   }
 
   bool LocalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,

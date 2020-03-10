@@ -82,9 +82,30 @@ namespace orca
     return std::abs(norm_angle(yaw - get_yaw(msg.pose.pose.orientation)));
   }
 
+  Pose Pose::project(const rclcpp::Duration &d, const orca::Twist &v0, const orca::Acceleration &a) const
+  {
+    double dt = d.seconds();
+    Pose result;
+    result.x = x + v0.x * dt + 0.5 * a.x * dt * dt;
+    result.y = y + v0.y * dt + 0.5 * a.y * dt * dt;
+    result.z = z + v0.z * dt + 0.5 * a.z * dt * dt;
+    result.yaw = orca::norm_angle(yaw + v0.yaw * dt + 0.5 * a.yaw * dt * dt);
+    return result;
+  }
+
+  Pose Pose::operator+(const Pose &that) const
+  {
+    return Pose(x + that.x, y + that.y, z + that.z, norm_angle(yaw + that.yaw));
+  }
+
+  Pose Pose::operator-(const Pose &that) const
+  {
+    return Pose(x - that.x, y - that.y, z - that.z, norm_angle(yaw - that.yaw));
+  }
+
   std::ostream &operator<<(std::ostream &os, Pose const &pose)
   {
-    return os << std::fixed << std::setprecision(2)
+    return os << std::fixed << std::setprecision(3)
               << "{" << pose.x << ", " << pose.y << ", " << pose.z << ", " << pose.yaw << "}";
   }
 
@@ -127,6 +148,11 @@ namespace orca
     path.poses.push_back(msg);
   }
 
+  std::ostream &operator<<(std::ostream &os, const orca::PoseStamped &p)
+  {
+    return os << std::fixed << std::setprecision(3) << "{" << p.t.seconds() << ", " << p.pose << "}";
+  }
+
   //=====================================================================================
   // PoseWithCovariance
   //=====================================================================================
@@ -164,9 +190,21 @@ namespace orca
     return msg;
   }
 
+  // Project twist at time t to time t+d, given acceleration a
+  Twist Twist::project(const rclcpp::Duration &d, const orca::Acceleration &a) const
+  {
+    double dt = d.seconds();
+    orca::Twist result;
+    result.x = x + a.x * dt;
+    result.y = y + a.y * dt;
+    result.z = z + a.z * dt;
+    result.yaw = yaw + a.yaw * dt;
+    return result;
+  }
+
   std::ostream &operator<<(std::ostream &os, Twist const &t)
   {
-    return os << std::fixed << std::setprecision(2)
+    return os << std::fixed << std::setprecision(3)
               << "{" << t.x << ", " << t.y << ", " << t.z << ", " << t.yaw << "}";
   }
 
@@ -174,9 +212,24 @@ namespace orca
   // Acceleration in the world frame
   //=====================================================================================
 
+  Acceleration Acceleration::operator+(const Acceleration &that) const
+  {
+    return Acceleration(x + that.x, y + that.y, z + that.z, yaw + that.yaw);
+  }
+
+  Acceleration Acceleration::operator-(const Acceleration &that) const
+  {
+    return Acceleration(x - that.x, y - that.y, z - that.z, yaw - that.yaw);
+  }
+
+  Acceleration Acceleration::operator-() const
+  {
+    return Acceleration(-x, -y, -z, -yaw);
+  }
+
   std::ostream &operator<<(std::ostream &os, Acceleration const &a)
   {
-    return os << std::fixed << std::setprecision(2)
+    return os << std::fixed << std::setprecision(3)
               << "{" << a.x << ", " << a.y << ", " << a.z << ", " << a.yaw << "}";
   }
 
@@ -260,7 +313,7 @@ namespace orca
 
   std::ostream &operator<<(std::ostream &os, Efforts const &e)
   {
-    return os << std::fixed << std::setprecision(2)
+    return os << std::fixed << std::setprecision(3)
               << "{" << e.forward() << ", " << e.strafe() << ", " << e.vertical() << ", " << e.yaw() << "}";
   }
 

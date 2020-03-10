@@ -29,7 +29,7 @@ namespace orca_base
     virtual bool advance(const rclcpp::Duration &d) = 0;
 
     __uint8_t type()
-    { return type_;}
+    { return type_; }
 
     std::string type_name();
   };
@@ -92,60 +92,6 @@ namespace orca_base
 
     const orca::AccelerationBody &ff() const
     { return ff_; }
-  };
-
-  //=====================================================================================
-  // Use a trapezoidal velocity planner to plan motion in x, y, z, yaw
-  // There are 3 velocity trapezoids: xy motion, z motion and yaw motion
-  //=====================================================================================
-
-  class TrapVelo : public PoseSegmentBase
-  {
-    double angle_to_goal_;
-
-    orca::Acceleration initial_accel_;  // Initial total acceleration, not modified
-    orca::Acceleration accel_;          // Total acceleration, accel_ = drag_ + ff_
-    orca::Acceleration drag_;           // Acceleration due to drag
-
-    // Start time
-    rclcpp::Time start_{0, 0, RCL_ROS_TIME};
-
-    // Time to change from one phase to another
-    rclcpp::Time xy_run_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time xy_decel_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time xy_stop_{0, 0, RCL_ROS_TIME};
-
-    rclcpp::Time z_run_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time z_decel_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time z_stop_{0, 0, RCL_ROS_TIME};
-
-    rclcpp::Time yaw_run_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time yaw_decel_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time yaw_stop_{0, 0, RCL_ROS_TIME};
-
-  public:
-
-    explicit TrapVelo(const AUVContext &cxt, uint8_t type, const FPStamped &start, const FP &goal);
-
-    // Return time required to complete all motion
-    rclcpp::Duration duration() const;
-
-    std::string to_str() override;
-
-    bool advance(const rclcpp::Duration &d) override;
-
-    // Factory methods: make a segment that gets from plan to goal, and update plan
-    static std::shared_ptr<TrapVelo>
-    make_vertical(const AUVContext &cxt, FPStamped &plan, double z);
-
-    static std::shared_ptr<TrapVelo>
-    make_rotate(const AUVContext &cxt, FPStamped &plan, double yaw);
-
-    static std::shared_ptr<TrapVelo>
-    make_line(const AUVContext &cxt, FPStamped &plan, double x, double y);
-
-    static std::shared_ptr<TrapVelo>
-    make_pose(const AUVContext &cxt, FPStamped &plan, const FP &goal);
   };
 
   //=====================================================================================

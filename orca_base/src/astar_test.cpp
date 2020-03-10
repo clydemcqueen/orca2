@@ -1,8 +1,9 @@
 #include "orca_base/astar.hpp"
 
-
-void test1()
+void astar_test()
 {
+  std::cout << "=== ASTAR TEST ===" << std::endl;
+
   using astar::Edge;
 
   std::vector<Edge> edges = std::vector<Edge>{
@@ -34,9 +35,4 @@ void test1()
     std::cout << item << ", ";
   }
   std::cout << std::endl;
-}
-
-int main(int argc, char **argv)
-{
-  test1();
 }
