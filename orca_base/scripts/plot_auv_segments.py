@@ -9,6 +9,10 @@ Usage:
 ros2 run orca_base plot_auv_segments.py
 """
 
+import queue
+import threading
+import time
+
 import matplotlib
 
 # Set backend before importing matplotlib.pyplot
@@ -35,94 +39,24 @@ def set_ylim_with_min_range(ax):
         ax.set_ylim(limits[0] - adj, limits[1] + adj)
 
 
-class PlannerStatus(object):
+class Plotter(object):
 
-    def __init__(self, msg: Control):
-        self.global_plan_idx = msg.global_plan_idx
-
-        self.targets_total = msg.targets_total
-        self.target_idx = msg.target_idx
-        self.target_marker_id = msg.target_marker_id
-
-        self.planner = msg.planner
-        self.local_plan_idx = msg.local_plan_idx
-
-        self.segments_total = msg.segments_total
-        self.segment_idx = msg.segment_idx
-        self.segment_info = msg.segment_info
-        self.segment_type = msg.segment_type
-
-    def different_segment(self, other):
-        return self.global_plan_idx != other.global_plan_idx or \
-               self.target_idx != other.target_idx or \
-               self.local_plan_idx != other.local_plan_idx or \
-               self.segment_idx != other.segment_idx
-
-    def segment_name(self):
-        if self.segment_type == Control.PAUSE:
-            return 'pause'
-        if self.segment_type == Control.POSE_VERTICAL:
-            return 'pose_vertical'
-        if self.segment_type == Control.POSE_ROTATE:
-            return 'pose_rotate'
-        if self.segment_type == Control.POSE_LINE:
-            return 'pose_line'
-        if self.segment_type == Control.POSE_COMBO:
-            return 'pose_combo'
-        if self.segment_type == Control.OBS_RTM:
-            return 'obs_rtm'
-        if self.segment_type == Control.OBS_MTM:
-            return 'obs_mtm'
-        return 'none'
-
-    def filename(self):
-        return 'g{}_t{}_l{}_s{}_{}.pdf'.format(self.global_plan_idx, self.target_idx, self.local_plan_idx,
-                                               self.segment_idx, self.segment_name())
-
-
-class PlotControlNode(Node):
-
-    def __init__(self):
-        super().__init__('plot_control')
+    def __init__(self, filename):
         self._control_msgs: List[Control] = []
-        self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
-        self._prev_status = None
+        self._filename = filename
+        print('collecting messages for {}'.format(self._filename))
 
-    def control_callback(self, msg: Control):
-        # Ignore ROV messages
-        if msg.mode != Control.AUV:
-            return
-
-        curr_status = PlannerStatus(msg)
-
-        # Bootstrap
-        if self._prev_status is None:
-            self._prev_status = curr_status
-
-        # Plot when segment changes
-        if curr_status.different_segment(self._prev_status):
-            if len(self._control_msgs) < 2:
-                print('error -- too few messages! skipping')
-            else:
-                filename = self._prev_status.filename()
-                print(filename)
-
-                # Plot and save to a unique file
-                self.plot_msgs('{} messages, {}'.format(len(self._control_msgs), filename), filename)
-
-                # Plot and overwrite a single file
-                self.plot_msgs('{} messages, {}'.format(len(self._control_msgs), filename), 'plot_control.pdf')
-
-            # Clear messages
-            self._control_msgs.clear()
-
-            # Set prev
-            self._prev_status = curr_status
-
-        # Add message to the queue
+    def add_msg(self, msg):
         self._control_msgs.append(msg)
 
-    def plot_msgs(self, title, filename):
+    def plot(self):
+        if len(self._control_msgs) < 2:
+            print('error -- {} has too few messages! skipping'.format(self._filename))
+            return
+
+        print('plotting {}'.format(self._filename))
+        start_time = time.process_time()
+
         # Create a figure and 12 subplots:
         # 4 for velocity in the world frame
         # 4 for plan vs est in the world frame
@@ -133,6 +67,12 @@ class PlotControlNode(Node):
 
         # x axis for all plots == time
         x_values = [seconds(msg.header.stamp) for msg in self._control_msgs]
+
+        # Warn on a large gap -- this shouldn't happen with threading
+        gaps = [second - first for first, second in zip(x_values[:-1], x_values[1:])]
+        largest_gap = max(gaps)
+        if largest_gap > 0.1:
+            print('WARNING large time stamp gap {:.2f}s'.format(largest_gap))
 
         plan_names = ['plan x', 'plan y', 'plan z', 'plan yaw']
         est_names = ['est x', 'est y', 'est z', 'est yaw']
@@ -209,13 +149,112 @@ class PlotControlNode(Node):
             ax.plot(x_values, effort_values)
 
         # Set figure title
-        fig.suptitle(title)
+        fig.suptitle('{} messages, {}'.format(len(self._control_msgs), self._filename))
 
-        # [Over]write PDF to disk
-        plt.savefig(filename)
+        # Write PDF file twice:
+        # -- once with a unique name for detailed analysis
+        # -- again with a repeated name so I can watch the plots live
+        plt.savefig(self._filename)
+        plt.savefig('plot_control.pdf')
 
         # Close the figure to reclaim the memory
         plt.close(fig)
+
+        stop_time = time.process_time()
+        print('finished {}, elapsed time {:.2f}s'.format(self._filename, stop_time - start_time))
+
+
+def consumer(q: queue.Queue):
+    while True:
+        plotter: Plotter = q.get()
+        plotter.plot()
+
+
+class PlannerStatus(object):
+
+    def __init__(self, msg: Control):
+        self.global_plan_idx = msg.global_plan_idx
+
+        self.targets_total = msg.targets_total
+        self.target_idx = msg.target_idx
+        self.target_marker_id = msg.target_marker_id
+
+        self.planner = msg.planner
+        self.local_plan_idx = msg.local_plan_idx
+
+        self.segments_total = msg.segments_total
+        self.segment_idx = msg.segment_idx
+        self.segment_info = msg.segment_info
+        self.segment_type = msg.segment_type
+
+    def different_segment(self, other):
+        return self.global_plan_idx != other.global_plan_idx or \
+               self.target_idx != other.target_idx or \
+               self.local_plan_idx != other.local_plan_idx or \
+               self.segment_idx != other.segment_idx
+
+    def segment_name(self):
+        if self.segment_type == Control.PAUSE:
+            return 'pause'
+        if self.segment_type == Control.POSE_VERTICAL:
+            return 'pose_vertical'
+        if self.segment_type == Control.POSE_ROTATE:
+            return 'pose_rotate'
+        if self.segment_type == Control.POSE_LINE:
+            return 'pose_line'
+        if self.segment_type == Control.POSE_COMBO:
+            return 'pose_combo'
+        if self.segment_type == Control.OBS_RTM:
+            return 'obs_rtm'
+        if self.segment_type == Control.OBS_MTM:
+            return 'obs_mtm'
+        return 'none'
+
+    def filename(self):
+        return 'g{}_t{}_l{}_s{}_{}.pdf'.format(self.global_plan_idx, self.target_idx, self.local_plan_idx,
+                                               self.segment_idx, self.segment_name())
+
+
+class PlotControlNode(Node):
+
+    def __init__(self):
+        super().__init__('plot_control')
+        self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
+
+        self._plot = None
+        self._prev_status = None
+
+        # Use the producer-consumer model
+        # We are the producer -- we collect messages in self._plot
+        # When the plotter has "enough" message, it gets added to the queue
+        self._q = queue.Queue()
+
+        # The consumer creates the plot
+        # This takes ~2s, which will cause the node to drop messages
+        # Run the consumer in it's own thread to avoid this
+        self._thread = threading.Thread(target=consumer, args=(self._q,))
+        self._thread.start()
+
+    def control_callback(self, msg: Control):
+        # Ignore ROV messages
+        if msg.mode != Control.AUV:
+            return
+
+        curr_status = PlannerStatus(msg)
+
+        # Bootstrap
+        if self._plot is None:
+            self._plot = Plotter(curr_status.filename())
+            self._prev_status = curr_status
+
+        # Plot when segment changes
+        if curr_status.different_segment(self._prev_status):
+            self._q.put(self._plot)
+            self._plot = Plotter(curr_status.filename())
+            self._prev_status = curr_status
+
+        # Add message to the plotter
+        self._plot.add_msg(msg)
 
 
 def main():
@@ -231,6 +270,7 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         node.get_logger().info('ctrl-C detected, shutting down')
+        # TODO notify consumer thread for a clean shutdown
     finally:
         node.destroy_node()
         rclpy.shutdown()
