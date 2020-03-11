@@ -19,7 +19,7 @@ def seconds(stamp: Time) -> float:
     return float(stamp.sec) + float(stamp.nanosec) / 1e9
 
 
-def normalize_angle(x):
+def norm_angle(x):
     x = x % (2 * math.pi)  # force in range [0, 2 pi)
     if x > math.pi:  # move to [-pi, pi)
         x -= 2 * math.pi
