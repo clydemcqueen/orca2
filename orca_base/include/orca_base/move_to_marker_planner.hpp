@@ -15,7 +15,7 @@ namespace orca_base
   // MoveToMarkerPlanner -- a recovery strategy
   //=====================================================================================
 
-  class MoveToMarkerPlanner
+  class MoveToMarkerPlanner : public LocalPlanner
   {
     rclcpp::Logger logger_;
     const AUVContext &cxt_;
@@ -29,7 +29,8 @@ namespace orca_base
     MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const ObservationStamped &start,
                         PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);
+    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                 PlannerStatus &status) override;
   };
 
 } // namespace orca_base

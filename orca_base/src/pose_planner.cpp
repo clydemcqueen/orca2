@@ -1,4 +1,4 @@
-#include "orca_base/local_planner.hpp"
+#include "orca_base/pose_planner.hpp"
 
 #include "rclcpp/logging.hpp"
 
@@ -11,13 +11,13 @@ namespace orca_base
 {
 
   //=====================================================================================
-  // LocalPlanner -- build a local plan to a target
+  // PosePlanner -- build a local plan to a target
   //=====================================================================================
 
-  LocalPlanner::LocalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start,
-                             Target target, Map map, bool keep_station, PlannerStatus &status) :
-    logger_{logger}, cxt_{cxt}, target_{std::move(target)}, map_{std::move(map)}, keep_station_{keep_station},
-    controller_{std::make_shared<PoseController>(cxt_)}
+  PosePlanner::PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start,
+                           Target target, Map map, bool keep_station, PlannerStatus &status) :
+    LocalPlanner{LocalPlannerType::POSE_PLANNER}, logger_{logger}, cxt_{cxt}, target_{std::move(target)},
+    map_{std::move(map)}, keep_station_{keep_station}, controller_{std::make_shared<PoseController>(cxt_)}
   {
     // Future: build a plan that will keep markers in view at all times
     // For now, consider 2 cases:
@@ -107,33 +107,33 @@ namespace orca_base
     status.twist = segments_[status.segment_idx]->twist();
   }
 
-  void LocalPlanner::add_keep_station_segment(FPStamped &plan, double seconds)
+  void PosePlanner::add_keep_station_segment(FPStamped &plan, double seconds)
   {
     segments_.push_back(std::make_shared<Pause>(cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
   }
 
-  void LocalPlanner::add_vertical_segment(FPStamped &plan, double z)
+  void PosePlanner::add_vertical_segment(FPStamped &plan, double z)
   {
     segments_.push_back(Trap2::make_vertical(cxt_, plan, z));
   }
 
-  void LocalPlanner::add_rotate_segment(FPStamped &plan, double yaw)
+  void PosePlanner::add_rotate_segment(FPStamped &plan, double yaw)
   {
     segments_.push_back(Trap2::make_rotate(cxt_, plan, yaw));
   }
 
-  void LocalPlanner::add_line_segment(FPStamped &plan, double x, double y)
+  void PosePlanner::add_line_segment(FPStamped &plan, double x, double y)
   {
     segments_.push_back(Trap2::make_line(cxt_, plan, x, y));
   }
 
-  void LocalPlanner::add_pose_segment(FPStamped &plan, const FP &goal)
+  void PosePlanner::add_pose_segment(FPStamped &plan, const FP &goal)
   {
     segments_.push_back(Trap2::make_pose(cxt_, plan, goal));
   }
 
-  bool LocalPlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
-                             PlannerStatus &status)
+  bool PosePlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                            PlannerStatus &status)
   {
     // Update the plan
     if (segments_[status.segment_idx]->advance(d)) {

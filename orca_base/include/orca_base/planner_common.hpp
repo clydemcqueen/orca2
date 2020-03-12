@@ -49,7 +49,7 @@ namespace orca_base
     // Next target
     void next_target(int);
 
-    // New segments, called by LocalPlanner() and MoveToMarkerPlanner()
+    // New segments, called by PosePlanner() and MoveToMarkerPlanner()
     void first_segment(uint8_t _planner, int _segments_total, std::string _segment_info, uint8_t _segment_type);
 
     // Next segment
@@ -73,6 +73,40 @@ namespace orca_base
   };
 
   std::ostream &operator<<(std::ostream &os, Target const &target);
+
+  //=====================================================================================
+  // LocalPlannerType
+  //=====================================================================================
+
+  struct LocalPlannerType
+  {
+    static constexpr int POSE_PLANNER = 0;
+    static constexpr int MTM_PLANNER = 1;
+    // Future: 360 planner
+  };
+
+  //=====================================================================================
+  // LocalPlanner -- abstract base class
+  //=====================================================================================
+
+  class LocalPlanner
+  {
+    int type_;
+
+  public:
+
+    explicit LocalPlanner(int type) : type_{type}
+    {}
+
+    bool is_pose_planner()
+    { return type_ == LocalPlannerType::POSE_PLANNER; }
+
+    bool is_mtm_planner()
+    { return type_ == LocalPlannerType::MTM_PLANNER; }
+
+    virtual bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                         PlannerStatus &status) = 0;
+  };
 
 } // namespace orca_base
 

@@ -3,7 +3,7 @@
 
 #include "orca_description/parser.hpp"
 
-#include "orca_base/local_planner.hpp"
+#include "orca_base/pose_planner.hpp"
 #include "orca_base/move_to_marker_planner.hpp"
 
 namespace orca_base
@@ -25,8 +25,7 @@ namespace orca_base
     std::vector<Target> targets_;                             // Global plan
     bool keep_station_;                                       // True: keep station at last target
     nav_msgs::msg::Path global_path_;                         // Path to all targets
-    std::shared_ptr<LocalPlanner> local_planner_;             // Local planner, or...
-    std::shared_ptr<MoveToMarkerPlanner> recovery_planner_;   // ... recovery planner
+    std::shared_ptr<LocalPlanner> local_planner_;             // Local planner
 
     // State
     PlannerStatus status_;                                    // Planner status
@@ -34,11 +33,24 @@ namespace orca_base
     // Given a planned pose, predict the marker observations for the forward camera
     void predict_observations(FP &plan) const;
 
-    // Create a local_planner_
-    void start_local_plan(const FPStamped &start);
+    /**
+     * Create a pose planner
+     * @param start Initial pose
+     */
+    void create_pose_planner(const FPStamped &start);
 
-    // Create a recovery_planner_
-    void start_recovery_plan(const ObservationStamped &start);
+    /**
+     * Create a move-to-marker planner
+     * @param start
+     */
+    void create_mtm_planner(const ObservationStamped &start);
+
+    /**
+     * Create some sort of local planner if possible
+     * @param estimate Current pose
+     * @return True if successful
+     */
+    bool create_local_planner(const FPStamped &estimate);
 
   public:
 

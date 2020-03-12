@@ -16,7 +16,7 @@ namespace orca_base
   MoveToMarkerPlanner::MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt,
                                            const ObservationStamped &start,
                                            PlannerStatus &status) :
-    logger_{logger}, cxt_{cxt}, marker_id_{start.o.id},
+    LocalPlanner{LocalPlannerType::MTM_PLANNER}, logger_{logger}, cxt_{cxt}, marker_id_{start.o.id},
     controller_{std::make_shared<ObservationController>(cxt_)}
   {
     // Start observation

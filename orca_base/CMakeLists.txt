@@ -51,11 +51,11 @@ add_executable(
   src/controller.cpp
   src/fp.cpp
   src/global_planner.cpp
-  src/local_planner.cpp
   src/map.cpp
   src/mission.cpp
   src/move_to_marker_planner.cpp
   src/planner_common.cpp
+  src/pose_planner.cpp
   src/segment.cpp
   src/trap2_segment.cpp
 )

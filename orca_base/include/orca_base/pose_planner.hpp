@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_LOCAL_PLANNER_HPP
-#define ORCA_BASE_LOCAL_PLANNER_HPP
+#ifndef ORCA_BASE_POSE_PLANNER_HPP
+#define ORCA_BASE_POSE_PLANNER_HPP
 
 #include "rclcpp/logger.hpp"
 
@@ -13,10 +13,10 @@ namespace orca_base
 {
 
   //=====================================================================================
-  // LocalPlanner -- build a local plan to a target
+  // PosePlanner -- given a good pose, build a local plan to a target
   //=====================================================================================
 
-  class LocalPlanner
+  class PosePlanner : public LocalPlanner
   {
     rclcpp::Logger logger_;
     const AUVContext &cxt_;
@@ -44,10 +44,11 @@ namespace orca_base
 
   public:
 
-    LocalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start, Target target, Map map,
-                 bool keep_station, PlannerStatus &status);
+    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start, Target target, Map map,
+                bool keep_station, PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts, PlannerStatus &status);
+    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+                 PlannerStatus &status) override;
 
 #ifdef LOCAL_PATH
     const nav_msgs::msg::Path &local_path() const
@@ -57,4 +58,4 @@ namespace orca_base
 
 } // namespace orca_base
 
-#endif //ORCA_BASE_LOCAL_PLANNER_HPP
+#endif //ORCA_BASE_POSE_PLANNER_HPP
