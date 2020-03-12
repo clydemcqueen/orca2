@@ -29,7 +29,7 @@
     <xacro:property name="MASS_Z" value="0.011"/>
     <xacro:property name="VOLUME_Z" value="0.06"/>
     <xacro:property name="FORWARD_FORCE" value="50"/>
-    <xacro:property name="REVERSE_FORCE" value="44"/>
+    <xacro:property name="REVERSE_FORCE" value="40"/>
     <xacro:property name="HAS_TETHER" default="false"/>
     <xacro:property name="SURFACE" default="0"/>
 

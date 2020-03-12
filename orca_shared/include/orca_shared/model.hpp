@@ -50,6 +50,11 @@ namespace orca
     // Assume a uniform distribution of mass in the vehicle box
     static constexpr double MOMENT_OF_INERTIA_YAW = MASS / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
 
+    // From BlueRobotics specs, in Newtons
+    // Use bollard_force_* and max_torque_yaw instead
+    static constexpr double T200_MAX_POS_FORCE = 50;
+    static constexpr double T200_MAX_NEG_FORCE = 40;
+
     //=====================================================================================
     // Dynamics
     //=====================================================================================
@@ -72,12 +77,18 @@ namespace orca
     // Parameters, updated by validate_parameters
     //=====================================================================================
 
-    // From BlueRobotics specs, all forces are in Newtons
+    // Estimate bollard forces from the thruster specs, and measure them in the field
+    // Update orca_gazebo/orca.urdf.xacro to match for a good simulation
+
     // bollard_force_xy_ could also be called bollard_force_fs_
-    double bollard_force_xy_ = 137;
-    double bollard_force_z_ = 88;
-    double t200_max_pos_force_ = 50;
-    double t200_max_neg_force_ = 44;
+    double bollard_force_xy_ = 0.76 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
+
+    // Up and down forces are different
+    double bollard_force_z_up_ = 2 * T200_MAX_POS_FORCE;
+    double bollard_force_z_down_ = 2 * T200_MAX_NEG_FORCE;
+
+    // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
+    double max_torque_yaw_ = 0.18 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
     // Fluid density, 997 for freshwater or 1029 for seawater
     double fluid_density_ = 997;
@@ -96,33 +107,31 @@ namespace orca
     double drag_partial_const_yaw_ = 0.004;
 
     //=====================================================================================
-    // Thrust efforts depend on bollard forces
+    // Force / torque <=> effort
     //=====================================================================================
 
-    // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse), each mounted ~tangent to a circle with radius = 18cm
-    double max_torque_yaw_ = 0.18 * 2.0 * (t200_max_pos_force_ + t200_max_neg_force_);
-
-    // Force / torque => effort
     double force_to_effort_xy(double force_xy) const
     { return force_xy / bollard_force_xy_; }
 
     double force_to_effort_z(double force_z) const
-    { return force_z / bollard_force_z_; }
+    { return force_z / (force_z > 0 ? bollard_force_z_up_ : bollard_force_z_down_); }
 
     double torque_to_effort_yaw(double torque_yaw) const
     { return torque_yaw / max_torque_yaw_; }
 
-    // Effort => force / torque
     double effort_to_force_xy(double effort_xy) const
     { return effort_xy * bollard_force_xy_; }
+
+    double effort_to_force_z(double effort_z) const
+    { return effort_z * (effort_z > 0 ? bollard_force_z_up_ : bollard_force_z_down_); }
 
     double effort_to_torque_yaw(double effort_yaw) const
     { return effort_yaw * max_torque_yaw_; }
 
-    double effort_to_force_z(double effort_z) const
-    { return effort_z * bollard_force_z_; }
+    //=====================================================================================
+    // Acceleration <=> effort
+    //=====================================================================================
 
-    // Acceleration => effort
     double accel_to_effort_xy(double accel_xy) const
     { return force_to_effort_xy(accel_to_force(accel_xy)); }
 
@@ -132,7 +141,6 @@ namespace orca
     double accel_to_effort_yaw(double accel_yaw) const
     { return torque_to_effort_yaw(accel_to_torque_yaw(accel_yaw)); }
 
-    // Effort => acceleration
     double effort_to_accel_xy(double effort_xy) const
     { return force_to_accel(effort_to_force_xy(effort_xy)); }
 
@@ -195,27 +203,33 @@ namespace orca
 
     // Velocity => drag force / torque
     // Motion works in all 4 quadrants, note the use of abs()
+    double drag_force(double velo, double drag_constant) const
+    { return velo * std::abs(velo) * -drag_constant; }
+
     double drag_force_f(double velo_f) const
-    { return velo_f * std::abs(velo_f) * -drag_const_f(); }
+    { return drag_force(velo_f, drag_const_f()); }
 
     double drag_force_s(double velo_s) const
-    { return velo_s * std::abs(velo_s) * -drag_const_s(); }
+    { return drag_force(velo_s, drag_const_s()); }
 
     double drag_force_z(double velo_z) const
-    { return velo_z * std::abs(velo_z) * -drag_const_z(); }
+    { return drag_force(velo_z, drag_const_z()); }
 
     double drag_torque_yaw(double velo_yaw) const
     { return velo_yaw * std::abs(velo_yaw) * -drag_const_yaw(); }
 
     // Velocity => acceleration due to drag
+    double drag_accel(double velo, double drag_constant) const
+    { return force_to_accel(drag_force(velo, drag_constant)); }
+
     double drag_accel_f(double velo_f) const
-    { return force_to_accel(drag_force_f(velo_f)); }
+    { return drag_accel(velo_f, drag_const_f()); }
 
     double drag_accel_s(double velo_s) const
-    { return force_to_accel(drag_force_s(velo_s)); }
+    { return drag_accel(velo_s, drag_const_s()); }
 
     double drag_accel_z(double velo_z) const
-    { return force_to_accel(drag_force_z(velo_z)); }
+    { return drag_accel(velo_z, drag_const_z()); }
 
     double drag_accel_yaw(double velo_yaw) const
     { return torque_to_accel_yaw(drag_torque_yaw(velo_yaw)); }
@@ -231,12 +245,6 @@ namespace orca
     //=====================================================================================
 
     void drag_const_world(double yaw, double motion_world, double &drag_const_x, double &drag_const_y);
-
-    double drag_force(double velo, double drag_constant) const
-    { return velo * std::abs(velo) * -drag_constant; }
-
-    double drag_accel(double velo, double drag_constant) const
-    { return force_to_accel(drag_force(velo, drag_constant)); }
   };
 
 } // namespace orca

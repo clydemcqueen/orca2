@@ -16,7 +16,7 @@ namespace orca_base
 
 #undef RUN_PERF
 #ifdef RUN_PERF
-  #define START_PERF()\
+#define START_PERF()\
 auto __start__ = std::chrono::high_resolution_clock::now();
 
 #define STOP_PERF(msg)\
@@ -125,7 +125,13 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
       if (control_msg_.mode == orca_msgs::msg::Control::AUV) {
         ss << "AUV target m" << control_msg_.target_marker_id;
         if (control_msg_.planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
-          ss << " RECOVERY move to marker"; // TODO add recovery_marker_id to orca_msgs::msg::Control
+          // Expect exactly 1 planned observation
+          if (control_msg_.plan_observations.size() == 1) {
+            ss << " RECOVERY move to marker m" << control_msg_.plan_observations[0].vlam.id;
+          } else {
+            ss << " RECOVERY move to marker [ERROR " << control_msg_.plan_observations.size()
+               << "planned observations]";
+          }
         } else {
           ss << " " << control_msg_.segment_info;
         }

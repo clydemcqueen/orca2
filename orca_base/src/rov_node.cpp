@@ -117,7 +117,8 @@ namespace orca_base
   {
     // Update model from new parameters
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-    cxt_.model_.bollard_force_z_ = cxt_.bollard_force_z_;
+    cxt_.model_.bollard_force_z_up_ = cxt_.bollard_force_z_up_;
+    cxt_.model_.bollard_force_z_down_ = cxt_.bollard_force_z_down_;
 
     // Update timeouts
     baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
