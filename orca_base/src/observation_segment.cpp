@@ -22,36 +22,29 @@ namespace orca_base
     ff_ = orca::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
   }
 
+  /* Future work... ObservationSegmentBase should look like this (see Trap2):
+   *     orca::ObservationStamped o0_;    // Start observation
+   *     orca::ObservationStamped o1_;
+   *     orca::ObservationStamped o2_;
+   *     orca::ObservationStamped o3_;    // End observation
+   *     orca::AccelerationBody a0_;      // Acceleration at o0_.t
+   *     orca::TwistBody v1_;             // Velocity at o1_.t
+   *
+   * ... and SegmentBase::advance() should take rclcpp::Time, not rclcpp::Duration
+   */
+
   //=====================================================================================
-  // plan_trap_velo TODO use FastPlan instead
+  // plan_obs_fast
   //=====================================================================================
 
-  // Plan a 3-phase trapezoidal velocity motion constrained by acceleration and max_velocity.
-  //    phase 1: accelerate
-  //    phase 2: run at constant velocity
-  //    phase 3: decelerate and stop
-  //
-  // If the distance is short skip the run phase
-
-  void plan_trap_velo(const double accel, const double max_velo, const double distance,
-                      const rclcpp::Time &start, rclcpp::Time &run, rclcpp::Time &decel, rclcpp::Time &stop)
+  void plan_obs_fast(const bool angle, const double accel, const double max_velo, const double distance,
+                     const rclcpp::Time &start, rclcpp::Time &run, rclcpp::Time &decel, rclcpp::Time &stop)
   {
-    auto ramp_seconds = max_velo / accel;
-    auto ramp_distance = accel * ramp_seconds * ramp_seconds / 2;
+    FastPlan plan(angle, distance, accel, max_velo);
 
-    double run_seconds;
-    if (2 * ramp_distance < distance) {
-      run_seconds = (distance - 2 * ramp_distance) / max_velo;
-    } else {
-      // Distance too short, will not hit max_velo
-      // Note that distance = 2 * ramp_distance
-      ramp_seconds = sqrt(distance / accel);
-      run_seconds = 0;
-    }
-
-    run = start + rclcpp::Duration::from_seconds(ramp_seconds);
-    decel = run + rclcpp::Duration::from_seconds(run_seconds);
-    stop = decel + rclcpp::Duration::from_seconds(ramp_seconds);
+    run = start + rclcpp::Duration::from_seconds(plan.t_ramp);
+    decel = run + rclcpp::Duration::from_seconds(plan.t_run);
+    stop = decel + rclcpp::Duration::from_seconds(plan.t_ramp);
   }
 
   //=====================================================================================
@@ -65,7 +58,8 @@ namespace orca_base
 
     if (distance_yaw > 0) {
       // Plan yaw motion, start phase 1
-      plan_trap_velo(cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t, yaw_run_, yaw_decel_, yaw_stop_);
+      plan_obs_fast(true, cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t,
+                    yaw_run_, yaw_decel_, yaw_stop_);
       initial_accel_.yaw = orca::norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
@@ -135,7 +129,7 @@ namespace orca_base
 
     if (distance_fwd > 0) {
       // Plan forward motion, start phase 1
-      plan_trap_velo(cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
+      plan_obs_fast(false, cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
       initial_accel_.forward = cxt_.mtm_fwd_accel_; // Always moving foward, so always +accel to start
     } else {
       f_run_ = f_decel_ = f_stop_ = start_;

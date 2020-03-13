@@ -124,6 +124,7 @@ add_executable(
   src/astar.cpp
   src/astar_test.cpp
   src/fp.cpp
+  src/pose_segment.cpp
   src/segment_common.cpp
   src/segment_test.cpp
   src/test_main.cpp

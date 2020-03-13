@@ -10,6 +10,71 @@ namespace orca_base
 {
 
   //=====================================================================================
+  // plan_pose_sync
+  //=====================================================================================
+
+  void plan_pose_sync(const AUVContext &cxt, const orca::PoseStamped &p0,
+                      orca::PoseStamped &p1, orca::PoseStamped &p2, orca::PoseStamped &p3,
+                      orca::Acceleration &a0, orca::Twist &v1)
+  {
+    /* Notes on motion in the xy plane:
+     *
+     * If we move in x and y separately we end up with higher 2D velocity for diagonal motion
+     * (e.g., x+5, y+5) than for motion along an axis (e.g., x+0, y+5). Avoid this by computing
+     * xy motion together.
+     *
+     * We do still have cases where we end up with higher 3D velocity for diagonal motion
+     * (e.g., x+5, y+5, z+5). This is OK because xy and z motion use different thrusters.
+     *
+     * We are left with the case where xy motion and yaw motion, which use the same thrusters,
+     * may combine to saturate the thrusters. For now we avoid this by picking the right values
+     * for auv_xy_accel, auv_xy_velo, auv_yaw_accel, auv_yaw_velo, and xy_gain.
+     */
+
+    // Create the fastest plans
+    double dxy = p3.pose.distance_xy(p0.pose);
+    FastPlan xy_fast(false, dxy, cxt.auv_xy_accel_, cxt.auv_xy_velo_);
+    FastPlan z_fast(false, p3.pose.z - p0.pose.z, cxt.auv_z_accel_, cxt.auv_z_velo_);
+    FastPlan yaw_fast(true, p3.pose.yaw - p0.pose.yaw, cxt.auv_yaw_accel_, cxt.auv_yaw_velo_);
+
+    // Find the longest ramp and run times
+    double t_ramp = xy_fast.t_ramp;
+    if (t_ramp < z_fast.t_ramp) t_ramp = z_fast.t_ramp;
+    if (t_ramp < yaw_fast.t_ramp) t_ramp = yaw_fast.t_ramp;
+
+    double t_run = xy_fast.t_run;
+    if (t_run < z_fast.t_run) t_run = z_fast.t_run;
+    if (t_run < yaw_fast.t_run) t_run = yaw_fast.t_run;
+
+    // Create plans where the phases are synchronized
+    SyncPlan xy_sync(false, dxy, t_ramp, t_run);
+    SyncPlan z_sync(false, p3.pose.z - p0.pose.z, t_ramp, t_run);
+    SyncPlan yaw_sync(true, p3.pose.yaw - p0.pose.yaw, t_ramp, t_run);
+
+    // Save results
+    p1.t = p0.t + rclcpp::Duration::from_seconds(t_ramp);
+    p2.t = p1.t + rclcpp::Duration::from_seconds(t_run);
+    p3.t = p2.t + rclcpp::Duration::from_seconds(t_ramp);
+
+    auto angle_to_goal = atan2(p3.pose.y - p0.pose.y, p3.pose.x - p0.pose.x);
+    auto xf = cos(angle_to_goal);   // x fraction of xy motion
+    auto yf = sin(angle_to_goal);   // y fraction of xy motion
+
+    p1.pose = p0.pose + orca::Pose(xf * xy_sync.d_ramp, yf * xy_sync.d_ramp, z_sync.d_ramp, yaw_sync.d_ramp);
+    p2.pose = p1.pose + orca::Pose(xf * xy_sync.d_run, yf * xy_sync.d_run, z_sync.d_run, yaw_sync.d_run);
+
+    a0.x = xf * xy_sync.a;
+    a0.y = yf * xy_sync.a;
+    a0.z = z_sync.a;
+    a0.yaw = yaw_sync.a;
+
+    v1.x = xf * xy_sync.v;
+    v1.y = yf * xy_sync.v;
+    v1.z = z_sync.v;
+    v1.yaw = yaw_sync.v;
+  }
+
+  //=====================================================================================
   // PoseSegmentBase
   //=====================================================================================
 
@@ -61,7 +126,7 @@ namespace orca_base
     p3_.pose = goal.pose.pose;
 
     // Create a synchronized motion plan
-    plan_sync(cxt_, p0_, p1_, p2_, p3_, a0_, v1_);
+    plan_pose_sync(cxt_, p0_, p1_, p2_, p3_, a0_, v1_);
   }
 
   rclcpp::Duration Trap2::duration() const

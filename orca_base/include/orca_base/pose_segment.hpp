@@ -8,6 +8,26 @@ namespace orca_base
 {
 
   //=====================================================================================
+  // plan_pose_sync
+  //=====================================================================================
+
+  /**
+   * Trapezoidal velocity motion planner for 4DoF poses
+   * All DoF are moving through the phases at the same time
+   *
+   * @param cxt AUV context object with various parameters
+   * @param p0 In: start of motion
+   * @param p1 Out: pose and time at end of phase 1
+   * @param p2 Out: pose and time at end of phase 2
+   * @param p3 In: pose at end of phase 3, out: time at end of phase 3
+   * @param a0 Out: acceleration, apply from p0.t to p1.t, and decelerate from p2.t to p3.t
+   * @param v1 Out: peak velocity runs from p1.t to p2.t
+   */
+  void plan_pose_sync(const AUVContext &cxt, const orca::PoseStamped &p0,
+                      orca::PoseStamped &p1, orca::PoseStamped &p2, orca::PoseStamped &p3,
+                      orca::Acceleration &a0, orca::Twist &v1);
+
+  //=====================================================================================
   // Pose segments plan motion based on poses
   //=====================================================================================
 

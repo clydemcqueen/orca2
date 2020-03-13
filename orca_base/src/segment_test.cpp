@@ -24,7 +24,7 @@ void segment_test()
   orca::Acceleration a;
   orca::Twist v;
 
-  orca_base::plan_sync(cxt, p0, p1, p2, p3, a, v);
+  orca_base::plan_pose_sync(cxt, p0, p1, p2, p3, a, v);
 
   std::cout << "p0: " << p0 << std::endl;
   std::cout << "p1: " << p1 << std::endl;
