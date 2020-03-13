@@ -67,6 +67,7 @@ def generate_launch_description():
              node_name='rov_node', parameters=[{
                 'use_sim_time': use_sim_time,
             }], remappings=[
+                ('control', 'rov_control'),  # Send control messages to auv_node
             ]),
 
         # Depth node, turns /barometer messages into /depth messages

@@ -56,6 +56,7 @@ namespace orca_base
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
@@ -100,6 +101,18 @@ namespace orca_base
 
     // Subscription callbacks
     void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
+
+    /**
+     * Abort the active mission and re-publish the message on the output topic
+     *
+     * If rov_node is active, arrange the nodes and topics serially, e.g.,
+     * rov_node -> 'rov_control' topic -> auv_node -> 'control' topic -> driver_node
+     *
+     * This will prevent rov_node and auv_node from sending conflicting messages to orca_driver
+     *
+     * @param msg Control message
+     */
+    void control_callback(orca_msgs::msg::Control::SharedPtr msg);
 
     void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
 

@@ -149,10 +149,12 @@ namespace gazebo
     // Handle an incoming message from ROS
     void OnRosMsg(const orca_msgs::msg::Control::SharedPtr msg)
     {
-      control_msg_time_ = msg->header.stamp;
+      if (valid(msg->header.stamp)) {
+        control_msg_time_ = msg->header.stamp;
 
-      for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
-        thrusters_[i].effort = orca::pwm_to_effort(msg->thruster_pwm[i]);
+        for (int i = 0; i < thrusters_.size() && i < msg->thruster_pwm.size(); ++i) {
+          thrusters_[i].effort = orca::pwm_to_effort(msg->thruster_pwm[i]);
+        }
       }
     }
 

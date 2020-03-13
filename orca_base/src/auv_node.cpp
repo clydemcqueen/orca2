@@ -99,6 +99,8 @@ namespace orca_base
     // Other subscriptions
     auto battery_cb = std::bind(&AUVNode::battery_callback, this, _1);
     battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
+    auto control_cb = std::bind(&AUVNode::control_callback, this, _1);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("rov_control", 1, control_cb);
     auto leak_cb = std::bind(&AUVNode::leak_callback, this, _1);
     leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
 
@@ -239,6 +241,16 @@ namespace orca_base
       RCLCPP_ERROR(get_logger(), "low battery (%g volts), abort mission", msg->voltage);
       abort_mission(msg->header.stamp);
     }
+  }
+
+  void AUVNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
+  {
+    if (mission_) {
+      RCLCPP_INFO(get_logger(), "received ROV message, aborting mission");
+      abort_mission(msg->header.stamp);
+    }
+
+    control_pub_->publish(*msg);
   }
 
   void AUVNode::depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first)
