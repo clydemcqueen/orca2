@@ -1,57 +1,12 @@
-#include "orca_base/segment.hpp"
+#include "orca_base/observation_segment.hpp"
 
 #include <iomanip>
 
 #include "orca_msgs/msg/control.hpp"
 #include "orca_shared/util.hpp"
 
-using namespace orca;
-
 namespace orca_base
 {
-
-  //=====================================================================================
-  // SegmentBase
-  //=====================================================================================
-
-  SegmentBase::SegmentBase(AUVContext cxt, uint8_t type) :
-    cxt_{std::move(cxt)}, type_{type}
-  {
-  }
-
-  std::string SegmentBase::type_name()
-  {
-    if (type_ == orca_msgs::msg::Control::PAUSE) {
-      return "pause";
-    } else if (type_ == orca_msgs::msg::Control::POSE_VERTICAL) {
-      return "pose_vertical";
-    } else if (type_ == orca_msgs::msg::Control::POSE_ROTATE) {
-      return "pose_rotate";
-    } else if (type_ == orca_msgs::msg::Control::POSE_LINE) {
-      return "pose_line";
-    } else if (type_ == orca_msgs::msg::Control::POSE_COMBO) {
-      return "pose_combo";
-    } else if (type_ == orca_msgs::msg::Control::OBS_RTM) {
-      return "obs_rtm";
-    } else if (type_ == orca_msgs::msg::Control::OBS_MTM) {
-      return "obs_mtm";
-    } else if (type_ == orca_msgs::msg::Control::POSE_LINE) {
-      return "no_segment";
-    }
-  }
-
-  //=====================================================================================
-  // PoseSegmentBase
-  //=====================================================================================
-
-  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal) :
-    SegmentBase{cxt, type},
-    plan_{std::move(start)},
-    goal_{std::move(goal)}
-  {
-    // Default ff includes acceleration to counteract buoyancy
-    ff_ = Acceleration{0, 0, cxt.model_.hover_accel_z(), 0};
-  }
 
   //=====================================================================================
   // ObservationSegmentBase
@@ -64,33 +19,7 @@ namespace orca_base
     goal_{std::move(goal)}
   {
     // Default ff includes acceleration to counteract buoyancy
-    ff_ = AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
-  }
-
-  //=====================================================================================
-  // Pause
-  //=====================================================================================
-
-  Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration) :
-    PoseSegmentBase{cxt, orca_msgs::msg::Control::PAUSE, start, start.fp}, pause_duration_{pause_duration}
-  {}
-
-  std::string Pause::to_str()
-  {
-    std::stringstream ss;
-    ss << "pause for " << pause_duration_.seconds() << " seconds";
-    return ss.str();
-  }
-
-  bool Pause::advance(const rclcpp::Duration &d)
-  {
-    // Update plan
-    plan_.t = plan_.t + d;
-
-    // Count down time remaining
-    pause_duration_ = pause_duration_ - d;
-
-    return pause_duration_.nanoseconds() > 0;
+    ff_ = orca::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
   }
 
   //=====================================================================================
@@ -132,12 +61,12 @@ namespace orca_base
   RotateToMarker::RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
     ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_RTM, start, goal)
   {
-    double distance_yaw = std::abs(norm_angle(plan_.o.yaw - goal_.yaw));
+    double distance_yaw = std::abs(orca::norm_angle(plan_.o.yaw - goal_.yaw));
 
     if (distance_yaw > 0) {
       // Plan yaw motion, start phase 1
       plan_trap_velo(cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t, yaw_run_, yaw_decel_, yaw_stop_);
-      initial_accel_.yaw = norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
+      initial_accel_.yaw = orca::norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
@@ -190,7 +119,7 @@ namespace orca_base
     twist_.yaw += accel_.yaw * dt;
 
     // Plan
-    plan_.o.yaw = norm_angle(plan_.o.yaw + twist_.yaw * dt);
+    plan_.o.yaw = orca::norm_angle(plan_.o.yaw + twist_.yaw * dt);
 
     return true;
   }

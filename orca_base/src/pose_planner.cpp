@@ -2,7 +2,6 @@
 
 #include "rclcpp/logging.hpp"
 
-#include "orca_base/trap2_segment.hpp"
 #include "orca_msgs/msg/control.hpp"
 
 using namespace orca;

@@ -1,4 +1,4 @@
-#include "orca_base/trap2_segment.hpp"
+#include "orca_base/pose_segment.hpp"
 
 #include <iostream>
 

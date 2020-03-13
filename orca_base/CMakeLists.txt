@@ -54,10 +54,11 @@ add_executable(
   src/map.cpp
   src/mission.cpp
   src/move_to_marker_planner.cpp
+  src/observation_segment.cpp
   src/planner_common.cpp
   src/pose_planner.cpp
-  src/segment.cpp
-  src/trap2_segment.cpp
+  src/pose_segment.cpp
+  src/segment_common.cpp
 )
 
 ament_target_dependencies(
@@ -123,10 +124,9 @@ add_executable(
   src/astar.cpp
   src/astar_test.cpp
   src/fp.cpp
-  src/segment.cpp
+  src/segment_common.cpp
   src/segment_test.cpp
   src/test_main.cpp
-  src/trap2_segment.cpp
 )
 
 ament_target_dependencies(

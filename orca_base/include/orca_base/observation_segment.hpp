@@ -1,68 +1,11 @@
-#ifndef ORCA_BASE_SEGMENT_HPP
-#define ORCA_BASE_SEGMENT_HPP
+#ifndef ORCA_BASE_OBSERVATION_SEGMENT_HPP
+#define ORCA_BASE_OBSERVATION_SEGMENT_HPP
 
-#include "orca_base/auv_context.hpp"
 #include "orca_base/fp.hpp"
+#include "orca_base/segment_common.hpp"
 
 namespace orca_base
 {
-
-  //=====================================================================================
-  // Segments describe a trajectory from start to goal over time
-  //=====================================================================================
-
-  class SegmentBase
-  {
-  protected:
-
-    AUVContext cxt_;
-    uint8_t type_;
-
-  public:
-
-    explicit SegmentBase(AUVContext cxt, uint8_t type);
-
-    // Return a string suitable for logging
-    virtual std::string to_str() = 0;
-
-    // Advance the motion plan by dt seconds, return true to continue, false if we're done
-    virtual bool advance(const rclcpp::Duration &d) = 0;
-
-    __uint8_t type()
-    { return type_; }
-
-    std::string type_name();
-  };
-
-  //=====================================================================================
-  // Pose segments plan motion based on poses
-  //=====================================================================================
-
-  class PoseSegmentBase : public SegmentBase
-  {
-  protected:
-
-    FPStamped plan_;        // Planned pose, incremented with each call to advance()
-    FP goal_;               // Goal pose
-
-    orca::Twist twist_;     // Velocity in the world frame
-    orca::Acceleration ff_; // Acceleration in the world frame
-
-  public:
-    PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal);
-
-    const FPStamped &plan() const
-    { return plan_; }
-
-    const FP &goal() const
-    { return goal_; }
-
-    const orca::Twist &twist() const
-    { return twist_; }
-
-    const orca::Acceleration &ff() const
-    { return ff_; }
-  };
 
   //=====================================================================================
   // Observation segments plan motion based on marker observations
@@ -92,23 +35,6 @@ namespace orca_base
 
     const orca::AccelerationBody &ff() const
     { return ff_; }
-  };
-
-  //=====================================================================================
-  // Pause segments stay in one pose for a period of time
-  //=====================================================================================
-
-  class Pause : public PoseSegmentBase
-  {
-    rclcpp::Duration pause_duration_;     // Time remaining
-
-  public:
-
-    Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration);
-
-    std::string to_str() override;
-
-    bool advance(const rclcpp::Duration &d) override;
   };
 
   //=====================================================================================
@@ -167,4 +93,4 @@ namespace orca_base
 
 } // namespace orca_base
 
-#endif //ORCA_BASE_SEGMENT_HPP
+#endif //ORCA_BASE_OBSERVATION_SEGMENT_HPP

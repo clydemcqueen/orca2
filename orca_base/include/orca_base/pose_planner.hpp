@@ -7,7 +7,7 @@
 #include "orca_base/controller.hpp"
 #include "orca_base/map.hpp"
 #include "orca_base/planner_common.hpp"
-#include "orca_base/segment.hpp"
+#include "orca_base/pose_segment.hpp"
 
 namespace orca_base
 {

@@ -1,30 +1,58 @@
-#include "orca_base/segment.hpp"
+#ifndef ORCA_BASE_POSE_SEGMENT_HPP
+#define ORCA_BASE_POSE_SEGMENT_HPP
+
+#include "orca_base/fp.hpp"
+#include "orca_base/segment_common.hpp"
 
 namespace orca_base
 {
 
-  /**
-   * Trapezoidal velocity motion planner
-   *
-   * Phase 1: constant acceleration from p0 to p1
-   * Phase 2: constant velocity from p1 to p2
-   * Phase 3: constant deceleration from p2 to p3
-   *
-   * All dimensions are moving through the phases at the same time
-   * If the distances are short, the constant velocity phase might be skipped
-   * Assumes start velocity (v0) is {0, 0, 0, 0}
-   *
-   * @param cxt AUV context object with various parameters
-   * @param p0 In: start of motion
-   * @param p1 Out: pose and time at end of phase 1
-   * @param p2 Out: pose and time at end of phase 2
-   * @param p3 In: pose at end of phase 3, out: time at end of phase 3
-   * @param a0 Out: acceleration, apply from p0.t to p1.t, and decelerate from p2.t to p3.t
-   * @param v1 Out: peak velocity runs from p1.t to p2.t
-   */
-  void plan_sync(const AUVContext &cxt, const orca::PoseStamped &p0,
-                 orca::PoseStamped &p1, orca::PoseStamped &p2, orca::PoseStamped &p3,
-                 orca::Acceleration &a0, orca::Twist &v1);
+  //=====================================================================================
+  // Pose segments plan motion based on poses
+  //=====================================================================================
+
+  class PoseSegmentBase : public SegmentBase
+  {
+  protected:
+
+    FPStamped plan_;        // Planned pose, incremented with each call to advance()
+    FP goal_;               // Goal pose
+
+    orca::Twist twist_;     // Velocity in the world frame
+    orca::Acceleration ff_; // Acceleration in the world frame
+
+  public:
+    PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal);
+
+    const FPStamped &plan() const
+    { return plan_; }
+
+    const FP &goal() const
+    { return goal_; }
+
+    const orca::Twist &twist() const
+    { return twist_; }
+
+    const orca::Acceleration &ff() const
+    { return ff_; }
+  };
+
+  //=====================================================================================
+  // Pause segments stay in one pose for a period of time
+  //=====================================================================================
+
+  class Pause : public PoseSegmentBase
+  {
+    rclcpp::Duration pause_duration_;     // Time remaining
+
+  public:
+
+    Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration);
+
+    std::string to_str() override;
+
+    bool advance(const rclcpp::Duration &d) override;
+  };
 
   //=====================================================================================
   // Trap2: implement a trapezoidal velocity motion segment
@@ -101,3 +129,5 @@ namespace orca_base
   };
 
 } // namespace orca_base
+
+#endif // ORCA_BASE_POSE_SEGMENT_HPP

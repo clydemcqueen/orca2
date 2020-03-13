@@ -6,7 +6,7 @@
 #include "orca_base/auv_context.hpp"
 #include "orca_base/controller.hpp"
 #include "orca_base/planner_common.hpp"
-#include "orca_base/segment.hpp"
+#include "orca_base/observation_segment.hpp"
 
 namespace orca_base
 {
