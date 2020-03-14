@@ -5,30 +5,32 @@ Orca2 is a [ROS2](http://www.ros.org/) AUV (Autonomous Underwater Vehicle) based
 
 ## Simulation
 
-Orca2 runs in [Gazebo](http://gazebosim.org/), a SITL (software-in-the-loop) simulator.
-Use the instructions below to install ROS, Gazebo and Orca2 on your desktop or laptop.
+Orca2 runs on Ubuntu 18.04 in [Gazebo](http://gazebosim.org/), a SITL (software-in-the-loop) simulator.
+Installation instructions:
 
-[Install ROS2 Eloquent](https://index.ros.org/doc/ros2/Installation/)
-with the `ros-eloquent-desktop` option.
-If you install binaries, be sure to also install Colcon from the
-[Colcon tutorial](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+* Install ROS2 Eloquent
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
+Use the `ros-eloquent-desktop` option.
 
-Install Gazebo v9:
+* Install Colcon (the build tool for ROS2)
+[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+
+* Install Gazebo v9:
 ~~~
 sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 ~~~
 
-Install these ROS packages:
+* Install these additional ROS2 packages:
 ~~~
 sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs ros-eloquent-xacro
 ~~~
 
-Use your favorite Python package manager to install these Python packages:
+* Use your favorite Python package manager to install these Python packages:
 ~~~
 pip3 install numpy transformations
 ~~~
 
-Build Orca2 (but not the orca_driver hardware interface):
+* Build Orca2 (but not the orca_driver hardware interface):
 ~~~
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
@@ -43,7 +45,7 @@ source /opt/ros/eloquent/setup.bash
 colcon build
 ~~~
 
-Run the simulation:
+* Run the simulation:
 ~~~
 cd ~/ros2/orca_ws
 source /opt/ros/eloquent/setup.bash
