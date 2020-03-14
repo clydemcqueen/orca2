@@ -20,7 +20,6 @@ namespace orca_driver
     {
       orca_msgs::msg::Control msg;
       msg.header.stamp = now();
-      msg.stability = 1.0;
       msg.odom_lag = 0.0;
       msg.mode = msg.ROV;
       msg.camera_tilt_pwm = msg.TILT_0;

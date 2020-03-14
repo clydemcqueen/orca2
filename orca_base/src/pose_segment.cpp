@@ -28,7 +28,7 @@ namespace orca_base
      *
      * We are left with the case where xy motion and yaw motion, which use the same thrusters,
      * may combine to saturate the thrusters. For now we avoid this by picking the right values
-     * for auv_xy_accel, auv_xy_velo, auv_yaw_accel, auv_yaw_velo, and xy_gain.
+     * for auv_xy_accel, auv_xy_velo, auv_yaw_accel, auv_yaw_velo, and xy_limit.
      */
 
     // Create the fastest plans

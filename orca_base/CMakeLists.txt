@@ -59,6 +59,7 @@ add_executable(
   src/pose_planner.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
+  src/thrusters.cpp
 )
 
 ament_target_dependencies(
@@ -84,6 +85,7 @@ ament_target_dependencies(
 add_executable(
   rov_node
   src/rov_node.cpp
+  src/thrusters.cpp
 )
 
 ament_target_dependencies(

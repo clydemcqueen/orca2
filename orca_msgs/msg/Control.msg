@@ -66,9 +66,7 @@ bool has_good_observation
 
 # Efforts in world frame, range [-1.0, 1.0]
 orca_msgs/Efforts efforts
-
-# Stability, range [1.0, 0.0]
-float64 stability
+bool thruster_saturated
 
 # Odom lag, seconds
 float64 odom_lag

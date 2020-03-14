@@ -46,6 +46,7 @@ add_library(
   src/baro.cpp
   src/geometry.cpp
   src/model.cpp
+  src/pwm.cpp
   src/util.cpp
 )
 

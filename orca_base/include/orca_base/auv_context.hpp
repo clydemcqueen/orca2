@@ -40,7 +40,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
   CXT_MACRO_MEMBER(fcam_vres, double, 600)                    /* Forward camera vertical resolution in pixels  */ \
   \
-  CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Limit fwd/strafe motion, rest is yaw  */ \
+  CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Limit fwd/strafe motion, rest is yaw  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6)                 /* AUV x pid Kp  */ \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.2)                 /* AUV x pid Ki  */ \

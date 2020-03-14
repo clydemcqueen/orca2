@@ -600,20 +600,6 @@ namespace orca_base
 
   void AUVNode::publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts)
   {
-    // Combine joystick efforts to get thruster efforts.
-    std::vector<double> thruster_efforts;
-    for (const auto &i : THRUSTERS) {
-      // Clamp forward + strafe to xy_gain_
-      double xy_effort = clamp(
-        efforts.forward() * i.forward_factor + efforts.strafe() * i.strafe_factor,
-        -cxt_.xy_gain_, cxt_.xy_gain_);
-
-      // Clamp total thrust
-      thruster_efforts.push_back(
-        clamp(xy_effort + efforts.yaw() * i.yaw_factor + efforts.vertical() * i.vertical_factor,
-              THRUST_FULL_REV, THRUST_FULL_FWD));
-    }
-
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
@@ -646,15 +632,13 @@ namespace orca_base
     control_msg.good_z = estimate_.fp.good_z();
     control_msg.has_good_observation = estimate_.fp.has_good_observation(cxt_.good_obs_dist_);
     control_msg.efforts = efforts.to_msg();
-    control_msg.stability = 1.0;
     control_msg.odom_lag = (now() - msg_time).seconds();
 
     // Control
     control_msg.camera_tilt_pwm = tilt_to_pwm(0);
     control_msg.brightness_pwm = brightness_to_pwm(0);
-    for (double thruster_effort : thruster_efforts) {
-      control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
-    }
+    efforts_to_control(efforts, cxt_.xy_limit_, control_msg);
+
     control_pub_->publish(control_msg);
   }
 

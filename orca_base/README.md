@@ -90,7 +90,7 @@ The 4 effort values are rotated into the body frame, then added in various combi
 for the 6 thrusters.
 For the 4 horizontal thrusters it’s possible for the thruster efforts to fall outside the range [-1, 1], e.g., if the 
 AUV is trying to rotate, move forward and move left all at the same time.
-This is currently handled by combining forward and strafe thrust then clamping each thruster effort to ‘xy_gain’.
+This is currently handled by combining forward and strafe thrust then clamping each thruster effort to ‘xy_limit’.
 The yaw thrust is then added and each thruster is clamped again to [-1, 1].
 This tends to favor the yaw motion over the forward and strafe motion (good), but the forward and strafe forces might 
 be clamped per-thruster in odd ways, resulting in a wobbly motion (bad).

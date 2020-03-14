@@ -24,7 +24,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(inc_lights, int, 20)                       /* Lights increment  */ \
   \
   CXT_MACRO_MEMBER(input_dead_band, float, 0.05f)             /* Ignore small joystick inputs  */ \
-  CXT_MACRO_MEMBER(xy_gain, double, 0.5)                      /* Attenuate joystick inputs  */ \
+  CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Attenuate joystick inputs  */ \
   CXT_MACRO_MEMBER(yaw_gain, double, 0.2)                     /* Attenuate joystick inputs  */ \
   CXT_MACRO_MEMBER(vertical_gain, double, 0.5)                /* Attenuate joystick inputs  */ \
   \

@@ -311,8 +311,8 @@ namespace orca_base
     double dt = joy_cb_.dt();
 
     Efforts efforts;
-    efforts.set_forward(dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_);
-    efforts.set_strafe(dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_);
+    efforts.set_forward(dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+    efforts.set_strafe(dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
     efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_pressure()) {
@@ -327,43 +327,20 @@ namespace orca_base
 
   void ROVNode::publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts)
   {
-    // Combine joystick efforts to get thruster efforts.
-    std::vector<double> thruster_efforts;
-    for (const auto &i : THRUSTERS) {
-      // Clamp forward + strafe to xy_gain_
-      double xy_effort = clamp(
-        efforts.forward() * i.forward_factor + efforts.strafe() * i.strafe_factor,
-        -cxt_.xy_gain_, cxt_.xy_gain_);
-
-      // Clamp total thrust
-      thruster_efforts.push_back(
-        clamp(xy_effort + efforts.yaw() * i.yaw_factor + efforts.vertical() * i.vertical_factor,
-              THRUST_FULL_REV, THRUST_FULL_FWD));
-    }
-
-    // Publish control message
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
     control_msg.header.frame_id = cxt_.base_frame_; // Control is expressed in the base frame
-    control_msg.estimate_pose = geometry_msgs::msg::Pose{};
-    control_msg.efforts = efforts.to_msg();
-    control_msg.stability = 1.0;
-    control_msg.odom_lag = (now() - msg_time).seconds();
+
+    // Diagnostics
     control_msg.mode = mode_;
-    control_msg.plan_pose = geometry_msgs::msg::Pose{};
-    control_msg.plan_twist = geometry_msgs::msg::Twist{};
-    control_msg.targets_total = 0;
-    control_msg.target_idx = 0;
-    control_msg.target_marker_id = 0;
-    control_msg.planner = orca_msgs::msg::Control::PLAN_NONE;
-    control_msg.segments_total = 0;
-    control_msg.segment_idx = 0;
-    control_msg.segment_info = "";
+    control_msg.efforts = efforts.to_msg();
+    control_msg.odom_lag = (now() - msg_time).seconds();
+
+    // Control
     control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
     control_msg.brightness_pwm = brightness_to_pwm(brightness_);
-    for (double thruster_effort : thruster_efforts) {
-      control_msg.thruster_pwm.push_back(effort_to_pwm(thruster_effort));
-    }
+    efforts_to_control(efforts, cxt_.xy_limit_, control_msg);
+
     control_pub_->publish(control_msg);
   }
 
