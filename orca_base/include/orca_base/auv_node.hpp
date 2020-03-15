@@ -171,7 +171,7 @@ namespace orca_base
 
     explicit AUVNode();
 
-    ~AUVNode() override = default;
+    ~AUVNode() override;
   };
 
 } // namespace orca_base

@@ -113,6 +113,12 @@ namespace orca_base
     RCLCPP_INFO(get_logger(), "rov_node ready");
   }
 
+  ROVNode::~ROVNode()
+  {
+    // Disarm! This will stop an active mission and stop the thrusters
+    disarm(now());
+  }
+
   void ROVNode::validate_parameters()
   {
     // Update model from new parameters

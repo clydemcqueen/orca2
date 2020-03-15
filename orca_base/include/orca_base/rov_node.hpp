@@ -150,7 +150,7 @@ namespace orca_base
 
     explicit ROVNode();
 
-    ~ROVNode() override = default;
+    ~ROVNode() override;
   };
 
 } // namespace orca_base

@@ -20,6 +20,7 @@ from orca_msgs.msg import Control
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import SetParameters
 from rclpy.action import ActionClient
+from rclpy.action.client import ClientGoalHandle
 from rclpy.node import Node
 
 import nees
@@ -146,6 +147,9 @@ class RunNode(Node):
         self._send_goal_future = None
         self._get_result_future = None
 
+        # Active mission
+        self._goal_handle = None
+
         # Start 1st experiment
         self._idx = 0
         self._count = 0
@@ -218,9 +222,12 @@ class RunNode(Node):
         self._send_goal_future.add_done_callback(self.goal_response_cb)
 
     def goal_response_cb(self, future):
-        goal_handle = future.result()
+        goal_handle: ClientGoalHandle = future.result()
         if goal_handle.accepted:
             self.get_logger().info('goal accepted')
+
+            # Save client goal handle, useful if we need to abort the mission
+            self._goal_handle = goal_handle
 
             # Start recording messages
             if self._calc_nees:
@@ -256,6 +263,9 @@ class RunNode(Node):
             self._gt_msgs = None
         else:
             self.get_logger().warn('goal failed with status: {0}'.format(status))
+
+        # Clear goal_handle
+        self._goal_handle = None
 
         # Step 4
         self.start_next_experiment()
@@ -310,6 +320,18 @@ class RunNode(Node):
         for experiment in self._experiments:
             experiment.print()
 
+    def stop_mission_and_destroy_client(self):
+        if self._goal_handle is not None:
+            print('stop mission')
+            self._goal_handle.cancel_goal_async()
+            self._goal_handle = None
+
+        if self._mission_action_client is not None:
+            print('destroy action client')
+            # Avoids a crash in rclpy/action/client.py
+            self._mission_action_client.destroy()
+            self._mission_action_client = None
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -323,7 +345,7 @@ def main(args=None):
     except KeyboardInterrupt:
         node.get_logger().info('ctrl-C detected, shutting down')
     finally:
-        # TODO add node.abort_action()
+        node.stop_mission_and_destroy_client()
         node.destroy_node()
         rclpy.shutdown()
 

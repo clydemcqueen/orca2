@@ -128,6 +128,12 @@ namespace orca_base
     RCLCPP_INFO(get_logger(), "auv_node ready");
   }
 
+  AUVNode::~AUVNode()
+  {
+    // Abort mission!
+    abort_mission(now());
+  }
+
   void AUVNode::validate_parameters()
   {
     // Sync subscriptions
