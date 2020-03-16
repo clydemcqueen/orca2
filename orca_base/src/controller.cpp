@@ -168,11 +168,11 @@ namespace orca_base
     cxt_{cxt},
     forward_controller_{false, cxt.mtm_fwd_pid_kp_, cxt.mtm_fwd_pid_ki_, cxt.mtm_fwd_pid_kd_},
     vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_}, // Re-use auv_z
-    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_} // Re-us auv_yaw
+    bearing_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_} // Re-use auv_yaw
   {}
 
   // Observations are in the camera_link frame, not the base_link frame
-  // This means that the sub is ~20cm further away than obs.distance, and obs.yaw is exaggerated
+  // This means that the sub is ~20cm further away than obs.distance, and obs.bearing is exaggerated
   // In practice we can ignore this
   void ObservationController::calc(const rclcpp::Duration &d, const Observation &plan, double plan_z,
                                    const Observation &estimate, double estimate_z, const orca::AccelerationBody &ff,
@@ -185,13 +185,13 @@ namespace orca_base
 
     // If we have a fairly close observation run the PID controllers
     // Running the PID controllers from too far away causes a lot of jerk
-    // TODO estimate yaw and distance uncertainty and use these to attenuate the PID controllers
+    // TODO estimate bearing and distance uncertainty and use these to attenuate the PID controllers
     if (estimate.id != NOT_A_MARKER && estimate.distance < 5 /* TODO param */) {
-      yaw_controller_.set_target(plan.yaw);
-      u_bar.yaw = yaw_controller_.calc(estimate.yaw, dt) + ff.yaw;
+      bearing_controller_.set_target(plan.bearing);
+      u_bar.yaw = bearing_controller_.calc(estimate.bearing, dt) + ff.yaw;
 
       forward_controller_.set_target(plan.distance);
-      u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.yaw;
+      u_bar.forward = -forward_controller_.calc(estimate.distance, dt) + ff.forward;
     }
 
     // Always run the vertical PID controller

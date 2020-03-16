@@ -54,13 +54,13 @@ namespace orca_base
   RotateToMarker::RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
     ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_RTM, start, goal)
   {
-    double distance_yaw = std::abs(orca::norm_angle(plan_.o.yaw - goal_.yaw));
+    double distance_yaw = std::abs(orca::norm_angle(plan_.o.bearing - goal_.bearing));
 
     if (distance_yaw > 0) {
       // Plan yaw motion, start phase 1
       plan_obs_fast(true, cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t,
                     yaw_run_, yaw_decel_, yaw_stop_);
-      initial_accel_.yaw = orca::norm_angle(goal_.yaw - plan_.o.yaw) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
+      initial_accel_.yaw = orca::norm_angle(goal_.bearing - plan_.o.bearing) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
@@ -113,7 +113,7 @@ namespace orca_base
     twist_.yaw += accel_.yaw * dt;
 
     // Plan
-    plan_.o.yaw = orca::norm_angle(plan_.o.yaw + twist_.yaw * dt);
+    plan_.o.bearing = orca::norm_angle(plan_.o.bearing + twist_.yaw * dt);
 
     return true;
   }

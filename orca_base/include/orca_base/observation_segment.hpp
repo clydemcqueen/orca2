@@ -10,7 +10,7 @@ namespace orca_base
   //=====================================================================================
   // Observation segments plan motion based on marker observations
   // Observations are in the camera_link frame, not the base_link frame
-  // This means that the sub is ~20cm further away than obs.distance, and obs.yaw is exaggerated
+  // This means that the sub is ~20cm further away than obs.distance, and obs.bearing is exaggerated
   // In practice we can ignore this
   //=====================================================================================
 

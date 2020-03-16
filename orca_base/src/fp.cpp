@@ -22,7 +22,7 @@ namespace orca_base
     c1.y = msg.y1;
     c2.y = msg.y2;
     c3.y = msg.y3;
-    estimate_distance_and_yaw(marker_length, hfov, hres);
+    estimate_distance_and_bearing(marker_length, hfov, hres);
   }
 
   Observation::Observation(int _id, const cv::Point2d &_c0, const cv::Point2d &_c1, const cv::Point2d &_c2,
@@ -33,10 +33,10 @@ namespace orca_base
     c1 = _c1;
     c2 = _c2;
     c3 = _c3;
-    estimate_distance_and_yaw(marker_length, hfov, hres);
+    estimate_distance_and_bearing(marker_length, hfov, hres);
   }
 
-  void Observation::estimate_distance_and_yaw(double marker_length, double hfov, double hres)
+  void Observation::estimate_distance_and_bearing(double marker_length, double hfov, double hres)
   {
     // Assumptions:
     // -- camera is pointed forward
@@ -65,7 +65,7 @@ namespace orca_base
 
     double center_x = (c0.x + c1.x + c2.x + c3.x) / 4;
 
-    yaw = hfov / 2 - center_x * hfov / hres;
+    bearing = hfov / 2 - center_x * hfov / hres;
   }
 
   void Observation::estimate_corners(double marker_length, double hfov, double hres, double vres)
@@ -78,7 +78,7 @@ namespace orca_base
 
     double longest_side = hres / hfov * asin(marker_length / distance);
 
-    double center_x = hres * (0.5 - yaw / hfov);
+    double center_x = hres * (0.5 - bearing / hfov);
     double center_y = vres / 2;
 
     c0.x = center_x - longest_side / 2;
@@ -105,14 +105,14 @@ namespace orca_base
     result.vlam.x3 = c3.x;
     result.vlam.y3 = c3.y;
     result.distance = distance;
-    result.yaw = yaw;
+    result.bearing = bearing;
     return result;
   }
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs)
   {
     return os << std::fixed << std::setprecision(2)
-              << "{marker: " << obs.id << ", distance: " << obs.distance << ", yaw: " << obs.yaw << "}";
+              << "{marker: " << obs.id << ", distance: " << obs.distance << ", bearing: " << obs.bearing << "}";
   }
 
   //=====================================================================================

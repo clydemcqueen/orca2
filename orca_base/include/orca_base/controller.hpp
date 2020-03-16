@@ -145,7 +145,7 @@ namespace orca_base
     // PID controllers
     pid::Controller forward_controller_;
     pid::Controller vertical_controller_;
-    pid::Controller yaw_controller_;
+    pid::Controller bearing_controller_;
 
   public:
 

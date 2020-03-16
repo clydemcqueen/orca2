@@ -27,7 +27,7 @@ namespace orca_base
     goal = start.o;
 
     // Rotate to face the marker
-    goal.yaw = 0;
+    goal.bearing = 0;
     segments_.push_back(std::make_shared<RotateToMarker>(cxt_, plan, goal));
     plan.o = goal;
 

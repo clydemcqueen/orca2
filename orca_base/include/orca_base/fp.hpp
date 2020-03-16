@@ -12,8 +12,12 @@ namespace orca_base
 
   //=====================================================================================
   // Observation -- observation of a marker from a camera
-  // Distance and yaw are relative to camera_link, not base_link
-  // Yaw measurement is pretty reasonable, but distance measurement is noisy
+  //
+  // Distance and bearing are relative to camera_link, not base_link
+  // Bearing measurement is pretty reasonable, but distance measurement is noisy
+  //
+  // Note: "bearing" is similar to the nautical term "relative bearing" BUT it's the
+  // COUNTER-clockwise angle from the heading of the vessel, not the clockwise angle.
   //=====================================================================================
 
   // Should be Observation::NOT_A_MARKER, but sometimes gives a linker error if < C++17
@@ -24,7 +28,7 @@ namespace orca_base
     int id{NOT_A_MARKER};         // Marker ID
     cv::Point2d c0, c1, c2, c3;   // Corners
     double distance{0};           // Estimated distance to marker
-    double yaw{0};                // Yaw to center of marker
+    double bearing{0};            // Bearing to center of marker
 
     Observation()
     = default;
@@ -43,7 +47,7 @@ namespace orca_base
 
   private:
 
-    void estimate_distance_and_yaw(double marker_length, double hfov, double hres);
+    void estimate_distance_and_bearing(double marker_length, double hfov, double hres);
   };
 
   std::ostream &operator<<(std::ostream &os, Observation const &obs);

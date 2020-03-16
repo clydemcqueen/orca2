@@ -152,7 +152,7 @@ namespace orca_base
           if (status_.pose.fp.get_good_observation(cxt_.good_obs_dist_, target_id, plan_target_obs) &&
               estimate.get_good_observation(cxt_.good_obs_dist_, target_id, estimate_target_obs)) {
 
-            if (std::abs(plan_target_obs.yaw - estimate_target_obs.o.yaw) > cxt_.planner_max_obs_yaw_error_) {
+            if (std::abs(plan_target_obs.bearing - estimate_target_obs.o.bearing) > cxt_.planner_max_obs_yaw_error_) {
               RCLCPP_INFO(logger_, "poor pose, target marker in view but yaw error is high, recover");
               create_mtm_planner(estimate_target_obs);
               return AdvanceRC::CONTINUE;
