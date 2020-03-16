@@ -13,9 +13,8 @@
 #include "orca_driver/driver_context.hpp"
 #include "orca_driver/maestro.hpp"
 #include "orca_msgs/msg/barometer.hpp"
-#include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
-#include "orca_msgs/msg/leak.hpp"
+#include "orca_msgs/msg/driver.hpp"
 
 namespace orca_driver
 {
@@ -30,11 +29,6 @@ namespace orca_driver
 
   class DriverNode : public rclcpp::Node
   {
-    enum class Status
-    {
-      none, ready, mission, problem
-    };
-
     // Parameters
     DriverContext cxt_;
     std::vector<Thruster> thrusters_;
@@ -42,9 +36,7 @@ namespace orca_driver
     // State
     maestro::Maestro maestro_;
     orca_msgs::msg::Barometer barometer_msg_;
-    orca_msgs::msg::Battery battery_msg_;
-    orca_msgs::msg::Leak leak_msg_;
-    Status status_;
+    orca_msgs::msg::Driver driver_msg_;
 
     // Control message state
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
@@ -55,8 +47,7 @@ namespace orca_driver
 
     // Publications
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Battery>::SharedPtr battery_pub_;
-    rclcpp::Publisher<orca_msgs::msg::Leak>::SharedPtr leak_pub_;
+    rclcpp::Publisher<orca_msgs::msg::Driver>::SharedPtr driver_pub_;
 
     // LEDs on the UP board
     // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
@@ -69,7 +60,7 @@ namespace orca_driver
 
     void validate_parameters();
 
-    void set_status(Status status);
+    void set_status(uint8_t status);
 
     void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
 

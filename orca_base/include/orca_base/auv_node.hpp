@@ -7,10 +7,9 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_description/parser.hpp"
-#include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
-#include "orca_msgs/msg/leak.hpp"
+#include "orca_msgs/msg/driver.hpp"
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/auv_context.hpp"
@@ -34,6 +33,7 @@ namespace orca_base
 
     // Timeouts, set by parameters
     rclcpp::Duration depth_timeout_{0};
+    rclcpp::Duration driver_timeout_{RCL_S_TO_NS(1)};
     rclcpp::Duration fp_timeout_{0};
 
     // Parsed URDF
@@ -55,12 +55,11 @@ namespace orca_base
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
     // Subscriptions
-    rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Driver>::SharedPtr driver_sub_;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
-    rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
     // Message filter subscriptions
@@ -85,10 +84,11 @@ namespace orca_base
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
 
-    // Validate parameters
     void validate_parameters();
 
     bool depth_ok(const rclcpp::Time &t);
+
+    bool driver_ok(const rclcpp::Time &t);
 
     bool fp_ok(const rclcpp::Time &t);
 
@@ -96,11 +96,7 @@ namespace orca_base
 
     bool ready_to_start_mission();
 
-    // Timer callback
     void timer_callback(bool first);
-
-    // Subscription callbacks
-    void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
 
     /**
      * Abort the active mission and re-publish the message on the output topic
@@ -116,9 +112,9 @@ namespace orca_base
 
     void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);
 
-    void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
+    void driver_callback(orca_msgs::msg::Driver::SharedPtr msg);
 
-    void leak_callback(orca_msgs::msg::Leak::SharedPtr msg);
+    void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
@@ -135,6 +131,8 @@ namespace orca_base
       timer_cb_{this, &AUVNode::timer_callback};
     monotonic::Monotonic<AUVNode *, orca_msgs::msg::Depth::SharedPtr>
       depth_cb_{this, &AUVNode::depth_callback};
+    monotonic::Valid<AUVNode *, orca_msgs::msg::Driver::SharedPtr>
+      driver_cb_{this, &AUVNode::driver_callback};
     monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr>
       fcam_info_cb_{this, &AUVNode::fcam_info_callback};
     monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr>

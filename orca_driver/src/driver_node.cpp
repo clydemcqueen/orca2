@@ -14,6 +14,8 @@ namespace orca_driver
   // DriverNode
   //=============================================================================
 
+  constexpr int QUEUE_SIZE = 10;
+
   DriverNode::DriverNode() :
     Node{"orca_driver"},
     barometer_{0}
@@ -43,14 +45,13 @@ namespace orca_driver
     }
 
     // Publish battery and leak messages
-    barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", 1);
-    battery_pub_ = create_publisher<orca_msgs::msg::Battery>("battery", 1);
-    leak_pub_ = create_publisher<orca_msgs::msg::Leak>("leak", 1);
+    barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", QUEUE_SIZE);
+    driver_pub_ = create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);
 
     // Subscribe to control messages
     using std::placeholders::_1;
     auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
-    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", 1, control_cb);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("control", QUEUE_SIZE, control_cb);
 
     // Spin timer
     // TODO move to param
@@ -66,23 +67,23 @@ namespace orca_driver
     DRIVER_NODE_ALL_PARAMS
   }
 
-  void DriverNode::set_status(Status status)
+  void DriverNode::set_status(uint8_t status)
   {
-    if (status != status_) {
-      status_ = status;
+    if (status != driver_msg_.status) {
+      driver_msg_.status = status;
 
       led_ready_.setBrightness(0);
       led_mission_.setBrightness(0);
       led_problem_.setBrightness(0);
 
-      switch (status_) {
-        case Status::ready:
+      switch (driver_msg_.status) {
+        case orca_msgs::msg::Driver::STATUS_OK:
           led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
           break;
-        case Status::mission:
+        case orca_msgs::msg::Driver::STATUS_OK_MISSION:
           led_mission_.setBrightness(led_mission_.readMaxBrightness() / 2);
           break;
-        case Status::problem:
+        case orca_msgs::msg::Driver::STATUS_ABORT:
           led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
           break;
         default:
@@ -99,9 +100,9 @@ namespace orca_driver
 
     control_msg_time_ = msg->header.stamp;
 
-    set_status(msg->mode == msg->AUV ? Status::mission : Status::ready);
-
     if (maestro_.ready()) {
+      set_status(msg->mode == msg->AUV ? orca_msgs::msg::Driver::STATUS_OK_MISSION : orca_msgs::msg::Driver::STATUS_OK);
+
       if (!maestro_.setPWM(static_cast<uint8_t>(cxt_.tilt_channel_), msg->camera_tilt_pwm)) {
         RCLCPP_ERROR(get_logger(), "failed to set camera tilt");
       }
@@ -130,7 +131,7 @@ namespace orca_driver
       return;
     }
 
-    if (!read_barometer() || !read_battery() || !read_leak() || battery_msg_.low_battery || leak_msg_.leak_detected) {
+    if (!read_barometer() || !read_battery() || !read_leak() || driver_msg_.low_battery || driver_msg_.leak_detected) {
       // Huge problem, we're done
       abort();
       return;
@@ -145,8 +146,9 @@ namespace orca_driver
     }
 
     barometer_pub_->publish(barometer_msg_);
-    battery_pub_->publish(battery_msg_);
-    leak_pub_->publish(leak_msg_);
+
+    driver_msg_.header.stamp = now();
+    driver_pub_->publish(driver_msg_);
   }
 
   // Read barometer sensor, return true if successful
@@ -162,20 +164,18 @@ namespace orca_driver
   // Read battery sensor, return true if successful
   bool DriverNode::read_battery()
   {
-    battery_msg_.header.stamp = now();
-
     double value = 0.0;
     if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
-      battery_msg_.voltage = value * cxt_.voltage_multiplier_;
-      battery_msg_.low_battery = static_cast<uint8_t>(battery_msg_.voltage < cxt_.voltage_min_);
-      if (battery_msg_.low_battery) {
-        RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", battery_msg_.voltage, cxt_.voltage_min_);
+      driver_msg_.voltage = value * cxt_.voltage_multiplier_;
+      driver_msg_.low_battery = static_cast<uint8_t>(driver_msg_.voltage < cxt_.voltage_min_);
+      if (driver_msg_.low_battery) {
+        RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", driver_msg_.voltage, cxt_.voltage_min_);
       }
       return true;
     } else {
       RCLCPP_ERROR(get_logger(), "can't read battery");
-      battery_msg_.voltage = 0;
-      battery_msg_.low_battery = 1;
+      driver_msg_.voltage = 0;
+      driver_msg_.low_battery = 1;
       return false;
     }
   }
@@ -183,18 +183,16 @@ namespace orca_driver
   // Read leak sensor, return true if successful
   bool DriverNode::read_leak()
   {
-    leak_msg_.header.stamp = now();
-
     bool value = 0.0;
     if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
-      leak_msg_.leak_detected = static_cast<uint8_t>(value);
-      if (leak_msg_.leak_detected) {
+      driver_msg_.leak_detected = static_cast<uint8_t>(value);
+      if (driver_msg_.leak_detected) {
         RCLCPP_ERROR(get_logger(), "leak detected");
       }
       return true;
     } else {
       RCLCPP_ERROR(get_logger(), "can't read leak sensor");
-      leak_msg_.leak_detected = 1;
+      driver_msg_.leak_detected = 1;
       return false;
     }
   }
@@ -214,7 +212,7 @@ namespace orca_driver
   void DriverNode::abort()
   {
     RCLCPP_ERROR(get_logger(), "aborting dive");
-    set_status(Status::problem);
+    set_status(orca_msgs::msg::Driver::STATUS_ABORT);
     all_stop();
     maestro_.disconnect();
   }
@@ -266,37 +264,37 @@ namespace orca_driver
   bool DriverNode::connect_battery()
   {
     if (!read_battery()) {
-      abort();
+      RCLCPP_ERROR(get_logger(), "can't read the battery, correct bus? member of i2c?");
       return false;
     }
 
-    RCLCPP_INFO(get_logger(), "voltage is %g", battery_msg_.voltage);
-    return !battery_msg_.low_battery;
+    RCLCPP_INFO(get_logger(), "voltage is %g", driver_msg_.voltage);
+    return !driver_msg_.low_battery;
   }
 
   // Connect to the leak sensor and run pre-dive checks, return true if successful
   bool DriverNode::connect_leak()
   {
     if (!read_leak()) {
-      abort();
+      RCLCPP_ERROR(get_logger(), "can't read the leak sensor");
       return false;
     }
 
-    RCLCPP_INFO(get_logger(), "leak status is %d", leak_msg_.leak_detected);
-    return !leak_msg_.leak_detected;
+    RCLCPP_INFO(get_logger(), "leak status is %d", driver_msg_.leak_detected);
+    return !driver_msg_.leak_detected;
   }
 
   // Connect to all hardware and run pre-dive checks, return true if we're ready to dive
   bool DriverNode::connect()
   {
-    set_status(Status::none);
+    set_status(orca_msgs::msg::Driver::STATUS_NONE);
     if (!connect_barometer() || !connect_battery() || !connect_controller() || !connect_leak()) {
       abort();
       return false;
     }
 
     RCLCPP_INFO(get_logger(), "hardware initialized, pre-dive checks passed");
-    set_status(Status::ready);
+    set_status(orca_msgs::msg::Driver::STATUS_OK);
     return true;
   }
 
@@ -304,7 +302,7 @@ namespace orca_driver
   void DriverNode::disconnect()
   {
     RCLCPP_INFO(get_logger(), "normal exit");
-    set_status(Status::none);
+    set_status(orca_msgs::msg::Driver::STATUS_NONE);
     all_stop();
     maestro_.disconnect();
   }

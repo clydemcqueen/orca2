@@ -79,7 +79,7 @@ namespace gazebo
         baro_topic = sdf->GetElement("baro_topic")->Get<std::string>();
       }
       RCLCPP_INFO(node_->get_logger(), "baro topic: %s", baro_topic.c_str());
-      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 1);
+      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 10);
 
       if (sdf->HasElement("fluid_density")) {
         fluid_density = sdf->GetElement("fluid_density")->Get<double>();

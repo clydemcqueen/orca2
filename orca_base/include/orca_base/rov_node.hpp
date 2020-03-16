@@ -7,9 +7,8 @@
 
 #include "orca_msgs/action/mission.hpp"
 #include "orca_msgs/msg/barometer.hpp"
-#include "orca_msgs/msg/battery.hpp"
 #include "orca_msgs/msg/control.hpp"
-#include "orca_msgs/msg/leak.hpp"
+#include "orca_msgs/msg/driver.hpp"
 #include "orca_shared/geometry.hpp"
 #include "orca_shared/monotonic.hpp"
 
@@ -50,6 +49,7 @@ namespace orca_base
 
     // Timeouts will be set by parameters
     rclcpp::Duration baro_timeout_{0};
+    rclcpp::Duration driver_timeout_{RCL_S_TO_NS(1)};
     rclcpp::Duration joy_timeout_{0};
     std::chrono::milliseconds spin_period_{0};
 
@@ -71,10 +71,9 @@ namespace orca_base
 
     // Subscriptions
     rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
-    rclcpp::Subscription<orca_msgs::msg::Battery>::SharedPtr battery_sub_;
+    rclcpp::Subscription<orca_msgs::msg::Driver>::SharedPtr driver_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
-    rclcpp::Subscription<orca_msgs::msg::Leak>::SharedPtr leak_sub_;
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
@@ -91,6 +90,8 @@ namespace orca_base
 
     bool baro_ok(const rclcpp::Time &t);
 
+    bool driver_ok(const rclcpp::Time &t);
+
     bool joy_ok(const rclcpp::Time &t);
 
     // Timer callback
@@ -99,16 +100,15 @@ namespace orca_base
     // Subscription callbacks
     void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg);
 
-    void battery_callback(orca_msgs::msg::Battery::SharedPtr msg);
-
     void goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
     void joy_callback(sensor_msgs::msg::Joy::SharedPtr msg, bool first);
 
-    void leak_callback(orca_msgs::msg::Leak::SharedPtr msg);
+    void driver_callback(orca_msgs::msg::Driver::SharedPtr msg);
 
     // Callback wrappers
     monotonic::Valid<ROVNode *, orca_msgs::msg::Barometer::SharedPtr> baro_cb_{this, &ROVNode::baro_callback};
+    monotonic::Valid<ROVNode *, orca_msgs::msg::Driver::SharedPtr> driver_cb_{this, &ROVNode::driver_callback};
     monotonic::Monotonic<ROVNode *, sensor_msgs::msg::Joy::SharedPtr> joy_cb_{this, &ROVNode::joy_callback};
 
     // Publications
@@ -142,7 +142,8 @@ namespace orca_base
       KEEP_STATION, GO_TO_POSE, RANDOM_MARKERS
     };
 
-    void start_mission(const rclcpp::Time &msg_time, Mission mission, const geometry_msgs::msg::Pose &pose = geometry_msgs::msg::Pose{});
+    void start_mission(const rclcpp::Time &msg_time, Mission mission,
+                       const geometry_msgs::msg::Pose &pose = geometry_msgs::msg::Pose{});
 
     void stop_mission();
 

@@ -36,11 +36,10 @@ rosidl_generate_interfaces(
   orca_msgs
   action/Mission.action
   msg/Barometer.msg
-  msg/Battery.msg
   msg/Control.msg
   msg/Depth.msg
+  msg/Driver.msg
   msg/Efforts.msg
-  msg/Leak.msg
   msg/Observation.msg
   DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )

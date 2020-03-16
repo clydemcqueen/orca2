@@ -6,6 +6,7 @@
 
 #include "orca_shared/pwm.hpp"
 #include "orca_msgs/msg/control.hpp"
+#include "orca_msgs/msg/driver.hpp"
 
 /* A simple thruster plugin. Usage:
  *
@@ -45,12 +46,15 @@ namespace gazebo
   constexpr double T200_MAX_POS_FORCE = 50;
   constexpr double T200_MAX_NEG_FORCE = 40;
 
-  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(3)}; // All-stop if control messages stop
+  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(1)};   // All-stop if control messages stop
+  const rclcpp::Duration DRIVER_PERIOD{RCL_MS_TO_NS(100)};  // Periodically publish driver status messages
 
   bool valid(const rclcpp::Time &t)
   {
     return t.nanoseconds() > 0;
   }
+
+  constexpr int QUEUE_SIZE = 10;
 
   class OrcaThrusterPlugin : public ModelPlugin
   {
@@ -63,9 +67,13 @@ namespace gazebo
     // Pointer to the GazeboROS node
     gazebo_ros::Node::SharedPtr node_;
 
-    // ROS subscriber
+    // Subscribe to control messages
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Time control_msg_time_;
+
+    // Publish driver status messages
+    rclcpp::Publisher<orca_msgs::msg::Driver>::SharedPtr driver_pub_;
+    orca_msgs::msg::Driver driver_msg_;
 
     // Model for each thruster
     struct Thruster
@@ -110,7 +118,15 @@ namespace gazebo
       // Subscribe to the topic
       // Note the use of std::placeholders::_1 vs. the included _1 from Boost
       control_sub_ = node_->create_subscription<orca_msgs::msg::Control>(
-        ros_topic, 1, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
+        ros_topic, QUEUE_SIZE, std::bind(&OrcaThrusterPlugin::OnRosMsg, this, std::placeholders::_1));
+
+      // Periodically publish driver status messages
+      // TODO topic should be param
+      driver_pub_ = node_->create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);
+      driver_msg_.voltage = 14;
+      driver_msg_.low_battery = false;
+      driver_msg_.leak_detected = false;
+      driver_msg_.status = orca_msgs::msg::Driver::STATUS_OK;
 
       // Listen to the update event. This event is broadcast every simulation iteration.
       update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&OrcaThrusterPlugin::OnUpdate, this, _1));
@@ -156,6 +172,10 @@ namespace gazebo
           thrusters_[i].effort = orca::pwm_to_effort(msg->thruster_pwm[i]);
         }
       }
+
+      driver_msg_.status = msg->mode == orca_msgs::msg::Control::AUV ?
+                           orca_msgs::msg::Driver::STATUS_OK_MISSION :
+                           orca_msgs::msg::Driver::STATUS_OK;
     }
 
     // Stop thrusters
@@ -175,16 +195,23 @@ namespace gazebo
       // Hack: use wall time
       auto wall_time = std::chrono::high_resolution_clock::now();
       rclcpp::Time update_time{wall_time.time_since_epoch().count(), RCL_ROS_TIME};
-      if (valid(control_msg_time_) && update_time - control_msg_time_ > CONTROL_TIMEOUT) {
 #else
-      if (valid(control_msg_time_) && node_->now() - control_msg_time_ > CONTROL_TIMEOUT) {
+      rclcpp::Time update_time = node_->now();
 #endif
+
+      if (valid(control_msg_time_) && update_time - control_msg_time_ > CONTROL_TIMEOUT) {
         // We were receiving control messages, but they stopped.
         // This is normal, but it might also indicate that a node died.
         // RCLCPP_INFO isn't flushed right away, so use iostream directly.
         std::cout << "OrcaThrusterPlugin control timeout" << std::endl;
         control_msg_time_ = rclcpp::Time();
         AllStop();
+      }
+
+      rclcpp::Time driver_msg_time{driver_msg_.header.stamp};
+      if (!valid(driver_msg_time) || update_time - driver_msg_time > DRIVER_PERIOD) {
+        driver_msg_.header.stamp = update_time;
+        driver_pub_->publish(driver_msg_);
       }
 
       for (Thruster t : thrusters_) {

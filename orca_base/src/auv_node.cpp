@@ -48,11 +48,11 @@ namespace orca_base
   AUVNode::AUVNode() : Node{"auv_node"}, map_{get_logger(), cxt_}
   {
     // Suppress IDE warnings
-    (void) battery_sub_;
+    (void) control_sub_;
     (void) depth_sub_;
+    (void) driver_sub_;
     (void) fcam_info_sub_;
     (void) goal_sub_;
-    (void) leak_sub_;
     (void) map_sub_;
     (void) obs_sub_;
     (void) spin_timer_;
@@ -87,6 +87,9 @@ namespace orca_base
     depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
       "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
       { this->depth_cb_.call(msg); });
+    driver_sub_ = create_subscription<orca_msgs::msg::Driver>(
+      "driver_status", QUEUE_SIZE, [this](const orca_msgs::msg::Driver::SharedPtr msg) -> void
+      { this->driver_cb_.call(msg); });
     fcam_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
       "fcam_info", camera_info_qos, [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) -> void
       { this->fcam_info_cb_.call(msg); });
@@ -97,12 +100,8 @@ namespace orca_base
     using namespace std::placeholders;
 
     // Other subscriptions
-    auto battery_cb = std::bind(&AUVNode::battery_callback, this, _1);
-    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
     auto control_cb = std::bind(&AUVNode::control_callback, this, _1);
-    control_sub_ = create_subscription<orca_msgs::msg::Control>("rov_control", 1, control_cb);
-    auto leak_cb = std::bind(&AUVNode::leak_callback, this, _1);
-    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
+    control_sub_ = create_subscription<orca_msgs::msg::Control>("rov_control", QUEUE_SIZE, control_cb);
 
     // Action server
     mission_server_ = rclcpp_action::create_server<MissionAction>(
@@ -191,6 +190,9 @@ namespace orca_base
   bool AUVNode::depth_ok(const rclcpp::Time &t)
   { return depth_cb_.receiving() && t - depth_cb_.prev() < depth_timeout_; }
 
+  bool AUVNode::driver_ok(const rclcpp::Time &t)
+  { return driver_cb_.receiving() && t - driver_cb_.prev() < driver_timeout_; }
+
   bool AUVNode::fp_ok(const rclcpp::Time &t)
   { return monotonic::valid(estimate_.t) && t - estimate_.t < fp_timeout_; }
 
@@ -202,9 +204,9 @@ namespace orca_base
     // -- not currently in a mission
     // -- have a map
     // -- have camera info
-    // -- getting depth and fiducial messages
+    // -- getting driver, depth and fiducial messages
     // -- have a good pose or a good observation
-    return !mission_ && map_.ok() && cam_info_ok() && depth_ok(now()) && fp_ok(now()) &&
+    return !mission_ && map_.ok() && cam_info_ok() && driver_ok(now()) && depth_ok(now()) && fp_ok(now()) &&
            (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
   }
 
@@ -217,6 +219,12 @@ namespace orca_base
 
     auto curr_time = timer_cb_.curr();
     auto prev_time = timer_cb_.prev();
+
+    // If the driver stopped sending status messages, then abort the mission
+    if (mission_ && !driver_ok(curr_time)) {
+      RCLCPP_ERROR(get_logger(), "lost driver messages, abort mission");
+      abort_mission(curr_time);
+    }
 
     // If we're expecting steady depth messages, but they stop, then abort the mission
     if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(curr_time)) {
@@ -238,14 +246,6 @@ namespace orca_base
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == TIMER_DRIVEN) {
       auv_advance(curr_time, curr_time - prev_time);
-    }
-  }
-
-  void AUVNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
-  {
-    if (mission_ && msg->low_battery) {
-      RCLCPP_ERROR(get_logger(), "low battery (%g volts), abort mission", msg->voltage);
-      abort_mission(msg->header.stamp);
     }
   }
 
@@ -275,17 +275,18 @@ namespace orca_base
     }
   }
 
+  void AUVNode::driver_callback(const orca_msgs::msg::Driver::SharedPtr msg)
+  {
+    if (mission_ && !(msg->status == orca_msgs::msg::Driver::STATUS_OK ||
+                      msg->status == orca_msgs::msg::Driver::STATUS_OK_MISSION)) {
+      RCLCPP_ERROR(get_logger(), "driver problem, abort mission");
+      abort_mission(msg->header.stamp);
+    }
+  }
+
   void AUVNode::fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg)
   {
     fcam_model_.fromCameraInfo(msg);
-  }
-
-  void AUVNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
-  {
-    if (mission_ && msg->leak_detected) {
-      RCLCPP_ERROR(get_logger(), "leak detected, abort mission");
-      abort_mission(msg->header.stamp);
-    }
   }
 
   void AUVNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)

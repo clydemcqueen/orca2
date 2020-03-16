@@ -49,15 +49,16 @@ namespace orca_base
   // ROVNode
   //=============================================================================
 
+  constexpr int QUEUE_SIZE = 10;
+
   ROVNode::ROVNode() : Node{"rov_node"}
   {
     // Suppress IDE warnings
     (void) baro_sub_;
-    (void) battery_sub_;
     (void) goal_sub_;
     (void) joy_sub_;
-    (void) leak_sub_;
     (void) spin_timer_;
+    (void) driver_sub_;
 
     // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
@@ -79,28 +80,27 @@ namespace orca_base
                                                            cxt_.rov_pressure_pid_kd_);
 
     // Publications
-    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", 1);
+    control_pub_ = create_publisher<orca_msgs::msg::Control>("control", QUEUE_SIZE);
 
     // Camera info may be published with a different QoS
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
 
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-      "barometer", 1, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
+      "barometer", QUEUE_SIZE, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       { this->baro_cb_.call(msg); });
+    driver_sub_ = create_subscription<orca_msgs::msg::Driver>(
+      "driver_status", QUEUE_SIZE, [this](const orca_msgs::msg::Driver::SharedPtr msg) -> void
+      { this->driver_cb_.call(msg); });
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
-      "joy", 1, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
+      "joy", QUEUE_SIZE, [this](const sensor_msgs::msg::Joy::SharedPtr msg) -> void
       { this->joy_cb_.call(msg); });
 
     using namespace std::placeholders;
 
     // Other subscriptions
-    auto battery_cb = std::bind(&ROVNode::battery_callback, this, _1);
-    battery_sub_ = create_subscription<orca_msgs::msg::Battery>("battery", 1, battery_cb);
     auto goal_cb = std::bind(&ROVNode::goal_callback, this, _1);
-    goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1, goal_cb);
-    auto leak_cb = std::bind(&ROVNode::leak_callback, this, _1);
-    leak_sub_ = create_subscription<orca_msgs::msg::Leak>("leak", 1, leak_cb);
+    goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", QUEUE_SIZE, goal_cb);
 
     // Mission action client
     mission_client_ = rclcpp_action::create_client<MissionAction>(
@@ -148,6 +148,9 @@ namespace orca_base
   bool ROVNode::baro_ok(const rclcpp::Time &t)
   { return baro_cb_.receiving() && t - baro_cb_.prev() < baro_timeout_; }
 
+  bool ROVNode::driver_ok(const rclcpp::Time &t)
+  { return driver_cb_.receiving() && t - driver_cb_.prev() < driver_timeout_; }
+
   bool ROVNode::joy_ok(const rclcpp::Time &t)
   { return joy_cb_.receiving() && t - joy_cb_.prev() < joy_timeout_; }
 
@@ -157,11 +160,11 @@ namespace orca_base
     pressure_ = msg->pressure;
   }
 
-  // New battery reading
-  void ROVNode::battery_callback(const orca_msgs::msg::Battery::SharedPtr msg)
+  void ROVNode::driver_callback(const orca_msgs::msg::Driver::SharedPtr msg)
   {
-    if (msg->low_battery) {
-      RCLCPP_ERROR(get_logger(), "low battery (%g volts), disarming", msg->voltage);
+    if ((rov_mode() || auv_mode()) && !(msg->status == orca_msgs::msg::Driver::STATUS_OK ||
+                                        msg->status == orca_msgs::msg::Driver::STATUS_OK_MISSION)) {
+      RCLCPP_ERROR(get_logger(), "driver problem, disarm");
       disarm(msg->header.stamp);
     }
   }
@@ -173,6 +176,12 @@ namespace orca_base
     auto spin_time = now();
     if (spin_time.nanoseconds() <= 0) {
       return;
+    }
+
+    // If the driver stopped sending status messages, disarm
+    if ((rov_mode() || auv_mode()) && !driver_ok(spin_time)) {
+      RCLCPP_ERROR(get_logger(), "lost driver messages, disarm");
+      disarm(spin_time);
     }
 
     // Various timeouts
@@ -264,15 +273,6 @@ namespace orca_base
     }
 
     joy_msg_ = *msg;
-  }
-
-  // Leak detector
-  void ROVNode::leak_callback(const orca_msgs::msg::Leak::SharedPtr msg)
-  {
-    if (msg->leak_detected) {
-      RCLCPP_ERROR(get_logger(), "leak detected, disarming");
-      disarm(msg->header.stamp);
-    }
   }
 
   void ROVNode::goal_response_callback(std::shared_future<MissionHandle::SharedPtr> future)
