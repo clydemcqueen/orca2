@@ -15,6 +15,9 @@ namespace orca_filter
 #define FILTER_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
+  CXT_MACRO_MEMBER(timeout_open_water_ms, int, 300)           /* Flip to a depth filter when we hit open water  */ \
+  CXT_MACRO_MEMBER(timeout_outlier_ms, int, 300)              /* Reset the filter if poses are consistently rejected as outliers  */ \
+  \
   CXT_MACRO_MEMBER(urdf_file, std::string, "install/orca_description/share/orca_description/urdf/orca.urdf") \
   CXT_MACRO_MEMBER(urdf_forward_camera_joint, std::string, "forward_camera_frame_joint") \
   CXT_MACRO_MEMBER(urdf_left_camera_joint, std::string, "left_camera_frame_joint") \
@@ -39,6 +42,14 @@ namespace orca_filter
   CXT_MACRO_MEMBER(outlier_distance, double, 4.0)             /* Reject measurements > n std devs from estimate  */ \
   \
   CXT_MACRO_MEMBER(four_dof, bool, false)                     /* Experiment: run 4dof filter instead of 6dof filter  */ \
+  CXT_MACRO_MEMBER(min_dt, double, 0.001)                     /* Minimum dt between message timestamps  */ \
+  CXT_MACRO_MEMBER(max_dt, double, 0.3)                       /* Maxiumum dt between message timestamps  */ \
+  CXT_MACRO_MEMBER(default_dt, double, 0.1)                   /* If dt > max, use default instead  */ \
+  CXT_MACRO_MEMBER(always_publish_odom, bool, false)          /* False: don't publish odom from depth messages in a pose filter  */ \
+  \
+  CXT_MACRO_MEMBER(ukf_alpha, double, 0.001)                  /* UKF alpha -- see UKF  */ \
+  CXT_MACRO_MEMBER(ukf_beta, double, 2.0)                     /* UKF beta -- see UKF  */ \
+  CXT_MACRO_MEMBER(ukf_kappa, int, 0)                         /* UKF kappa -- see UKF  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

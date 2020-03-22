@@ -46,8 +46,8 @@ namespace gazebo
   constexpr double T200_MAX_POS_FORCE = 50;
   constexpr double T200_MAX_NEG_FORCE = 40;
 
-  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(1)};   // All-stop if control messages stop
-  const rclcpp::Duration DRIVER_PERIOD{RCL_MS_TO_NS(100)};  // Periodically publish driver status messages
+  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(1)};   // All-stop if control messages stop TODO param
+  const rclcpp::Duration DRIVER_PERIOD{RCL_MS_TO_NS(100)};  // Periodically publish driver status messages TODO param
 
   bool valid(const rclcpp::Time &t)
   {

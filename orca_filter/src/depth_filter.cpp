@@ -64,8 +64,11 @@ namespace orca_filter
     flatten_6x6_covar(m, pose_covar, 0);
   }
 
-  DepthFilter::DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
-    FilterBase{logger, cxt, DEPTH_STATE_DIM}
+  DepthFilter::DepthFilter(const rclcpp::Logger &logger,
+                           const FilterContext &cxt,
+                           rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                           rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
+    FilterBase{Type::depth, logger, cxt, filtered_odom_pub, tf_pub, DEPTH_STATE_DIM}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(DEPTH_STATE_DIM, DEPTH_STATE_DIM) * 0.01);
 

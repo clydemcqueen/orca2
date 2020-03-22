@@ -39,7 +39,7 @@ include_directories(
 )
 
 #=============
-# Filter node
+# Depth node
 #=============
 
 add_executable(
@@ -61,10 +61,11 @@ ament_target_dependencies(
 
 add_executable(
   filter_node
+  src/depth_filter.cpp
   src/filter_node.cpp
   src/filter_base.cpp
-  src/depth_filter.cpp
   src/four_filter.cpp
+  src/measurement.cpp
   src/pose_filter.cpp
 )
 

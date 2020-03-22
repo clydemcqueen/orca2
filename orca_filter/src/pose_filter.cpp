@@ -150,8 +150,11 @@ namespace orca_filter
     return mean;
   }
 
-  PoseFilter::PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
-    FilterBase{logger, cxt, POSE_STATE_DIM}
+  PoseFilter::PoseFilter(const rclcpp::Logger &logger,
+                         const FilterContext &cxt,
+                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
+    FilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(POSE_STATE_DIM, POSE_STATE_DIM) * 0.01);
 

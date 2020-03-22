@@ -1,10 +1,14 @@
 /auv_node:
   ros__parameters:
-    loop_driver: 0
-    filtered_odom: false
-    fuse_depth: true
-    publish_tf: true
     param_fluid_density: 997.0
+
+    # Timer is stable w/ or w/o filter:
+    loop_driver: 0
+
+    # With filter_node:
+    filtered_odom: true
+    fuse_depth: false
+    publish_tf: false
 
     # If xy distance is > this, then build a long plan (rotate, run, rotate)
     # Otherwise build a short plan (move in all DoF at once)

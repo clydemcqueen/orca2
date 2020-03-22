@@ -5,7 +5,8 @@
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "rclcpp/logger.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "tf2_msgs/msg/tf_message.hpp"
 #include "ukf/ukf.hpp"
 
 #include "orca_msgs/msg/depth.hpp"
@@ -64,6 +65,12 @@ namespace orca_filter
 
   struct Measurement
   {
+    enum class Type
+    {
+      depth, four, six
+    };
+
+    Type type_;
     rclcpp::Time stamp_;
     Eigen::VectorXd z_;
     Eigen::MatrixXd R_;
@@ -71,7 +78,7 @@ namespace orca_filter
     ukf::ResidualFn r_z_fn_;
     ukf::UnscentedMeanFn mean_z_fn_;
 
-    // Must be default constructible to be used in a priority queue
+    // Must be default constructable to be used in a priority queue
     Measurement() = default;
 
     // 1dof z measurement from a depth message
@@ -88,6 +95,9 @@ namespace orca_filter
     {
       return a.stamp_ > b.stamp_;
     }
+
+    // Type name
+    std::string name();
   };
 
   //=============================================================================
@@ -100,7 +110,7 @@ namespace orca_filter
     Eigen::VectorXd x_;
     Eigen::MatrixXd P_;
 
-    // Must be default constructible
+    // Must be default constructable
     State() = default;
 
     State(const rclcpp::Time &stamp, Eigen::VectorXd x, Eigen::MatrixXd P) :
@@ -114,12 +124,24 @@ namespace orca_filter
 
   class FilterBase
   {
+  protected:
+
+    enum class Type
+    {
+      depth, four, pose
+    };
+
+  private:
+
     const rclcpp::Duration HISTORY_LENGTH{RCL_S_TO_NS(1)};
 
-    int state_dim_;
+    Type type_;                                 // Depth filter vs four filter vs pose filter
+    int state_dim_;                             // Number of dimensions, 1 for depth filter, etc.
+    rclcpp::Time filter_time_;                  // Current time of filter
+    rclcpp::Time odom_time_;                    // Timestamp of last publish odom message
 
-    // Current time of filter
-    rclcpp::Time filter_time_;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     // Measurement priority queue, sorted from oldest to newest
     std::priority_queue<Measurement, std::vector<Measurement>, Measurement> measurement_q_;
@@ -130,14 +152,35 @@ namespace orca_filter
     // Measurement history, ordered from oldest to newest
     std::deque<Measurement> measurement_history_;
 
-    // Call filter_->predict
+    /**
+     * Call filter_->predict
+     *
+     * @param stamp Predict state at this timestamp
+     * @param u_bar Control input
+     */
     void predict(const rclcpp::Time &stamp, const orca::Acceleration &u_bar);
 
-    // Process all messages in the queue, return true if there's an odometry message to publish
-    bool process(const rclcpp::Time &stamp, const orca::Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom);
+    /**
+     * Process all messages in the queue and publish odometry as necessary
+     *
+     * @param stamp Timestamp of most recent message, used to trim state history and measurement history
+     * @param u_bar Control input
+     * @param filtered_odom
+     * @return True if at least one measurement was an inlier and the filter is good
+     */
+    bool process_measurements(const rclcpp::Time &stamp, const orca::Acceleration &u_bar,
+                              nav_msgs::msg::Odometry &filtered_odom);
 
-    // Rewind to a previous state
+    /**
+     * Rewind the filter to a previous state
+     *
+     * @param stamp Rewind to this time
+     * @return Return true if rewind was successful (i.e., history went back that far)
+     */
     bool rewind(const rclcpp::Time &stamp);
+
+    // Publish odometry
+    void publish_odom(nav_msgs::msg::Odometry &odom);
 
   protected:
 
@@ -149,29 +192,71 @@ namespace orca_filter
     // Reset the filter with an Eigen vector
     void reset(const Eigen::VectorXd &x);
 
+    /**
+     * Generate an odometry message from the current filter state
+     *
+     * @param filtered_odom Output: odometry message
+     */
     virtual void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) = 0;
 
-    // Convert a Depth message to a Measurement
+    /**
+     * Convert a Depth message to a Measurement
+     *
+     * @param depth Incoming message
+     * @return Measurement
+     */
     virtual Measurement to_measurement(const orca_msgs::msg::Depth &depth) const = 0;
 
-    // Convert PoseWithCovarianceStamped message to a Measurement
+    /**
+     * Convert PoseWithCovarianceStamped message to a Measurement
+     *
+     * @param pose Incoming message
+     * @return Measurement
+     */
     virtual Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const = 0;
 
   public:
 
-    explicit FilterBase(const rclcpp::Logger &logger, const FilterContext &cxt_, int state_dim);
+    explicit FilterBase(Type type,
+                        const rclcpp::Logger &logger,
+                        const FilterContext &cxt,
+                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
+                        int state_dim);
 
-    // Reset the filter
+    /**
+     * Reset the filter with the default pose (0, 0, 0) and high uncertainty
+     */
     void reset();
 
-    // Reset the filter with a pose
+    /**
+     * Reset the filter with an initial pose and high uncertainty
+     *
+     * Problem: if the first pose is an outlier the filter may settle on a bad solution and reject
+     * all other poses. In theory this can be prevented by setting the uncertainty correctly. In practice
+     * calculating uncertainty can be difficult, and the uncertainty might not be Gaussian. For Orca2
+     * the poses are generated by OpenCV ArUco detection and SolvePnP, and the uncertainty is decidedly
+     * non-Gaussian.
+     *
+     * Workaround: initialize the filter with a reasonable estimate -- perhaps from the motion planner.
+     *
+     * @param pose The initial pose
+     */
     virtual void reset(const geometry_msgs::msg::Pose &pose) = 0;
 
     // Is the filter valid?
     bool filter_valid()
     { return filter_.valid(); }
 
-    // Process a message
+    /**
+     * Send a message to the filter, and publish updated odometry
+     *
+     * @tparam T Type of message to process, each type requires a corresponding to_measurement(T) function
+     * @param msg Message to process
+     * @param u_bar Control input
+     * @param filtered_odom Filtered odometry output
+     * @return True if there was at least one inlier and the filter is good
+     */
     template<typename T>
     bool process_message(const T &msg, const orca::Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
     {
@@ -186,7 +271,7 @@ namespace orca_filter
       measurement_q_.push(to_measurement(msg));
 
       // Process one or more measurements
-      return process(stamp, u_bar, filtered_odom);
+      return process_measurements(stamp, u_bar, filtered_odom);
     }
   };
 
@@ -204,7 +289,10 @@ namespace orca_filter
 
   public:
 
-    explicit DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt_);
+    explicit DepthFilter(const rclcpp::Logger &logger,
+                         const FilterContext &cxt,
+                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
     void reset(const geometry_msgs::msg::Pose &pose) override;
@@ -224,7 +312,10 @@ namespace orca_filter
 
   public:
 
-    explicit FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
+    explicit FourFilter(const rclcpp::Logger &logger,
+                        const FilterContext &cxt,
+                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
     void reset(const geometry_msgs::msg::Pose &pose) override;
@@ -240,7 +331,10 @@ namespace orca_filter
 
   public:
 
-    explicit PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt);
+    explicit PoseFilter(const rclcpp::Logger &logger,
+                        const FilterContext &cxt,
+                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
     void reset(const geometry_msgs::msg::Pose &pose) override;

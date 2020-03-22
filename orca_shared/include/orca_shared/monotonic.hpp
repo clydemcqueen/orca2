@@ -40,6 +40,8 @@ namespace monotonic
       if (valid(curr_)) {
         process_(node_, msg);
         prev_ = curr_;
+      } else {
+        // std::cout << "valid: timestamp is 0" << std::endl;
       }
     }
 
@@ -85,11 +87,15 @@ namespace monotonic
           if (curr_ > prev_) {
             process_(node_, msg, false);
             prev_ = curr_;
+          } else {
+            // std::cout << "monotonic: timestamp is out of order" << std::endl;
           }
         } else {
           process_(node_, msg, true);
           prev_ = curr_;
         }
+      } else {
+        // std::cout << "monotonic: timestamp is 0" << std::endl;
       }
     }
 

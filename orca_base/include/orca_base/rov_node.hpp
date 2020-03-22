@@ -49,7 +49,7 @@ namespace orca_base
 
     // Timeouts will be set by parameters
     rclcpp::Duration baro_timeout_{0};
-    rclcpp::Duration driver_timeout_{RCL_S_TO_NS(1)};
+    rclcpp::Duration driver_timeout_{0};
     rclcpp::Duration joy_timeout_{0};
     std::chrono::milliseconds spin_period_{0};
 

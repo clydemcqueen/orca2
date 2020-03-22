@@ -2,11 +2,19 @@
 
 ## UKF predict step (in progress)
 
+~~~
+orca_filter/*
+~~~
+
 The UKF predict step projects the pose estimate from the previous sensor message forward to the time of the
 most recent sensor message. 
 The dt in these equations is the difference between the two sensor message timestamps.
 
 ## Trajectory planner and feedforward
+
+~~~
+orca_base/src/*segment*.cpp
+~~~
 
 The trajectory planner generates a planned (desired) pose at the time of the most recent sensor message.
 The planner doesn’t care about the pose estimate.
@@ -27,9 +35,13 @@ Possible future work: use the covariance to attenuate the response to the pose e
 
 ## PID controllers
 
+~~~
+orca_base/include/orca_base/pid.hpp
+~~~
+
 The most recent pose error is fed into the PID controllers, one for each control (x, y, z and yaw).
 The result of each controller is u (control) at time t.
-We interpret as u as acceleration, so the PID coefficients have the following units:
+Orca interprets as u as acceleration, so the PID coefficients have the following units:
 * Kp is 1 / s^2
 * Ki is 1 / s^3
 * Kd is 1 / s 
@@ -56,10 +68,14 @@ This is possible future work.
 
 ## High-level controllers
 
+~~~
+orca_base/src/controller.cpp
+~~~
+
 The high-level controllers calculate the pose error and pass it to the 4 PID controllers.
 They may do other pre- or post-processing to improve vehicle dynamics.
 
-There are 5 high-level controllers:
+There are 5 high-level controllers: **(this section is out of date: there is 1 pose controller and 1 observation controller)**
 
 The **IgnoreEstimateController** ignores the estimate completely.
 Motion is dictated by the motion planner.
@@ -81,7 +97,7 @@ The **BestController** combines the logic in the DeadzoneController and JerkCont
 
 ## Computing thrust efforts
 
-We convert force and torque to ‘effort’ in the range [-1, 1] for each control using some notion of the maximum forces 
+Orca converts force and torque to ‘effort’ in the range [-1, 1] for each control using some notion of the maximum forces 
 and torques that the thrusters can generate in unison.
 These are very rough, and should be measured in the field.
 The effort values are clamped to the range [-1, 1].
@@ -98,14 +114,10 @@ A better solution might be to add in all of the yaw force first, compute the amo
 and strafe, and attenuate them equally and add them in.
 If velocities are low relative to thruster power this is moot.
 
-Orca doesn’t completely ignore the roll and pitch estimate: they are used to compute a ‘stability’ value, and this 
-value is used to attenuate all 6 thrust efforts.
-If stability falls below a certain threshold the control loop disarms the AUV altogether.
-
 ## Sensor rates and the control loop
 
 When we fuse sensors we combine the rates of all of the sensors.
-Orca currently has one camera running at 30fps, but the plan is to have two 30 fps cameras (forward and down), 
+Orca currently has one camera running at 30fps, but the plan is to have at least two 30 fps cameras (forward and down), 
 one barometer and one IMU.
 This will result in nominal sensor rates of 30 + 30 + 10 + 100 = 170Hz.
 The actual sensor rate may vary: odometry may be lost on one or both cameras, 
@@ -141,6 +153,52 @@ torque to the Gazebo model at 1000Hz.
 There are custom plug-ins to simulate drag and buoyancy, which applies additional forces to the Gazebo model.
 The resulting simulation looks fairly reasonable.
 
+## QoS, message queues, and threads
+
+ROS2 can send messages 2 basic ways:
+* service quality-of-service uses TCP packets and guarantees delivery
+* sensor QoS uses UDP packages and a best-effort delivery mechanism
+
+Orca uses service QoS for (almost) all topics because
+1. these messages are logged
+2. it's easier to debug the system when we expect every message to arrive
+
+In the future we expect to move to sensor QoS for sensor messages.
+
+Orca uses a message queue (history) of 10 for all topics.
+A short queue -- combined with high callback latencies -- will drop messages.
+This can cause timeouts to trip and can be difficult to debug.
+The solution is to keep callback latencies short. Some examples:
+
+* `annotate_image_node` subscribes to raw images, adds annotations, and publishes the annotated image.
+The code was developed as part of `auv_node` and timing tests showed it never took more than 6ms, and
+was typically around 1ms -- certainly fast enough.
+However in some simulations (with a loaded CPU and a queue length of 1)
+some control messages -- much more critical than annotated images -- were dropped.
+Moving it to it's own node, with it's own thread, solved the problem.
+I could have used a multi-thread executor, but moving this diagnostic to it's own node also
+reduces complexity in the mission-critical `auv_node` code.
+* `plot_auv_segments.py` listens to control messages, and when enough messages are accumulated
+it builds and writes a set of graphs using `matplotlib`.
+These plots were taking up to 2s. With a 20Hz message rate and a queue of 10 the node was dropping up
+to 30 messages. The fix was to move the plotter to it's own Python thread so the callback is always fast.
+* `auv_node` may decide to build a new local plan for every incoming sensor message. At the moment the
+callback latency never exceeds 200us even if a new local plan is generated, so there is currently no reason to move
+the planner to a separate thread.
+
+## Timeouts
+
+ArUco marker detection and pose generation can succeed or fail frame-by-frame, which means that some topics
+will have abrupt stops and starts. Timeouts across multiple nodes must be calibrated:
+
+* `image_raw` should be 30fps (33ms between messages). Same for `/forward_camera/camera_pose`, etc.
+* `orca_filter` will wait 200ms (~6 frames) for a camera pose before switching to a depth filter
+* `orca_filter` will wait 200ms (~6 frames) before resetting the filter due to rejected outliers
+* `auv_node` will wait 300ms (~9 frames) before aborting the mission
+* `driver_node` will wait 1s (~30 frames) before disabling the controller
+
+**TODO update this section**
+
 # Addendum
 
 ## Coordinate frames
@@ -153,7 +211,7 @@ I mention them here because they are decidedly different than the maritime conve
 * rotations follow the right hand rule
 * everything is ISO (metric)
 
-To avoid confusion the code uses names like z and yaw instead of depth and heading.
+To avoid confusion a lot of code uses names like z and yaw instead of depth and heading.
 
 The surface of the water is z=0.
 
@@ -174,7 +232,7 @@ Therefore:
 
 ## Motion model
 
-Forces that we model:
+Forces that Orca models:
 * gravity
 * buoyancy
 * thruster translation forces

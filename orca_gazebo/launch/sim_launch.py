@@ -38,7 +38,8 @@ def generate_launch_description():
         # Launch Gazebo, loading the world
         # Could use additional_env to add model path, but we need to add to the path, not replace it
         ExecuteProcess(cmd=[
-            'gazebo',
+            # 'gazebo',
+            'gzserver',
             '--verbose',
             '-s', 'libgazebo_ros_init.so',  # Publish /clock
             '-s', 'libgazebo_ros_factory.so',  # Provide injection endpoints
@@ -96,13 +97,13 @@ def generate_launch_description():
             }]),
 
         # Filter
-        # Node(package='orca_filter', node_executable='filter_node', output='screen',
-        #      node_name='filter_node', parameters=[filter_node_params_path, {
-        #         'use_sim_time': use_sim_time,
-        #         'urdf_file': urdf_path,
-        #     }], remappings=[
-        #         ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-        #     ]),
+        Node(package='orca_filter', node_executable='filter_node', output='screen',
+             node_name='filter_node', parameters=[filter_node_params_path, {
+                'use_sim_time': use_sim_time,
+                'urdf_file': urdf_path,
+            }], remappings=[
+                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+            ]),
 
         # AUV controller
         Node(package='orca_base', node_executable='auv_node', output='screen',

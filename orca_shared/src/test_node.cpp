@@ -12,7 +12,7 @@ public:
   TestNode() : Node("test_node")
   {
     sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      "pose", 1,
+      "pose", 10,
       [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) -> void
       { this->cb_.call(msg); });
   }

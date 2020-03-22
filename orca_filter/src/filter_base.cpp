@@ -1,6 +1,5 @@
 #include "orca_filter/filter_base.hpp"
 
-#include "eigen3/Eigen/Dense"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include "orca_shared/util.hpp"
@@ -10,19 +9,11 @@ using namespace orca;
 namespace orca_filter
 {
 
-  //=============================================================================
-  // Constants
-  //=============================================================================
-
-  constexpr int CONTROL_DIM = 4;          // [ax, ay, az, ayaw]T
-
-  constexpr double MIN_DT = 0.001;
-  constexpr double DEFAULT_DT = 0.1;
-  constexpr double MAX_DT = 1.0;
-
   //==================================================================
   // Utility functions
   //==================================================================
+
+  constexpr int CONTROL_DIM = 4;          // [ax, ay, az, ayaw]T
 
   // Create control matrix u
   void to_u(const Acceleration &in, Eigen::VectorXd &out)
@@ -42,90 +33,26 @@ namespace orca_filter
   }
 
   //==================================================================
-  // Measurement
-  //==================================================================
-
-  void Measurement::init_z(const orca_msgs::msg::Depth &depth, ukf::MeasurementFn h_fn)
-  {
-    stamp_ = depth.header.stamp;
-
-    z_ = Eigen::VectorXd(1);
-    z_ << depth.z;
-
-    R_ = Eigen::MatrixXd(1, 1);
-    R_ << depth.z_variance;
-
-    h_fn_ = std::move(h_fn);
-
-    // Use the standard residual and mean functions for depth measurements
-    r_z_fn_ = ukf::residual;
-    mean_z_fn_ = ukf::unscented_mean;
-  }
-
-  void Measurement::init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn)
-  {
-    stamp_ = pose.header.stamp;
-
-    tf2::Transform t_map_base;
-    tf2::fromMsg(pose.pose.pose, t_map_base);
-
-    tf2Scalar roll, pitch, yaw;
-    t_map_base.getBasis().getRPY(roll, pitch, yaw);
-
-    z_ = Eigen::VectorXd(4);
-    z_ << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), yaw;
-
-    R_ = Eigen::MatrixXd(4, 4);
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        // Copy rows {0, 1, 2, 5} and cols {0, 1, 2, 5}
-        R_(i, j) = pose.pose.covariance[(i < 3 ? i : 5) * 6 + (j < 3 ? j : 5)];
-      }
-    }
-
-    h_fn_ = std::move(h_fn);
-
-    // Use a custom residual and mean functions for pose measurements
-    r_z_fn_ = four_state_residual;
-    mean_z_fn_ = four_state_mean;
-  }
-
-  void Measurement::init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn)
-  {
-    stamp_ = pose.header.stamp;
-
-    tf2::Transform t_map_base;
-    tf2::fromMsg(pose.pose.pose, t_map_base);
-
-    tf2Scalar roll, pitch, yaw;
-    t_map_base.getBasis().getRPY(roll, pitch, yaw);
-
-    z_ = Eigen::VectorXd(6);
-    z_ << t_map_base.getOrigin().x(), t_map_base.getOrigin().y(), t_map_base.getOrigin().z(), roll, pitch, yaw;
-
-    R_ = Eigen::MatrixXd(6, 6);
-    for (int i = 0; i < 6; i++) {
-      for (int j = 0; j < 6; j++) {
-        R_(i, j) = pose.pose.covariance[i * 6 + j];
-      }
-    }
-
-    h_fn_ = std::move(h_fn);
-
-    // Use a custom residual and mean functions for pose measurements
-    r_z_fn_ = six_state_residual;
-    mean_z_fn_ = six_state_mean;
-  }
-
-  //==================================================================
   // FilterBase
   //==================================================================
 
-  FilterBase::FilterBase(const rclcpp::Logger &logger, const FilterContext &cxt, int state_dim) :
+  constexpr int QUEUE_SIZE = 10;
+
+  FilterBase::FilterBase(Type type,
+                         const rclcpp::Logger &logger,
+                         const FilterContext &cxt,
+                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
+                         int state_dim) :
+
+    type_{type},
     logger_{logger},
     cxt_{cxt},
+    filtered_odom_pub_{filtered_odom_pub},
+    tf_pub_{tf_pub},
     state_dim_{state_dim},
-    filter_{state_dim, 0.001, 2.0, 0}
+    filter_{state_dim, cxt_.ukf_alpha_, cxt_.ukf_beta_, cxt_.ukf_kappa_},
+    odom_time_{0, 0, RCL_ROS_TIME}
   {
     reset();
   }
@@ -162,13 +89,13 @@ namespace orca_filter
       double dt = (stamp - filter_time_).seconds();
       assert(dt >= 0);
 
-      if (dt > MAX_DT) {
+      if (dt > cxt_.max_dt_) {
         // Delta is too large for some reason, use a smaller delta to avoid screwing up the filter
-        RCLCPP_WARN(logger_, "dt %g is too large, use default %g", dt, DEFAULT_DT);
-        dt = DEFAULT_DT;
+        RCLCPP_WARN(logger_, "dt %g is too large, use default %g", dt, cxt_.default_dt_);
+        dt = cxt_.default_dt_;
       }
 
-      if (dt < MIN_DT) {
+      if (dt < cxt_.min_dt_) {
         // Delta is quite small, possibly 0
         RCLCPP_DEBUG(logger_, "skip predict, stamp %s, filter %s",
                      to_str(stamp).c_str(), to_str(filter_time_).c_str());
@@ -186,7 +113,8 @@ namespace orca_filter
     filter_time_ = stamp;
   }
 
-  bool FilterBase::process(const rclcpp::Time &stamp, const Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+  bool FilterBase::process_measurements(const rclcpp::Time &stamp, const Acceleration &u_bar,
+                                        nav_msgs::msg::Odometry &filtered_odom)
   {
     // Trim state_history_
     while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
@@ -222,6 +150,28 @@ namespace orca_filter
 
       if (filter_.update(m.z_, m.R_)) {
         inliers++;
+
+        /* If we're running a pose filter and getting both pose messages at 30Hz and depth messages at 10Hz
+         * we can get into a state where the pose messages and depth messages have roughly the same timestamps,
+         * but the depth messages arrive at the filter first. This is because vloc_node takes longer to calculate
+         * a pose from an image -- so the "odom lag" for pose messages is higher than depth messages. The filter
+         * works fine in this case:
+         *
+         * -- the depth message arrives with timestamp t, the filter is updated, odom is published at t
+         * -- the pose messages arrives with timestamp t-e, the filter is rewound to t-e, then updated again with
+         *    both messages. Odom is not published, because it has already been published at t.
+         *
+         * A problem arises because auv_node is using an ExactSync message filter to combine odom and fiducial
+         * observations. When this situation arises the ExactSync starts dropping messages.
+         *
+         * The solution is to avoid publishing odometry for depth messages when we're in a pose filter.
+         * This behavior can be overridden using the cxt_.always_publish_odom_ flag.
+         */
+        if (type_ == Type::depth || m.type_ != Measurement::Type::depth || cxt_.always_publish_odom_) {
+          filtered_odom.header.stamp = filter_time_;
+          odom_from_filter(filtered_odom);
+          publish_odom(filtered_odom);
+        }
       } else {
         outliers++;
       }
@@ -270,12 +220,46 @@ namespace orca_filter
 
     // Pop newer measurements and put them back into the priority queue
     while (!measurement_history_.empty() && measurement_history_.back().stamp_ > stamp) {
-      RCLCPP_DEBUG(logger_, "rewind: re-queue measurement %s", to_str(stamp).c_str());
+      RCLCPP_DEBUG(logger_, "rewind: re-queue measurement %s %s",
+                   measurement_history_.back().name().c_str(), to_str(stamp).c_str());
       measurement_q_.push(measurement_history_.back());
       measurement_history_.pop_back();
     }
 
     return true;
+  }
+
+  void FilterBase::publish_odom(nav_msgs::msg::Odometry &odom)
+  {
+    // If we rewind the filter the timestamp will repeat
+    // Downstream consumers might get confused if (curr - prev) == 0
+    if (odom.header.stamp == odom_time_) {
+      return;
+    }
+    odom_time_ = odom.header.stamp;
+
+    // Publish odometry
+    if (filtered_odom_pub_->get_subscription_count() > 0) {
+      filtered_odom_pub_->publish(odom);
+    }
+
+    // Publish filtered tf
+    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
+      geometry_msgs::msg::TransformStamped geo_tf;
+      geo_tf.header = odom.header;
+      geo_tf.child_frame_id = cxt_.frame_id_base_link_;
+
+      // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
+      tf2::Transform t_map_base;
+      fromMsg(odom.pose.pose, t_map_base);
+      geo_tf.transform = toMsg(t_map_base);
+
+      // One transform in this tf message
+      tf2_msgs::msg::TFMessage tf_message;
+      tf_message.transforms.emplace_back(geo_tf);
+
+      tf_pub_->publish(tf_message);
+    }
   }
 
 } // namespace orca_filter

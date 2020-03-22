@@ -33,6 +33,8 @@ namespace orca_filter
   // and publishes /depth (base_link.z in the map frame)
   //=============================================================================
 
+  constexpr int QUEUE_SIZE = 10;
+
   class DepthNode : public rclcpp::Node
   {
     DepthContext cxt_;                  // Parameter(s)
@@ -89,11 +91,11 @@ namespace orca_filter
 
       // Subscribe
       baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
-        "barometer", 5, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
+        "barometer", QUEUE_SIZE, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
         { this->baro_cb_.call(msg); });
 
       // Advertise
-      depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", 1);
+      depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", QUEUE_SIZE);
 
       RCLCPP_INFO(get_logger(), "depth_node ready");
     }

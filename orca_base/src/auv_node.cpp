@@ -147,8 +147,10 @@ namespace orca_base
 
       // Start filtered sync
       using namespace std::placeholders;
+
       filtered_sync_.reset(new FilteredSync(FilteredPolicy(QUEUE_SIZE), obs_sub_, odom_sub_));
       filtered_sync_->registerCallback(std::bind(&AUVNode::filtered_fiducial_callback, this, _1, _2));
+      filtered_sync_->registerDropCallback(std::bind(&AUVNode::filtered_fiducial_drop_callback, this, _1, _2));
     } else {
       // Message filter subscriptions
       obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
@@ -162,6 +164,7 @@ namespace orca_base
       using namespace std::placeholders;
       raw_sync_.reset(new RawSync(RawPolicy(QUEUE_SIZE), obs_sub_, fcam_pose_sub_));
       raw_sync_->registerCallback(std::bind(&AUVNode::raw_fiducial_callback, this, _1, _2));
+      raw_sync_->registerDropCallback(std::bind(&AUVNode::raw_fiducial_drop_callback, this, _1, _2));
     }
 
     // Update model from new parameters
@@ -179,6 +182,7 @@ namespace orca_base
     // Update timer period and timeouts
     spin_period_ = std::chrono::milliseconds{cxt_.timer_period_ms_};
     depth_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_depth_ms_)};
+    driver_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_driver_ms_)};
     fp_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_fp_ms_)};
 
     // [Re-]start loop
@@ -199,14 +203,14 @@ namespace orca_base
   bool AUVNode::cam_info_ok()
   { return fcam_info_cb_.receiving(); }
 
-  bool AUVNode::ready_to_start_mission()
+  bool AUVNode::ready_to_start_mission(const rclcpp::Time &t)
   {
     // -- not currently in a mission
     // -- have a map
     // -- have camera info
     // -- getting driver, depth and fiducial messages
     // -- have a good pose or a good observation
-    return !mission_ && map_.ok() && cam_info_ok() && driver_ok(now()) && depth_ok(now()) && fp_ok(now()) &&
+    return !mission_ && map_.ok() && cam_info_ok() && driver_ok(t) && depth_ok(t) && fp_ok(t) &&
            (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
   }
 
@@ -218,7 +222,6 @@ namespace orca_base
     }
 
     auto curr_time = timer_cb_.curr();
-    auto prev_time = timer_cb_.prev();
 
     // If the driver stopped sending status messages, then abort the mission
     if (mission_ && !driver_ok(curr_time)) {
@@ -245,7 +248,7 @@ namespace orca_base
 
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == TIMER_DRIVEN) {
-      auv_advance(curr_time, curr_time - prev_time);
+      auv_advance(curr_time, timer_cb_.d());
     }
   }
 
@@ -370,6 +373,17 @@ namespace orca_base
     prev_time = curr_time;
   }
 
+  void AUVNode::raw_fiducial_drop_callback(
+    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
+  {
+    if (obs_msg) {
+      RCLCPP_WARN(get_logger(), "drop: have an observation but no odometry");
+    } else {
+      RCLCPP_WARN(get_logger(), "drop: have odometry but no observation");
+    }
+  }
+
   // Get a synchronized set of messages: raw marker observations from vloc and filtered odom from filter_node
   // filter_node guarantees that all messages are monotonic, no need to guard against invalid or duplicate timestamps
   // filter_node odom messages are base_f_map
@@ -430,6 +444,19 @@ namespace orca_base
     prev_time = curr_time;
   }
 
+  void AUVNode::filtered_fiducial_drop_callback(
+    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
+  {
+    // The filter sends at 40fps: 30 for the camera, and 10 for the barometer
+    // The only interesting drops are when we have an observation but no odometry
+    // These are uncommon when we're close to a marker, but they can be pretty noisy
+    // far away from markers, so make these DEBUG.
+    if (obs_msg) {
+      RCLCPP_DEBUG(get_logger(), "drop: have an observation but no odometry");
+    }
+  }
+
   rclcpp_action::GoalResponse AUVNode::mission_goal(
     const rclcpp_action::GoalUUID &uuid,
     std::shared_ptr<const MissionAction::Goal> goal)
@@ -438,7 +465,7 @@ namespace orca_base
 
     using orca_msgs::msg::Control;
 
-    if (ready_to_start_mission()) {
+    if (ready_to_start_mission(now())) {
       RCLCPP_INFO(get_logger(), "mission accepted");
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     } else {
@@ -560,10 +587,10 @@ namespace orca_base
    *
    * The planners require that curr_time = prev_time + d, so we can't limit d.
    *
-   * @param msg_time Time of call, either sensor_msg.header.stamp or now()
+   * @param t Time of call, either sensor_msg.header.stamp or now()
    * @param d dt since last call
    */
-  void AUVNode::auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d)
+  void AUVNode::auv_advance(const rclcpp::Time &t, const rclcpp::Duration &d)
   {
     if (d.seconds() > 0.2) {
       RCLCPP_WARN(get_logger(), "auv loop d=%g seconds higher than expected", d.seconds());
@@ -588,7 +615,7 @@ namespace orca_base
     Efforts efforts;
     if (mission_->advance(d, estimate_, efforts)) {
       // Publish control message
-      publish_control(msg_time, efforts);
+      publish_control(t, efforts);
 
       if (mission_->status().planner == orca_msgs::msg::Control::PLAN_LOCAL &&
           count_subscribers(planned_pose_pub_->get_topic_name()) > 0) {
@@ -601,7 +628,7 @@ namespace orca_base
     } else {
       // Mission is over, clean up
       mission_ = nullptr;
-      publish_control(msg_time, {});
+      publish_control(t, {});
     }
   }
 
@@ -639,7 +666,7 @@ namespace orca_base
     control_msg.good_z = estimate_.fp.good_z();
     control_msg.has_good_observation = estimate_.fp.has_good_observation(cxt_.good_obs_dist_);
     control_msg.efforts = efforts.to_msg();
-    control_msg.odom_lag = (now() - msg_time).seconds();
+    control_msg.odom_lag = (now() - estimate_.t).seconds();
 
     // Control
     control_msg.camera_tilt_pwm = tilt_to_pwm(0);

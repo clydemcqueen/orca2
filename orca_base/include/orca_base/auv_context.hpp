@@ -28,8 +28,9 @@ namespace orca_base
   CXT_MACRO_MEMBER(filtered_odom, bool, false)                /* Subscribe to filtered odom msg, vs raw pose  */ \
   CXT_MACRO_MEMBER(fuse_depth, bool, true)                    /* Fuse depth and fiducial messages  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
-  CXT_MACRO_MEMBER(timeout_depth_ms, int, 250)                /* Depth message timeout in ms  */ \
-  CXT_MACRO_MEMBER(timeout_fp_ms, int, 250)                   /* Fiducial pose message timeout in ms  */ \
+  CXT_MACRO_MEMBER(timeout_depth_ms, int, 300)                /* Depth message timeout in ms  */ \
+  CXT_MACRO_MEMBER(timeout_driver_ms, int, 1000)              /* Driver status message timeout in ms  */ \
+  CXT_MACRO_MEMBER(timeout_fp_ms, int, 300)                   /* Fiducial pose message timeout in ms  */ \
   CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \

@@ -3,7 +3,7 @@
 namespace orca_driver
 {
 
-  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(3)}; // All-stop if control messages stop
+  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(1)}; // All-stop if control messages stop TODO move to param
 
   bool valid(const rclcpp::Time &t)
   {

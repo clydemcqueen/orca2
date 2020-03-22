@@ -33,14 +33,12 @@ namespace orca_filter
 
     bool receiving_poses_{false};
     std::shared_ptr<FilterBase> filter_;
-    rclcpp::Time last_pose_received_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time last_pose_inlier_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_pose_stamp_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_pose_inlier_stamp_{0, 0, RCL_ROS_TIME};
 
-    // Change modes if poses are missing, or available, for 0.3s (~9 poses)
-    const rclcpp::Duration OPEN_WATER_TIMEOUT{RCL_MS_TO_NS(300)};
-
-    // Reset the filter if poses are consistently rejected as outliers for 0.3s (~9 poses)
-    const rclcpp::Duration OUTLIER_TIMEOUT{RCL_MS_TO_NS(300)};
+    // Timeouts, set by parameters
+    rclcpp::Duration open_water_timeout_{0};
+    rclcpp::Duration outlier_timeout_{0};
 
     // Parameters
     FilterContext cxt_;
@@ -104,9 +102,6 @@ namespace orca_filter
     void process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
                       const tf2::Transform &t_sensor_base, const std::string &frame_id,
                       const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub);
-
-    // Publish odometry
-    void publish_odom(nav_msgs::msg::Odometry &odom);
 
   public:
     explicit FilterNode();

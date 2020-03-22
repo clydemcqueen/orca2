@@ -124,8 +124,11 @@ namespace orca_filter
     return mean;
   }
 
-  FourFilter::FourFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
-    FilterBase{logger, cxt, FOUR_STATE_DIM}
+  FourFilter::FourFilter(const rclcpp::Logger &logger,
+                         const FilterContext &cxt,
+                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
+    FilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(FOUR_STATE_DIM, FOUR_STATE_DIM) * 0.01);
 

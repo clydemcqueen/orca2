@@ -35,6 +35,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(planner_target_z, double, -0.5)            /* AUV path target z position  */ \
   \
   CXT_MACRO_MEMBER(timeout_baro_ms, int, 400)                 /* Barometer message timeout in ms  */ \
+  CXT_MACRO_MEMBER(timeout_driver_ms, int, 1000)              /* Driver status message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_joy_ms, int, 1000)                 /* Joy message timeout in ms  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
 /* End of list */

@@ -128,6 +128,7 @@ namespace orca_base
 
     // Update timeouts
     baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
+    driver_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_driver_ms_)};
     joy_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_joy_ms_)};
     spin_period_ = std::chrono::milliseconds{cxt_.timer_period_ms_};
 
@@ -366,7 +367,11 @@ namespace orca_base
   {
     stop_mission();
     mode_ = orca_msgs::msg::Control::DISARMED;
+
+    // joy_callback will no longer call publish_control
+    // Call it once to let driver_node know we're disarmed
     publish_control(msg_time, {});
+
     RCLCPP_INFO(get_logger(), "disarmed");
   }
 
@@ -374,7 +379,10 @@ namespace orca_base
   {
     stop_mission();
     mode_ = orca_msgs::msg::Control::ROV;
-    publish_control(msg_time, {});
+
+    // joy_callback will call publish_control, so we don't have to
+    // publish_control(msg_time, {});
+
     RCLCPP_INFO(get_logger(), "manual");
   }
 
@@ -383,7 +391,10 @@ namespace orca_base
     stop_mission();
     pressure_hold_pid_->set_target(pressure_);
     mode_ = orca_msgs::msg::Control::ROV_HOLD_PRESSURE;
-    publish_control(msg_time, {});
+
+    // joy_callback will call publish_control, so we don't have to
+    // publish_control(msg_time, {});
+
     RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_);
   }
 

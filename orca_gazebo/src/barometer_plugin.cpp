@@ -32,6 +32,7 @@ namespace gazebo
 
   constexpr double FRESHWATER_DENSITY = 997;          // Default water density
   constexpr double ATMOSPHERIC_PRESSURE = 101300;     // Default air pressure at the surface of the water
+  constexpr int QUEUE_SIZE = 10;
 
   class OrcaBarometerPlugin : public SensorPlugin
   {
@@ -79,7 +80,7 @@ namespace gazebo
         baro_topic = sdf->GetElement("baro_topic")->Get<std::string>();
       }
       RCLCPP_INFO(node_->get_logger(), "baro topic: %s", baro_topic.c_str());
-      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 10);
+      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, QUEUE_SIZE);
 
       if (sdf->HasElement("fluid_density")) {
         fluid_density = sdf->GetElement("fluid_density")->Get<double>();

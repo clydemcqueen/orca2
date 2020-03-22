@@ -33,7 +33,7 @@ namespace orca_base
 
     // Timeouts, set by parameters
     rclcpp::Duration depth_timeout_{0};
-    rclcpp::Duration driver_timeout_{RCL_S_TO_NS(1)};
+    rclcpp::Duration driver_timeout_{0};
     rclcpp::Duration fp_timeout_{0};
 
     // Parsed URDF
@@ -94,7 +94,7 @@ namespace orca_base
 
     bool cam_info_ok();
 
-    bool ready_to_start_mission();
+    bool ready_to_start_mission(const rclcpp::Time &t);
 
     void timer_callback(bool first);
 
@@ -122,7 +122,15 @@ namespace orca_base
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
       const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
 
+    void raw_fiducial_drop_callback(
+      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
+
     void filtered_fiducial_callback(
+      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
+      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
+
+    void filtered_fiducial_drop_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
       const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
 
@@ -161,7 +169,7 @@ namespace orca_base
 
     void abort_mission(const rclcpp::Time &msg_time);
 
-    void auv_advance(const rclcpp::Time &msg_time, const rclcpp::Duration &d);
+    void auv_advance(const rclcpp::Time &t, const rclcpp::Duration &d);
 
     void publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts);
 
