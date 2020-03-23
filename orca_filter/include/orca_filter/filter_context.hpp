@@ -36,8 +36,6 @@ namespace orca_filter
   \
   CXT_MACRO_MEMBER(filter_baro, bool, true)                   /* Filter barometer messages  */ \
   CXT_MACRO_MEMBER(filter_fcam, bool, false)                  /* Filter forward camera messages  */ \
-  CXT_MACRO_MEMBER(filter_lcam, bool, true)                   /* Filter left camera messages  */ \
-  CXT_MACRO_MEMBER(filter_rcam, bool, true)                   /* Filter right camera messages  */ \
   \
   CXT_MACRO_MEMBER(outlier_distance, double, 4.0)             /* Reject measurements > n std devs from estimate  */ \
   \

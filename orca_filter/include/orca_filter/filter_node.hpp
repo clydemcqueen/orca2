@@ -54,15 +54,11 @@ namespace orca_filter
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_pub_;
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr lcam_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr rcam_sub_;
 
     // Validate parameters
     void validate_parameters();
@@ -82,10 +78,6 @@ namespace orca_filter
 
     void fcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
 
-    void lcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
-
-    void rcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
-
     // Callback wrappers
     monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Depth::SharedPtr>
       depth_cb_{this, &FilterNode::depth_callback};
@@ -93,10 +85,6 @@ namespace orca_filter
       control_cb_{this, &FilterNode::control_callback};
     monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
       fcam_cb_{this, &FilterNode::fcam_callback};
-    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
-      lcam_cb_{this, &FilterNode::lcam_callback};
-    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
-      rcam_cb_{this, &FilterNode::rcam_callback};
 
     // Process a camera pose
     void process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,

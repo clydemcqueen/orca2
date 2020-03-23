@@ -22,8 +22,6 @@ namespace orca_filter
     (void) depth_sub_;
     (void) control_sub_;
     (void) fcam_sub_;
-    (void) lcam_sub_;
-    (void) rcam_sub_;
 
     // Create this before calling validate_parameters()
     filtered_odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", QUEUE_SIZE);
@@ -66,27 +64,6 @@ namespace orca_filter
     } else {
       fcam_sub_ = nullptr;
       fcam_pub_ = nullptr;
-    }
-
-    if (cxt_.filter_lcam_) {
-      lcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "lcam_f_map", QUEUE_SIZE, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
-        { this->lcam_cb_.call(msg); });
-      lcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("raw_lcam_f_base", QUEUE_SIZE);
-
-    } else {
-      lcam_sub_ = nullptr;
-      lcam_pub_ = nullptr;
-    }
-
-    if (cxt_.filter_rcam_) {
-      rcam_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "rcam_f_map", QUEUE_SIZE, [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) -> void
-        { this->rcam_cb_.call(msg); });
-      rcam_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("raw_rcam_f_base", QUEUE_SIZE);
-    } else {
-      rcam_sub_ = nullptr;
-      rcam_pub_ = nullptr;
     }
 
     if (cxt_.publish_tf_ || cxt_.publish_measurement_tf_) {
@@ -214,20 +191,6 @@ namespace orca_filter
     }
 
     STOP_PERF("fcam_callback")
-  }
-
-  void FilterNode::lcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
-  {
-    if (cxt_.filter_lcam_) {
-      process_pose(msg, t_lcam_base_, "lcam_measurement", lcam_pub_);
-    }
-  }
-
-  void FilterNode::rcam_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first)
-  {
-    if (cxt_.filter_rcam_) {
-      process_pose(msg, t_rcam_base_, "rcam_measurement", rcam_pub_);
-    }
   }
 
   void FilterNode::process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,

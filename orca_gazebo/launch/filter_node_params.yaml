@@ -7,8 +7,6 @@
     predict_accel_buoyancy: false
     filter_baro: true
     filter_fcam: true
-    filter_lcam: false
-    filter_rcam: false
     urdf_barometer_joint: 'baro_joint'
     urdf_forward_camera_joint: 'forward_camera_frame_joint'
     publish_tf: true
