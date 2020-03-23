@@ -18,11 +18,6 @@ namespace orca_filter
   CXT_MACRO_MEMBER(timeout_open_water_ms, int, 300)           /* Flip to a depth filter when we hit open water  */ \
   CXT_MACRO_MEMBER(timeout_outlier_ms, int, 300)              /* Reset the filter if poses are consistently rejected as outliers  */ \
   \
-  CXT_MACRO_MEMBER(urdf_file, std::string, "install/orca_description/share/orca_description/urdf/orca.urdf") \
-  CXT_MACRO_MEMBER(urdf_forward_camera_joint, std::string, "forward_camera_frame_joint") \
-  CXT_MACRO_MEMBER(urdf_left_camera_joint, std::string, "left_camera_frame_joint") \
-  CXT_MACRO_MEMBER(urdf_right_camera_joint, std::string, "right_camera_frame_joint") \
-  \
   CXT_MACRO_MEMBER(frame_id_map, std::string, "map") \
   CXT_MACRO_MEMBER(frame_id_base_link, std::string, "base_link") \
   \

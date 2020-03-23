@@ -25,16 +25,22 @@ def generate_launch_description():
 
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
 
-    world_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3.world')
-    map_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3_map.yaml')
-    # world_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring.world')
-    # map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring_map.yaml')
+    # There are two tested simulations:
+    # -- ft3 (field test #3) is a 12' diameter pool with 12 markers arranged along the walls
+    # -- large ring is a 20m diameter ring with 4 markers
+    #    It relies on "move to marker" behavior which currently doesn't work with the filter_node
+    ft3 = True
 
-    auv_node_params_path = os.path.join(orca_gazebo_path, 'launch', 'auv_node_params.yaml')
-    filter_node_params_path = os.path.join(orca_gazebo_path, 'launch', 'filter_node_params.yaml')
-    vloc_node_params_path = os.path.join(orca_gazebo_path, 'launch', 'vloc_node_params.yaml')
+    if ft3:
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3_map.yaml')
+        params_path = os.path.join(orca_gazebo_path, 'launch', 'ft3_params.yaml')
+    else:
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring_map.yaml')
+        params_path = os.path.join(orca_gazebo_path, 'launch', 'large_ring_params.yaml')
 
-    return LaunchDescription([
+    all_entities = [
         # Launch Gazebo, loading the world
         # Could use additional_env to add model path, but we need to add to the path, not replace it
         ExecuteProcess(cmd=[
@@ -91,23 +97,14 @@ def generate_launch_description():
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[
-                vloc_node_params_path, {
+                params_path, {
                 'use_sim_time': use_sim_time,
                 'camera_frame_id': forward_camera_frame,
             }]),
 
-        # Filter
-        Node(package='orca_filter', node_executable='filter_node', output='screen',
-             node_name='filter_node', parameters=[filter_node_params_path, {
-                'use_sim_time': use_sim_time,
-                'urdf_file': urdf_path,
-            }], remappings=[
-                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-            ]),
-
         # AUV controller
         Node(package='orca_base', node_executable='auv_node', output='screen',
-             node_name='auv_node', parameters=[auv_node_params_path, {
+             node_name='auv_node', parameters=[params_path, {
                 'use_sim_time': use_sim_time,
             }], remappings=[
                 ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
@@ -118,4 +115,16 @@ def generate_launch_description():
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
              node_name='annotate_image_node', node_namespace=forward_camera_name),
-    ])
+    ]
+
+    if ft3:
+        all_entities.append(
+            Node(package='orca_filter', node_executable='filter_node', output='screen',
+                 node_name='filter_node', parameters=[params_path, {
+                    'use_sim_time': use_sim_time,
+                    'urdf_file': urdf_path,
+                }], remappings=[
+                    ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+                ]))
+
+    return LaunchDescription(all_entities)

@@ -1,7 +1,6 @@
 #ifndef ORCA_FILTER_FILTER_NODE_HPP
 #define ORCA_FILTER_FILTER_NODE_HPP
 
-#include "urdf/model.h"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 

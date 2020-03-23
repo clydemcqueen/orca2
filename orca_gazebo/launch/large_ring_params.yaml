@@ -1,0 +1,34 @@
+/forward_camera/vloc_forward:
+  ros__parameters:
+    publish_tfs: 0
+    publish_tfs_per_marker: 0
+    sub_camera_info_best_effort_not_reliable: 1
+    publish_camera_pose: 1
+    publish_base_pose: 0
+    publish_camera_odom: 0
+    publish_base_odom: 0
+
+    # I hacked up several sensor plugins in gazebo_ros_pkgs to publish everything in wall time,
+    # so vloc_node doesn't need to overwrite the timestamps
+    stamp_msgs_with_current_time: 0
+
+/auv_node:
+  ros__parameters:
+    param_fluid_density: 997.0
+
+    # Timer is stable w/ or w/o filter:
+    loop_driver: 0
+
+    # filter_node is not running:
+    filtered_odom: false
+    fuse_depth: true
+    publish_tf: true
+
+    # If xy distance is > this, then build a long plan (rotate, run, rotate)
+    # Otherwise build a short plan (move in all DoF at once)
+    planner_max_short_plan_xy: 2.0
+
+    # Related values... how far in front of a marker is a good pose?
+    good_pose_dist: 1.8
+    planner_target_local_distance: 1.0
+    planner_target_mtm_distance: 1.5

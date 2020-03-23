@@ -33,7 +33,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(ukf REQUIRED)
-find_package(urdf REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
 include_directories(

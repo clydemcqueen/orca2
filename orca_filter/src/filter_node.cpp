@@ -41,6 +41,11 @@ namespace orca_filter
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     FILTER_NODE_ALL_PARAMS
 
+    // Parse URDF
+    if (!parser_.parse()) {
+      RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
+    }
+
     RCLCPP_INFO(get_logger(), "filter_node ready");
   }
 
@@ -80,11 +85,6 @@ namespace orca_filter
     outlier_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_outlier_ms_)};
 
     create_filter();
-
-    // Parse URDF
-    if (!parser_.parse()) {
-      RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
-    }
   }
 
   void FilterNode::create_filter()

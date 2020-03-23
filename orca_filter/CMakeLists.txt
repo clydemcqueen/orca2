@@ -31,7 +31,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(ukf REQUIRED)
-find_package(urdf REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
@@ -83,7 +82,6 @@ ament_target_dependencies(
   tf2
   tf2_ros
   ukf
-  urdf
 )
 
 #=============

@@ -239,4 +239,17 @@ namespace orca
     os << fp.fp.pose.pose;
   }
 
+  //=====================================================================================
+  // Utilities
+  //=====================================================================================
+
+  double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
+                             double marker_length, double hfov, double hres)
+  {
+    FP temp;
+    geometry_msgs::msg::PoseWithCovarianceStamped fake; // Hmmm... API can be improved
+    temp.from_msgs(*obs_msg, fake, marker_length, hfov, hres);
+    return temp.closest_observation();
+  }
+
 } // namespace orca

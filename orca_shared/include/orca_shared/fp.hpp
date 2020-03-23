@@ -33,7 +33,7 @@ namespace orca
     Observation()
     = default;
 
-    // Construct from vlam observation and z
+    // Construct from vlam observation
     Observation(const fiducial_vlam_msgs::msg::Observation &msg,
                 double marker_length, double hfov, double hres);
 
@@ -165,6 +165,13 @@ namespace orca
   };
 
   std::ostream &operator<<(std::ostream &os, FPStamped const &fp);
+
+  //=====================================================================================
+  // Utilities
+  //=====================================================================================
+
+  double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
+                             double marker_length, double hfov, double hres);
 
 } // namespace orca
 
