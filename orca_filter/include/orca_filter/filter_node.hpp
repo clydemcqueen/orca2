@@ -5,9 +5,9 @@
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
+#include "orca_description/parser.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
-
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_filter/filter_context.hpp"
@@ -20,7 +20,15 @@ namespace orca_filter
 
   class FilterNode : public rclcpp::Node
   {
-  private:
+    // Parameters
+    FilterContext cxt_;
+
+    // Timeouts, set by parameters
+    rclcpp::Duration open_water_timeout_{0};
+    rclcpp::Duration outlier_timeout_{0};
+
+    // Parsed URDF
+    orca_description::Parser parser_;
 
     // FilterNode runs one of two filters:
     // -- a pose filter takes all sensor input and produces a full pose
@@ -36,21 +44,9 @@ namespace orca_filter
     rclcpp::Time last_pose_stamp_{0, 0, RCL_ROS_TIME};
     rclcpp::Time last_pose_inlier_stamp_{0, 0, RCL_ROS_TIME};
 
-    // Timeouts, set by parameters
-    rclcpp::Duration open_water_timeout_{0};
-    rclcpp::Duration outlier_timeout_{0};
-
-    // Parameters
-    FilterContext cxt_;
-
     // Control state
     double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
     orca::Acceleration u_bar_{};                  // Last control, used for filter predict step
-
-    // Transform base_f_sensor_frame for camera sensors
-    tf2::Transform t_fcam_base_{};
-    tf2::Transform t_lcam_base_{};
-    tf2::Transform t_rcam_base_{};
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
@@ -65,11 +61,6 @@ namespace orca_filter
 
     // Create the filter
     void create_filter();
-
-    // Parse urdf
-    void parse_urdf();
-
-    void get_joint(const urdf::Model &model, const std::string &name, tf2::Transform &t);
 
     // Callbacks
     void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);

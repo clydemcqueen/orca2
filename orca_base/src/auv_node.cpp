@@ -117,11 +117,6 @@ namespace orca_base
     // Parse URDF
     if (!parser_.parse()) {
       RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
-    } else {
-      std::cout << "baro " << to_str_rpy(parser_.t_baro_base) << std::endl;
-      std::cout << "fcam " << to_str_rpy(parser_.t_fcam_base) << std::endl;
-      std::cout << "lcam " << to_str_rpy(parser_.t_lcam_base) << std::endl;
-      std::cout << "rcam " << to_str_rpy(parser_.t_rcam_base) << std::endl;
     }
 
     RCLCPP_INFO(get_logger(), "auv_node ready");

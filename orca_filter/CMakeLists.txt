@@ -20,6 +20,7 @@ find_package(Eigen3 REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(orca_description REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(orca_shared REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -71,6 +72,7 @@ add_executable(
 
 ament_target_dependencies(
   filter_node
+  orca_description
   orca_msgs
   orca_shared
   fiducial_vlam_msgs

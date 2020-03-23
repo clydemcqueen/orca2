@@ -110,6 +110,7 @@ so it is kept small as possible, with the least number of dependencies.
 * `orca_filter` consists of 2 nodes:
   * `depth_node` consumes barometer readings and generates depth messages
   * `filter_node` consumes poses and observations from `fiducial_vlam` and depth and generates odometry  
+  * Depends on `orca_description`
   * Depends on `orca_msgs`
   * Depends on `orca_shared`
 

@@ -81,7 +81,10 @@ namespace orca_filter
 
     create_filter();
 
-    parse_urdf();
+    // Parse URDF
+    if (!parser_.parse()) {
+      RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
+    }
   }
 
   void FilterNode::create_filter()
@@ -97,46 +100,6 @@ namespace orca_filter
     } else {
       RCLCPP_INFO(get_logger(), "depth filter");
       filter_ = std::make_shared<DepthFilter>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
-    }
-  }
-
-  void FilterNode::parse_urdf()
-  {
-    urdf::Model model;
-    if (model.initFile(cxt_.urdf_file_)) {
-      get_joint(model, cxt_.urdf_forward_camera_joint_, t_fcam_base_);
-      get_joint(model, cxt_.urdf_left_camera_joint_, t_lcam_base_);
-      get_joint(model, cxt_.urdf_right_camera_joint_, t_rcam_base_);
-    } else {
-      RCLCPP_ERROR(get_logger(), "failed to parse %s", cxt_.urdf_file_.c_str());
-    }
-  }
-
-  void FilterNode::get_joint(const urdf::Model &model, const std::string &name, tf2::Transform &t)
-  {
-    auto joint = model.getJoint(name);
-    if (joint) {
-      if (joint->parent_link_name != cxt_.frame_id_base_link_) {
-        RCLCPP_ERROR(get_logger(), "joint %s expected parent %s, but found %s", name.c_str(),
-                     cxt_.frame_id_base_link_.c_str(), joint->parent_link_name.c_str());
-      }
-
-      auto pose = joint->parent_to_joint_origin_transform;
-
-      tf2::Transform t2 = tf2::Transform{
-        tf2::Quaternion{pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w},
-        tf2::Vector3{pose.position.x, pose.position.y, pose.position.z}};
-
-      RCLCPP_DEBUG(get_logger(), "%s: parent(%s), child(%s), %s", name.c_str(),
-                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t2).c_str());
-
-      // Invert
-      t = t2.inverse();
-      RCLCPP_DEBUG(get_logger(), "inverted %s: parent(%s), child(%s), %s", name.c_str(),
-                   joint->parent_link_name.c_str(), joint->child_link_name.c_str(), to_str_rpy(t).c_str());
-
-    } else {
-      RCLCPP_ERROR(get_logger(), "joint %s missing", name.c_str());
     }
   }
 
@@ -187,7 +150,7 @@ namespace orca_filter
     START_PERF()
 
     if (cxt_.filter_fcam_) {
-      process_pose(msg, t_fcam_base_, "fcam_measurement", fcam_pub_);
+      process_pose(msg, parser_.t_fcam_base, "fcam_measurement", fcam_pub_);
     }
 
     STOP_PERF("fcam_callback")

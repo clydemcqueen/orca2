@@ -20,6 +20,7 @@
     <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
     <depend>nav_msgs</depend>
+    <depend>orca_description</depend>
     <depend>orca_msgs</depend>
     <depend>orca_shared</depend>
     <depend>rclcpp</depend>
