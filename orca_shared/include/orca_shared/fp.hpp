@@ -7,7 +7,7 @@
 #include "orca_shared/geometry.hpp"
 #include "rclcpp/time.hpp"
 
-namespace orca_base
+namespace orca
 {
 
   //=====================================================================================
@@ -166,6 +166,6 @@ namespace orca_base
 
   std::ostream &operator<<(std::ostream &os, FPStamped const &fp);
 
-}
+} // namespace orca
 
 #endif //ORCA_BASE_FP_HPP

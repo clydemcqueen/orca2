@@ -12,8 +12,8 @@ namespace orca_base
   // ObservationSegmentBase
   //=====================================================================================
 
-  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, uint8_t type, ObservationStamped start,
-                                                 Observation goal) :
+  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, uint8_t type, orca::ObservationStamped start,
+                                                 orca::Observation goal) :
     SegmentBase{cxt, type},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -51,7 +51,8 @@ namespace orca_base
   // RotateToMarker
   //=====================================================================================
 
-  RotateToMarker::RotateToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
+  RotateToMarker::RotateToMarker(const AUVContext &cxt, const orca::ObservationStamped &start,
+                                 const orca::Observation &goal) :
     ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_RTM, start, goal)
   {
     double distance_yaw = std::abs(orca::norm_angle(plan_.o.bearing - goal_.bearing));
@@ -60,7 +61,8 @@ namespace orca_base
       // Plan yaw motion, start phase 1
       plan_obs_fast(true, cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t,
                     yaw_run_, yaw_decel_, yaw_stop_);
-      initial_accel_.yaw = orca::norm_angle(goal_.bearing - plan_.o.bearing) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
+      initial_accel_.yaw =
+        orca::norm_angle(goal_.bearing - plan_.o.bearing) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
@@ -122,7 +124,8 @@ namespace orca_base
   // MoveToMarker
   //=====================================================================================
 
-  MoveToMarker::MoveToMarker(const AUVContext &cxt, const ObservationStamped &start, const Observation &goal) :
+  MoveToMarker::MoveToMarker(const AUVContext &cxt, const orca::ObservationStamped &start,
+                             const orca::Observation &goal) :
     ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_MTM, start, goal)
   {
     double distance_fwd = std::abs(plan_.o.distance - goal_.distance);

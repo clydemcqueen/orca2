@@ -26,10 +26,10 @@ namespace orca_base
 
   public:
 
-    MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const ObservationStamped &start,
+    MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const orca::ObservationStamped &start,
                         PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+    bool advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
                  PlannerStatus &status) override;
   };
 

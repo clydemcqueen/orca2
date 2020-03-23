@@ -46,7 +46,7 @@ namespace orca_base
     double base_link_z_{};
 
     // Most recent observations and pose estimate
-    FPStamped estimate_;
+    orca::FPStamped estimate_;
 
     // AUV operation
     int global_plan_idx_{-1};                     // Count of global plans, starts at 0

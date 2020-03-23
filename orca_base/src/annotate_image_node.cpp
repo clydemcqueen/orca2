@@ -3,7 +3,7 @@
 #include "cv_bridge/cv_bridge.h"
 #include "rclcpp/node.hpp"
 
-#include "orca_base/fp.hpp"
+#include "orca_shared/fp.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_shared/monotonic.hpp"
 

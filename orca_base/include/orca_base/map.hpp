@@ -11,14 +11,14 @@
 
 #include "orca_base/astar.hpp"
 #include "orca_base/auv_context.hpp"
-#include "orca_base/fp.hpp"
+#include "orca_shared/fp.hpp"
 
 namespace orca_base
 {
   struct Marker
   {
     double marker_length{0};
-    int id{NOT_A_MARKER};
+    int id{orca::NOT_A_MARKER};
     geometry_msgs::msg::Pose marker_f_map;
     tf2::Vector3 corner0_f_map;
     tf2::Vector3 corner1_f_map;
@@ -30,7 +30,7 @@ namespace orca_base
     Marker(int id, const geometry_msgs::msg::Pose &_marker_f_map, double marker_length);
 
     bool predict_observation(const AUVContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
-                             const tf2::Transform &t_cam_map, Observation &obs) const;
+                             const tf2::Transform &t_cam_map, orca::Observation &obs) const;
   };
 
   class Map

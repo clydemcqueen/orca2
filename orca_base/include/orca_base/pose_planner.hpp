@@ -32,22 +32,22 @@ namespace orca_base
 #endif
 
     // Add a trajectory segment and update plan
-    void add_keep_station_segment(FPStamped &plan, double seconds);
+    void add_keep_station_segment(orca::FPStamped &plan, double seconds);
 
-    void add_vertical_segment(FPStamped &plan, double z);
+    void add_vertical_segment(orca::FPStamped &plan, double z);
 
-    void add_rotate_segment(FPStamped &plan, double yaw);
+    void add_rotate_segment(orca::FPStamped &plan, double yaw);
 
-    void add_line_segment(FPStamped &plan, double x, double y);
+    void add_line_segment(orca::FPStamped &plan, double x, double y);
 
-    void add_pose_segment(FPStamped &plan, const FP &goal);
+    void add_pose_segment(orca::FPStamped &plan, const orca::FP &goal);
 
   public:
 
-    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start, Target target, Map map,
-                bool keep_station, PlannerStatus &status);
+    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const orca::FPStamped &start, Target target,
+                Map map, bool keep_station, PlannerStatus &status);
 
-    bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+    bool advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
                  PlannerStatus &status) override;
 
 #ifdef LOCAL_PATH

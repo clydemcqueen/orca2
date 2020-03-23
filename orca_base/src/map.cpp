@@ -67,7 +67,7 @@ namespace orca_base
   }
 
   bool Marker::predict_observation(const AUVContext &cxt, const image_geometry::PinholeCameraModel &cam_model,
-                                   const tf2::Transform &t_cam_map, Observation &obs) const
+                                   const tf2::Transform &t_cam_map, orca::Observation &obs) const
   {
     // Camera frame: x right, y down, z forward
 
@@ -98,7 +98,7 @@ namespace orca_base
       return false;
     }
 
-    obs = Observation(id, c0, c1, c2, c3, marker_length, cxt.fcam_hfov_, cxt.fcam_hres_);
+    obs = orca::Observation(id, c0, c1, c2, c3, marker_length, cxt.fcam_hfov_, cxt.fcam_hres_);
 
     return true;
   }

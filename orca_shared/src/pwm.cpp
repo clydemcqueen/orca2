@@ -13,4 +13,4 @@ namespace orca
       orca_msgs::msg::Control::THRUST_FULL_FWD);
   }
 
-} // namespace orca_base
+} // namespace orca

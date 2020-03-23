@@ -31,26 +31,26 @@ namespace orca_base
     PlannerStatus status_;                                    // Planner status
 
     // Given a planned pose, predict the marker observations for the forward camera
-    void predict_observations(FP &plan) const;
+    void predict_observations(orca::FP &plan) const;
 
     /**
      * Create a pose planner
      * @param start Initial pose
      */
-    void create_pose_planner(const FPStamped &start);
+    void create_pose_planner(const orca::FPStamped &start);
 
     /**
      * Create a move-to-marker planner
      * @param start
      */
-    void create_mtm_planner(const ObservationStamped &start);
+    void create_mtm_planner(const orca::ObservationStamped &start);
 
     /**
      * Create some sort of local planner if possible
      * @param estimate Current pose
      * @return True if successful
      */
-    bool create_local_planner(const FPStamped &estimate);
+    bool create_local_planner(const orca::FPStamped &estimate);
 
   public:
 
@@ -66,7 +66,7 @@ namespace orca_base
     { return global_path_; }
 
     // Advance the plan by dt, return AdvanceRC
-    int advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+    int advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
                 const std::function<void(double completed, double total)> &send_feedback);
 
     // Factory: visit a list markers, if list is empty all markers will be visited

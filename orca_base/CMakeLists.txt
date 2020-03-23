@@ -49,7 +49,6 @@ add_executable(
   src/astar.cpp
   src/auv_node.cpp
   src/controller.cpp
-  src/fp.cpp
   src/global_planner.cpp
   src/map.cpp
   src/mission.cpp
@@ -125,7 +124,6 @@ add_executable(
   test_main
   src/astar.cpp
   src/astar_test.cpp
-  src/fp.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
   src/segment_test.cpp

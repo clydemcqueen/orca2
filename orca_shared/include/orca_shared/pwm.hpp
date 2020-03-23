@@ -72,6 +72,6 @@ namespace orca
               (pwm < orca_msgs::msg::Control::THRUST_STOP ? THRUST_DZ_PWM : 0))) / THRUST_RANGE_PWM;
   }
 
-} // namespace orca_base
+} // namespace orca
 
 #endif // ORCA_BASE_PWM_HPP

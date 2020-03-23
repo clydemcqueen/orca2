@@ -1,7 +1,7 @@
 #ifndef ORCA_BASE_PLANNER_COMMON_HPP
 #define ORCA_BASE_PLANNER_COMMON_HPP
 
-#include "orca_base/fp.hpp"
+#include "orca_shared/fp.hpp"
 
 namespace orca_base
 {
@@ -40,7 +40,7 @@ namespace orca_base
     std::string segment_info;     // Current segment info string
     uint8_t segment_type{};       // Segment type, see Control.msg for values
 
-    FPStamped pose;               // Planned pose
+    orca::FPStamped pose;         // Planned pose
     orca::Twist twist;            // Planned twist
 
     // New targets, called by GlobalPlanner()
@@ -63,12 +63,12 @@ namespace orca_base
   struct Target
   {
     int marker_id;
-    FP fp; // Hmmm... I think we can get by with just an orca::Pose
+    orca::FP fp; // Hmmm... I think we can get by with just an orca::Pose
 
-    Target() : marker_id{NOT_A_MARKER}
+    Target() : marker_id{orca::NOT_A_MARKER}
     {}
 
-    Target(int _marker_id, FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
+    Target(int _marker_id, orca::FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
     {}
   };
 
@@ -104,7 +104,7 @@ namespace orca_base
     bool is_mtm_planner()
     { return type_ == LocalPlannerType::MTM_PLANNER; }
 
-    virtual bool advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
+    virtual bool advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
                          PlannerStatus &status) = 0;
   };
 

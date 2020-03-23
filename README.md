@@ -92,6 +92,41 @@ Orca uses camera(s) and ArUco markers to localize.
 Make sure the camera has a good view of a marker before starting a mission.
 If the mission fails to start there might be no marker in view, or the closest marker might be too far away.
 
+## Packages
+
+Orca consists of 7 packages:
+* `orca_msgs` defines custom messages.
+
+* `orca_description` provides the URDF file and an URDF parser
+
+* `orca_driver` must run on the sub hardware. It subscribes to `Control` messages and 
+publishes `Barometer` and `Driver` messages. This package can't be tested in simulation,
+so it is kept small as possible, with the least number of dependencies.
+  * Depends on `orca_msgs`
+
+* `orca_shared` contains various shared utilities.
+  * Depends on `orca_msgs`
+
+* `orca_filter` consists of 2 nodes:
+  * `depth_node` consumes barometer readings and generates depth messages
+  * `filter_node` consumes poses and observations from `fiducial_vlam` and depth and generates odometry  
+  * Depends on `orca_msgs`
+  * Depends on `orca_shared`
+
+* `orca_base` is the largest package, and consists of 2 primary nodes:
+  * `auv_node` provides the `Mission` action server and runs autonomous missions, publishing `Control` messages
+  * `rov_node` consumes `Joy` messages and generates `Control` messages.
+It also calls the `Mission` action server to start missions
+  * There are several Python nodes that use `matplotlib` to graph various messages
+  * Depends on `orca_description`
+  * Depends on `orca_msgs`
+  * Depends on `orca_shared`
+
+* `orca_gazebo` provides a simulation environment, with plugins for thrusters, buoyancy and drag
+  * Depends on `orca_description`
+  * Depends on `orca_msgs`
+  * Depends on `orca_shared`
+
 ## Hardware modifications
 
 This is rough sketch of the hardware modifications I made to my 2017 BlueROV2. YMMV.

@@ -25,13 +25,13 @@ namespace orca_base
 
     Mission(const rclcpp::Logger &logger, const AUVContext &cxt,
             std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-            std::shared_ptr<GlobalPlanner> planner, const FPStamped &start);
+            std::shared_ptr<GlobalPlanner> planner, const orca::FPStamped &start);
 
     const PlannerStatus &status() const
     { return planner_->status(); }
 
     // Advance the plan, return true to continue
-    bool advance(const rclcpp::Duration& d, const FPStamped &estimate, orca::Efforts &efforts);
+    bool advance(const rclcpp::Duration& d, const orca::FPStamped &estimate, orca::Efforts &efforts);
 
     // Abort the mission
     void abort();

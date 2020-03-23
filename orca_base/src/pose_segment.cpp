@@ -78,7 +78,7 @@ namespace orca_base
   // PoseSegmentBase
   //=====================================================================================
 
-  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, uint8_t type, FPStamped start, FP goal) :
+  PoseSegmentBase::PoseSegmentBase(const AUVContext &cxt, uint8_t type, orca::FPStamped start, orca::FP goal) :
     SegmentBase{cxt, type},
     plan_{std::move(start)},
     goal_{std::move(goal)}
@@ -91,7 +91,7 @@ namespace orca_base
   // Pause
   //=====================================================================================
 
-  Pause::Pause(const AUVContext &cxt, const FPStamped &start, const rclcpp::Duration &pause_duration) :
+  Pause::Pause(const AUVContext &cxt, const orca::FPStamped &start, const rclcpp::Duration &pause_duration) :
     PoseSegmentBase{cxt, orca_msgs::msg::Control::PAUSE, start, start.fp}, pause_duration_{pause_duration}
   {}
 
@@ -117,7 +117,7 @@ namespace orca_base
   // Trap2
   //=====================================================================================
 
-  Trap2::Trap2(const AUVContext &cxt, uint8_t type, const FPStamped &start, const FP &goal) :
+  Trap2::Trap2(const AUVContext &cxt, uint8_t type, const orca::FPStamped &start, const orca::FP &goal) :
     PoseSegmentBase{cxt, type, start, goal}
   {
     p0_.t = start.t;
@@ -193,9 +193,9 @@ namespace orca_base
   }
 
   std::shared_ptr<Trap2>
-  Trap2::make_vertical(const AUVContext &cxt, FPStamped &plan, double z)
+  Trap2::make_vertical(const AUVContext &cxt, orca::FPStamped &plan, double z)
   {
-    FP goal = plan.fp;
+    auto goal = plan.fp;
     goal.pose.pose.z = z;
     auto result = std::make_shared<Trap2>(cxt, orca_msgs::msg::Control::POSE_VERTICAL, plan, goal);
     plan.fp = goal;
@@ -204,9 +204,9 @@ namespace orca_base
   }
 
   std::shared_ptr<Trap2>
-  Trap2::make_rotate(const AUVContext &cxt, FPStamped &plan, double yaw)
+  Trap2::make_rotate(const AUVContext &cxt, orca::FPStamped &plan, double yaw)
   {
-    FP goal = plan.fp;
+    auto goal = plan.fp;
     goal.pose.pose.yaw = yaw;
     auto result = std::make_shared<Trap2>(cxt, orca_msgs::msg::Control::POSE_ROTATE, plan, goal);
     plan.fp = goal;
@@ -215,9 +215,9 @@ namespace orca_base
   }
 
   std::shared_ptr<Trap2>
-  Trap2::make_line(const AUVContext &cxt, FPStamped &plan, double x, double y)
+  Trap2::make_line(const AUVContext &cxt, orca::FPStamped &plan, double x, double y)
   {
-    FP goal = plan.fp;
+    auto goal = plan.fp;
     goal.pose.pose.x = x;
     goal.pose.pose.y = y;
     auto result = std::make_shared<Trap2>(cxt, orca_msgs::msg::Control::POSE_LINE, plan, goal);
@@ -227,7 +227,7 @@ namespace orca_base
   }
 
   std::shared_ptr<Trap2>
-  Trap2::make_pose(const AUVContext &cxt, FPStamped &plan, const FP &goal)
+  Trap2::make_pose(const AUVContext &cxt, orca::FPStamped &plan, const orca::FP &goal)
   {
     auto result = std::make_shared<Trap2>(cxt, orca_msgs::msg::Control::POSE_COMBO, plan, goal);
     plan.fp = goal;
