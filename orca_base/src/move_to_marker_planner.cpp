@@ -32,7 +32,7 @@ namespace orca_base
     plan.o = goal;
 
     // Move toward the marker
-    goal.distance = cxt_.mtm_planner_target_dist_;
+    goal.distance = cxt_.mtm_plan_target_dist_;
     segments_.push_back(std::make_shared<MoveToMarker>(cxt_, plan, goal));
 
     RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
@@ -75,7 +75,7 @@ namespace orca_base
     // If marker was not observed, estimate.obs.id == NOT_A_MARKER, and calc() will ignore PID outputs
     Observation estimate_obs;
     estimate.fp.get_observation(marker_id_, estimate_obs);
-    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.planner_target_z_, estimate_obs,
+    controller_->calc(d, segments_[status.segment_idx]->plan().o, cxt_.global_plan_target_z_, estimate_obs,
                       estimate.fp.pose.pose.z, segments_[status.segment_idx]->ff(), efforts);
 
     return true;

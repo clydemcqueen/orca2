@@ -273,6 +273,9 @@ namespace orca_filter
       // Process one or more measurements
       return process_measurements(stamp, u_bar, filtered_odom);
     }
+
+    // Type name
+    std::string name();
   };
 
   //=============================================================================

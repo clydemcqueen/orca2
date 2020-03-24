@@ -203,7 +203,7 @@ namespace orca_filter
     // If we're receiving poses but not publishing odometry then reset the filter
     rclcpp::Time stamp{sensor_f_map->header.stamp};
     if (valid_stamp(last_pose_inlier_stamp_) && stamp - last_pose_inlier_stamp_ > outlier_timeout_) {
-      RCLCPP_WARN(get_logger(), "reset filter");
+      RCLCPP_DEBUG(get_logger(), "reset filter");
       filter_->reset(base_f_map.pose.pose);
       last_pose_inlier_stamp_ = stamp;
     }

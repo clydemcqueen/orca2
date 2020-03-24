@@ -90,13 +90,14 @@ namespace orca_base
 
     ObservationStamped obs;
 
-    if (estimate.get_good_observation(cxt_.good_obs_dist_, status_.target_marker_id, obs)) {
+    if (cxt_.global_plan_allow_mtm_ &&
+        estimate.get_good_observation(cxt_.good_obs_dist_, status_.target_marker_id, obs)) {
       RCLCPP_INFO(logger_, "recover: move to the target marker (m%d)", obs.o.id);
       create_mtm_planner(obs);
       return true;
     }
 
-    if (estimate.get_closest_observation(obs) < cxt_.good_obs_dist_) {
+    if (cxt_.global_plan_allow_mtm_ && estimate.get_closest_observation(obs) < cxt_.good_obs_dist_) {
       RCLCPP_INFO(logger_, "recover: move to the closest marker (m%d)", obs.o.id);
       create_mtm_planner(obs);
       return true;
@@ -128,13 +129,13 @@ namespace orca_base
         if (estimate.fp.good_pose(cxt_.good_pose_dist_)) {
 
           // Good pose, make sure the plan & estimate are reasonably close
-          if (estimate.distance_xy(status_.pose) > cxt_.planner_max_pose_xy_error_) {
+          if (estimate.distance_xy(status_.pose) > cxt_.global_plan_max_xy_err_) {
             RCLCPP_INFO(logger_, "large pose error, re-plan");
             create_pose_planner(estimate);
             return AdvanceRC::CONTINUE;
           }
 
-        } else {
+        } else if (cxt_.global_plan_allow_mtm_) {
 
           // Dead reckoning: no marker, or the nearest marker is too far away to calculate a good pose
 
@@ -152,7 +153,7 @@ namespace orca_base
           if (status_.pose.fp.get_good_observation(cxt_.good_obs_dist_, target_id, plan_target_obs) &&
               estimate.get_good_observation(cxt_.good_obs_dist_, target_id, estimate_target_obs)) {
 
-            if (std::abs(plan_target_obs.bearing - estimate_target_obs.o.bearing) > cxt_.planner_max_obs_yaw_error_) {
+            if (std::abs(plan_target_obs.bearing - estimate_target_obs.o.bearing) > cxt_.global_plan_max_obs_yaw_err_) {
               RCLCPP_INFO(logger_, "poor pose, target marker in view but yaw error is high, recover");
               create_mtm_planner(estimate_target_obs);
               return AdvanceRC::CONTINUE;
@@ -207,12 +208,12 @@ namespace orca_base
     target.fp.pose.pose.from_msg(marker.marker_f_map);
 
     // Set plan.z from parameters
-    target.fp.pose.pose.z = cxt.planner_target_z_;
+    target.fp.pose.pose.z = cxt.global_plan_target_z_;
 
     if (!floor) {
       // Target is in front of the marker
-      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.local_planner_target_dist_;
-      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.local_planner_target_dist_;
+      target.fp.pose.pose.x += sin(target.fp.pose.pose.yaw) * cxt.pose_plan_target_dist_;
+      target.fp.pose.pose.y -= cos(target.fp.pose.pose.yaw) * cxt.pose_plan_target_dist_;
 
       // Face the marker to get a good pose
       target.fp.pose.pose.yaw = norm_angle(target.fp.pose.pose.yaw + M_PI_2);

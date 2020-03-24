@@ -130,28 +130,28 @@ namespace orca_base
 
     // Add start pose to map
     auto start_z_target = start_pose;
-    start_z_target.z = cxt_.planner_target_z_;
+    start_z_target.z = cxt_.global_plan_target_z_;
     poses[START_ID] = start_z_target;
 
     // Add destination pose to map
     auto destination_z_target = destination_pose;
-    destination_z_target.z = cxt_.planner_target_z_;
+    destination_z_target.z = cxt_.global_plan_target_z_;
     poses[DESTINATION_ID] = destination_z_target;
 
     // Add all of the markers to the map
     for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
       orca::Pose pose;
       pose.from_msg(vlam_map_->poses[i].pose);
-      pose.z = cxt_.planner_target_z_;
+      pose.z = cxt_.global_plan_target_z_;
       poses[vlam_map_->ids[i]] = pose;
     }
 
-    // Enumerate all edges between markers that are < MAX_DEAD_RECKONING_DISTANCE
+    // Enumerate all edges between markers that are < cxt_.pose_plan_max_dead_reckon_dist_
     std::vector<astar::Edge> short_paths;
     for (auto i = poses.begin(); i != poses.end(); ++i) {
       for (auto j = std::next(i); j != poses.end(); ++j) {
         auto distance = i->second.distance_xy(j->second);
-        if (distance < cxt_.planner_max_dead_reckon_dist_) {
+        if (distance < cxt_.pose_plan_max_dead_reckon_dist_) {
           short_paths.emplace_back(i->first, j->first, distance);
         }
       }

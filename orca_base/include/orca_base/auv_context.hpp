@@ -85,17 +85,18 @@ namespace orca_base
   CXT_MACRO_MEMBER(good_pose_dist, double, 1.8)               /* Good pose if marker < 1.8m away  */ \
   CXT_MACRO_MEMBER(good_obs_dist, double, 10)                 /* Good observation if marker < 10m away  */ \
   \
-  CXT_MACRO_MEMBER(planner_look_for_waypoints, bool, false)   /* Use A* to find waypoints  */ \
-  CXT_MACRO_MEMBER(planner_epsilon_xyz, double, 0.05)         /* If xyz distance < epsilon, skip this segment  */ \
-  CXT_MACRO_MEMBER(planner_max_pose_xy_error, double, 0.6)    /* Replan if xy distance > max  */ \
-  CXT_MACRO_MEMBER(planner_max_short_plan_xy, double, 2)      /* Build a long plan if xy distance > max  */ \
-  CXT_MACRO_MEMBER(planner_max_obs_yaw_error, double, 0.2)    /* Start recovery if observation yaw error is > max  */ \
-  CXT_MACRO_MEMBER(planner_max_dead_reckon_dist, double, 9)   /* Max allowable dead reckoning distance  */ \
-  CXT_MACRO_MEMBER(planner_target_z, double, -0.5)            /* Target z position  */ \
+  CXT_MACRO_MEMBER(global_plan_allow_mtm, bool, false)        /* Allow mtm recovery  */ \
+  CXT_MACRO_MEMBER(global_plan_max_xy_err, double, 0.6)       /* Replan if xy distance > max  */ \
+  CXT_MACRO_MEMBER(global_plan_max_obs_yaw_err, double, 0.2)  /* Start recovery if observation yaw error is > max  */ \
+  CXT_MACRO_MEMBER(global_plan_target_z, double, -0.5)        /* Target z position  */ \
   \
-  CXT_MACRO_MEMBER(local_planner_target_dist, double, 1)      /* Local planner: target distance in front of marker  */ \
+  CXT_MACRO_MEMBER(pose_plan_waypoints, bool, false)          /* Use A* to find waypoints between targets  */ \
+  CXT_MACRO_MEMBER(pose_plan_epsilon_xyz, double, 0.05)       /* If xyz distance < epsilon, skip this segment  */ \
+  CXT_MACRO_MEMBER(pose_plan_max_short_plan_xy, double, 2)    /* Build a long plan if xy distance > max  */ \
+  CXT_MACRO_MEMBER(pose_plan_max_dead_reckon_dist, double, 9) /* Max allowable dead reckoning distance  */ \
+  CXT_MACRO_MEMBER(pose_plan_target_dist, double, 1)          /* Target distance in front of marker  */ \
   \
-  CXT_MACRO_MEMBER(mtm_planner_target_dist, double, 1)        /* MTM planner: target distance from marker */ \
+  CXT_MACRO_MEMBER(mtm_plan_target_dist, double, 1)           /* Target distance from marker */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

@@ -83,7 +83,7 @@ namespace orca_filter
   {
     // Filter time starts at 0, test for this
     if (!valid_stamp(filter_time_)) {
-      RCLCPP_INFO(logger_, "start filter, stamp %s", to_str(stamp).c_str());
+      RCLCPP_INFO(logger_, "start %s filter, stamp %s", name().c_str(), to_str(stamp).c_str());
     } else {
       // Compute delta from last message, must be zero or positive
       double dt = (stamp - filter_time_).seconds();
@@ -161,8 +161,9 @@ namespace orca_filter
          * -- the pose messages arrives with timestamp t-e, the filter is rewound to t-e, then updated again with
          *    both messages. Odom is not published, because it has already been published at t.
          *
-         * A problem arises because auv_node is using an ExactSync message filter to combine odom and fiducial
-         * observations. When this situation arises the ExactSync starts dropping messages.
+         * But a problem arises because auv_node is using an ExactSync message filter to combine odom and fiducial
+         * observations. When this situation arises the ExactSync starts dropping messages because messages arrive
+         * at timestamp t, not timestamp t-e.
          *
          * The solution is to avoid publishing odometry for depth messages when we're in a pose filter.
          * This behavior can be overridden using the cxt_.always_publish_odom_ flag.
@@ -259,6 +260,17 @@ namespace orca_filter
       tf_message.transforms.emplace_back(geo_tf);
 
       tf_pub_->publish(tf_message);
+    }
+  }
+
+  std::string FilterBase::name()
+  {
+    if (type_ == Type::depth) {
+      return "depth";
+    } else if (type_ == Type::four) {
+      return "four";
+    } else {
+      return "pose";
     }
   }
 

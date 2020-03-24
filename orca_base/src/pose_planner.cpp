@@ -26,7 +26,7 @@ namespace orca_base
     // Start pose
     FPStamped plan = start;
 
-    if (target.fp.distance_xy(start.fp) < cxt_.planner_max_short_plan_xy_) {
+    if (target.fp.distance_xy(start.fp) < cxt_.pose_plan_max_short_plan_xy_) {
       RCLCPP_INFO_STREAM(logger_, "short plan: " << target);
 
       add_pose_segment(plan, target.fp);
@@ -37,7 +37,7 @@ namespace orca_base
       // Generate a series of waypoints to minimize dead reckoning
       std::vector<Pose> waypoints;
 
-      if (cxt_.planner_look_for_waypoints_ && map_.get_waypoints(start.fp.pose.pose, target_.fp.pose.pose, waypoints)) {
+      if (cxt_.pose_plan_waypoints_ && map_.get_waypoints(start.fp.pose.pose, target_.fp.pose.pose, waypoints)) {
         RCLCPP_INFO(logger_, "... through %d waypoints", waypoints.size() - 1);
       } else {
         waypoints.push_back(target_.fp.pose.pose);
@@ -46,14 +46,14 @@ namespace orca_base
       // Travel to each waypoint, breaking down z, yaw and xy phases
       for (auto &waypoint : waypoints) {
         // Ascend/descend to target z
-        if (plan.fp.pose.pose.distance_z(waypoint) > cxt_.planner_epsilon_xyz_) {
+        if (plan.fp.pose.pose.distance_z(waypoint) > cxt_.pose_plan_epsilon_xyz_) {
           add_vertical_segment(plan, waypoint.z);
           add_keep_station_segment(plan, 1);
         } else {
           RCLCPP_INFO(logger_, "skip vertical");
         }
 
-        if (plan.fp.pose.pose.distance_xy(waypoint) > cxt_.planner_epsilon_xyz_) {
+        if (plan.fp.pose.pose.distance_xy(waypoint) > cxt_.pose_plan_epsilon_xyz_) {
           // Point in the direction of travel
           add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
           add_keep_station_segment(plan, 1);

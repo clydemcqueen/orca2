@@ -24,14 +24,21 @@
     fuse_depth: false
     publish_tf: false
 
+    # How far in front of a marker is a good pose?
+    good_pose_dist: 2.0
+
+    # Do not allow MTM recovery
+    global_plan_allow_mtm: false
+
+    # Do not allow waypoints
+    pose_plan_waypoints: false
+
     # If xy distance is > this, then build a long plan (rotate, run, rotate)
     # Otherwise build a short plan (move in all DoF at once)
-    planner_max_short_plan_xy: 2.0
+    pose_plan_max_short_plan_xy: 0.5
 
-    # Related values... how far in front of a marker is a good pose?
-    good_pose_dist: 1.8
-    planner_target_local_distance: 1.0
-    planner_target_mtm_distance: 1.5
+    # How close to the markers should we get?
+    pose_plan_target_dist: 0.8
 
 /filter_node:
   ros__parameters:
