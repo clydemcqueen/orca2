@@ -23,20 +23,19 @@ namespace orca
 
   struct Pose
   {
-    double x;
-    double y;
-    double z;
-    double yaw;
+    double x{};
+    double y{};
+    double z{};
+    double yaw{};
 
-    constexpr Pose() : x{0}, y{0}, z{0}, yaw{0}
-    {}
+    constexpr Pose() = default;
 
     constexpr Pose(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
 
-    geometry_msgs::msg::Pose to_msg() const;
+    explicit Pose(const geometry_msgs::msg::Pose &msg);
 
-    void from_msg(const geometry_msgs::msg::Pose &msg);
+    geometry_msgs::msg::Pose to_msg() const;
 
     // Distance between 2 poses on the xy plane
     double distance_xy(const Pose &that) const;
@@ -73,16 +72,27 @@ namespace orca
 
   struct PoseStamped
   {
-    rclcpp::Time t;
-    Pose pose;
+    rclcpp::Time t{0, 0, RCL_ROS_TIME};
+    Pose pose{};
+
+    constexpr PoseStamped() = default;
+
+    explicit PoseStamped(const geometry_msgs::msg::PoseStamped &msg) :
+      t{msg.header.stamp},
+      pose{msg.pose}
+    {}
+
+    explicit PoseStamped(const nav_msgs::msg::Odometry &msg) :
+      t{msg.header.stamp},
+      pose{msg.pose.pose}
+    {}
+
+    explicit PoseStamped(geometry_msgs::msg::PoseWithCovarianceStamped &msg) :
+      t{msg.header.stamp},
+      pose{msg.pose.pose}
+    {}
 
     geometry_msgs::msg::PoseStamped to_msg() const;
-
-    void from_msg(const geometry_msgs::msg::PoseStamped &msg);
-
-    void from_msg(const nav_msgs::msg::Odometry &msg);
-
-    void from_msg(geometry_msgs::msg::PoseWithCovarianceStamped &msg);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
   };
@@ -95,21 +105,23 @@ namespace orca
 
   struct PoseWithCovariance
   {
-    Pose pose;
+    Pose pose{};
 
     // Don't store the full 6x6 covariance, just store 4 bits of data
-    bool x_valid;
-    bool y_valid;
-    bool z_valid;
-    bool yaw_valid;
+    bool x_valid{};
+    bool y_valid{};
+    bool z_valid{};
+    bool yaw_valid{};
+
+    constexpr PoseWithCovariance() = default;
+
+    explicit PoseWithCovariance(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance);
 
     bool good_pose() const
     { return x_valid && y_valid && z_valid && yaw_valid; }
 
     bool good_z() const
     { return z_valid; }
-
-    void from_msg(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance);
   };
 
   //=====================================================================================
@@ -118,18 +130,17 @@ namespace orca
 
   struct Twist
   {
-    double x;
-    double y;
-    double z;
-    double yaw;
+    double x{};
+    double y{};
+    double z{};
+    double yaw{};
 
-    constexpr Twist() : x{0}, y{0}, z{0}, yaw{0}
-    {}
+    constexpr Twist() = default;
 
     constexpr Twist(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
 
-    void from_msg(const geometry_msgs::msg::Twist &msg);
+    explicit Twist(const geometry_msgs::msg::Twist &msg);
 
     geometry_msgs::msg::Twist to_msg() const;
 
@@ -145,13 +156,12 @@ namespace orca
 
   struct TwistBody
   {
-    double forward;
-    double strafe;
-    double vertical;
-    double yaw;
+    double forward{};
+    double strafe{};
+    double vertical{};
+    double yaw{};
 
-    constexpr TwistBody() : forward{0}, strafe{0}, vertical{0}, yaw{0}
-    {}
+    constexpr TwistBody() = default;
   };
 
   //=====================================================================================
@@ -160,13 +170,12 @@ namespace orca
 
   struct Acceleration
   {
-    double x;
-    double y;
-    double z;
-    double yaw;
+    double x{};
+    double y{};
+    double z{};
+    double yaw{};
 
-    constexpr Acceleration() : x{0}, y{0}, z{0}, yaw{0}
-    {}
+    constexpr Acceleration() = default;
 
     constexpr Acceleration(double _x, double _y, double _z, double _yaw) : x{_x}, y{_y}, z{_z}, yaw{_yaw}
     {}
@@ -186,13 +195,12 @@ namespace orca
 
   struct AccelerationBody
   {
-    double forward;
-    double strafe;
-    double vertical;
-    double yaw;
+    double forward{};
+    double strafe{};
+    double vertical{};
+    double yaw{};
 
-    constexpr AccelerationBody() : forward{0}, strafe{0}, vertical{0}, yaw{0}
-    {}
+    constexpr AccelerationBody() = default;
 
     constexpr AccelerationBody(double _forward, double _strafe, double _vertical, double _yaw) :
       forward{_forward}, strafe{_strafe}, vertical{_vertical}, yaw{_yaw}
@@ -208,15 +216,18 @@ namespace orca
 
   class Efforts
   {
-    double forward_;
-    double strafe_;
-    double vertical_;
-    double yaw_;
+    double forward_{};
+    double strafe_{};
+    double vertical_{};
+    double yaw_{};
 
   public:
 
-    Efforts() : forward_{0}, strafe_{0}, vertical_{0}, yaw_{0}
-    {}
+    constexpr Efforts() = default;
+
+    Efforts(const orca::Model &model, const double current_yaw, const Acceleration &u_bar);
+
+    explicit Efforts(const orca_msgs::msg::Efforts &msg);
 
     double forward() const
     { return forward_; }
@@ -240,15 +251,11 @@ namespace orca
 
     void all_stop();
 
-    void from_acceleration(const orca::Model &model, const double current_yaw, const Acceleration &u_bar);
-
     void to_acceleration(const orca::Model &model, const double current_yaw, Acceleration &u_bar);
 
     void scale(double factor);
 
     orca_msgs::msg::Efforts to_msg() const;
-
-    void from_msg(const orca_msgs::msg::Efforts &msg);
   };
 
   std::ostream &operator<<(std::ostream &os, Efforts const &e);

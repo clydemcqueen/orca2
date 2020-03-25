@@ -203,9 +203,7 @@ namespace orca_base
   // Floor == false: markers must be on the wall, and there must be a forward-facing camera
   Target marker_to_target(const AUVContext &cxt, const Marker &marker, bool floor)
   {
-    Target target;
-    target.marker_id = marker.id;
-    target.fp.pose.pose.from_msg(marker.marker_f_map);
+    Target target{marker.id, marker.marker_f_map};
 
     // Set plan.z from parameters
     target.fp.pose.pose.z = cxt.global_plan_target_z_;
@@ -264,14 +262,6 @@ namespace orca_base
     return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, targets, keep_station);
   }
 
-  Target pose_to_target(const geometry_msgs::msg::Pose &pose)
-  {
-    Target target;
-    target.marker_id = NOT_A_MARKER;
-    target.fp.pose.pose.from_msg(pose);
-    return target;
-  }
-
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const Map &map,
                             const orca_description::Parser &parser,
@@ -289,7 +279,7 @@ namespace orca_base
     }
 
     for (auto pose : poses) {
-      targets.push_back(pose_to_target(pose));
+      targets.emplace_back(pose);
     }
 
     if (random) {

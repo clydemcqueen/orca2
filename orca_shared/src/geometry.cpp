@@ -14,6 +14,15 @@ namespace orca
   // Pose in world frame
   //=====================================================================================
 
+  Pose::Pose(const geometry_msgs::msg::Pose &msg)
+  {
+    // Convert ROS Pose to Orca2 Pose by dropping roll & pitch
+    x = msg.position.x;
+    y = msg.position.y;
+    z = msg.position.z;
+    yaw = get_yaw(msg.orientation);
+  }
+
   geometry_msgs::msg::Pose Pose::to_msg() const
   {
     geometry_msgs::msg::Pose msg;
@@ -28,15 +37,6 @@ namespace orca
     msg.orientation = tf2::toMsg(q);
 
     return msg;
-  }
-
-  void Pose::from_msg(const geometry_msgs::msg::Pose &msg)
-  {
-    // Convert ROS Pose to Orca2 Pose by dropping roll & pitch
-    x = msg.position.x;
-    y = msg.position.y;
-    z = msg.position.z;
-    yaw = get_yaw(msg.orientation);
   }
 
   // Distance between 2 poses on the xy plane
@@ -123,24 +123,6 @@ namespace orca
     return msg;
   }
 
-  void PoseStamped::from_msg(const geometry_msgs::msg::PoseStamped &msg)
-  {
-    t = msg.header.stamp;
-    pose.from_msg(msg.pose);
-  }
-
-  void PoseStamped::from_msg(const nav_msgs::msg::Odometry &msg)
-  {
-    t = msg.header.stamp;
-    pose.from_msg(msg.pose.pose);
-  }
-
-  void PoseStamped::from_msg(geometry_msgs::msg::PoseWithCovarianceStamped &msg)
-  {
-    t = msg.header.stamp;
-    pose.from_msg(msg.pose.pose);
-  }
-
   void PoseStamped::add_to_path(nav_msgs::msg::Path &path) const
   {
     auto msg = to_msg();
@@ -157,9 +139,9 @@ namespace orca
   // PoseWithCovariance
   //=====================================================================================
 
-  void PoseWithCovariance::from_msg(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance)
+  PoseWithCovariance::PoseWithCovariance(const geometry_msgs::msg::PoseWithCovariance &pose_with_covariance) :
+    pose{pose_with_covariance.pose}
   {
-    pose.from_msg(pose_with_covariance.pose);
     x_valid = (pose_with_covariance.covariance[0 * 7] < 1e4);
     y_valid = (pose_with_covariance.covariance[1 * 7] < 1e4);
     z_valid = (pose_with_covariance.covariance[2 * 7] < 1e4);
@@ -170,7 +152,7 @@ namespace orca
   // Twist in the world frame
   //=====================================================================================
 
-  void Twist::from_msg(const geometry_msgs::msg::Twist &msg)
+  Twist::Twist(const geometry_msgs::msg::Twist &msg)
   {
     x = msg.linear.x;
     y = msg.linear.y;
@@ -237,6 +219,28 @@ namespace orca
   // Efforts
   //=====================================================================================
 
+  Efforts::Efforts(const orca::Model &model, const double current_yaw, const Acceleration &u_bar)
+  {
+    // Convert from world frame to body frame
+    double x_effort = model.accel_to_effort_xy(u_bar.x);
+    double y_effort = model.accel_to_effort_xy(u_bar.y);
+    double forward, strafe;
+    rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
+
+    set_forward(forward);
+    set_strafe(strafe);
+    set_vertical(model.accel_to_effort_z(u_bar.z));
+    set_yaw(model.accel_to_effort_yaw(u_bar.yaw));
+  }
+
+  Efforts::Efforts(const orca_msgs::msg::Efforts &msg)
+  {
+    forward_ = msg.forward;
+    strafe_ = msg.strafe;
+    vertical_ = msg.vertical;
+    yaw_ = msg.yaw;
+  }
+
   void Efforts::set_forward(double forward)
   { forward_ = clamp(forward, -1.0, 1.0); }
 
@@ -255,20 +259,6 @@ namespace orca
     strafe_ = 0;
     vertical_ = 0;
     yaw_ = 0;
-  }
-
-  void Efforts::from_acceleration(const orca::Model &model, const double current_yaw, const Acceleration &u_bar)
-  {
-    // Convert from world frame to body frame
-    double x_effort = model.accel_to_effort_xy(u_bar.x);
-    double y_effort = model.accel_to_effort_xy(u_bar.y);
-    double forward, strafe;
-    rotate_frame(x_effort, y_effort, current_yaw, forward, strafe);
-
-    set_forward(forward);
-    set_strafe(strafe);
-    set_vertical(model.accel_to_effort_z(u_bar.z));
-    set_yaw(model.accel_to_effort_yaw(u_bar.yaw));
   }
 
   void Efforts::to_acceleration(const orca::Model &model, const double current_yaw, Acceleration &u_bar)
@@ -301,14 +291,6 @@ namespace orca
     msg.yaw = yaw_;
 
     return msg;
-  }
-
-  void Efforts::from_msg(const orca_msgs::msg::Efforts &msg)
-  {
-    forward_ = msg.forward;
-    strafe_ = msg.strafe;
-    vertical_ = msg.vertical;
-    yaw_ = msg.yaw;
   }
 
   std::ostream &operator<<(std::ostream &os, Efforts const &e)

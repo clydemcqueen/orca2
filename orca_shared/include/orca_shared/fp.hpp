@@ -3,6 +3,7 @@
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "opencv2/core/types.hpp"
+#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
 #include "orca_msgs/msg/observation.hpp"
 #include "orca_shared/geometry.hpp"
 #include "rclcpp/time.hpp"
@@ -25,19 +26,18 @@ namespace orca
 
   struct Observation
   {
-    int id{NOT_A_MARKER};         // Marker ID
-    cv::Point2d c0, c1, c2, c3;   // Corners
-    double distance{0};           // Estimated distance to marker
-    double bearing{0};            // Bearing to center of marker
+    int id{NOT_A_MARKER};                 // Marker ID
+    cv::Point2d c0{}, c1{}, c2{}, c3{};   // Corners
+    double distance{};                    // Estimated distance to marker
+    double bearing{};                     // Bearing to center of marker
 
-    Observation()
-    = default;
+    constexpr Observation() = default;
 
-    // Construct from vlam observation
     Observation(const fiducial_vlam_msgs::msg::Observation &msg,
                 double marker_length, double hfov, double hres);
 
-    // Construct from id, corners and z
+    explicit Observation(const orca_msgs::msg::Observation &msg);
+
     Observation(int _id, const cv::Point2d &_c0, const cv::Point2d &_c1, const cv::Point2d &_c2, const cv::Point2d &_c3,
                 double marker_length, double hfov, double hres);
 
@@ -59,7 +59,9 @@ namespace orca
   struct ObservationStamped
   {
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
-    Observation o;
+    Observation o{};
+
+    constexpr ObservationStamped() = default;
   };
 
   std::ostream &operator<<(std::ostream &os, ObservationStamped const &obs);
@@ -70,8 +72,16 @@ namespace orca
 
   struct FP
   {
-    orca::PoseWithCovariance pose;
-    std::vector<Observation> observations;
+    orca::PoseWithCovariance pose{};
+    std::vector<Observation> observations{};
+
+    constexpr FP() = default;
+
+    FP(const fiducial_vlam_msgs::msg::Observations &obs,
+       const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+       double marker_length, double hfov, double hres);
+
+    explicit FP(const orca_msgs::msg::FiducialPose &msg);
 
     // True if z is good
     bool good_z() const
@@ -113,11 +123,6 @@ namespace orca
       return pose.pose.distance_yaw(that.pose.pose);
     }
 
-    // (Could be a constructor)
-    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-                   double marker_length, double hfov, double hres);
-
     void set_good_z(double z);
   };
 
@@ -132,16 +137,19 @@ namespace orca
     rclcpp::Time t{0, 0, RCL_ROS_TIME};
     FP fp;
 
+    constexpr FPStamped() = default;
+
+    FPStamped(const fiducial_vlam_msgs::msg::Observations &obs,
+              const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+              double marker_length, double hfov, double hres);
+
+    explicit FPStamped(const orca_msgs::msg::FiducialPoseStamped &msg);
+
     // Get the observation of a particular marker, return true if found and the observation is good
     bool get_good_observation(double good_obs_dist, int id, ObservationStamped &obs) const;
 
     // Get the closest observation and return the distance
     double get_closest_observation(ObservationStamped &obs) const;
-
-    // (Could be a constructor)
-    void from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                   const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-                   double marker_length, double hfov, double hres);
 
     void add_to_path(nav_msgs::msg::Path &path) const;
 
@@ -172,6 +180,10 @@ namespace orca
 
   double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
                              double marker_length, double hfov, double hres);
+
+  void vlam_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                    std::vector<orca_msgs::msg::Observation> &orca_msg,
+                    double marker_length, double hfov, double hres);
 
 } // namespace orca
 

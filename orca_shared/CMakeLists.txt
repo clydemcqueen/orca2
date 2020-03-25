@@ -74,7 +74,9 @@ add_executable(
 
 ament_target_dependencies(
   test_node
+  fiducial_vlam_msgs
   geometry_msgs
+  orca_msgs
   rclcpp
 )
 

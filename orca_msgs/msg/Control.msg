@@ -50,12 +50,12 @@ uint8 segment_type
 
 # The tuple (mission_idx, target_idx, plan_idx, segment_idx) uniquely names a segment while auv_node is running
 
-# Plan in world frame
+# Plan in world frame TODO FiducialPose
 geometry_msgs/Pose plan_pose
 geometry_msgs/Twist plan_twist
 orca_msgs/Observation[] plan_observations
 
-# Estimate in world frame
+# Estimate in world frame TODO FiducialPose
 geometry_msgs/Pose estimate_pose
 orca_msgs/Observation[] estimate_observations
 

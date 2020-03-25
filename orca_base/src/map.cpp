@@ -140,8 +140,7 @@ namespace orca_base
 
     // Add all of the markers to the map
     for (size_t i = 0; i < vlam_map_->ids.size(); ++i) {
-      orca::Pose pose;
-      pose.from_msg(vlam_map_->poses[i].pose);
+      orca::Pose pose{vlam_map_->poses[i].pose};
       pose.z = cxt_.global_plan_target_z_;
       poses[vlam_map_->ids[i]] = pose;
     }

@@ -56,6 +56,28 @@ ament_target_dependencies(
 )
 
 #=============
+# Fiducial pose node
+#=============
+
+add_executable(
+  fp_node
+  src/fp_node.cpp
+)
+
+ament_target_dependencies(
+  fp_node
+  fiducial_vlam_msgs
+  geometry_msgs
+  orca_description
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+  tf2
+  tf2_ros
+)
+
+#=============
 # Filter node
 #=============
 
@@ -89,6 +111,6 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS depth_node filter_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

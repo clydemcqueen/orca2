@@ -40,6 +40,8 @@ rosidl_generate_interfaces(
   msg/Depth.msg
   msg/Driver.msg
   msg/Efforts.msg
+  msg/FiducialPose.msg
+  msg/FiducialPoseStamped.msg
   msg/Observation.msg
   DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )

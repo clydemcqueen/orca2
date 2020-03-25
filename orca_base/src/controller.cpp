@@ -41,7 +41,7 @@ namespace orca_base
       u_bar.z = z_controller_.calc(estimate.pose.pose.z, dt) + ff.z;
     }
 
-    efforts.from_acceleration(cxt_.model_, plan.pose.pose.yaw, u_bar);
+    efforts = {cxt_.model_, plan.pose.pose.yaw, u_bar};
   }
 
 #if 0

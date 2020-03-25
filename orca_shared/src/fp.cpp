@@ -25,6 +25,21 @@ namespace orca
     estimate_distance_and_bearing(marker_length, hfov, hres);
   }
 
+  Observation::Observation(const orca_msgs::msg::Observation &msg)
+  {
+    id = msg.vlam.id;
+    c0.x = msg.vlam.x0;
+    c1.x = msg.vlam.x1;
+    c2.x = msg.vlam.x2;
+    c3.x = msg.vlam.x3;
+    c0.y = msg.vlam.y0;
+    c1.y = msg.vlam.y1;
+    c2.y = msg.vlam.y2;
+    c3.y = msg.vlam.y3;
+    distance = msg.distance;
+    bearing = msg.bearing;
+  }
+
   Observation::Observation(int _id, const cv::Point2d &_c0, const cv::Point2d &_c1, const cv::Point2d &_c2,
                            const cv::Point2d &_c3, double marker_length, double hfov, double hres)
   {
@@ -128,6 +143,24 @@ namespace orca
   // Fiducial pose (FP) -- pose and observations
   //=====================================================================================
 
+  FP::FP(const fiducial_vlam_msgs::msg::Observations &obs,
+         const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+         double marker_length, double hfov, double hres) :
+    pose{fcam_msg.pose}
+  {
+    for (const auto &r : obs.observations) {
+      observations.emplace_back(r, marker_length, hfov, hres);
+    }
+  }
+
+  FP::FP(const orca_msgs::msg::FiducialPose &msg) :
+    pose{msg.pose}
+  {
+    for (const auto &r : msg.observations) {
+      observations.emplace_back(r);
+    }
+  }
+
   bool FP::good_pose(double good_pose_dist) const
   {
     return pose.good_pose() && closest_observation() < good_pose_dist;
@@ -175,18 +208,6 @@ namespace orca
     return closest;
   }
 
-  void FP::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                     const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-                     double marker_length, double hfov, double hres)
-  {
-    pose.from_msg(fcam_msg.pose);
-
-    observations.clear();
-    for (const auto &r : obs.observations) {
-      observations.emplace_back(r, marker_length, hfov, hres);
-    }
-  }
-
   void FP::set_good_z(double z)
   {
     // Override the z value
@@ -203,6 +224,20 @@ namespace orca
   // FPStamped -- pose and observations with timestamp
   //=====================================================================================
 
+  FPStamped::FPStamped(const fiducial_vlam_msgs::msg::Observations &obs,
+                       const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
+                       double marker_length, double hfov, double hres) :
+    t{obs.header.stamp},
+    fp{obs, fcam_msg, marker_length, hfov, hres}
+  {
+    assert(obs.header.stamp == fcam_msg.header.stamp);
+  }
+
+  FPStamped::FPStamped(const orca_msgs::msg::FiducialPoseStamped &msg) :
+    t{msg.header.stamp},
+    fp{msg.fp}
+  {}
+
   bool FPStamped::get_good_observation(double good_obs_dist, int id, ObservationStamped &obs) const
   {
     obs.t = t;
@@ -213,16 +248,6 @@ namespace orca
   {
     obs.t = t;
     return fp.get_closest_observation(obs.o);
-  }
-
-  void FPStamped::from_msgs(const fiducial_vlam_msgs::msg::Observations &obs,
-                            const geometry_msgs::msg::PoseWithCovarianceStamped &fcam_msg,
-                            double marker_length, double hfov, double hres)
-  {
-    assert(obs.header.stamp == fcam_msg.header.stamp);
-
-    t = obs.header.stamp;
-    fp.from_msgs(obs, fcam_msg, marker_length, hfov, hres);
   }
 
   void FPStamped::add_to_path(nav_msgs::msg::Path &path) const
@@ -246,10 +271,28 @@ namespace orca
   double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
                              double marker_length, double hfov, double hres)
   {
-    FP temp;
     geometry_msgs::msg::PoseWithCovarianceStamped fake; // Hmmm... API can be improved
-    temp.from_msgs(*obs_msg, fake, marker_length, hfov, hres);
+    FP temp = FP{*obs_msg, fake, marker_length, hfov, hres};
     return temp.closest_observation();
+  }
+
+  /**
+   * Convert vlam observations to Orca observations by calculating bearing and distance
+   *
+   * @param vlam_msg In: vector of marker observations from vlam
+   * @param orca_msg Out: vector of marker observations with bearing and distance
+   * @param marker_length In: marker length
+   * @param hfov In: horizontal field of view
+   * @param hres In: horizontal resolution
+   */
+  void vlam_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                    std::vector<orca_msgs::msg::Observation> &orca_msg,
+                    double marker_length, double hfov, double hres)
+  {
+    for (auto vlam_obs : vlam_msg->observations) {
+      Observation orca_obs{vlam_obs, marker_length, hfov, hres};
+      orca_msg.push_back(orca_obs.to_msg());
+    }
   }
 
 } // namespace orca

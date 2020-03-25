@@ -62,11 +62,20 @@ namespace orca_base
 
   struct Target
   {
-    int marker_id;
-    orca::FP fp; // Hmmm... I think we can get by with just an orca::Pose
+    int marker_id{orca::NOT_A_MARKER};
+    orca::FP fp{}; // Hmmm... I think we can get by with just an orca::Pose
 
-    Target() : marker_id{orca::NOT_A_MARKER}
-    {}
+    constexpr Target() = default;
+
+    explicit Target(const geometry_msgs::msg::Pose &pose)
+    {
+      fp.pose.pose = orca::Pose{pose};
+    }
+
+    Target(int _marker_id, const geometry_msgs::msg::Pose &pose) : marker_id{_marker_id}
+    {
+      fp.pose.pose = orca::Pose{pose};
+    }
 
     Target(int _marker_id, orca::FP _fp) : marker_id{_marker_id}, fp{std::move(_fp)}
     {}

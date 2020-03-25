@@ -102,13 +102,21 @@ def generate_launch_description():
                 'camera_frame_id': forward_camera_frame,
             }]),
 
+        # FP node, generate fiducial poses from observations and poses
+        Node(package='orca_filter', node_executable='fp_node', output='screen',
+             node_name='fp_node', parameters=[{
+                'use_sim_time': use_sim_time,
+                'fluid_density': 997.0,
+            }], remappings=[
+                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+            ]),
+
         # AUV controller
         Node(package='orca_base', node_executable='auv_node', output='screen',
              node_name='auv_node', parameters=[params_path, {
                 'use_sim_time': use_sim_time,
             }], remappings=[
                 ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-                ('fcam_image', '/' + forward_camera_name + '/image_raw'),
                 ('fcam_info', '/' + forward_camera_name + '/camera_info'),
             ]),
 

@@ -357,7 +357,7 @@ namespace orca_base
     }
 
     // Save the observations and pose
-    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+    estimate_ = {*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_};
 
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
@@ -428,7 +428,7 @@ namespace orca_base
     }
 
     // Save the observations and pose
-    estimate_.from_msgs(*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_);
+    estimate_ = {*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_};
 
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
