@@ -126,7 +126,7 @@ namespace orca_filter
 
   FourFilter::FourFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
     FilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
   {
@@ -204,28 +204,30 @@ namespace orca_filter
     FilterBase::reset(pose_to_fx(pose));
   }
 
-  void FourFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
+  void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom)
   {
-    pose_from_fx(filter_.x(), filtered_odom.pose.pose);
-    twist_from_fx(filter_.x(), filtered_odom.twist.twist);
-    flatten_4x4_covar(filter_.P(), filtered_odom.pose.covariance, true);
-    flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
+    pose_from_fx(filter_.x(), filtered_odom.fp.pose.pose);
+    // twist_from_fx(filter_.x(), filtered_odom.twist.twist);
+    flatten_4x4_covar(filter_.P(), filtered_odom.fp.pose.covariance, true);
+    // flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
   }
 
-  Measurement FourFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
+  Measurement FourFilter::to_measurement(const orca_msgs::msg::Depth &depth,
+                                         const orca::Observations &observations) const
   {
     Measurement m;
-    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_z(depth, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = fx_z;
     });
     return m;
   }
 
-  Measurement FourFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
+  Measurement FourFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                                         const orca::Observations &observations) const
   {
     Measurement m;
-    m.init_4dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_4dof(pose, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = fx_x;
       z(1) = fx_y;

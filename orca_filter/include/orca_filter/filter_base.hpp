@@ -3,13 +3,12 @@
 
 #include <queue>
 
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "ukf/ukf.hpp"
 
 #include "orca_msgs/msg/depth.hpp"
+#include "orca_shared/fp.hpp"
 #include "orca_shared/geometry.hpp"
 
 #include "orca_filter/filter_context.hpp"
@@ -72,6 +71,8 @@ namespace orca_filter
 
     Type type_;
     rclcpp::Time stamp_;
+    orca::Observations observations_;
+
     Eigen::VectorXd z_;
     Eigen::MatrixXd R_;
     ukf::MeasurementFn h_fn_;
@@ -82,13 +83,15 @@ namespace orca_filter
     Measurement() = default;
 
     // 1dof z measurement from a depth message
-    void init_z(const orca_msgs::msg::Depth &depth, ukf::MeasurementFn h_fn);
+    void init_z(const orca_msgs::msg::Depth &depth, const orca::Observations &observations, ukf::MeasurementFn h_fn);
 
     // 4dof measurement from a pose message
-    void init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn);
+    void init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                   const orca::Observations &observations, ukf::MeasurementFn h_fn);
 
     // 6dof measurement from a pose message
-    void init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn);
+    void init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                   const orca::Observations &observations, ukf::MeasurementFn h_fn);
 
     // Sort by time
     bool operator()(const Measurement &a, const Measurement &b)
@@ -124,7 +127,7 @@ namespace orca_filter
 
   class FilterBase
   {
-  protected:
+  public:
 
     enum class Type
     {
@@ -140,7 +143,7 @@ namespace orca_filter
     rclcpp::Time filter_time_;                  // Current time of filter
     rclcpp::Time odom_time_;                    // Timestamp of last publish odom message
 
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub_;
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     // Measurement priority queue, sorted from oldest to newest
@@ -164,12 +167,9 @@ namespace orca_filter
      * Process all messages in the queue and publish odometry as necessary
      *
      * @param stamp Timestamp of most recent message, used to trim state history and measurement history
-     * @param u_bar Control input
-     * @param filtered_odom
      * @return True if at least one measurement was an inlier and the filter is good
      */
-    bool process_measurements(const rclcpp::Time &stamp, const orca::Acceleration &u_bar,
-                              nav_msgs::msg::Odometry &filtered_odom);
+    bool process_measurements(const rclcpp::Time &stamp);
 
     /**
      * Rewind the filter to a previous state
@@ -180,7 +180,7 @@ namespace orca_filter
     bool rewind(const rclcpp::Time &stamp);
 
     // Publish odometry
-    void publish_odom(nav_msgs::msg::Odometry &odom);
+    void publish_odom(const Measurement &measurement);
 
   protected:
 
@@ -197,7 +197,7 @@ namespace orca_filter
      *
      * @param filtered_odom Output: odometry message
      */
-    virtual void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) = 0;
+    virtual void odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom) = 0;
 
     /**
      * Convert a Depth message to a Measurement
@@ -205,7 +205,8 @@ namespace orca_filter
      * @param depth Incoming message
      * @return Measurement
      */
-    virtual Measurement to_measurement(const orca_msgs::msg::Depth &depth) const = 0;
+    virtual Measurement to_measurement(const orca_msgs::msg::Depth &depth,
+                                       const orca::Observations &observations) const = 0;
 
     /**
      * Convert PoseWithCovarianceStamped message to a Measurement
@@ -213,14 +214,15 @@ namespace orca_filter
      * @param pose Incoming message
      * @return Measurement
      */
-    virtual Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const = 0;
+    virtual Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                                       const orca::Observations &observations) const = 0;
 
   public:
 
     explicit FilterBase(Type type,
                         const rclcpp::Logger &logger,
                         const FilterContext &cxt,
-                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
                         int state_dim);
 
@@ -253,12 +255,11 @@ namespace orca_filter
      *
      * @tparam T Type of message to process, each type requires a corresponding to_measurement(T) function
      * @param msg Message to process
-     * @param u_bar Control input
-     * @param filtered_odom Filtered odometry output
+     * @param observations Fiducial observations... these will be passed through (unfiltered) to the published odometry
      * @return True if there was at least one inlier and the filter is good
      */
     template<typename T>
-    bool process_message(const T &msg, const orca::Acceleration &u_bar, nav_msgs::msg::Odometry &filtered_odom)
+    bool process_message(const T &msg, const orca::Observations &observations)
     {
       rclcpp::Time stamp{msg.header.stamp};
 
@@ -268,13 +269,15 @@ namespace orca_filter
       }
 
       // Add this message to the priority queue
-      measurement_q_.push(to_measurement(msg));
+      measurement_q_.push(to_measurement(msg, observations));
 
       // Process one or more measurements
-      return process_measurements(stamp, u_bar, filtered_odom);
+      return process_measurements(stamp);
     }
 
-    // Type name
+    Type type()
+    { return type_; }
+
     std::string name();
   };
 
@@ -284,17 +287,19 @@ namespace orca_filter
 
   class DepthFilter : public FilterBase
   {
-    void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
+    void odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom) override;
 
-    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth,
+                               const orca::Observations &observations) const override;
 
-    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                               const orca::Observations &observations) const override;
 
   public:
 
     explicit DepthFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
@@ -307,17 +312,19 @@ namespace orca_filter
 
   class FourFilter : public FilterBase
   {
-    void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
+    void odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom) override;
 
-    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth,
+                               const orca::Observations &observations) const override;
 
-    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                               const orca::Observations &observations) const override;
 
   public:
 
     explicit FourFilter(const rclcpp::Logger &logger,
                         const FilterContext &cxt,
-                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
@@ -330,21 +337,23 @@ namespace orca_filter
 
   class PoseFilter : public FilterBase
   {
-    void odom_from_filter(nav_msgs::msg::Odometry &filtered_odom) override;
+    void odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom) override;
 
   public:
 
     explicit PoseFilter(const rclcpp::Logger &logger,
                         const FilterContext &cxt,
-                        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                        rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
     // Reset the filter with a pose
     void reset(const geometry_msgs::msg::Pose &pose) override;
 
-    Measurement to_measurement(const orca_msgs::msg::Depth &depth) const override;
+    Measurement to_measurement(const orca_msgs::msg::Depth &depth,
+                               const orca::Observations &observations) const override;
 
-    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const override;
+    Measurement to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                               const orca::Observations &observations) const override;
   };
 
 } // namespace orca_filter

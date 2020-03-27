@@ -28,8 +28,8 @@ namespace orca_filter
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   \
   CXT_MACRO_MEMBER(marker_length, double, 0.1778)             /* Marker length in meters  */ \
-  CXT_MACRO_MEMBER(fcam_hfov, double, 1.4)                    /* Forward camera horiz field of view in radians  */ \
-  CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
+  CXT_MACRO_MEMBER(cam_hfov, double, 1.4)                     /* Camera horiz field of view in radians  */ \
+  CXT_MACRO_MEMBER(cam_hres, double, 800)                     /* Camera horiz resolution in pixels  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
@@ -59,7 +59,7 @@ namespace orca_filter
 
     // Message filter subscriptions
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
-    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_pose_sub_;
+    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> pose_sub_;
 
     // Sync pose + observations
     using FiducialPolicy = message_filters::sync_policies::ExactTime<
@@ -91,11 +91,11 @@ namespace orca_filter
      * vloc poses are sensor_f_map -- transform to base_f_map
      *
      * @param obs_msg Marker observations
-     * @param fcam_msg Resulting pose from SolvePnP
+     * @param pose_msg Resulting pose from SolvePnP
      */
     void fiducial_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
+      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &pose_msg)
     {
       // Keep track of the previous time
       static rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
@@ -122,15 +122,16 @@ namespace orca_filter
 
       // Convert pose to transform
       tf2::Transform t_map_sensor;
-      tf2::fromMsg(fcam_msg->pose.pose, t_map_sensor);
+      tf2::fromMsg(pose_msg->pose.pose, t_map_sensor);
 
       // Multiply transforms to get t_map_base
+      // This is tied to fcam... fix this to support multiple cameras
       tf2::Transform t_map_base = t_map_sensor * parser_.t_fcam_base;
 
       // Convert transform back to pose
       geometry_msgs::msg::PoseWithCovariance base_f_map;
       toMsg(t_map_base, base_f_map.pose);
-      base_f_map.covariance = fcam_msg->pose.covariance;  // TODO rotate covariance
+      base_f_map.covariance = pose_msg->pose.covariance;  // TODO rotate covariance
 
       // Publish tf
       if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
@@ -150,7 +151,7 @@ namespace orca_filter
 
       // Resulting fiducial pose
       orca_msgs::msg::FiducialPoseStamped fp_msg{};
-      fp_msg.header = fcam_msg->header;
+      fp_msg.header = pose_msg->header;
       fp_msg.fp.pose = base_f_map;
 
       // "Fuse" depth and fiducial messages
@@ -159,7 +160,7 @@ namespace orca_filter
       }
 
       // Convert observations
-      orca::vlam_to_orca(obs_msg, fp_msg.fp.observations, cxt_.marker_length_, cxt_.fcam_hfov_, cxt_.fcam_hres_);
+      orca::vlam_msg_to_orca_msg(obs_msg, fp_msg.fp.observations, cxt_.marker_length_, cxt_.cam_hfov_, cxt_.cam_hres_);
 
       // Publish
       fp_pub_->publish(fp_msg);
@@ -170,7 +171,7 @@ namespace orca_filter
 
     void fiducial_drop_callback(
       const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
+      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &pose_msg)
     {
       if (obs_msg) {
         RCLCPP_WARN(get_logger(), "drop: have an observation but no odometry");
@@ -185,7 +186,7 @@ namespace orca_filter
       if (cxt_.fuse_depth_) {
         using namespace std::placeholders;
         auto depth_cb = std::bind(&FPNode::depth_callback, this, _1);
-        depth_sub_ = create_subscription<orca_msgs::msg::Depth>("depth", QUEUE_SIZE, depth_cb);
+        depth_sub_ = create_subscription<orca_msgs::msg::Depth>("/depth", QUEUE_SIZE, depth_cb);
       } else {
         depth_sub_.reset();
       }
@@ -217,12 +218,12 @@ namespace orca_filter
       FP_NODE_ALL_PARAMS
 
       // Message filter subscriptions
-      obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
-      fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Default qos is reliable, queue=10
+      obs_sub_.subscribe(this, "/fiducial_observations"); // Default qos is reliable, queue=10
+      pose_sub_.subscribe(this, "camera_pose"); // Default qos is reliable, queue=10
 
       // Start sync
       using namespace std::placeholders;
-      sync_.reset(new FiducialSync(FiducialPolicy(QUEUE_SIZE), obs_sub_, fcam_pose_sub_));
+      sync_.reset(new FiducialSync(FiducialPolicy(QUEUE_SIZE), obs_sub_, pose_sub_));
       sync_->registerCallback(std::bind(&FPNode::fiducial_callback, this, _1, _2));
       sync_->registerDropCallback(std::bind(&FPNode::fiducial_drop_callback, this, _1, _2));
 

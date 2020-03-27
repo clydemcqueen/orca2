@@ -11,15 +11,13 @@
  *      Launch auv_node
  *      AUVContext:
  *          loop_driver = 0 (timer driven)
- *          filtered_odom = false
  *          fuse_depth = true
  *          publish_tf = true
  *
- * With a filter:
+ * With a filter (typical case):
  *      Launch auv_node and filter_node
  *      AUVContext:
  *          loop_driver = 2 (fiducial driven)
- *          filtered_odom = true
  *          fuse_depth = false
  *          publish_tf = false
  *      FilterContext:
@@ -52,9 +50,9 @@ namespace orca_base
     (void) depth_sub_;
     (void) driver_sub_;
     (void) fcam_info_sub_;
+    (void) fp_sub_;
     (void) goal_sub_;
     (void) map_sub_;
-    (void) obs_sub_;
     (void) spin_timer_;
     (void) mission_server_;
 
@@ -84,15 +82,15 @@ namespace orca_base
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
 
     // Monotonic subscriptions
-    depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
-      "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
-      { this->depth_cb_.call(msg); });
     driver_sub_ = create_subscription<orca_msgs::msg::Driver>(
       "driver_status", QUEUE_SIZE, [this](const orca_msgs::msg::Driver::SharedPtr msg) -> void
       { this->driver_cb_.call(msg); });
     fcam_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
       "fcam_info", camera_info_qos, [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) -> void
       { this->fcam_info_cb_.call(msg); });
+    fp_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
+      "filtered_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
+      { this->fp_cb_.call(msg); });
     map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
       "fiducial_map", QUEUE_SIZE, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
       { this->map_cb_.call(msg); });
@@ -130,36 +128,13 @@ namespace orca_base
 
   void AUVNode::validate_parameters()
   {
-    // Sync subscriptions
-    if (cxt_.filtered_odom_) {
-      // Message filter subscriptions
-      obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
-      fcam_pose_sub_.unsubscribe();
-      odom_sub_.subscribe(this, "odom"); // Default qos is reliable, queue=10
-
-      // Stop raw sync
-      raw_sync_ = nullptr;
-
-      // Start filtered sync
-      using namespace std::placeholders;
-
-      filtered_sync_.reset(new FilteredSync(FilteredPolicy(QUEUE_SIZE), obs_sub_, odom_sub_));
-      filtered_sync_->registerCallback(std::bind(&AUVNode::filtered_fiducial_callback, this, _1, _2));
-      filtered_sync_->registerDropCallback(std::bind(&AUVNode::filtered_fiducial_drop_callback, this, _1, _2));
+    // Subscribe to depth messages
+    if (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) {
+      depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
+        "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
+        { this->depth_cb_.call(msg); });
     } else {
-      // Message filter subscriptions
-      obs_sub_.subscribe(this, "fiducial_observations"); // Default qos is reliable, queue=10
-      fcam_pose_sub_.subscribe(this, "fcam_f_map"); // Default qos is reliable, queue=10
-      odom_sub_.unsubscribe();
-
-      // Stop filtered sync
-      filtered_sync_ = nullptr;
-
-      // Start raw sync
-      using namespace std::placeholders;
-      raw_sync_.reset(new RawSync(RawPolicy(QUEUE_SIZE), obs_sub_, fcam_pose_sub_));
-      raw_sync_->registerCallback(std::bind(&AUVNode::raw_fiducial_callback, this, _1, _2));
-      raw_sync_->registerDropCallback(std::bind(&AUVNode::raw_fiducial_drop_callback, this, _1, _2));
+      depth_sub_.reset();
     }
 
     // Update model from new parameters
@@ -200,13 +175,43 @@ namespace orca_base
 
   bool AUVNode::ready_to_start_mission(const rclcpp::Time &t)
   {
-    // -- not currently in a mission
-    // -- have a map
-    // -- have camera info
-    // -- getting driver, depth and fiducial messages
-    // -- have a good pose or a good observation
-    return !mission_ && map_.ok() && cam_info_ok() && driver_ok(t) && depth_ok(t) && fp_ok(t) &&
-           (estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_));
+    if (mission_) {
+      RCLCPP_ERROR(get_logger(), "mission already running");
+      return false;
+    }
+
+    if (!map_.ok()) {
+      RCLCPP_ERROR(get_logger(), "no map");
+      return false;
+    }
+
+    if (!cam_info_ok()) {
+      RCLCPP_ERROR(get_logger(), "no camera info");
+      return false;
+    }
+
+    if (!driver_ok(t)) {
+      RCLCPP_ERROR(get_logger(), "no driver status");
+      return false;
+    }
+
+    if ((cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(t)) {
+      RCLCPP_ERROR(get_logger(), "no depth messages");
+      return false;
+    }
+
+    if (!fp_ok(t)) {
+      RCLCPP_ERROR(get_logger(), "no fiducial pose messages");
+      return false;
+    }
+
+    if (!(estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_))) {
+      RCLCPP_ERROR(get_logger(), "no good pose, no good observation");
+      return false;
+    }
+
+    RCLCPP_INFO(get_logger(), "mission accepted");
+    return true;
   }
 
   void AUVNode::timer_callback(bool first)
@@ -226,13 +231,13 @@ namespace orca_base
 
     // If we're expecting steady depth messages, but they stop, then abort the mission
     if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(curr_time)) {
-      RCLCPP_ERROR(get_logger(), "lost depth readings, abort mission");
+      RCLCPP_ERROR(get_logger(), "lost depth messages, abort mission");
       abort_mission(curr_time);
     }
 
     // If we're expecting steady fiducial messages, but they stop, then abort the mission
     if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN && !fp_ok(curr_time)) {
-      RCLCPP_ERROR(get_logger(), "lost fiducial readings, abort mission");
+      RCLCPP_ERROR(get_logger(), "lost fiducial pose messages, abort mission");
       abort_mission(curr_time);
     }
 
@@ -292,163 +297,18 @@ namespace orca_base
     map_.set_vlam_map(msg);
   }
 
-  // Get a synchronized set of messages from vloc: pose from SolvePnP and raw marker observations
-  // Guard against invalid or duplicate timestamps
-  // vloc poses are sensor_f_map -- transform to base_f_map
-  void AUVNode::raw_fiducial_callback(
-    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
+  void AUVNode::fp_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
   {
-    // Keep track of the previous time
-    static rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
-
-    // Wait for at least 1 map and 1 depth message
-    if (!map_.ok() || !depth_cb_.receiving()) {
-      return;
-    }
-
-    // The current time
-    rclcpp::Time curr_time = obs_msg->header.stamp;
-
     // Skip first message
-    if (!monotonic::valid(prev_time)) {
-      prev_time = curr_time;
+    if (first) {
       return;
     }
 
-    // Ignore invalid timestamps
-    if (!monotonic::valid(curr_time)) {
-      return;
-    }
-
-    // Ignore duplicates, or time going backwards
-    // (Possible in simulation if we're running ROS time, see notes in orca_gazebo README)
-    if (curr_time <= prev_time) {
-      return;
-    }
-
-    // Convert pose to transform
-    tf2::Transform t_map_sensor;
-    tf2::fromMsg(fcam_msg->pose.pose, t_map_sensor);
-
-    // Multiply transforms to get t_map_base
-    tf2::Transform t_map_base = t_map_sensor * parser_.t_fcam_base;
-
-    // Convert transform back to pose
-    geometry_msgs::msg::PoseWithCovarianceStamped base_f_map;
-    base_f_map.header = fcam_msg->header;
-    toMsg(t_map_base, base_f_map.pose.pose);
-    base_f_map.pose.covariance = fcam_msg->pose.covariance;  // TODO rotate covariance
-
-    // Publish tf
-    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
-      // Build transform message
-      geometry_msgs::msg::TransformStamped transform;
-      transform.header.stamp = curr_time;
-      transform.header.frame_id = cxt_.map_frame_;
-      transform.child_frame_id = cxt_.base_frame_;
-      transform.transform = toMsg(t_map_base);
-
-      // TF messages can have multiple transforms, we have just 1
-      tf2_msgs::msg::TFMessage tf_message;
-      tf_message.transforms.emplace_back(transform);
-
-      tf_pub_->publish(tf_message);
-    }
-
-    // Save the observations and pose
-    estimate_ = {*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_};
+    estimate_ = FPStamped{*msg};
 
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
-      auv_advance(estimate_.t, curr_time - prev_time);
-    }
-
-    // Update prev_time
-    prev_time = curr_time;
-  }
-
-  void AUVNode::raw_fiducial_drop_callback(
-    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg)
-  {
-    if (obs_msg) {
-      RCLCPP_WARN(get_logger(), "drop: have an observation but no odometry");
-    } else {
-      RCLCPP_WARN(get_logger(), "drop: have odometry but no observation");
-    }
-  }
-
-  // Get a synchronized set of messages: raw marker observations from vloc and filtered odom from filter_node
-  // filter_node guarantees that all messages are monotonic, no need to guard against invalid or duplicate timestamps
-  // filter_node odom messages are base_f_map
-  void AUVNode::filtered_fiducial_callback(
-    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
-  {
-    // Keep track of the previous time
-    static rclcpp::Time prev_time{0, 0, RCL_ROS_TIME};
-
-    // Wait for at least 1 map and 1 depth message
-    if (!map_.ok() || !depth_cb_.receiving()) {
-      return;
-    }
-
-    // The current time
-    rclcpp::Time curr_time = obs_msg->header.stamp;
-
-    // Skip first message
-    if (!monotonic::valid(prev_time)) {
-      prev_time = curr_time;
-      return;
-    }
-
-    geometry_msgs::msg::PoseWithCovarianceStamped base_f_map;
-    base_f_map.header = odom_msg->header;
-    base_f_map.pose = odom_msg->pose;
-
-    // Publish tf
-    if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
-      // Can't convert geometry_msgs::msg::Pose to geometry_msgs::msg::Transform, so go by way of tf2::Transform
-      tf2::Transform t_map_base;
-      tf2::fromMsg(odom_msg->pose.pose, t_map_base);
-
-      // Build transform message
-      geometry_msgs::msg::TransformStamped transform;
-      transform.header.stamp = curr_time;
-      transform.header.frame_id = cxt_.map_frame_;
-      transform.child_frame_id = cxt_.base_frame_;
-      transform.transform = toMsg(t_map_base);
-
-      // TF messages can have multiple transforms, we have just 1
-      tf2_msgs::msg::TFMessage tf_message;
-      tf_message.transforms.emplace_back(transform);
-
-      tf_pub_->publish(tf_message);
-    }
-
-    // Save the observations and pose
-    estimate_ = {*obs_msg, base_f_map, map_.marker_length(), cxt_.fcam_hfov_, cxt_.fcam_hres_};
-
-    // Drive the AUV loop
-    if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
-      auv_advance(estimate_.t, curr_time - prev_time);
-    }
-
-    // Update prev_time
-    prev_time = curr_time;
-  }
-
-  void AUVNode::filtered_fiducial_drop_callback(
-    const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg)
-  {
-    // The filter sends at 40fps: 30 for the camera, and 10 for the barometer
-    // The only interesting drops are when we have an observation but no odometry
-    // These are uncommon when we're close to a marker, but they can be pretty noisy
-    // far away from markers, so make these DEBUG.
-    if (obs_msg) {
-      RCLCPP_DEBUG(get_logger(), "drop: have an observation but no odometry");
+      auv_advance(estimate_.t, fp_cb_.d());
     }
   }
 
@@ -461,10 +321,8 @@ namespace orca_base
     using orca_msgs::msg::Control;
 
     if (ready_to_start_mission(now())) {
-      RCLCPP_INFO(get_logger(), "mission accepted");
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     } else {
-      RCLCPP_ERROR(get_logger(), "mission rejected"); // TODO would be nice to say why it was rejected
       return rclcpp_action::GoalResponse::REJECT;
     }
   }
@@ -545,7 +403,7 @@ namespace orca_base
   {
     if (mission_) {
       mission_->abort();
-      mission_ = nullptr;
+      mission_.reset();
 
       // Send the last control message
       publish_control(msg_time, {});
@@ -566,10 +424,10 @@ namespace orca_base
    *                      -- no lag between new depth data & controller response
    *                      -- should provide a consistent 10Hz rate [but messages may be lost or delayed]
    *
-   * FIDUCIAL_DRIVEN      Called by fiducial_callback
+   * FIDUCIAL_DRIVEN      Called by fp_callback
    *                      Pros:
    *                      -- no lag between new fiducial data & controller response
-   *                      -- if orca_filter is running upstream and fusing depth and fiducial data, should provide
+   *                      -- if filter_node is running upstream and fusing depth and fiducial data, should provide
    *                         a consistent stream of messages at 10-40Hz [but messages may be lost or delayed]
    *
    * The gating factor for depth messages is the barometer driver in orca_driver: it takes at least 40ms
@@ -577,8 +435,8 @@ namespace orca_base
    *
    * The image message rates depend on many factors, but 15-30Hz is typical.
    *
-   * orca_filter runs at the sum of all of the sensor rates, so 1 camera at 15fps + 1 barometer at 10Hz
-   * should provide 25Hz when there's a marker in view, and 10Hz when there isn't.
+   * filter_node can run at the sum of all of the sensor rates, so 1 camera at 15fps + 1 barometer at 10Hz
+   * might provide 25Hz when there's a marker in view, and 10Hz when there isn't.
    *
    * The planners require that curr_time = prev_time + d, so we can't limit d.
    *
@@ -588,7 +446,7 @@ namespace orca_base
   void AUVNode::auv_advance(const rclcpp::Time &t, const rclcpp::Duration &d)
   {
     if (d.seconds() > 0.2) {
-      RCLCPP_WARN(get_logger(), "auv loop d=%g seconds higher than expected", d.seconds());
+      RCLCPP_WARN(get_logger(), "high dt: %g > 0.2", d.seconds());
     }
 
     // Fuse depth and fiducial messages
@@ -622,7 +480,7 @@ namespace orca_base
       }
     } else {
       // Mission is over, clean up
-      mission_ = nullptr;
+      mission_.reset();
       publish_control(t, {});
     }
   }

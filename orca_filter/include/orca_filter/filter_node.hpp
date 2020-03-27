@@ -7,6 +7,7 @@
 #include "orca_description/parser.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
+#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_filter/filter_context.hpp"
@@ -29,36 +30,28 @@ namespace orca_filter
     // Parsed URDF
     orca_description::Parser parser_;
 
-    // FilterNode runs one of two filters:
-    // -- a pose filter takes all sensor input and produces a full pose
-    // -- a depth filter takes barometric data and produces a filtered z value
-    //
-    // When poses are available (near a marker) the pose filter is used.
-    // When poses are not available (running through open water) the depth filter is used.
-    //
-    // Both filters publish odometry. The depth filter publishes very high (>1e4) covariance values for most dimensions.
-
-    bool receiving_poses_{false};
+    // Filter state
+    bool good_pose_{false};
     std::shared_ptr<FilterBase> filter_;
-    rclcpp::Time last_pose_stamp_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time last_pose_inlier_stamp_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_fp_stamp_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time last_fp_inlier_stamp_{0, 0, RCL_ROS_TIME};
+    orca::Observations observations_{};
 
     // Control state
-    double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
-    orca::Acceleration u_bar_{};                  // Last control, used for filter predict step
+    // double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
+    // orca::Acceleration u_bar_{};                  // Last control, used for filter predict step
 
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_pub_;
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub_;
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr fcam_sub_;
+    rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fcam_sub_;
 
     // Validate parameters
     void validate_parameters();
 
-    // Create the filter
+    // Using observations_, set the state and create the appropriate filter
     void create_filter();
 
     // Callbacks
@@ -66,20 +59,19 @@ namespace orca_filter
 
     void control_callback(orca_msgs::msg::Control::SharedPtr msg, bool first);
 
-    void fcam_callback(geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg, bool first);
+    void fcam_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first);
 
     // Callback wrappers
     monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Depth::SharedPtr>
       depth_cb_{this, &FilterNode::depth_callback};
     monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr>
       control_cb_{this, &FilterNode::control_callback};
-    monotonic::Monotonic<FilterNode *, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr>
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::FiducialPoseStamped::SharedPtr>
       fcam_cb_{this, &FilterNode::fcam_callback};
 
     // Process a camera pose
-    void process_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr &sensor_f_map,
-                      const tf2::Transform &t_sensor_base, const std::string &frame_id,
-                      const rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr &pose_pub);
+    void process_pose(const orca_msgs::msg::FiducialPoseStamped::SharedPtr &msg,
+                      const tf2::Transform &t_sensor_base, const std::string &frame_id);
 
   public:
     explicit FilterNode();

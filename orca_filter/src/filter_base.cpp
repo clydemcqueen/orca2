@@ -41,7 +41,7 @@ namespace orca_filter
   FilterBase::FilterBase(Type type,
                          const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
                          int state_dim) :
 
@@ -113,8 +113,8 @@ namespace orca_filter
     filter_time_ = stamp;
   }
 
-  bool FilterBase::process_measurements(const rclcpp::Time &stamp, const Acceleration &u_bar,
-                                        nav_msgs::msg::Odometry &filtered_odom)
+  // TODO take control input, will need to get estimated yaw to turn control into u_bar
+  bool FilterBase::process_measurements(const rclcpp::Time &stamp)
   {
     // Trim state_history_
     while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
@@ -142,7 +142,7 @@ namespace orca_filter
       Measurement m = measurement_q_.top();
       measurement_q_.pop();
 
-      predict(m.stamp_, u_bar);
+      predict(m.stamp_, {});
 
       filter_.set_h_fn(m.h_fn_);
       filter_.set_r_z_fn(m.r_z_fn_);
@@ -169,9 +169,7 @@ namespace orca_filter
          * This behavior can be overridden using the cxt_.always_publish_odom_ flag.
          */
         if (type_ == Type::depth || m.type_ != Measurement::Type::depth || cxt_.always_publish_odom_) {
-          filtered_odom.header.stamp = filter_time_;
-          odom_from_filter(filtered_odom);
-          publish_odom(filtered_odom);
+          publish_odom(m);
         }
       } else {
         outliers++;
@@ -188,15 +186,7 @@ namespace orca_filter
       RCLCPP_DEBUG(logger_, "rejected %d outlier(s)", outliers);
     }
 
-    if (!inliers || !filter_.valid()) {
-      return false;
-    }
-
-    // Return a new estimate
-    filtered_odom.header.stamp = filter_time_;
-    odom_from_filter(filtered_odom);
-
-    return true;
+    return inliers > 0 && filter_.valid();
   }
 
   // Rewind to a previous state, return true if successful, false if there was no change
@@ -230,14 +220,22 @@ namespace orca_filter
     return true;
   }
 
-  void FilterBase::publish_odom(nav_msgs::msg::Odometry &odom)
+  void FilterBase::publish_odom(const Measurement &measurement)
   {
     // If we rewind the filter the timestamp will repeat
     // Downstream consumers might get confused if (curr - prev) == 0
-    if (odom.header.stamp == odom_time_) {
+    if (filter_time_ == odom_time_) {
       return;
     }
-    odom_time_ = odom.header.stamp;
+    odom_time_ = filter_time_;
+
+    // Get pose from the filter
+    orca_msgs::msg::FiducialPoseStamped odom;
+    odom.header.stamp = odom_time_;
+    odom_from_filter(odom);
+
+    // Copy the unfiltered observations from the measurement
+    orca::orca_to_orca_msg(measurement.observations_, odom.fp.observations);
 
     // Publish odometry
     if (filtered_odom_pub_->get_subscription_count() > 0) {
@@ -252,7 +250,7 @@ namespace orca_filter
 
       // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
       tf2::Transform t_map_base;
-      fromMsg(odom.pose.pose, t_map_base);
+      fromMsg(odom.fp.pose.pose, t_map_base);
       geo_tf.transform = toMsg(t_map_base);
 
       // One transform in this tf message

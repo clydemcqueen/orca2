@@ -20,15 +20,13 @@
     loop_driver: 0
 
     # filter_node is running:
-    filtered_odom: true
-    fuse_depth: false
     publish_tf: false
 
     # How far in front of a marker is a good pose?
     good_pose_dist: 2.0
 
-    # Do not allow MTM recovery
-    global_plan_allow_mtm: false
+    # Allow MTM recovery
+    global_plan_allow_mtm: true
 
     # Do not allow waypoints
     pose_plan_waypoints: false
@@ -39,6 +37,7 @@
 
     # How close to the markers should we get?
     pose_plan_target_dist: 0.8
+    mtm_plan_target_dist: 1.5
 
 /filter_node:
   ros__parameters:
@@ -50,4 +49,6 @@
     filter_baro: true
     filter_fcam: true
     publish_tf: true
-    publish_measurement_tf: false
+
+    # How far in front of a marker is a good pose?
+    good_pose_dist: 2.0

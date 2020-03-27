@@ -2,8 +2,6 @@
 #define ORCA_BASE_AUV_NODE_HPP
 
 #include "image_geometry/pinhole_camera_model.h"
-#include "message_filters/subscriber.h"
-#include "message_filters/sync_policies/exact_time.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_description/parser.hpp"
@@ -59,27 +57,9 @@ namespace orca_base
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Driver>::SharedPtr driver_sub_;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr fcam_info_sub_;
+    rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
-
-    // Message filter subscriptions
-    message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
-    message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> fcam_pose_sub_;
-    message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
-
-    // Sync raw (unfiltered) pose + observations
-    using RawPolicy = message_filters::sync_policies::ExactTime<
-      fiducial_vlam_msgs::msg::Observations,
-      geometry_msgs::msg::PoseWithCovarianceStamped>;
-    using RawSync = message_filters::Synchronizer<RawPolicy>;
-    std::shared_ptr<RawSync> raw_sync_;
-
-    // Sync filtered odom + observations
-    using FilteredPolicy = message_filters::sync_policies::ExactTime<
-      fiducial_vlam_msgs::msg::Observations,
-      nav_msgs::msg::Odometry>;
-    using FilteredSync = message_filters::Synchronizer<FilteredPolicy>;
-    std::shared_ptr<FilteredSync> filtered_sync_;
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
@@ -116,23 +96,9 @@ namespace orca_base
 
     void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
+    void fp_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first);
+
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
-
-    void raw_fiducial_callback(
-      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
-
-    void raw_fiducial_drop_callback(
-      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &fcam_msg);
-
-    void filtered_fiducial_callback(
-      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
-
-    void filtered_fiducial_drop_callback(
-      const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &obs_msg,
-      const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg);
 
     // Callback wrappers
     monotonic::Timer<AUVNode *>
@@ -143,6 +109,8 @@ namespace orca_base
       driver_cb_{this, &AUVNode::driver_callback};
     monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr>
       fcam_info_cb_{this, &AUVNode::fcam_info_callback};
+    monotonic::Monotonic<AUVNode *, orca_msgs::msg::FiducialPoseStamped::SharedPtr>
+      fp_cb_{this, &AUVNode::fp_callback};
     monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr>
       map_cb_{this, &AUVNode::map_callback};
 

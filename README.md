@@ -95,28 +95,29 @@ If the mission fails to start there might be no marker in view, or the closest m
 ## Packages
 
 Orca consists of 7 packages:
-* `orca_msgs` defines custom messages.
-
+* `orca_msgs` defines custom messages
 * `orca_description` provides the URDF file and an URDF parser
-
-* `orca_driver` must run on the sub hardware. It subscribes to `Control` messages and 
-publishes `Barometer` and `Driver` messages. This package can't be tested in simulation,
-so it is kept small as possible, with the least number of dependencies.
+* `orca_driver` consists of 1 node:
+  * `driver_node` must run on the sub hardware. It subscribes to `Control` messages and 
+  publishes `Barometer` and `Driver` messages. This node can't be tested in simulation,
+  so it is kept small as possible, with the least number of dependencies.
   * Depends on `orca_msgs`
 
 * `orca_shared` contains various shared utilities.
   * Depends on `orca_msgs`
 
-* `orca_filter` consists of 2 nodes:
-  * `depth_node` consumes barometer readings and generates depth messages
-  * `filter_node` consumes poses and observations from `fiducial_vlam` and depth and generates odometry  
+* `orca_filter` consists of 3 nodes:
+  * `depth_node` subscribes to `Barometer` messages and publishes `Depth` messages
+  * `fp_node` subscribes to observations and poses from `fiducial_vlam` and publishes `FiducialPoseStamped`
+  * `filter_node` fuses `FiducialPoseStamped` and `Depth` measurements and publishes filtered `FiducialPoseStamped`  
   * Depends on `orca_description`
   * Depends on `orca_msgs`
   * Depends on `orca_shared`
 
 * `orca_base` is the largest package, and consists of 2 primary nodes:
-  * `auv_node` provides the `Mission` action server and runs autonomous missions, publishing `Control` messages
-  * `rov_node` consumes `Joy` messages and generates `Control` messages.
+  * `auv_node` provides the `Mission` action server and runs autonomous missions, consuming `FiducialPoseStamped`
+   messages and publishing `Control` messages
+  * `rov_node` subscribes to `Joy` messages and publishes `Control` messages.
 It also calls the `Mission` action server to start missions
   * There are several Python nodes that use `matplotlib` to graph various messages
   * Depends on `orca_description`

@@ -22,7 +22,6 @@ namespace orca_filter
   CXT_MACRO_MEMBER(frame_id_base_link, std::string, "base_link") \
   \
   CXT_MACRO_MEMBER(publish_tf, bool, "true")                  /* Publish t_map_base  */ \
-  CXT_MACRO_MEMBER(publish_measurement_tf, bool, "true") \
   \
   CXT_MACRO_MEMBER(predict_accel, bool, true)                 /* Predict acceleration  */ \
   CXT_MACRO_MEMBER(predict_accel_control, bool, true)         /* Add u_bar to predicted acceleration  */ \
@@ -32,6 +31,8 @@ namespace orca_filter
   CXT_MACRO_MEMBER(filter_baro, bool, true)                   /* Filter barometer messages  */ \
   CXT_MACRO_MEMBER(filter_fcam, bool, false)                  /* Filter forward camera messages  */ \
   \
+  CXT_MACRO_MEMBER(good_pose_dist, double, 1.8)               /* Good pose if marker < 1.8m away  */ \
+  CXT_MACRO_MEMBER(good_obs_dist, double, 10)                 /* Good observation if marker < 10m away  */ \
   CXT_MACRO_MEMBER(outlier_distance, double, 4.0)             /* Reject measurements > n std devs from estimate  */ \
   \
   CXT_MACRO_MEMBER(four_dof, bool, false)                     /* Experiment: run 4dof filter instead of 6dof filter  */ \

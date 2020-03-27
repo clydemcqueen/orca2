@@ -11,10 +11,12 @@ namespace orca_filter
   // Measurement
   //==================================================================
 
-  void Measurement::init_z(const orca_msgs::msg::Depth &depth, ukf::MeasurementFn h_fn)
+  void Measurement::init_z(const orca_msgs::msg::Depth &depth,
+                           const orca::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::depth;
     stamp_ = depth.header.stamp;
+    observations_ = observations;
 
     z_ = Eigen::VectorXd(1);
     z_ << depth.z;
@@ -29,10 +31,12 @@ namespace orca_filter
     mean_z_fn_ = ukf::unscented_mean;
   }
 
-  void Measurement::init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn)
+  void Measurement::init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                              const orca::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::four;
     stamp_ = pose.header.stamp;
+    observations_ = observations;
 
     tf2::Transform t_map_base;
     tf2::fromMsg(pose.pose.pose, t_map_base);
@@ -58,10 +62,12 @@ namespace orca_filter
     mean_z_fn_ = four_state_mean;
   }
 
-  void Measurement::init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose, ukf::MeasurementFn h_fn)
+  void Measurement::init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                              const orca::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::six;
     stamp_ = pose.header.stamp;
+    observations_ = observations;
 
     tf2::Transform t_map_base;
     tf2::fromMsg(pose.pose.pose, t_map_base);

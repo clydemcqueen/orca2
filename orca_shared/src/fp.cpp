@@ -190,8 +190,7 @@ namespace orca
 
   double FP::closest_observation() const
   {
-    Observation obs;
-    return get_closest_observation(obs);
+    return orca::closest_observation(observations);
   }
 
   double FP::get_closest_observation(Observation &obs) const
@@ -268,30 +267,58 @@ namespace orca
   // Utilities
   //=====================================================================================
 
+  double closest_observation(const Observations &observations)
+  {
+    double closest = std::numeric_limits<double>::max();
+
+    for (const auto &i : observations) {
+      if (i.distance < closest) {
+        closest = i.distance;
+      }
+    }
+
+    return closest;
+  }
+
   double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
                              double marker_length, double hfov, double hres)
   {
-    geometry_msgs::msg::PoseWithCovarianceStamped fake; // Hmmm... API can be improved
-    FP temp = FP{*obs_msg, fake, marker_length, hfov, hres};
-    return temp.closest_observation();
+    Observations observations;
+    vlam_msg_to_orca(obs_msg, observations, marker_length, hfov, hres);
+    return closest_observation(observations);
   }
 
-  /**
-   * Convert vlam observations to Orca observations by calculating bearing and distance
-   *
-   * @param vlam_msg In: vector of marker observations from vlam
-   * @param orca_msg Out: vector of marker observations with bearing and distance
-   * @param marker_length In: marker length
-   * @param hfov In: horizontal field of view
-   * @param hres In: horizontal resolution
-   */
-  void vlam_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
-                    std::vector<orca_msgs::msg::Observation> &orca_msg,
-                    double marker_length, double hfov, double hres)
+  void vlam_msg_to_orca_msg(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                            std::vector<orca_msgs::msg::Observation> &orca_msg,
+                            double marker_length, double hfov, double hres)
   {
-    for (auto vlam_obs : vlam_msg->observations) {
-      Observation orca_obs{vlam_obs, marker_length, hfov, hres};
-      orca_msg.push_back(orca_obs.to_msg());
+    for (const auto r : vlam_msg->observations) {
+      orca_msg.push_back(Observation{r, marker_length, hfov, hres}.to_msg());
+    }
+  }
+
+  void vlam_msg_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                        Observations &observations,
+                        double marker_length, double hfov, double hres)
+  {
+    for (const auto r : vlam_msg->observations) {
+      observations.emplace_back(r, marker_length, hfov, hres);
+    }
+  }
+
+  void orca_msg_to_orca(const std::vector<orca_msgs::msg::Observation> &orca_msg, Observations &observations)
+  {
+    observations.clear();
+    for (const auto &r : orca_msg) {
+      observations.emplace_back(r);
+    }
+  }
+
+  void orca_to_orca_msg(const Observations &observations, std::vector<orca_msgs::msg::Observation> &orca_msg)
+  {
+    orca_msg.clear();
+    for (const auto &r : observations) {
+      orca_msg.push_back(r.to_msg());
     }
   }
 

@@ -152,7 +152,7 @@ namespace orca_filter
 
   PoseFilter::PoseFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
     FilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
   {
@@ -244,28 +244,30 @@ namespace orca_filter
     FilterBase::reset(pose_to_px(pose));
   }
 
-  void PoseFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
+  void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom)
   {
-    pose_from_px(filter_.x(), filtered_odom.pose.pose);
-    twist_from_px(filter_.x(), filtered_odom.twist.twist);
-    flatten_6x6_covar(filter_.P(), filtered_odom.pose.covariance, 0);
-    flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
+    pose_from_px(filter_.x(), filtered_odom.fp.pose.pose);
+    // twist_from_px(filter_.x(), filtered_odom.twist.twist);
+    flatten_6x6_covar(filter_.P(), filtered_odom.fp.pose.covariance, 0);
+    // flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
   }
 
-  Measurement PoseFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
+  Measurement PoseFilter::to_measurement(const orca_msgs::msg::Depth &depth,
+                                         const orca::Observations &observations) const
   {
     Measurement m;
-    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_z(depth, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = px_z;
     });
     return m;
   }
 
-  Measurement PoseFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
+  Measurement PoseFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                                         const orca::Observations &observations) const
   {
     Measurement m;
-    m.init_6dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_6dof(pose, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = px_x;
       z(1) = px_y;

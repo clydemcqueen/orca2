@@ -53,6 +53,12 @@ namespace orca
   std::ostream &operator<<(std::ostream &os, Observation const &obs);
 
   //=====================================================================================
+  // Observations -- vector of Observation
+  //=====================================================================================
+
+  using Observations = std::vector<Observation>;
+
+  //=====================================================================================
   // ObservationStamped -- observation with a timestamp
   //=====================================================================================
 
@@ -73,7 +79,7 @@ namespace orca
   struct FP
   {
     orca::PoseWithCovariance pose{};
-    std::vector<Observation> observations{};
+    Observations observations{};
 
     constexpr FP() = default;
 
@@ -178,12 +184,31 @@ namespace orca
   // Utilities
   //=====================================================================================
 
+  double closest_observation(const Observations &observations);
+
   double closest_observation(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr obs_msg,
                              double marker_length, double hfov, double hres);
 
-  void vlam_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
-                    std::vector<orca_msgs::msg::Observation> &orca_msg,
-                    double marker_length, double hfov, double hres);
+  /**
+   * Convert vlam msg observations to Orca msg observations by calculating bearing and distance
+   *
+   * @param vlam_msg In: vector of marker observations from vlam
+   * @param orca_msg Out: vector of marker observations with bearing and distance
+   * @param marker_length In: marker length
+   * @param hfov In: horizontal field of view
+   * @param hres In: horizontal resolution
+   */
+  void vlam_msg_to_orca_msg(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                            std::vector<orca_msgs::msg::Observation> &orca_msg,
+                            double marker_length, double hfov, double hres);
+
+  void vlam_msg_to_orca(const fiducial_vlam_msgs::msg::Observations::ConstSharedPtr &vlam_msg,
+                        Observations &observations,
+                        double marker_length, double hfov, double hres);
+
+  void orca_msg_to_orca(const std::vector<orca_msgs::msg::Observation> &orca_msg, Observations &observations);
+
+  void orca_to_orca_msg(const Observations &observations, std::vector<orca_msgs::msg::Observation> &orca_msg);
 
 } // namespace orca
 

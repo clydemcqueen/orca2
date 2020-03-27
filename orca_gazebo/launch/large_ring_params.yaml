@@ -19,13 +19,11 @@
     # Timer is stable w/ or w/o filter:
     loop_driver: 0
 
-    # filter_node is not running:
-    filtered_odom: false
-    fuse_depth: true
-    publish_tf: true
+    # filter_node is running:
+    publish_tf: false
 
     # How far in front of a marker is a good pose?
-    good_pose_dist: 1.8
+    good_pose_dist: 2.0
 
     # Allow MTM recovery
     global_plan_allow_mtm: true
@@ -40,3 +38,17 @@
     # How close to the markers should we get?
     pose_plan_target_dist: 1.0
     mtm_plan_target_dist: 1.5
+
+/filter_node:
+  ros__parameters:
+    param_fluid_density: 997.0
+    predict_accel: false
+    predict_accel_control: false
+    predict_accel_drag: false
+    predict_accel_buoyancy: false
+    filter_baro: true
+    filter_fcam: true
+    publish_tf: true
+
+    # How far in front of a marker is a good pose?
+    good_pose_dist: 2.0

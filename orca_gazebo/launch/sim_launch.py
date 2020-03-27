@@ -104,11 +104,17 @@ def generate_launch_description():
 
         # FP node, generate fiducial poses from observations and poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',
-             node_name='fp_node', parameters=[{
+             node_name='fp_node', node_namespace=forward_camera_name, parameters=[{
                 'use_sim_time': use_sim_time,
-                'fluid_density': 997.0,
+            }]),
+
+        # Filter
+        Node(package='orca_filter', node_executable='filter_node', output='screen',
+             node_name='filter_node', parameters=[params_path, {
+                'use_sim_time': use_sim_time,
+                'urdf_file': urdf_path,
             }], remappings=[
-                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
+                ('fcam_fp', '/' + forward_camera_name + '/fp'),
             ]),
 
         # AUV controller
@@ -116,7 +122,6 @@ def generate_launch_description():
              node_name='auv_node', parameters=[params_path, {
                 'use_sim_time': use_sim_time,
             }], remappings=[
-                ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
                 ('fcam_info', '/' + forward_camera_name + '/camera_info'),
             ]),
 
@@ -124,15 +129,5 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
              node_name='annotate_image_node', node_namespace=forward_camera_name),
     ]
-
-    if ft3:
-        all_entities.append(
-            Node(package='orca_filter', node_executable='filter_node', output='screen',
-                 node_name='filter_node', parameters=[params_path, {
-                    'use_sim_time': use_sim_time,
-                    'urdf_file': urdf_path,
-                }], remappings=[
-                    ('fcam_f_map', '/' + forward_camera_name + '/camera_pose'),
-                ]))
 
     return LaunchDescription(all_entities)
