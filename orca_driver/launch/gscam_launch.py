@@ -5,9 +5,10 @@ from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
-# GSCam launch, useful for testing the image processing pipeline
+# Experimental GSCam launch, useful for testing the image processing pipeline
 # Uses ROS2 components and IPC
 # Requires gscam2 driver
+# Not used in ft3
 
 # Setup:
 # 2x RPi camera module 2 with a wide angle lens sold by BlueRobotics

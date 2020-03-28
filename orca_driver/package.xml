@@ -17,13 +17,10 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
 
     <depend>br_ms5837</depend>
-    <depend>fiducial_vlam</depend>
-    <depend>gscam</depend>
     <depend>orca_msgs</depend>
     <depend>rclcpp</depend>
     <depend>rclpy</depend>
     <depend>ros2_shared</depend>
-    <depend>sensor_msgs</depend>
 
     <export>
         <build_type>ament_cmake</build_type>
