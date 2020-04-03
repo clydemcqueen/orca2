@@ -1,4 +1,4 @@
-/forward_camera/vloc_forward:
+/forward_camera/vloc_node:
   ros__parameters:
     publish_tfs: 0
     publish_tfs_per_marker: 0

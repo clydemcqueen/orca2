@@ -25,6 +25,7 @@ endif ()
 find_package(ament_cmake REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp)
 find_package(tf2 REQUIRED)
@@ -47,6 +48,7 @@ add_library(
   src/fp.cpp
   src/geometry.cpp
   src/model.cpp
+  src/observer.cpp
   src/pwm.cpp
   src/util.cpp
 )
@@ -55,6 +57,7 @@ ament_target_dependencies(
   ${ORCA_SHARED_LIB}
   fiducial_vlam_msgs
   geometry_msgs
+  image_geometry
   orca_msgs
   rclcpp
   tf2
@@ -76,6 +79,7 @@ ament_target_dependencies(
   test_node
   fiducial_vlam_msgs
   geometry_msgs
+  image_geometry
   orca_msgs
   rclcpp
 )

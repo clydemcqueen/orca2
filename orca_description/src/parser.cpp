@@ -8,11 +8,19 @@ namespace orca_description
   bool Parser::parse()
   {
     urdf::Model model;
-    return model.initFile(filename) &&
+
+    auto result = model.initFile(filename) &&
            get_joint(model, barometer_joint, t_baro_base) &&
            get_joint(model, forward_camera_joint, t_fcam_base) &&
            get_joint(model, left_camera_joint, t_lcam_base) &&
            get_joint(model, right_camera_joint, t_rcam_base);
+
+    t_base_baro = t_baro_base.inverse();
+    t_base_fcam = t_fcam_base.inverse();
+    t_base_lcam = t_lcam_base.inverse();
+    t_base_rcam = t_rcam_base.inverse();
+
+    return result;
   }
 
   bool Parser::get_joint(const urdf::Model &model, const std::string &joint_name, tf2::Transform &t)

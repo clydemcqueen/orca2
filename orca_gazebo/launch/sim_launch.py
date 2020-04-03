@@ -96,15 +96,14 @@ def generate_launch_description():
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[
-                params_path, {
+             node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[params_path, {
                 'use_sim_time': use_sim_time,
                 'camera_frame_id': forward_camera_frame,
             }]),
 
         # FP node, generate fiducial poses from observations and poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',
-             node_name='fp_node', node_namespace=forward_camera_name, parameters=[{
+             node_name='fp_node', node_namespace=forward_camera_name, parameters=[params_path, {
                 'use_sim_time': use_sim_time,
             }]),
 

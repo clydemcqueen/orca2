@@ -32,30 +32,30 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
   // Utilities
   //=============================================================================
 
-  void draw_text(cv::Mat &image, const std::string &s, const cv::Point2d &p, cv::Scalar color)
+  void draw_text(cv::Mat &image, const std::string &s, const cv::Point2d &p, cv::Scalar color, int scale)
   {
-    putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, 1, std::move(color));
+    putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, scale, std::move(color), scale);
   }
 
   void draw_observations(cv::Mat &image, const std::vector<orca_msgs::msg::Observation> &observations,
-                         const cv::Scalar &color)
+                         const cv::Scalar &color, int scale)
   {
     for (const auto &obs : observations) {
       // Draw marker name
-      cv::Point2d p{obs.vlam.x3, obs.vlam.y3 + 30};
+      cv::Point2d p{obs.vlam.x3, obs.vlam.y3 + scale * 30};
       std::stringstream ss;
       ss << std::fixed << std::setprecision(2) << "m" << obs.vlam.id << " d=" << obs.distance;
-      draw_text(image, ss.str(), p, color);
+      draw_text(image, ss.str(), p, color, scale);
 
       // Draw bounding box
       cv::Point2d c0{obs.vlam.x0, obs.vlam.y0};
       cv::Point2d c1{obs.vlam.x1, obs.vlam.y1};
       cv::Point2d c2{obs.vlam.x2, obs.vlam.y2};
       cv::Point2d c3{obs.vlam.x3, obs.vlam.y3};
-      cv::line(image, c0, c1, color);
-      cv::line(image, c1, c2, color);
-      cv::line(image, c2, c3, color);
-      cv::line(image, c3, c0, color);
+      cv::line(image, c0, c1, color, scale);
+      cv::line(image, c1, c2, color, scale);
+      cv::line(image, c2, c3, color, scale);
+      cv::line(image, c3, c0, color, scale);
     }
   }
 
@@ -100,14 +100,19 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
       }
 
       if (image_pub_->get_subscription_count() > 0) {
+        // Scale up for high res images
+        // TODO
+//        int scale = (int)std::round(control_msg_.estimate_observations.camera_info.width / 800.);
+        int scale = 1;
+
         cv_bridge::CvImagePtr marked;
         marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
         if (control_msg_.mode == orca_msgs::msg::Control::AUV) {
-          draw_observations(marked->image, control_msg_.plan_observations, CV_RGB(255, 0, 0));
+          draw_observations(marked->image, control_msg_.plan_observations, CV_RGB(255, 0, 0), scale);
         }
-        draw_observations(marked->image, control_msg_.estimate_observations, CV_RGB(0, 255, 0));
-        write_status(marked->image);
+        draw_observations(marked->image, control_msg_.estimate_observations, CV_RGB(0, 255, 0), scale);
+        write_status(marked->image, scale);
 
         image_pub_->publish(*marked->toImageMsg());
       }
@@ -115,9 +120,9 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
       STOP_PERF("image_callback")
     }
 
-    void write_status(cv::Mat &image)
+    void write_status(cv::Mat &image, int scale)
     {
-      cv::Point2d p{10, 20};
+      cv::Point2d p{scale * 10., scale * 20.};
       std::stringstream ss;
       ss << std::fixed << std::setprecision(2);
 
@@ -138,10 +143,10 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
       } else {
         ss << "ROV";
       }
-      draw_text(image, ss.str(), p, CV_RGB(255, 0, 0));
+      draw_text(image, ss.str(), p, CV_RGB(255, 0, 0), scale);
 
       // Line 2: pose estimate
-      p.y += 20;
+      p.y += scale * 20.;
       ss.str("");
       if (control_msg_.good_pose) {
         ss << "GOOD POSE";
@@ -154,7 +159,7 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
       }
       ss << " z=" << control_msg_.estimate_pose.position.z;
 
-      draw_text(image, ss.str(), p, CV_RGB(0, 255, 0));
+      draw_text(image, ss.str(), p, CV_RGB(0, 255, 0), scale);
     }
 
   public:

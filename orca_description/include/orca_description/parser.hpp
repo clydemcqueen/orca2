@@ -12,7 +12,7 @@ namespace orca_description
   constexpr const char *base_link = "base_link";
   constexpr const char *barometer_joint = "baro_joint";
 
-  // Note that these are x_camera_FRAME_joint, not x_camera_joint
+  // Note that these are x_camera_FRAME_joint, not x_camera_joint -- these relate the camera image to the base link
   constexpr const char *forward_camera_joint = "forward_camera_frame_joint";
   constexpr const char *left_camera_joint = "left_camera_frame_joint";
   constexpr const char *right_camera_joint = "right_camera_frame_joint";
@@ -24,6 +24,12 @@ namespace orca_description
     tf2::Transform t_fcam_base{};
     tf2::Transform t_lcam_base{};
     tf2::Transform t_rcam_base{};
+
+    // Inverse transforms
+    tf2::Transform t_base_baro{};
+    tf2::Transform t_base_fcam{};
+    tf2::Transform t_base_lcam{};
+    tf2::Transform t_base_rcam{};
 
     // Parse URDF and set t_foo_base, return true if OK
     bool parse();

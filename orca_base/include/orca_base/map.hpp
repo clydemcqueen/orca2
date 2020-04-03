@@ -15,15 +15,18 @@
 
 namespace orca_base
 {
+  /**
+   * ArUco marker
+   */
   struct Marker
   {
-    double marker_length{0};
-    int id{orca::NOT_A_MARKER};
-    geometry_msgs::msg::Pose marker_f_map;
-    tf2::Vector3 corner0_f_map;
-    tf2::Vector3 corner1_f_map;
-    tf2::Vector3 corner2_f_map;
-    tf2::Vector3 corner3_f_map;
+    double marker_length{0};                      // Length of a marker side
+    int id{orca::NOT_A_MARKER};                   // ID of the marker
+    geometry_msgs::msg::Pose marker_f_map;        // Pose of the marker in the map frame
+    tf2::Vector3 corner0_f_map;                   // Corner 0 (top left) in the map frame
+    tf2::Vector3 corner1_f_map;                   // Corner 1 (top right) in the map frame
+    tf2::Vector3 corner2_f_map;                   // Corner 2 (bottom right) in the map frame
+    tf2::Vector3 corner3_f_map;                   // Corner 3 (bottom left) in the map frame
 
     Marker() = default;
 

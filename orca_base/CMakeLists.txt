@@ -132,6 +132,7 @@ add_executable(
 ament_target_dependencies(
   test_main
   fiducial_vlam_msgs
+  image_geometry
   orca_msgs
   orca_shared
   rclcpp

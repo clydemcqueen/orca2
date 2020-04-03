@@ -1,5 +1,5 @@
-#ifndef ORCA_BASE_FP_HPP
-#define ORCA_BASE_FP_HPP
+#ifndef ORCA_SHARED_FP_HPP
+#define ORCA_SHARED_FP_HPP
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "opencv2/core/types.hpp"
@@ -212,4 +212,4 @@ namespace orca
 
 } // namespace orca
 
-#endif //ORCA_BASE_FP_HPP
+#endif //ORCA_SHARED_FP_HPP

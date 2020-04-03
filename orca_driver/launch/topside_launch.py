@@ -18,7 +18,7 @@ def generate_launch_description():
 
     orca_driver_path = get_package_share_directory('orca_driver')
     params_path = os.path.join(orca_driver_path, 'launch', 'ft3_params.yaml')
-    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')  # TODO 1920x1080
+    camera_info_url = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')  # TODO 1920x1080
     map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
 
     return LaunchDescription([
@@ -27,12 +27,15 @@ def generate_launch_description():
              arguments=[urdf_path]),
 
         # Forward camera
-        Node(package='gscam2', node_executable='gscam_node', output='log',
-             node_name='gscam_node', remappings=[
+        Node(package='gscam', node_executable='gscam_main', output='log',
+             node_name='gscam_node', node_namespace=camera_name, remappings=[
                 ('image_raw', '/' + camera_name + '/image_raw'),
                 ('camera_info', '/' + camera_name + '/camera_info'),
             ], parameters=[{
-                'camera_info_path': camera_info_path,
+                'gscam_config': 'udpsrc port=5600 ! application/x-rtp ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert',
+                'camera_info_url': camera_info_url,
+                'camera_name': camera_name,
+                'frame_id': camera_frame,
             }]),
 
         # Joystick driver, generates joy messages
@@ -65,7 +68,7 @@ def generate_launch_description():
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_forward', node_namespace=camera_name, parameters=[
+             node_name='vloc_node', node_namespace=camera_name, parameters=[
                 params_path, {
                     'camera_frame_id': camera_frame,
                 }]),
