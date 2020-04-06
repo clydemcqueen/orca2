@@ -16,10 +16,13 @@
 #include "orca_shared/mw/pose.hpp"
 #include "orca_shared/mw/pose_stamped.hpp"
 #include "orca_shared/mw/pose_with_covariance.hpp"
+#include "orca_shared/mw/pose_with_covariance_stamped.hpp"
 #include "orca_shared/mw/twist.hpp"
 #include "orca_shared/mw/quaternion.hpp"
 
 // TODO TwistBody
 // TODO AccelerationBody
+// TODO Barometer
+// TODO Depth
 
 #endif //ORCA_SHARED_MW_HPP

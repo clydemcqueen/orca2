@@ -9,8 +9,7 @@
 
 #include "orca_description/parser.hpp"
 #include "orca_msgs/msg/depth.hpp"
-#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
-#include "orca_shared/fp.hpp"
+#include "orca_shared/mw/fiducial_pose_stamped.hpp"
 #include "orca_shared/monotonic.hpp"
 
 namespace orca_filter
@@ -73,7 +72,7 @@ namespace orca_filter
 
     // Publications
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_pub_;
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr fp_pub_;
 
     /**
      * Save the latest depth reading
@@ -149,21 +148,19 @@ namespace orca_filter
         tf_pub_->publish(tf_message);
       }
 
+      geometry_msgs::msg::Pose cam_f_base;
+      toMsg(parser_.t_base_fcam, cam_f_base); // TODO want parser.cam_f_base
+
       // Resulting fiducial pose
-      orca_msgs::msg::FiducialPoseStamped fp_msg{};
-      fp_msg.header = pose_msg->header;
-      fp_msg.fp.pose = base_f_map;
+      mw::FiducialPoseStamped fp{cxt_.marker_length_, cam_f_base, *obs_msg, base_f_map};
 
       // "Fuse" depth and fiducial messages
       if (cxt_.fuse_depth_) {
-        fp_msg.fp.pose.pose.position.z = base_link_z_;
+        fp.fp().pose().pose().position().z() = base_link_z_;
       }
 
-      // Convert observations
-      orca::vlam_msg_to_orca_msg(obs_msg, fp_msg.fp.observations, cxt_.marker_length_, cxt_.cam_hfov_, cxt_.cam_hres_);
-
       // Publish
-      fp_pub_->publish(fp_msg);
+      fp_pub_->publish(fp.msg());
 
       // Update prev_time
       prev_time = curr_time;
@@ -228,7 +225,7 @@ namespace orca_filter
       sync_->registerDropCallback(std::bind(&FPNode::fiducial_drop_callback, this, _1, _2));
 
       // Publication
-      fp_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped>("fp", QUEUE_SIZE);
+      fp_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped2>("fp", QUEUE_SIZE);
 
       // Parse URDF
       if (!parser_.parse()) {

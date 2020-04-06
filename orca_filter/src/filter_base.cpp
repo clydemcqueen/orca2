@@ -1,10 +1,7 @@
 #include "orca_filter/filter_base.hpp"
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
 #include "orca_shared/util.hpp"
-
-using namespace orca;
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_filter
 {
@@ -16,10 +13,10 @@ namespace orca_filter
   constexpr int CONTROL_DIM = 4;          // [ax, ay, az, ayaw]T
 
   // Create control matrix u
-  void to_u(const Acceleration &in, Eigen::VectorXd &out)
+  void to_u(const mw::Acceleration &in, Eigen::VectorXd &out)
   {
     out = Eigen::VectorXd(CONTROL_DIM);
-    out << in.x, in.y, in.z, in.yaw;
+    out << in.x(), in.y(), in.z(), in.yaw();
   }
 
   // Flatten a 6x6 covariance matrix
@@ -41,7 +38,7 @@ namespace orca_filter
   FilterBase::FilterBase(Type type,
                          const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
                          int state_dim) :
 
@@ -79,11 +76,11 @@ namespace orca_filter
     filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_));
   }
 
-  void FilterBase::predict(const rclcpp::Time &stamp, const Acceleration &u_bar)
+  void FilterBase::predict(const rclcpp::Time &stamp, const mw::Acceleration &u_bar)
   {
     // Filter time starts at 0, test for this
-    if (!valid_stamp(filter_time_)) {
-      RCLCPP_INFO(logger_, "start %s filter, stamp %s", name().c_str(), to_str(stamp).c_str());
+    if (!orca::valid_stamp(filter_time_)) {
+      RCLCPP_INFO(logger_, "start %s filter, stamp %s", name().c_str(), orca::to_str(stamp).c_str());
     } else {
       // Compute delta from last message, must be zero or positive
       double dt = (stamp - filter_time_).seconds();
@@ -98,11 +95,11 @@ namespace orca_filter
       if (dt < cxt_.min_dt_) {
         // Delta is quite small, possibly 0
         RCLCPP_DEBUG(logger_, "skip predict, stamp %s, filter %s",
-                     to_str(stamp).c_str(), to_str(filter_time_).c_str());
+                     orca::to_str(stamp).c_str(), orca::to_str(filter_time_).c_str());
       } else {
         // Run the prediction
         RCLCPP_DEBUG(logger_, "predict, stamp %s, filter %s",
-                     to_str(stamp).c_str(), to_str(filter_time_).c_str());
+                     orca::to_str(stamp).c_str(), orca::to_str(filter_time_).c_str());
         Eigen::VectorXd u;
         to_u(u_bar, u);
         filter_.predict(dt, u);
@@ -118,13 +115,13 @@ namespace orca_filter
   {
     // Trim state_history_
     while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
-      RCLCPP_DEBUG(logger_, "pop old state history %s", to_str(state_history_.front().stamp_).c_str());
+      RCLCPP_DEBUG(logger_, "pop old state history %s", orca::to_str(state_history_.front().stamp_).c_str());
       state_history_.pop_front();
     }
 
     // Trim measurement_history_
     while (!measurement_history_.empty() && measurement_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
-      RCLCPP_DEBUG(logger_, "pop old measurement history %s", to_str(measurement_history_.front().stamp_).c_str());
+      RCLCPP_DEBUG(logger_, "pop old measurement history %s", orca::to_str(measurement_history_.front().stamp_).c_str());
       measurement_history_.pop_front();
     }
 
@@ -137,7 +134,7 @@ namespace orca_filter
 
     // Process all measurements
     while (!measurement_q_.empty()) {
-      RCLCPP_DEBUG(logger_, "processing measurement %s", to_str(measurement_q_.top().stamp_).c_str());
+      RCLCPP_DEBUG(logger_, "processing measurement %s", orca::to_str(measurement_q_.top().stamp_).c_str());
 
       Measurement m = measurement_q_.top();
       measurement_q_.pop();
@@ -193,13 +190,13 @@ namespace orca_filter
   bool FilterBase::rewind(const rclcpp::Time &stamp)
   {
     if (state_history_.empty() || stamp < state_history_.front().stamp_) {
-      RCLCPP_WARN(logger_, "can't rewind to %s, dropping message", to_str(stamp).c_str());
+      RCLCPP_WARN(logger_, "can't rewind to %s, dropping message", orca::to_str(stamp).c_str());
       return false;
     }
 
     // Pop newer states
     while (!state_history_.empty() && state_history_.back().stamp_ > stamp) {
-      RCLCPP_DEBUG(logger_, "rewind: pop state %s", to_str(stamp).c_str());
+      RCLCPP_DEBUG(logger_, "rewind: pop state %s", orca::to_str(stamp).c_str());
       state_history_.pop_back();
     }
 
@@ -212,7 +209,7 @@ namespace orca_filter
     // Pop newer measurements and put them back into the priority queue
     while (!measurement_history_.empty() && measurement_history_.back().stamp_ > stamp) {
       RCLCPP_DEBUG(logger_, "rewind: re-queue measurement %s %s",
-                   measurement_history_.back().name().c_str(), to_str(stamp).c_str());
+                   measurement_history_.back().name().c_str(), orca::to_str(stamp).c_str());
       measurement_q_.push(measurement_history_.back());
       measurement_history_.pop_back();
     }
@@ -230,12 +227,13 @@ namespace orca_filter
     odom_time_ = filter_time_;
 
     // Get pose from the filter
-    orca_msgs::msg::FiducialPoseStamped odom;
+    orca_msgs::msg::FiducialPoseStamped2 odom;
     odom.header.stamp = odom_time_;
-    odom_from_filter(odom);
+    odom.header.frame_id = cxt_.frame_id_map_;
+    odom_from_filter(odom.fp);
 
     // Copy the unfiltered observations from the measurement
-    orca::orca_to_orca_msg(measurement.observations_, odom.fp.observations);
+    odom.fp.observations = measurement.observations_.msg();
 
     // Publish odometry
     if (filtered_odom_pub_->get_subscription_count() > 0) {

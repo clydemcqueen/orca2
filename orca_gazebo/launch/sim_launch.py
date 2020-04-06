@@ -74,7 +74,7 @@ def generate_launch_description():
              node_name='rov_node', parameters=[{
                 'use_sim_time': use_sim_time,
             }], remappings=[
-                ('control', 'rov_control'),  # Send control messages to auv_node
+                ('control', 'control'),  # Send control messages to auv_node
             ]),
 
         # Depth node, turns /barometer messages into /depth messages
@@ -117,16 +117,16 @@ def generate_launch_description():
             ]),
 
         # AUV controller
-        Node(package='orca_base', node_executable='auv_node', output='screen',
-             node_name='auv_node', parameters=[params_path, {
-                'use_sim_time': use_sim_time,
-            }], remappings=[
-                ('fcam_info', '/' + forward_camera_name + '/camera_info'),
-            ]),
+        # Node(package='orca_base', node_executable='auv_node', output='screen',
+        #      node_name='auv_node', parameters=[params_path, {
+        #         'use_sim_time': use_sim_time,
+        #     }], remappings=[
+        #         ('fcam_info', '/' + forward_camera_name + '/camera_info'),
+        #     ]),
 
         # Annotate image for diagnostics
-        Node(package='orca_base', node_executable='annotate_image_node', output='screen',
-             node_name='annotate_image_node', node_namespace=forward_camera_name),
+        # Node(package='orca_base', node_executable='annotate_image_node', output='screen',
+        #      node_name='annotate_image_node', node_namespace=forward_camera_name),
     ]
 
     return LaunchDescription(all_entities)

@@ -24,6 +24,15 @@ namespace mw
       pose_{msg.pose}
     {}
 
+    // From fiducial_vlam_msgs + geometry_msgs
+    FiducialPose(const double &marker_length,
+                 const geometry_msgs::msg::Pose &cam_f_base,
+                 const fiducial_vlam_msgs::msg::Observations &vlam_observations,
+                 const geometry_msgs::msg::PoseWithCovariance &pose) :
+      observations_{marker_length, cam_f_base, vlam_observations},
+      pose_{pose}
+    {}
+
     FiducialPose(const Observations &observations, const PoseWithCovariance &pose) :
       observations_{observations},
       pose_{pose}

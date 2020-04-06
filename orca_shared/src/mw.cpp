@@ -10,7 +10,7 @@ namespace mw
   //=====================================================================================
 
   const Observation Observation::None{NOT_A_MARKER, {}, {}, {}, {}};
-  const PolarObservation PolarObservation::None{NOT_A_MARKER, {}, {}};
+  const PolarObservation PolarObservation::None{NOT_A_MARKER, {std::numeric_limits<double>::max()}, {}};
 
   //=====================================================================================
   // Utilities
@@ -33,13 +33,14 @@ namespace mw
 
   int Map::predict_observations(const Pose &base_f_map, Observations &observations)
   {
-    tf2::Transform t_cam_map = observations.observer().t_cam_base() * base_f_map.transform().inverse();
+    auto t_cam_map = observations.observer().t_cam_base() * base_f_map.transform().inverse();
+    auto model = observations.observer().camera_model();
 
     observations.clear();
     int num_observations = 0;
 
     for (const auto &marker : markers_) {
-      Observation observation = marker.predict_observation(observations.observer().cam_model(), t_cam_map);
+      Observation observation = marker.predict_observation(model, t_cam_map);
       if (observation != Observation::None) {
         ++num_observations;
         observations.add(observation);
@@ -98,10 +99,11 @@ namespace mw
 
     // Use the camera model to project the 2d corner points to 3d rays
     // The z value is always 1.0
-    auto ray0 = cam_model_.projectPixelTo3dRay(observation.c0());
-    auto ray1 = cam_model_.projectPixelTo3dRay(observation.c1());
-    auto ray2 = cam_model_.projectPixelTo3dRay(observation.c2());
-    auto ray3 = cam_model_.projectPixelTo3dRay(observation.c3());
+    auto model = camera_model();
+    auto ray0 = model.projectPixelTo3dRay(observation.c0());
+    auto ray1 = model.projectPixelTo3dRay(observation.c1());
+    auto ray2 = model.projectPixelTo3dRay(observation.c2());
+    auto ray3 = model.projectPixelTo3dRay(observation.c3());
 
     // Find the longest side
     auto side01 = std::hypot(ray0.x - ray1.x, ray0.y - ray1.y);
@@ -128,7 +130,7 @@ namespace mw
                               scale_factor};
 
     // Transform the center point from the camera frame to the base frame
-    auto center_f_base = t_base_cam_ * center_f_cam;
+    auto center_f_base = t_base_cam() * center_f_cam;
 
     // Calculate distance and bearing
     return {observation.id(),
@@ -153,7 +155,7 @@ namespace mw
                                0};
 
     // Transform the center point from the base frame to the camera frame
-    auto center_f_cam = t_cam_base_ * center_f_base;
+    auto center_f_cam = t_cam_base() * center_f_base;
 
     // Build corners in the camera frame
     cv::Point3d c0_f_cam{center_f_cam.x() - marker_length() / 2, center_f_cam.y() - marker_length() / 2,
@@ -166,11 +168,12 @@ namespace mw
                          center_f_cam.z()};
 
     // Project to pixels
+    auto model = camera_model();
     return {polar_observation.id(),
-            cam_model_.project3dToPixel(c0_f_cam),
-            cam_model_.project3dToPixel(c1_f_cam),
-            cam_model_.project3dToPixel(c2_f_cam),
-            cam_model_.project3dToPixel(c3_f_cam)};
+            model.project3dToPixel(c0_f_cam),
+            model.project3dToPixel(c1_f_cam),
+            model.project3dToPixel(c2_f_cam),
+            model.project3dToPixel(c3_f_cam)};
   }
 
   //=====================================================================================
@@ -273,6 +276,12 @@ namespace mw
     os << "}";
 #endif
     return os;
+  }
+
+  std::ostream &operator<<(std::ostream &os, PoseWithCovarianceStamped const &v)
+  {
+    return os << std::fixed << std::setprecision(3)
+              << "{" << v.header() << ", " << v.pose()  << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, PolarObservation const &v)

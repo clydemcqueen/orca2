@@ -22,6 +22,15 @@ namespace mw
       fp_{msg.fp}
     {}
 
+    // From fiducial_vlam_msgs + geometry_msgs
+    FiducialPoseStamped(const double &marker_length,
+                        const geometry_msgs::msg::Pose &cam_f_base,
+                        const fiducial_vlam_msgs::msg::Observations &vlam_observations,
+                        const geometry_msgs::msg::PoseWithCovariance &pose) :
+      header_{vlam_observations.header},
+      fp_{marker_length, cam_f_base, vlam_observations, pose}
+    {}
+
     FiducialPoseStamped(const Header &header, const FiducialPose &fp) :
       header_{header},
       fp_{fp}

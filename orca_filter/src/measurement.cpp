@@ -2,8 +2,6 @@
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
-using namespace orca;
-
 namespace orca_filter
 {
 
@@ -12,7 +10,7 @@ namespace orca_filter
   //==================================================================
 
   void Measurement::init_z(const orca_msgs::msg::Depth &depth,
-                           const orca::Observations &observations, ukf::MeasurementFn h_fn)
+                           const mw::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::depth;
     stamp_ = depth.header.stamp;
@@ -32,7 +30,7 @@ namespace orca_filter
   }
 
   void Measurement::init_4dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
-                              const orca::Observations &observations, ukf::MeasurementFn h_fn)
+                              const mw::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::four;
     stamp_ = pose.header.stamp;
@@ -63,7 +61,7 @@ namespace orca_filter
   }
 
   void Measurement::init_6dof(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
-                              const orca::Observations &observations, ukf::MeasurementFn h_fn)
+                              const mw::Observations &observations, ukf::MeasurementFn h_fn)
   {
     type_ = Type::six;
     stamp_ = pose.header.stamp;

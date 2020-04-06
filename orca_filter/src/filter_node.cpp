@@ -1,9 +1,8 @@
 #include "orca_filter/filter_node.hpp"
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
 #include "orca_filter/perf.hpp"
 #include "orca_shared/util.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 /*******************************************************************************************************
  * FilterNode runs one of three filters:
@@ -26,8 +25,6 @@
  *                   Depth messages are fused, but don't result in published odometry
  */
 
-using namespace orca;
-
 namespace orca_filter
 {
 
@@ -45,7 +42,7 @@ namespace orca_filter
     (void) fcam_sub_;
 
     // Create this before calling validate_parameters()
-    filtered_odom_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped>("filtered_fp", QUEUE_SIZE);
+    filtered_odom_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped2>("filtered_fp", QUEUE_SIZE);
 
     // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
@@ -82,8 +79,8 @@ namespace orca_filter
     }
 
     if (cxt_.filter_fcam_) {
-      fcam_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
-        "fcam_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
+      fcam_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped2>(
+        "fcam_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped2::SharedPtr msg) -> void
         { this->fcam_cb_.call(msg); });
     } else {
       fcam_sub_.reset();
@@ -107,8 +104,7 @@ namespace orca_filter
 
   void FilterNode::create_filter()
   {
-    auto closest_observation = orca::closest_observation(observations_);
-    bool good_pose = closest_observation < cxt_.good_pose_dist_;
+    bool good_pose = observations_.closest_distance() < cxt_.good_pose_dist_;
 
     if (filter_ && good_pose_ == good_pose) {
       // Nothing to do
@@ -144,7 +140,7 @@ namespace orca_filter
 
       if (!observations_.empty()) {
         rclcpp::Time stamp{msg->header.stamp};
-        if (valid_stamp(last_fp_stamp_) && stamp - last_fp_stamp_ > open_water_timeout_) {
+        if (orca::valid_stamp(last_fp_stamp_) && stamp - last_fp_stamp_ > open_water_timeout_) {
           // Timeout... clear observations and create a depth filter
           observations_.clear();
           create_filter();
@@ -167,7 +163,7 @@ namespace orca_filter
 #endif
   }
 
-  void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
+  void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped2::SharedPtr msg, bool first)
   {
     START_PERF()
 
@@ -178,13 +174,13 @@ namespace orca_filter
     STOP_PERF("fcam_callback")
   }
 
-  void FilterNode::process_pose(const orca_msgs::msg::FiducialPoseStamped::SharedPtr &msg,
+  void FilterNode::process_pose(const orca_msgs::msg::FiducialPoseStamped2::SharedPtr &msg,
                                 const tf2::Transform &t_sensor_base, const std::string &frame_id)
   {
     last_fp_stamp_ = msg->header.stamp;
 
     // Save observations
-    orca::orca_msg_to_orca(msg->fp.observations, observations_);
+    observations_ = mw::Observations{msg->fp.observations};
 
     // Make sure we have the right filter & state
     create_filter();
@@ -194,7 +190,7 @@ namespace orca_filter
     }
 
     // If we're receiving poses but not publishing odometry then reset the filter
-    if (valid_stamp(last_fp_inlier_stamp_) && last_fp_stamp_ - last_fp_inlier_stamp_ > outlier_timeout_) {
+    if (orca::valid_stamp(last_fp_inlier_stamp_) && last_fp_stamp_ - last_fp_inlier_stamp_ > outlier_timeout_) {
       RCLCPP_DEBUG(get_logger(), "reset filter");
       filter_->reset(msg->fp.pose.pose);
       last_fp_inlier_stamp_ = last_fp_stamp_;

@@ -1,12 +1,10 @@
 #include "orca_filter/filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
+#include "geometry_msgs/msg/twist.hpp"
 #include "orca_shared/model.hpp"
 #include "orca_shared/util.hpp"
-
-using namespace orca;
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_filter
 {
@@ -39,7 +37,7 @@ namespace orca_filter
     fx_x = pose.position.x;
     fx_y = pose.position.y;
     fx_z = pose.position.z;
-    fx_yaw = get_yaw(pose.orientation);
+    fx_yaw = mw::Quaternion{pose.orientation}.yaw();
 
     return x;
   }
@@ -96,7 +94,7 @@ namespace orca_filter
     Eigen::VectorXd residual = x - mean;
 
     // Normalize yaw
-    residual(3) = norm_angle(residual(3));
+    residual(3) = orca::norm_angle(residual(3));
 
     return residual;
   }
@@ -126,7 +124,7 @@ namespace orca_filter
 
   FourFilter::FourFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
     FilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
   {
@@ -170,10 +168,10 @@ namespace orca_filter
         }
 
         // Clamp acceleration
-        fx_ax = clamp(fx_ax, MAX_PREDICTED_ACCEL_XYZ);
-        fx_ay = clamp(fx_ay, MAX_PREDICTED_ACCEL_XYZ);
-        fx_az = clamp(fx_az, MAX_PREDICTED_ACCEL_XYZ);
-        fx_ayaw = clamp(fx_ayaw, MAX_PREDICTED_ACCEL_RPY);
+        fx_ax = orca::clamp(fx_ax, MAX_PREDICTED_ACCEL_XYZ);
+        fx_ay = orca::clamp(fx_ay, MAX_PREDICTED_ACCEL_XYZ);
+        fx_az = orca::clamp(fx_az, MAX_PREDICTED_ACCEL_XYZ);
+        fx_ayaw = orca::clamp(fx_ayaw, MAX_PREDICTED_ACCEL_RPY);
 
         // Velocity, vx += ax * dt
         fx_vx += fx_ax * dt;
@@ -182,16 +180,16 @@ namespace orca_filter
         fx_vyaw += fx_ayaw * dt;
 
         // Clamp velocity
-        fx_vx = clamp(fx_vx, MAX_PREDICTED_VELO_XYZ);
-        fx_vy = clamp(fx_vy, MAX_PREDICTED_VELO_XYZ);
-        fx_vz = clamp(fx_vz, MAX_PREDICTED_VELO_XYZ);
-        fx_vyaw = clamp(fx_vyaw, MAX_PREDICTED_VELO_RPY);
+        fx_vx = orca::clamp(fx_vx, MAX_PREDICTED_VELO_XYZ);
+        fx_vy = orca::clamp(fx_vy, MAX_PREDICTED_VELO_XYZ);
+        fx_vz = orca::clamp(fx_vz, MAX_PREDICTED_VELO_XYZ);
+        fx_vyaw = orca::clamp(fx_vyaw, MAX_PREDICTED_VELO_RPY);
 
         // Position, x += vx * dt
         fx_x += fx_vx * dt;
         fx_y += fx_vy * dt;
         fx_z += fx_vz * dt;
-        fx_yaw = norm_angle(fx_yaw + fx_vyaw * dt);
+        fx_yaw = orca::norm_angle(fx_yaw + fx_vyaw * dt);
       });
 
     // Custom residual and mean functions
@@ -204,16 +202,16 @@ namespace orca_filter
     FilterBase::reset(pose_to_fx(pose));
   }
 
-  void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPoseStamped &filtered_odom)
+  void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPose2 &filtered_odom)
   {
-    pose_from_fx(filter_.x(), filtered_odom.fp.pose.pose);
+    pose_from_fx(filter_.x(), filtered_odom.pose.pose);
     // twist_from_fx(filter_.x(), filtered_odom.twist.twist);
-    flatten_4x4_covar(filter_.P(), filtered_odom.fp.pose.covariance, true);
+    flatten_4x4_covar(filter_.P(), filtered_odom.pose.covariance, true);
     // flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
   }
 
   Measurement FourFilter::to_measurement(const orca_msgs::msg::Depth &depth,
-                                         const orca::Observations &observations) const
+                                         const mw::Observations &observations) const
   {
     Measurement m;
     m.init_z(depth, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
@@ -224,7 +222,7 @@ namespace orca_filter
   }
 
   Measurement FourFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
-                                         const orca::Observations &observations) const
+                                         const mw::Observations &observations) const
   {
     Measurement m;
     m.init_4dof(pose, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
