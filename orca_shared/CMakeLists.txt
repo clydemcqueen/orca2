@@ -48,6 +48,7 @@ add_library(
   src/fp.cpp
   src/geometry.cpp
   src/model.cpp
+  src/mw.cpp
   src/observer.cpp
   src/pwm.cpp
   src/util.cpp
@@ -72,7 +73,7 @@ ament_export_libraries(${ORCA_SHARED_LIB})
 
 add_executable(
   test_node
-  src/test_node.cpp
+  src/test/test_node.cpp
 )
 
 ament_target_dependencies(
@@ -82,6 +83,28 @@ ament_target_dependencies(
   image_geometry
   orca_msgs
   rclcpp
+)
+
+#=============
+# Test
+#=============
+
+add_executable(
+  test_main
+  src/test/test_main.cpp
+  src/test/test_mw_roundtrip.cpp
+  src/test/test_mw_use_cases.cpp
+  src/mw.cpp
+  src/util.cpp
+)
+
+ament_target_dependencies(
+  test_main
+  fiducial_vlam_msgs
+  image_geometry
+  orca_msgs
+  rclcpp
+  sensor_msgs
 )
 
 #=============

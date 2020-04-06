@@ -1,4 +1,3 @@
-#include "orca_shared/fp.hpp"
 #include "orca_shared/monotonic.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -24,26 +23,8 @@ public:
   }
 };
 
-void test_geometry_and_fp()
-{
-  orca::Pose pose;
-  orca::PoseStamped pose_stamped;
-  orca::PoseWithCovariance pose_with_covariance;
-  orca::Twist twist;
-  orca::TwistBody twist_body;
-  orca::Acceleration acceleration;
-  orca::AccelerationBody acceleration_body;
-  orca::Efforts efforts;
-  orca::Observation observation;
-  orca::ObservationStamped observation_stamped;
-  orca::FP fp;
-  orca::FPStamped fp_stamped;
-}
-
 int main(int argc, char **argv)
 {
-  test_geometry_and_fp();
-
   // Force flush of the stdout buffer
   setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
