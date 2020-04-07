@@ -31,6 +31,21 @@ namespace mw
       return msg_;
     }
 
+    /**
+     * Plan a route from start to destination through the smallest number of waypoints.
+     *
+     * Ignores marker orientation, so only works for down-facing cameras and markers on the seafloor.
+     *
+     * @param target_z Travel depth
+     * @param max_dead_reckon_dist Max dead reckoning distance
+     * @param start_pose Start pose
+     * @param destination_pose Destination pose
+     * @param waypoints Out: all posts from start to destionat
+     * @return True if a path was found
+     */
+    bool get_waypoints(const double &target_z, const double &max_dead_reckon_dist,
+                       const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const;
+
     int predict_observations(const Pose &base_f_map, Observations &observations);
 
     bool operator==(const Map &that) const

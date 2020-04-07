@@ -2,6 +2,8 @@
 
 #include <iomanip>
 
+#include "astar/astar.hpp"
+
 namespace mw
 {
 
@@ -30,6 +32,64 @@ namespace mw
   //=====================================================================================
   // Map
   //=====================================================================================
+
+  constexpr astar::node_type START_ID = -1;
+  constexpr astar::node_type DESTINATION_ID = -2;
+
+  bool Map::get_waypoints(const double &target_z, const double &max_dead_reckon_dist,
+                          const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const
+  {
+    waypoints.clear();
+
+    // Create a map of marker ids to poses, including the start and destination pose
+    std::map<astar::node_type, Pose> poses;
+
+    // Add start pose to map
+    auto start_z_target = start_pose;
+    start_z_target.position().z() = target_z;
+    poses[START_ID] = start_z_target;
+
+    // Add destination pose to map
+    auto destination_z_target = destination_pose;
+    destination_z_target.position().z() = target_z;
+    poses[DESTINATION_ID] = destination_z_target;
+
+    // Add all of the markers to the map
+    for (size_t i = 0; i < msg_.ids.size(); ++i) {
+      Pose pose{msg_.poses[i].pose};
+      pose.position().z() = target_z;
+      poses[msg_.ids[i]] = pose;
+    }
+
+    // Enumerate all edges between markers that are < cxt_.pose_plan_max_dead_reckon_dist_
+    std::vector<astar::Edge> short_paths{};
+    for (auto i = poses.begin(); i != poses.end(); ++i) {
+      for (auto j = std::next(i); j != poses.end(); ++j) {
+        auto distance = i->second.position().distance_xy(j->second.position());
+        if (distance < max_dead_reckon_dist) {
+          short_paths.emplace_back(i->first, j->first, distance);
+        }
+      }
+    }
+
+    // Create an A* solver that we can use to navigate between markers that are further away
+    auto solver = std::make_shared<astar::Solver>(short_paths, [&](astar::node_type a, astar::node_type b) -> double
+    {
+      return poses[a].position().distance_xy(poses[b].position());
+    });
+
+    // Find the shortest path from the start pose to the destination pose through markers
+    std::vector<astar::node_type> path{};
+    if (solver->find_shortest_path(START_ID, DESTINATION_ID, path)) {
+      for (auto marker : path) {
+        waypoints.push_back(poses[marker]);
+      }
+      return true;
+    } else {
+      std::cout << "A* failed to find a path through the markers" << std::endl;
+      return false;
+    }
+  }
 
   int Map::predict_observations(const Pose &base_f_map, Observations &observations)
   {
@@ -281,7 +341,7 @@ namespace mw
   std::ostream &operator<<(std::ostream &os, PoseWithCovarianceStamped const &v)
   {
     return os << std::fixed << std::setprecision(3)
-              << "{" << v.header() << ", " << v.pose()  << "}";
+              << "{" << v.header() << ", " << v.pose() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, PolarObservation const &v)
