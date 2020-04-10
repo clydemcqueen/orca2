@@ -11,7 +11,6 @@
 #include "orca_shared/monotonic.hpp"
 
 #include "orca_base/auv_context.hpp"
-#include "orca_base/map.hpp"
 #include "orca_base/mission.hpp"
 
 namespace orca_base
@@ -44,12 +43,12 @@ namespace orca_base
     double base_link_z_{};
 
     // Most recent observations and pose estimate
-    orca::FPStamped estimate_;
+    mw::FiducialPoseStamped estimate_;
 
     // AUV operation
     int global_plan_idx_{-1};                     // Count of global plans, starts at 0
     std::shared_ptr<Mission> mission_;            // The mission we're running
-    Map map_;                                     // Map of fiducial markers
+    mw::Map map_;                                 // Map of fiducial markers
     nav_msgs::msg::Path estimated_path_;          // Estimate of the actual path
 
     // Subscriptions
@@ -139,7 +138,7 @@ namespace orca_base
 
     void auv_advance(const rclcpp::Time &t, const rclcpp::Duration &d);
 
-    void publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts);
+    void publish_control(const rclcpp::Time &msg_time, const mw::Efforts &efforts);
 
   public:
 

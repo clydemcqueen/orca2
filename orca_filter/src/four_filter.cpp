@@ -124,7 +124,7 @@ namespace orca_filter
 
   FourFilter::FourFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
     FilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
   {
@@ -202,7 +202,7 @@ namespace orca_filter
     FilterBase::reset(pose_to_fx(pose));
   }
 
-  void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPose2 &filtered_odom)
+  void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPose &filtered_odom)
   {
     pose_from_fx(filter_.x(), filtered_odom.pose.pose);
     // twist_from_fx(filter_.x(), filtered_odom.twist.twist);

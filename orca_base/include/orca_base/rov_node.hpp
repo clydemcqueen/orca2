@@ -2,19 +2,17 @@
 #define ORCA_BASE_ROV_NODE_HPP
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "sensor_msgs/msg/joy.hpp"
-
+#include "orca_base/joystick.hpp"
+#include "orca_base/rov_context.hpp"
+#include "orca_base/pid.hpp"
 #include "orca_msgs/action/mission.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/driver.hpp"
-#include "orca_shared/geometry.hpp"
 #include "orca_shared/monotonic.hpp"
-
-#include "orca_base/rov_context.hpp"
-#include "orca_base/joystick.hpp"
-#include "orca_base/pid.hpp"
+#include "orca_shared/mw/mw.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "sensor_msgs/msg/joy.hpp"
 
 namespace orca_base
 {
@@ -129,7 +127,7 @@ namespace orca_base
 
     void rov_advance(const rclcpp::Time &stamp);
 
-    void publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts);
+    void publish_control(const rclcpp::Time &msg_time, const mw::Efforts &efforts);
 
     void disarm(const rclcpp::Time &msg_time);
 
@@ -139,7 +137,7 @@ namespace orca_base
 
     enum class Mission
     {
-      KEEP_STATION, GO_TO_POSE, RANDOM_MARKERS
+      keep_station, go_to_pose, random_markers
     };
 
     void start_mission(const rclcpp::Time &msg_time, Mission mission,

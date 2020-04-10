@@ -25,7 +25,7 @@ namespace orca_base
     {"t200_link_vertical_left",  true,  0.0, 0.0,  0.0,  -1.0},
   };
 
-  void efforts_to_control(const orca::Efforts &efforts, double xy_limit, orca_msgs::msg::Control &control_msg)
+  void efforts_to_control(const mw::Efforts &efforts, double xy_limit, orca_msgs::msg::Control &control_msg)
   {
     // Keep track of saturation for diagnostics
     bool thruster_saturated = false;

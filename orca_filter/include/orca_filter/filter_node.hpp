@@ -6,7 +6,7 @@
 #include "orca_filter/filter_base.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
-#include "orca_msgs/msg/fiducial_pose_stamped2.hpp"
+#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
 #include "orca_shared/monotonic.hpp"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_msgs/msg/tf_message.hpp"
@@ -39,12 +39,12 @@ namespace orca_filter
     // double estimated_yaw_{};                      // Yaw used to rotate thruster commands into the world frame
     // orca::Acceleration u_bar_{};                  // Last control, used for filter predict step
 
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub_;
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub_;
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
     rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
-    rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr fcam_sub_;
+    rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fcam_sub_;
 
     // Validate parameters
     void validate_parameters();
@@ -57,18 +57,18 @@ namespace orca_filter
 
     void control_callback(orca_msgs::msg::Control::SharedPtr msg, bool first);
 
-    void fcam_callback(orca_msgs::msg::FiducialPoseStamped2::SharedPtr msg, bool first);
+    void fcam_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first);
 
     // Callback wrappers
     monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Depth::SharedPtr>
       depth_cb_{this, &FilterNode::depth_callback};
     monotonic::Monotonic<FilterNode *, const orca_msgs::msg::Control::SharedPtr>
       control_cb_{this, &FilterNode::control_callback};
-    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::FiducialPoseStamped2::SharedPtr>
+    monotonic::Monotonic<FilterNode *, const orca_msgs::msg::FiducialPoseStamped::SharedPtr>
       fcam_cb_{this, &FilterNode::fcam_callback};
 
     // Process a camera pose
-    void process_pose(const orca_msgs::msg::FiducialPoseStamped2::SharedPtr &msg,
+    void process_pose(const orca_msgs::msg::FiducialPoseStamped::SharedPtr &msg,
                       const tf2::Transform &t_sensor_base, const std::string &frame_id);
 
   public:

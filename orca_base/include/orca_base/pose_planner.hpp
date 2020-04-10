@@ -1,13 +1,11 @@
 #ifndef ORCA_BASE_POSE_PLANNER_HPP
 #define ORCA_BASE_POSE_PLANNER_HPP
 
-#include "rclcpp/logger.hpp"
-
 #include "orca_base/auv_context.hpp"
 #include "orca_base/controller.hpp"
-#include "orca_base/map.hpp"
 #include "orca_base/planner_common.hpp"
 #include "orca_base/pose_segment.hpp"
+#include "rclcpp/logger.hpp"
 
 namespace orca_base
 {
@@ -20,9 +18,9 @@ namespace orca_base
   {
     rclcpp::Logger logger_;
     const AUVContext &cxt_;
-    Map map_;
+    mw::Map map_;
 
-    Target target_;                                             // Target
+    mw::Target target_;                                         // Target
     bool keep_station_;                                         // True: keep station at target
     std::vector<std::shared_ptr<PoseSegmentBase>> segments_;    // Motion segments
     std::shared_ptr<PoseController> controller_;                // Motion controller
@@ -32,23 +30,23 @@ namespace orca_base
 #endif
 
     // Add a trajectory segment and update plan
-    void add_keep_station_segment(orca::FPStamped &plan, double seconds);
+    void add_keep_station_segment(mw::PoseStamped &plan, double seconds);
 
-    void add_vertical_segment(orca::FPStamped &plan, double z);
+    void add_vertical_segment(mw::PoseStamped &plan, double z);
 
-    void add_rotate_segment(orca::FPStamped &plan, double yaw);
+    void add_rotate_segment(mw::PoseStamped &plan, double yaw);
 
-    void add_line_segment(orca::FPStamped &plan, double x, double y);
+    void add_line_segment(mw::PoseStamped &plan, double x, double y);
 
-    void add_pose_segment(orca::FPStamped &plan, const orca::FP &goal);
+    void add_pose_segment(mw::PoseStamped &plan, const mw::Pose &goal);
 
   public:
 
-    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const orca::FPStamped &start, Target target,
-                Map map, bool keep_station, PlannerStatus &status);
+    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PoseStamped &start, mw::Target target,
+                mw::Map map, bool keep_station, mw::MissionState &state);
 
-    bool advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
-                 PlannerStatus &status) override;
+    bool advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
+                 mw::MissionState &state) override;
 
 #ifdef LOCAL_PATH
     const nav_msgs::msg::Path &local_path() const

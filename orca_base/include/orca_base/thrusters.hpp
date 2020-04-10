@@ -2,7 +2,7 @@
 #define ORCA_BASE_THRUSTERS_HPP
 
 #include "orca_msgs/msg/control.hpp"
-#include "orca_shared/geometry.hpp"
+#include "orca_shared/mw/efforts.hpp"
 
 namespace orca_base
 {
@@ -14,7 +14,7 @@ namespace orca_base
    * @param xy_limit Limit forward + strafe efforts to this value
    * @param control_msg Write to this control message
    */
-  void efforts_to_control(const orca::Efforts &efforts, double xy_limit, orca_msgs::msg::Control &control_msg);
+  void efforts_to_control(const mw::Efforts &efforts, double xy_limit, orca_msgs::msg::Control &control_msg);
 
 } // namespace orca_base
 

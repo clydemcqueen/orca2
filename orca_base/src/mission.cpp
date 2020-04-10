@@ -1,12 +1,10 @@
 #include "orca_base/mission.hpp"
 
-using namespace orca;
-
 namespace orca_base
 {
   Mission::Mission(const rclcpp::Logger &logger, const AUVContext &cxt,
                    std::shared_ptr<rclcpp_action::ServerGoalHandle<orca_msgs::action::Mission>> goal_handle,
-                   std::shared_ptr<GlobalPlanner> planner, const FPStamped &start) :
+                   std::shared_ptr<GlobalPlanner> planner, const mw::FiducialPoseStamped &start) :
     logger_{logger},
     cxt_{cxt},
     goal_handle_{std::move(goal_handle)},
@@ -20,7 +18,7 @@ namespace orca_base
     }
   }
 
-  bool Mission::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts)
+  bool Mission::advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts)
   {
     // Cancel this mission?
     if (goal_handle_ && goal_handle_->is_canceling()) {

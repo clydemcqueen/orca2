@@ -10,19 +10,19 @@ void segment_test()
 {
   std::cout << "=== TRAP2 SEGMENT TEST ===" << std::endl;
 
-  orca::PoseStamped p0, p1, p2, p3;
+  mw::PoseStamped p0, p1, p2, p3;
 
-  p3.pose.x = -5;
-  p3.pose.y = 0;
-  p3.pose.z = 1;
-  p3.pose.yaw = 2;
+  p3.pose().position().x() = -5;
+  p3.pose().position().y() = 0;
+  p3.pose().position().z() = 1;
+  p3.pose().orientation().yaw(2);
 
   auto p3_save = p3;
 
   orca_base::AUVContext cxt{};
 
-  orca::Acceleration a;
-  orca::Twist v;
+  mw::Acceleration a;
+  mw::Twist v;
 
   orca_base::plan_pose_sync(cxt, p0, p1, p2, p3, a, v);
 
@@ -34,20 +34,20 @@ void segment_test()
   std::cout << "v1: " << v << std::endl;
 
   // Make sure plan_sync didn't screw with the original pose
-  assert(CLOSE_ENOUGH(p3_save.pose.x - p3.pose.x));
-  assert(CLOSE_ENOUGH(p3_save.pose.y - p3.pose.y));
-  assert(CLOSE_ENOUGH(p3_save.pose.z - p3.pose.z));
-  assert(CLOSE_ENOUGH(orca::norm_angle(p3_save.pose.yaw - p3.pose.yaw)));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().x() - p3.pose().position().x()));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().y() - p3.pose().position().y()));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().z() - p3.pose().position().z()));
+  assert(CLOSE_ENOUGH(orca::norm_angle(p3_save.pose().orientation().yaw() - p3.pose().orientation().yaw())));
 
-  auto ramp = p1.pose - p0.pose;
-  auto run = p2.pose - p1.pose;
-  auto check = p0.pose + ramp + run + ramp;
+  auto ramp = p1.pose() - p0.pose();
+  auto run = p2.pose() - p1.pose();
+  auto check = p0.pose() + ramp + run + ramp;
 
   // Make sure the sums work out
-  assert(CLOSE_ENOUGH(p3_save.pose.x - check.x));
-  assert(CLOSE_ENOUGH(p3_save.pose.y - check.y));
-  assert(CLOSE_ENOUGH(p3_save.pose.z - check.z));
-  assert(CLOSE_ENOUGH(orca::norm_angle(p3_save.pose.yaw - check.yaw)));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().x() - check.position().x()));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().y() - check.position().y()));
+  assert(CLOSE_ENOUGH(p3_save.pose().position().z() - check.position().z()));
+  assert(CLOSE_ENOUGH(orca::norm_angle(p3_save.pose().orientation().yaw() - check.orientation().yaw())));
 
   // TODO check against known results
 

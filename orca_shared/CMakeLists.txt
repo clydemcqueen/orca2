@@ -47,11 +47,8 @@ set(ORCA_SHARED_LIB "orca_shared")
 add_library(
   ${ORCA_SHARED_LIB} SHARED
   src/baro.cpp
-  src/fp.cpp
-  src/geometry.cpp
   src/model.cpp
   src/mw.cpp
-  src/observer.cpp
   src/pwm.cpp
   src/util.cpp
 )

@@ -34,7 +34,9 @@ geometry_msgs::msg::Pose make_cam_f_base()
 
 int main(int argc, char **argv)
 {
-  if (test_mw_observer() &&
+  if (test_mw_move() &&
+  test_mw_header() &&
+      test_mw_observer() &&
       test_mw_roundtrip() &&
       test_mw_pose_segment() &&
       test_mw_polar_segment()) {

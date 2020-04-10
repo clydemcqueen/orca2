@@ -13,6 +13,9 @@ namespace mw
   class Observer
   {
     orca_msgs::msg::Observer msg_;
+    image_geometry::PinholeCameraModel camera_model_;
+    tf2::Transform t_base_cam_;
+    tf2::Transform t_cam_base_;
 
   public:
 
@@ -30,14 +33,21 @@ namespace mw
       msg_.marker_length = marker_length;
       msg_.camera_info = camera_info;
       msg_.cam_f_base = cam_f_base;
+
+      camera_model_.fromCameraInfo(camera_info);
+      tf2::fromMsg(cam_f_base, t_base_cam_);
+      t_cam_base_ = t_base_cam_.inverse();
     }
 
     Observer(const double &marker_length,
-             const image_geometry::PinholeCameraModel &cam_model,
-             const tf2::Transform &t_base_cam)
+             const image_geometry::PinholeCameraModel &camera_model,
+             const tf2::Transform &t_base_cam) :
+             camera_model_{camera_model},
+             t_base_cam_{t_base_cam},
+             t_cam_base_{t_base_cam.inverse()}
     {
       msg_.marker_length = marker_length;
-      msg_.camera_info = cam_model.cameraInfo();
+      msg_.camera_info = camera_model.cameraInfo();
       tf2::toMsg(t_base_cam, msg_.cam_f_base);
     }
 
@@ -71,28 +81,24 @@ namespace mw
       return msg_.cam_f_base;
     }
 
-    image_geometry::PinholeCameraModel camera_model() const
+    const image_geometry::PinholeCameraModel &camera_model() const
     {
-      image_geometry::PinholeCameraModel result;
-      result.fromCameraInfo(msg_.camera_info);
-      return result;
+      return camera_model_;
     }
 
-    tf2::Transform t_cam_base() const
+    const tf2::Transform &t_base_cam() const
     {
-      tf2::Transform result;
-      tf2::fromMsg(cam_f_base(), result);
-      return result;
+      return t_base_cam_;
     }
 
-    tf2::Transform t_base_cam() const
+    const tf2::Transform &t_cam_base() const
     {
-      return t_cam_base().inverse();
+      return t_cam_base_;
     }
 
-    PolarObservation polar_observation(const Observation &observation);
+    void convert(const Observation &observation, PolarObservation &polar_observation);
 
-    Observation observation(const PolarObservation &polar_observation);
+    void convert(const PolarObservation &polar_observation, Observation &observation);
 
     bool operator==(const Observer &that) const
     {

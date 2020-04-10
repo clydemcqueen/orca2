@@ -2,7 +2,7 @@
 #define ORCA_SHARED_MW_OBSERVATIONS_HPP
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
-#include "orca_msgs/msg/observations2.hpp"
+#include "orca_msgs/msg/observations.hpp"
 #include "orca_shared/mw/observer.hpp"
 #include "orca_shared/mw/observation.hpp"
 #include "orca_shared/mw/polar_observation.hpp"
@@ -21,7 +21,7 @@ namespace mw
 
     Observations() = default;
 
-    explicit Observations(const orca_msgs::msg::Observations2 &msg) :
+    explicit Observations(const orca_msgs::msg::Observations &msg) :
       observer_{msg.observer}
     {
       assert(msg.observations.size() == msg.polar_observations.size());
@@ -48,9 +48,9 @@ namespace mw
       observer_{observer}
     {}
 
-    orca_msgs::msg::Observations2 msg() const
+    orca_msgs::msg::Observations msg() const
     {
-      orca_msgs::msg::Observations2 msg;
+      orca_msgs::msg::Observations msg;
       msg.observer = observer_.msg();
       for (const auto &item : observations_) {
         msg.observations.emplace_back(item.msg());
@@ -66,9 +66,24 @@ namespace mw
       return observer_;
     }
 
+    const std::vector<Observation> &observations() const
+    {
+      return observations_;
+    }
+
+    const std::vector<PolarObservation> &polar_observations() const
+    {
+      return polar_observations_;
+    }
+
     Observer &observer()
     {
       return observer_;
+    }
+
+    bool size() const
+    {
+      return observations().size();
     }
 
     bool empty() const
@@ -102,15 +117,22 @@ namespace mw
       return PolarObservation::None;
     }
 
-    PolarObservation closest_polar() const
+    const PolarObservation &closest_polar() const
     {
-      auto result = PolarObservation::None;
+      // 2 passes required to return a const &PolarObservation
+      auto closest_distance = std::numeric_limits<double>::max();
+      auto closest_id = NOT_A_MARKER;
+
+      // Pass 1
       for (const auto &item : polar_observations_) {
-        if (item.distance() < result.distance()) {
-          result = item;
+        if (item.distance() < closest_distance) {
+          closest_distance = item.distance();
+          closest_id = item.id();
         }
       }
-      return result;
+
+      // Pass 2
+      return get_polar(closest_id);
     }
 
     double closest_distance() const
@@ -119,10 +141,18 @@ namespace mw
       return closest.distance();
     }
 
+    bool good(const double &max_distance) const
+    {
+      return closest_distance() < max_distance;
+    }
+
     void add(const Observation &observation)
     {
+      PolarObservation polar_observation;
+      observer_.convert(observation, polar_observation);
+
       observations_.push_back(observation);
-      polar_observations_.push_back(observer_.polar_observation(observation));
+      polar_observations_.push_back(polar_observation);
     }
 
     void add(const fiducial_vlam_msgs::msg::Observation &vlam_observation)
@@ -132,7 +162,10 @@ namespace mw
 
     void add_polar(const PolarObservation &polar_observation)
     {
-      observations_.push_back(observer_.observation(polar_observation));
+      Observation observation;
+      observer_.convert(polar_observation, observation);
+
+      observations_.push_back(observation);
       polar_observations_.push_back(polar_observation);
     }
 

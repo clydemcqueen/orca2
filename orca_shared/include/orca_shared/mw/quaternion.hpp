@@ -12,9 +12,9 @@ namespace mw
 
   class Quaternion
   {
-    double roll_;
-    double pitch_;
-    double yaw_;
+    double roll_{};
+    double pitch_{};
+    double yaw_{};
 
   public:
 
@@ -75,6 +75,27 @@ namespace mw
     double distance_yaw(const Quaternion &that) const
     {
       return std::abs(orca::norm_angle(yaw() - that.yaw()));
+    }
+
+    Quaternion move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    {
+      auto dt = d.seconds();
+      return Quaternion{roll_, pitch_, orca::norm_angle(yaw_ + v0.yaw() * dt + 0.5 * a.yaw() * dt * dt)};
+    }
+
+    Quaternion operator+(const Quaternion &that) const
+    {
+      return Quaternion{roll_ + that.roll_, pitch_ + that.pitch_, yaw_ + that.yaw_};
+    }
+
+    Quaternion operator-(const Quaternion &that) const
+    {
+      return Quaternion{roll_ - that.roll_, pitch_ - that.pitch_, yaw_ - that.yaw_};
+    }
+
+    Quaternion operator-() const
+    {
+      return Quaternion{-roll_, -pitch_, -yaw_};
     }
 
     bool operator==(const Quaternion &that) const

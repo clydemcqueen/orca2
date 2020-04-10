@@ -1,8 +1,8 @@
 #ifndef ORCA_BASE_OBSERVATION_SEGMENT_HPP
 #define ORCA_BASE_OBSERVATION_SEGMENT_HPP
 
-#include "orca_shared/fp.hpp"
 #include "orca_base/segment_common.hpp"
+#include "orca_shared/mw/mw.hpp"
 
 namespace orca_base
 {
@@ -18,22 +18,22 @@ namespace orca_base
   {
   protected:
 
-    orca::ObservationStamped plan_;   // Goal observation
-    orca::Observation goal_;          // Planned observation, incremented with each call to advance()
+    mw::PolarObservationStamped plan_;    // Goal observation
+    mw::PolarObservation goal_;           // Planned observation, incremented with each call to advance()
 
-    orca::TwistBody twist_;           // Velocity in the body frame
-    orca::AccelerationBody ff_;       // Acceleration in the body frame
+    mw::TwistBody twist_;           // Velocity in the body frame
+    mw::AccelerationBody ff_;       // Acceleration in the body frame
 
   public:
-    ObservationSegmentBase(const AUVContext &cxt, uint8_t type, orca::ObservationStamped start, orca::Observation goal);
+    ObservationSegmentBase(const AUVContext &cxt, uint8_t type, mw::PolarObservationStamped start, mw::PolarObservation goal);
 
-    const orca::ObservationStamped &plan() const
+    const mw::PolarObservationStamped &plan() const
     { return plan_; }
 
-    const orca::TwistBody &twist() const
+    const mw::TwistBody &twist() const
     { return twist_; }
 
-    const orca::AccelerationBody &ff() const
+    const mw::AccelerationBody &ff() const
     { return ff_; }
   };
 
@@ -43,9 +43,9 @@ namespace orca_base
 
   class RotateToMarker : public ObservationSegmentBase
   {
-    orca::AccelerationBody initial_accel_;  // Initial total acceleration, not modified
-    orca::AccelerationBody accel_;          // Total acceleration, accel_ = drag_ + ff_
-    orca::AccelerationBody drag_;           // Acceleration due to drag
+    mw::AccelerationBody initial_accel_;  // Initial total acceleration, not modified
+    mw::AccelerationBody accel_;          // Total acceleration, accel_ = drag_ + ff_
+    mw::AccelerationBody drag_;           // Acceleration due to drag
 
     // Start time
     rclcpp::Time start_{0, 0, RCL_ROS_TIME};
@@ -57,7 +57,7 @@ namespace orca_base
 
   public:
 
-    RotateToMarker(const AUVContext &cxt, const orca::ObservationStamped &start, const orca::Observation &goal);
+    RotateToMarker(const AUVContext &cxt, const mw::PolarObservationStamped &start, const mw::PolarObservation &goal);
 
     std::string to_str() override;
 
@@ -70,9 +70,9 @@ namespace orca_base
 
   class MoveToMarker : public ObservationSegmentBase
   {
-    orca::AccelerationBody initial_accel_;  // Initial total acceleration, not modified
-    orca::AccelerationBody accel_;          // Total acceleration, accel_ = drag_ + ff_
-    orca::AccelerationBody drag_;           // Acceleration due to drag
+    mw::AccelerationBody initial_accel_;  // Initial total acceleration, not modified
+    mw::AccelerationBody accel_;          // Total acceleration, accel_ = drag_ + ff_
+    mw::AccelerationBody drag_;           // Acceleration due to drag
 
     // Start time
     rclcpp::Time start_{0, 0, RCL_ROS_TIME};
@@ -84,7 +84,7 @@ namespace orca_base
 
   public:
 
-    MoveToMarker(const AUVContext &cxt, const orca::ObservationStamped &start, const orca::Observation &goal);
+    MoveToMarker(const AUVContext &cxt, const mw::PolarObservationStamped &start, const mw::PolarObservation &goal);
 
     std::string to_str() override;
 

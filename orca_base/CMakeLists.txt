@@ -45,15 +45,12 @@ include_directories(
 
 add_executable(
   auv_node
-  src/astar.cpp
   src/auv_node.cpp
   src/controller.cpp
   src/global_planner.cpp
-  src/map.cpp
   src/mission.cpp
   src/move_to_marker_planner.cpp
   src/observation_segment.cpp
-  src/planner_common.cpp
   src/pose_planner.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
@@ -109,6 +106,7 @@ add_executable(
 ament_target_dependencies(
   annotate_image_node
   cv_bridge
+  image_geometry
   orca_msgs
   orca_shared
   rclcpp
@@ -121,8 +119,6 @@ ament_target_dependencies(
 
 add_executable(
   test_main
-  src/astar.cpp
-  src/astar_test.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
   src/segment_test.cpp

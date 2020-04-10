@@ -9,55 +9,61 @@ namespace mw
 
   class Header
   {
-    std_msgs::msg::Header msg_;
+    rclcpp::Time t_;
+    std::string frame_id_;
 
   public:
 
     Header() = default;
 
     explicit Header(const std_msgs::msg::Header &msg) :
-      msg_{msg}
+      t_{msg.stamp, RCL_ROS_TIME},
+      frame_id_{msg.frame_id}
     {}
 
     Header(const rclcpp::Time &stamp, const std::string &frame_id)
     {
-      msg_.stamp = stamp;
-      msg_.frame_id = frame_id;
+      t_ = stamp;
+      frame_id_ = frame_id;
     }
 
     std_msgs::msg::Header msg() const
     {
-      return msg_;
+      std_msgs::msg::Header msg;
+      msg.stamp = t_;
+      msg.frame_id = frame_id_;
+      return msg;
     }
 
-    rclcpp::Time stamp() const
+    bool valid()
     {
-      return rclcpp::Time{msg_.stamp, RCL_ROS_TIME};
+      return t().nanoseconds() > 0;
     }
 
-    std::string frame_id() const
+    const rclcpp::Time &t() const
     {
-      return msg_.frame_id;
+      return t_;
     }
 
-    void stamp(const rclcpp::Time &v)
+    const std::string &frame_id() const
     {
-      msg_.stamp = v;
+      return frame_id_;
     }
 
-    void frame_id(const std::string &v)
+    rclcpp::Time &t()
     {
-      msg_.frame_id = v;
+      return t_;
     }
 
-    bool valid_stamp()
+    std::string &frame_id()
     {
-      return stamp().nanoseconds() > 0;
+      return frame_id_;
     }
 
     bool operator==(const Header &that) const
     {
-      return msg_ == that.msg_;
+      return t_ == that.t_ &&
+             frame_id_ == that.frame_id_;
     }
 
     bool operator!=(const Header &that) const

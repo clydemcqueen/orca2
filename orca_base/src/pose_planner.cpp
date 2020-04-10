@@ -4,8 +4,6 @@
 
 #include "orca_msgs/msg/control.hpp"
 
-using namespace orca;
-
 namespace orca_base
 {
 
@@ -13,10 +11,15 @@ namespace orca_base
   // PosePlanner -- build a local plan to a target
   //=====================================================================================
 
-  PosePlanner::PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const FPStamped &start,
-                           Target target, Map map, bool keep_station, PlannerStatus &status) :
-    LocalPlanner{LocalPlannerType::POSE_PLANNER}, logger_{logger}, cxt_{cxt}, target_{std::move(target)},
-    map_{std::move(map)}, keep_station_{keep_station}, controller_{std::make_shared<PoseController>(cxt_)}
+  PosePlanner::PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PoseStamped &start,
+                           mw::Target target, mw::Map map, bool keep_station, mw::MissionState &state) :
+    LocalPlanner{LocalPlannerType::POSE_PLANNER},
+    logger_{logger},
+    cxt_{cxt},
+    target_{std::move(target)},
+    map_{std::move(map)},
+    keep_station_{keep_station},
+    controller_{std::make_shared<PoseController>(cxt_)}
   {
     // Future: build a plan that will keep markers in view at all times
     // For now, consider 2 cases:
@@ -24,49 +27,51 @@ namespace orca_base
     // 2. long plan: find a series of waypoints (if possible), and always face the direction of motion
 
     // Start pose
-    FPStamped plan = start;
+    mw::PoseStamped plan = start;
 
-    if (target.fp.distance_xy(start.fp) < cxt_.pose_plan_max_short_plan_xy_) {
-      RCLCPP_INFO_STREAM(logger_, "short plan: " << target);
+    if (target.pose().position().distance_xy(start.pose().position()) < cxt_.pose_plan_max_short_plan_xy_) {
+      RCLCPP_INFO_STREAM(logger_, "short plan " << target);
 
-      add_pose_segment(plan, target.fp);
+      add_pose_segment(plan, target.pose());
 
     } else {
-      RCLCPP_INFO_STREAM(logger_, "long plan: " << target);
+      RCLCPP_INFO_STREAM(logger_, "long plan " << target);
 
       // Generate a series of waypoints to minimize dead reckoning
-      std::vector<Pose> waypoints;
+      std::vector<mw::Pose> waypoints;
 
-      if (cxt_.pose_plan_waypoints_ && map_.get_waypoints(start.fp.pose.pose, target_.fp.pose.pose, waypoints)) {
+      if (cxt_.pose_plan_waypoints_ &&
+          map_.get_waypoints(cxt_.global_plan_target_z_, cxt_.pose_plan_max_dead_reckon_dist_,
+                             start.pose(), target_.pose(), waypoints)) {
         RCLCPP_INFO(logger_, "... through %d waypoints", waypoints.size() - 1);
       } else {
-        waypoints.push_back(target_.fp.pose.pose);
+        waypoints.push_back(target_.pose());
       }
 
       // Travel to each waypoint, breaking down z, yaw and xy phases
       for (auto &waypoint : waypoints) {
         // Ascend/descend to target z
-        if (plan.fp.pose.pose.distance_z(waypoint) > cxt_.pose_plan_epsilon_xyz_) {
-          add_vertical_segment(plan, waypoint.z);
+        if (plan.pose().position().distance_z(waypoint.position()) > cxt_.pose_plan_epsilon_xyz_) {
+          add_vertical_segment(plan, waypoint.z());
           add_keep_station_segment(plan, 1);
         } else {
           RCLCPP_INFO(logger_, "skip vertical");
         }
 
-        if (plan.fp.pose.pose.distance_xy(waypoint) > cxt_.pose_plan_epsilon_xyz_) {
+        if (plan.pose().position().distance_xy(waypoint.position()) > cxt_.pose_plan_epsilon_xyz_) {
           // Point in the direction of travel
-          add_rotate_segment(plan, atan2(waypoint.y - plan.fp.pose.pose.y, waypoint.x - plan.fp.pose.pose.x));
+          add_rotate_segment(plan, atan2(waypoint.y() - plan.pose().y(), waypoint.x() - plan.pose().x()));
           add_keep_station_segment(plan, 1);
 
           // Travel
-          add_line_segment(plan, waypoint.x, waypoint.y);
+          add_line_segment(plan, waypoint.x(), waypoint.y());
         } else {
           RCLCPP_INFO(logger_, "skip travel");
         }
       }
 
       // Always rotate to the target yaw
-      add_rotate_segment(plan, target_.fp.pose.pose.yaw);
+      add_rotate_segment(plan, target_.pose().yaw());
     }
 
     // Pause
@@ -93,68 +98,62 @@ namespace orca_base
       add_keep_station_segment(plan, 1e6);
     }
 
-    RCLCPP_INFO(logger_, "planned duration %g seconds", (plan.t - start.t).seconds());
-    RCLCPP_INFO(logger_, "segment 1 of %d", segments_.size());
+    RCLCPP_INFO(logger_, "planned duration %g seconds", (plan.header().t() - start.header().t()).seconds());
 
-    // Update status
-    status.first_segment(orca_msgs::msg::Control::PLAN_LOCAL, segments_.size(),
-      segments_[0]->to_str(), segments_[0]->type());
-    RCLCPP_INFO(logger_, status.segment_info);
+    // Update state
+    state.first_segment(orca_msgs::msg::MissionState::PLAN_LOCAL, segments_.size(),
+                        segments_[0]->to_str(), segments_[0]->type());
+    RCLCPP_INFO_STREAM(logger_, "segment 1 of " << segments_.size() << ", " << state.segment_info());
 
-    // Set initial pose and twist
-    status.pose = segments_[status.segment_idx]->plan();
-    status.twist = segments_[status.segment_idx]->twist();
+    state.set_plan(segments_[state.segment_idx()]->plan(), map_);
+    state.twist() = segments_[state.segment_idx()]->twist();
   }
 
-  void PosePlanner::add_keep_station_segment(FPStamped &plan, double seconds)
+  void PosePlanner::add_keep_station_segment(mw::PoseStamped &plan, double seconds)
   {
     segments_.push_back(std::make_shared<Pause>(cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
   }
 
-  void PosePlanner::add_vertical_segment(FPStamped &plan, double z)
+  void PosePlanner::add_vertical_segment(mw::PoseStamped &plan, double z)
   {
     segments_.push_back(Trap2::make_vertical(cxt_, plan, z));
   }
 
-  void PosePlanner::add_rotate_segment(FPStamped &plan, double yaw)
+  void PosePlanner::add_rotate_segment(mw::PoseStamped &plan, double yaw)
   {
     segments_.push_back(Trap2::make_rotate(cxt_, plan, yaw));
   }
 
-  void PosePlanner::add_line_segment(FPStamped &plan, double x, double y)
+  void PosePlanner::add_line_segment(mw::PoseStamped &plan, double x, double y)
   {
     segments_.push_back(Trap2::make_line(cxt_, plan, x, y));
   }
 
-  void PosePlanner::add_pose_segment(FPStamped &plan, const FP &goal)
+  void PosePlanner::add_pose_segment(mw::PoseStamped &plan, const mw::Pose &goal)
   {
     segments_.push_back(Trap2::make_pose(cxt_, plan, goal));
   }
 
-  bool PosePlanner::advance(const rclcpp::Duration &d, const FPStamped &estimate, orca::Efforts &efforts,
-                            PlannerStatus &status)
+  bool PosePlanner::advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
+                            mw::MissionState &state)
   {
     // Update the plan
-    if (segments_[status.segment_idx]->advance(d)) {
+    if (segments_[state.segment_idx()]->advance(d)) {
       // Continue in this segment
-    } else if (++status.segment_idx < segments_.size()) {
+    } else if (state.segment_idx() + 1 < segments_.size()) {
       // Move to the next segment
-      RCLCPP_INFO(logger_, "segment %d of %d", status.segment_idx + 1, segments_.size());
-
-      // Update status
-      status.next_segment(segments_[status.segment_idx]->to_str(), segments_[status.segment_idx]->type());
-      RCLCPP_INFO(logger_, status.segment_info);
+      state.next_segment(segments_[state.segment_idx() + 1]->to_str(), segments_[state.segment_idx() + 1]->type());
+      RCLCPP_INFO_STREAM(logger_, "segment " << state.segment_idx() + 1 << " of " << segments_.size() << ", " << state.segment_info());
     } else {
       // Local plan is complete
       return false;
     }
 
-    // Update pose and twist
-    status.pose = segments_[status.segment_idx]->plan();
-    status.twist = segments_[status.segment_idx]->twist();
+    state.set_plan(segments_[state.segment_idx()]->plan(), map_);
+    state.twist() = segments_[state.segment_idx()]->twist();
 
     // Run PID controller and calculate efforts
-    controller_->calc(d, status.pose.fp, estimate.fp, segments_[status.segment_idx]->ff(), efforts);
+    controller_->calc(d, state.plan().fp(), estimate.fp(), segments_[state.segment_idx()]->ff(), efforts);
 
     return true;
   }

@@ -2,7 +2,6 @@
 #define ORCA_BASE_SEGMENT_COMMON_HPP
 
 #include "orca_base/auv_context.hpp"
-#include "orca_shared/geometry.hpp"
 #include "rclcpp/duration.hpp"
 
 namespace orca_base

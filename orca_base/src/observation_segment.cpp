@@ -12,23 +12,23 @@ namespace orca_base
   // ObservationSegmentBase
   //=====================================================================================
 
-  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, uint8_t type, orca::ObservationStamped start,
-                                                 orca::Observation goal) :
+  ObservationSegmentBase::ObservationSegmentBase(const AUVContext &cxt, uint8_t type, mw::PolarObservationStamped start,
+                                                 mw::PolarObservation goal) :
     SegmentBase{cxt, type},
     plan_{std::move(start)},
     goal_{std::move(goal)}
   {
     // Default ff includes acceleration to counteract buoyancy
-    ff_ = orca::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
+    ff_ = mw::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
   }
 
   /* Future work... ObservationSegmentBase should look like this (see Trap2):
-   *     orca::ObservationStamped o0_;    // Start observation
-   *     orca::ObservationStamped o1_;
-   *     orca::ObservationStamped o2_;
-   *     orca::ObservationStamped o3_;    // End observation
-   *     orca::AccelerationBody a0_;      // Acceleration at o0_.t
-   *     orca::TwistBody v1_;             // Velocity at o1_.t
+   *     mw::ObservationStamped o0_;    // Start observation
+   *     mw::ObservationStamped o1_;
+   *     mw::ObservationStamped o2_;
+   *     mw::ObservationStamped o3_;    // End observation
+   *     mw::AccelerationBody a0_;      // Acceleration at o0_.t
+   *     mw::TwistBody v1_;             // Velocity at o1_.t
    *
    * ... and SegmentBase::advance() should take rclcpp::Time, not rclcpp::Duration
    */
@@ -51,18 +51,19 @@ namespace orca_base
   // RotateToMarker
   //=====================================================================================
 
-  RotateToMarker::RotateToMarker(const AUVContext &cxt, const orca::ObservationStamped &start,
-                                 const orca::Observation &goal) :
-    ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_RTM, start, goal)
+  RotateToMarker::RotateToMarker(const AUVContext &cxt,
+                                 const mw::PolarObservationStamped &start,
+                                 const mw::PolarObservation &goal) :
+    ObservationSegmentBase{cxt, orca_msgs::msg::MissionState::OBS_RTM, start, goal}
   {
-    double distance_yaw = std::abs(orca::norm_angle(plan_.o.bearing - goal_.bearing));
+    double distance_yaw = std::abs(orca::norm_angle(plan_.observation().bearing() - goal_.bearing()));
 
     if (distance_yaw > 0) {
       // Plan yaw motion, start phase 1
-      plan_obs_fast(true, cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.t,
+      plan_obs_fast(true, cxt_.mtm_yaw_accel_, cxt_.mtm_yaw_velo_, distance_yaw, plan_.header().t(),
                     yaw_run_, yaw_decel_, yaw_stop_);
-      initial_accel_.yaw =
-        orca::norm_angle(goal_.bearing - plan_.o.bearing) > 0 ? cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
+      initial_accel_.yaw() = orca::norm_angle(goal_.bearing() - plan_.observation().bearing()) > 0 ?
+                             cxt_.mtm_yaw_accel_ : -cxt_.mtm_yaw_accel_;
     } else {
       yaw_run_ = yaw_decel_ = yaw_stop_ = start_;
     }
@@ -74,48 +75,48 @@ namespace orca_base
   std::string RotateToMarker::to_str()
   {
     std::stringstream ss;
-    ss << "rotate to marker start: " << plan_ << ", goal: " << goal_;
+    ss << type_name() << ", start: " << plan_ << ", goal: " << goal_;
     return ss.str();
   }
 
   bool RotateToMarker::advance(const rclcpp::Duration &d)
   {
     // Update time
-    plan_.t = plan_.t + d;
+    plan_.header().t() = plan_.header().t() + d;
 
     // Check for exit condition
-    if (plan_.t > yaw_stop_) {
+    if (plan_.header().t() > yaw_stop_) {
       return false;
     }
 
     // Update yaw motion phase
-    if (plan_.t > yaw_stop_) {
+    if (plan_.header().t() > yaw_stop_) {
       // Stop
-      accel_.yaw = 0;
-      twist_.yaw = 0;
-    } else if (plan_.t > yaw_decel_) {
+      accel_.yaw() = 0;
+      twist_.yaw() = 0;
+    } else if (plan_.header().t() > yaw_decel_) {
       // Start phase 3: decelerate
-      accel_.yaw = -initial_accel_.yaw;
-    } else if (plan_.t > yaw_run_) {
+      accel_.yaw() = -initial_accel_.yaw();
+    } else if (plan_.header().t() > yaw_run_) {
       // Start phase 2: run at constant velocity
-      accel_.yaw = 0;
+      accel_.yaw() = 0;
     }
 
     // Acceleration due to drag
-    drag_.yaw = cxt_.model_.drag_accel_yaw(twist_.yaw);
+    drag_.yaw() = cxt_.model_.drag_accel_yaw(twist_.yaw());
 
     // Acceleration due to thrust
-    ff_.yaw = accel_.yaw - drag_.yaw;
+    ff_.yaw() = accel_.yaw() - drag_.yaw();
 
     // std::cout << std::fixed << std::setprecision(2) << "ff_: " << ff_ << std::endl;
 
     auto dt = d.seconds();
 
     // Twist
-    twist_.yaw += accel_.yaw * dt;
+    twist_.yaw() += accel_.yaw() * dt;
 
     // Plan
-    plan_.o.bearing = orca::norm_angle(plan_.o.bearing + twist_.yaw * dt);
+    plan_.observation().bearing() = orca::norm_angle(plan_.observation().bearing() + twist_.yaw() * dt);
 
     return true;
   }
@@ -124,16 +125,16 @@ namespace orca_base
   // MoveToMarker
   //=====================================================================================
 
-  MoveToMarker::MoveToMarker(const AUVContext &cxt, const orca::ObservationStamped &start,
-                             const orca::Observation &goal) :
-    ObservationSegmentBase(cxt, orca_msgs::msg::Control::OBS_MTM, start, goal)
+  MoveToMarker::MoveToMarker(const AUVContext &cxt, const mw::PolarObservationStamped &start,
+                             const mw::PolarObservation &goal) :
+    ObservationSegmentBase(cxt, orca_msgs::msg::MissionState::OBS_MTM, start, goal)
   {
-    double distance_fwd = std::abs(plan_.o.distance - goal_.distance);
+    double distance_fwd = std::abs(plan_.observation().distance() - goal_.distance());
 
     if (distance_fwd > 0) {
       // Plan forward motion, start phase 1
-      plan_obs_fast(false, cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.t, f_run_, f_decel_, f_stop_);
-      initial_accel_.forward = cxt_.mtm_fwd_accel_; // Always moving foward, so always +accel to start
+      plan_obs_fast(false, cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.header().t(), f_run_, f_decel_, f_stop_);
+      initial_accel_.forward() = cxt_.mtm_fwd_accel_; // Always moving foward, so always +accel to start
     } else {
       f_run_ = f_decel_ = f_stop_ = start_;
     }
@@ -145,48 +146,48 @@ namespace orca_base
   std::string MoveToMarker::to_str()
   {
     std::stringstream ss;
-    ss << "move to marker start: " << plan_ << ", goal: " << goal_;
+    ss << type_name() << ", start: " << plan_ << ", goal: " << goal_;
     return ss.str();
   }
 
   bool MoveToMarker::advance(const rclcpp::Duration &d)
   {
     // Update time
-    plan_.t = plan_.t + d;
+    plan_.header().t() = plan_.header().t() + d;
 
     // Check for exit condition
-    if (plan_.t > f_stop_) {
+    if (plan_.header().t() > f_stop_) {
       return false;
     }
 
     // Update forward motion phase
-    if (plan_.t > f_stop_) {
+    if (plan_.header().t() > f_stop_) {
       // Stop
-      accel_.forward = 0;
-      twist_.forward = 0;
-    } else if (plan_.t > f_decel_) {
+      accel_.forward() = 0;
+      twist_.forward() = 0;
+    } else if (plan_.header().t() > f_decel_) {
       // Start phase 3: decelerate
-      accel_.forward = -initial_accel_.forward;
-    } else if (plan_.t > f_run_) {
+      accel_.forward() = -initial_accel_.forward();
+    } else if (plan_.header().t() > f_run_) {
       // Start phase 2: run at constant velocity
-      accel_.forward = 0;
+      accel_.forward() = 0;
     }
 
     // Acceleration due to drag
-    drag_.forward = cxt_.model_.drag_accel_f(twist_.forward);
+    drag_.forward() = cxt_.model_.drag_accel_f(twist_.forward());
 
     // Acceleration due to thrust
-    ff_.forward = accel_.forward - drag_.forward;
+    ff_.forward() = accel_.forward() - drag_.forward();
 
     // std::cout << std::fixed << std::setprecision(2) << "ff_: " << ff_ << std::endl;
 
     auto dt = d.seconds();
 
     // Twist
-    twist_.forward += accel_.forward * dt;
+    twist_.forward() += accel_.forward() * dt;
 
     // Plan
-    plan_.o.distance = plan_.o.distance - twist_.forward * dt;
+    plan_.observation().distance() = plan_.observation().distance() - twist_.forward() * dt;
 
     return true;
   }

@@ -1,9 +1,9 @@
 #include <iomanip>
+#include <orca_shared/mw/mw.hpp>
 
 #include "cv_bridge/cv_bridge.h"
 #include "rclcpp/node.hpp"
 
-#include "orca_shared/fp.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_shared/monotonic.hpp"
 
@@ -37,30 +37,26 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
     putText(image, s.c_str(), p, cv::FONT_HERSHEY_PLAIN, scale, std::move(color), scale);
   }
 
-  void draw_observations(cv::Mat &image, const std::vector<orca_msgs::msg::Observation> &observations,
-                         const cv::Scalar &color, int scale)
+  void draw_observations(cv::Mat &image, const mw::Observations &observations, const cv::Scalar &color, int scale)
   {
-    for (const auto &obs : observations) {
+    auto o = observations.observations().begin();
+    auto p = observations.polar_observations().begin();
+    for (; o != observations.observations().end() && p != observations.polar_observations().end(); ++o, ++p) {
       // Draw marker name
-      cv::Point2d p{obs.vlam.x3, obs.vlam.y3 + scale * 30};
       std::stringstream ss;
-      ss << std::fixed << std::setprecision(2) << "m" << obs.vlam.id << " d=" << obs.distance;
-      draw_text(image, ss.str(), p, color, scale);
+      ss << std::fixed << std::setprecision(2) << "m" << o->id() << " d=" << p->distance();
+      draw_text(image, ss.str(), cv::Point2d{o->c3().x, o->c3().y + scale * 30}, color, scale);
 
       // Draw bounding box
-      cv::Point2d c0{obs.vlam.x0, obs.vlam.y0};
-      cv::Point2d c1{obs.vlam.x1, obs.vlam.y1};
-      cv::Point2d c2{obs.vlam.x2, obs.vlam.y2};
-      cv::Point2d c3{obs.vlam.x3, obs.vlam.y3};
-      cv::line(image, c0, c1, color, scale);
-      cv::line(image, c1, c2, color, scale);
-      cv::line(image, c2, c3, color, scale);
-      cv::line(image, c3, c0, color, scale);
+      cv::line(image, o->c0(), o->c1(), color, scale);
+      cv::line(image, o->c1(), o->c2(), color, scale);
+      cv::line(image, o->c2(), o->c3(), color, scale);
+      cv::line(image, o->c3(), o->c0(), color, scale);
     }
   }
 
   //=============================================================================
-  // AnnotateNode TODO add some documentation
+  // AnnotateNode
   //=============================================================================
 
   // Default queue size
@@ -109,9 +105,13 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
         marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
         if (control_msg_.mode == orca_msgs::msg::Control::AUV) {
-          draw_observations(marked->image, control_msg_.plan_observations, CV_RGB(255, 0, 0), scale);
+          draw_observations(marked->image,
+                            mw::Observations{control_msg_.mission.pose.fp.observations},
+                            CV_RGB(255, 0, 0), scale);
         }
-        draw_observations(marked->image, control_msg_.estimate_observations, CV_RGB(0, 255, 0), scale);
+        draw_observations(marked->image,
+                          mw::Observations{control_msg_.estimate.observations},
+                          CV_RGB(0, 255, 0), scale);
         write_status(marked->image, scale);
 
         image_pub_->publish(*marked->toImageMsg());
@@ -128,17 +128,17 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
 
       // Line 1: mission status
       if (control_msg_.mode == orca_msgs::msg::Control::AUV) {
-        ss << "AUV target m" << control_msg_.target_marker_id;
-        if (control_msg_.planner == orca_msgs::msg::Control::PLAN_RECOVERY_MTM) {
+        ss << "AUV target m" << control_msg_.mission.target_marker_id;
+        if (control_msg_.mission.planner == orca_msgs::msg::MissionState::PLAN_RECOVERY_MTM) {
           // Expect exactly 1 planned observation
-          if (control_msg_.plan_observations.size() == 1) {
-            ss << " RECOVERY move to marker m" << control_msg_.plan_observations[0].vlam.id;
+          if (control_msg_.mission.pose.fp.observations.polar_observations.size() == 1) {
+            ss << " RECOVERY move to marker m" << control_msg_.mission.pose.fp.observations.polar_observations[0].id;
           } else {
-            ss << " RECOVERY move to marker [ERROR " << control_msg_.plan_observations.size()
-               << "planned observations]";
+            ss << " RECOVERY move to marker [ERROR " << control_msg_.mission.pose.fp.observations.polar_observations.size()
+               << "planned polar observations]";
           }
         } else {
-          ss << " " << control_msg_.segment_info;
+          ss << " " << control_msg_.mission.segment_info;
         }
       } else {
         ss << "ROV";
@@ -152,12 +152,12 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
         ss << "GOOD POSE";
       } else if (control_msg_.has_good_observation) {
         ss << "GOOD OBSERVATION";
-      } else if (!control_msg_.estimate_observations.empty()) {
+      } else if (!control_msg_.estimate.observations.observations.empty()) {
         ss << "TOO FAR AWAY";
       } else {
         ss << "NO OBSERVATIONS";
       }
-      ss << " z=" << control_msg_.estimate_pose.position.z;
+      ss << " z=" << control_msg_.estimate.pose.pose.position.z;
 
       draw_text(image, ss.str(), p, CV_RGB(0, 255, 0), scale);
     }

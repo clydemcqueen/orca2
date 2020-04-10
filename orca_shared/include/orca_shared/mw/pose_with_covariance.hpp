@@ -7,21 +7,14 @@
 namespace mw
 {
 
-  enum class CovarianceDoF
-  {
-    none,   // Covariance is not valid
-    one,    // Covariance valid for z
-    four,   // Covariance valid for x, y, z, yaw
-    six,    // Covariance valid for x, y, z, roll, pitch, yaw
-  };
-
   using CovarianceType = std::array<double, 36>;
 
   class PoseWithCovariance
   {
     Pose pose_;
-    CovarianceDoF covariance_dof_{CovarianceDoF::none};
     CovarianceType covariance_;
+
+  public:
 
     constexpr static int X_IX = 0 * 7;
     constexpr static int Y_IX = 1 * 7;
@@ -29,52 +22,46 @@ namespace mw
     constexpr static int ROLL_IX = 3 * 7;
     constexpr static int PITCH_IX = 4 * 7;
     constexpr static int YAW_IX = 5 * 7;
+
     constexpr static double THRESHOLD = 1e4;
     constexpr static double VERY_HIGH = 1e5;
 
-  public:
+    constexpr static int DOF_NONE = 0;
+    constexpr static int DOF_Z = 1;
+    constexpr static int DOF_FOUR = 2;
+    constexpr static int DOF_SIX = 3;
 
     PoseWithCovariance() = default;
 
     explicit PoseWithCovariance(const geometry_msgs::msg::PoseWithCovariance &msg) :
       pose_{msg.pose},
       covariance_{msg.covariance}
+    {}
+
+    PoseWithCovariance(const Pose &pose, const CovarianceType &covariance, int dof = DOF_SIX) :
+      pose_{pose},
+      covariance_{covariance}
     {
-      // Hack: use a high covariance value to set covariance_dof_
-      if (covariance_[Z_IX] > THRESHOLD) {
-        covariance_dof_ = CovarianceDoF::none;
-      } else if (covariance_[X_IX] > THRESHOLD || covariance_[Y_IX] > THRESHOLD || covariance_[YAW_IX] > THRESHOLD) {
-        covariance_dof_ = CovarianceDoF::one;
-      } else if (covariance_[ROLL_IX] > THRESHOLD || covariance_[PITCH_IX] > THRESHOLD) {
-        covariance_dof_ = CovarianceDoF::four;
-      } else {
-        covariance_dof_ = CovarianceDoF::six;
+      // Slam the covariance as required
+      if (dof != DOF_SIX) {
+        covariance_[ROLL_IX] = VERY_HIGH;
+        covariance_[PITCH_IX] = VERY_HIGH;
+      }
+      if (dof != DOF_SIX && dof != DOF_FOUR) {
+        covariance_[X_IX] = VERY_HIGH;
+        covariance_[Y_IX] = VERY_HIGH;
+        covariance_[YAW_IX] = VERY_HIGH;
+      }
+      if (dof != DOF_SIX && dof != DOF_FOUR && dof != DOF_Z) {
+        covariance_[Z_IX] = VERY_HIGH;
       }
     }
-
-    PoseWithCovariance(const Pose &pose, const CovarianceDoF &covariance_dof, const CovarianceType &covariance) :
-      pose_{pose},
-      covariance_dof_{covariance_dof},
-      covariance_{covariance}
-    {}
 
     geometry_msgs::msg::PoseWithCovariance msg() const
     {
       geometry_msgs::msg::PoseWithCovariance msg;
       msg.pose = pose_.msg();
       msg.covariance = covariance_;
-      if (!good6()) {
-        msg.covariance[ROLL_IX] = VERY_HIGH;
-        msg.covariance[PITCH_IX] = VERY_HIGH;
-      }
-      if (!good4()) {
-        msg.covariance[X_IX] = VERY_HIGH;
-        msg.covariance[Y_IX] = VERY_HIGH;
-        msg.covariance[YAW_IX] = VERY_HIGH;
-      }
-      if (!good1()) {
-        msg.covariance[Z_IX] = VERY_HIGH;
-      }
       return msg;
     }
 
@@ -93,20 +80,39 @@ namespace mw
       return pose_;
     }
 
+    std::array<double, 36> &covariance()
+    {
+      return covariance_;
+    }
+
+    const int dof() const
+    {
+      if (covariance_[Z_IX] > THRESHOLD) {
+        return DOF_NONE;
+      } else if (covariance_[X_IX] > THRESHOLD || covariance_[Y_IX] > THRESHOLD || covariance_[YAW_IX] > THRESHOLD) {
+        return DOF_Z;
+      } else if (covariance_[ROLL_IX] > THRESHOLD || covariance_[PITCH_IX] > THRESHOLD) {
+        return DOF_FOUR;
+      } else {
+        return DOF_SIX;
+      }
+    }
+
     bool good1() const
     {
-      return covariance_dof_ == CovarianceDoF::six || covariance_dof_ == CovarianceDoF::four ||
-             covariance_dof_ == CovarianceDoF::one;
+      auto d = dof();
+      return d == DOF_SIX || d == DOF_FOUR || d == DOF_Z;
     }
 
     bool good4() const
     {
-      return covariance_dof_ == CovarianceDoF::six || covariance_dof_ == CovarianceDoF::four;
+      auto d = dof();
+      return d == DOF_SIX || d == DOF_FOUR;
     }
 
     bool good6() const
     {
-      return covariance_dof_ == CovarianceDoF::six;
+      return dof() == DOF_SIX;
     }
 
     bool operator==(const PoseWithCovariance &that) const

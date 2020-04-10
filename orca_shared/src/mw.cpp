@@ -11,6 +11,7 @@ namespace mw
   // Static objects
   //=====================================================================================
 
+  const Marker Marker::None{NOT_A_MARKER, {}, {}};
   const Observation Observation::None{NOT_A_MARKER, {}, {}, {}, {}};
   const PolarObservation PolarObservation::None{NOT_A_MARKER, {std::numeric_limits<double>::max()}, {}};
 
@@ -27,6 +28,29 @@ namespace mw
   inline bool in_frame(const cv::Point2d &p, double cx, double cy)
   {
     return p.x >= 0 && p.x <= 2 * cx && p.y >= 0 && p.y <= 2 * cy;
+  }
+
+  //=====================================================================================
+  // FiducialPose
+  //=====================================================================================
+
+  int FiducialPose::predict_observations(const Map &map)
+  {
+    auto t_cam_map = observations_.observer().t_cam_base() * pose_.pose().transform().inverse();
+    auto model = observations_.observer().camera_model();
+
+    observations_.clear();
+    int num_observations = 0;
+
+    for (const auto &marker : map.markers()) {
+      Observation observation = marker.predict_observation(model, t_cam_map);
+      if (observation != Observation::None) {
+        ++num_observations;
+        observations_.add(observation);
+      }
+    }
+
+    return num_observations;
   }
 
   //=====================================================================================
@@ -153,7 +177,7 @@ namespace mw
   // Observer
   //=====================================================================================
 
-  PolarObservation Observer::polar_observation(const Observation &observation)
+  void Observer::convert(const Observation &observation, PolarObservation &polar_observation)
   {
     assert(marker_length() != 0 && width() != 0 && height() != 0);
 
@@ -193,9 +217,9 @@ namespace mw
     auto center_f_base = t_base_cam() * center_f_cam;
 
     // Calculate distance and bearing
-    return {observation.id(),
-            std::hypot(center_f_base.x(), center_f_base.y()),
-            std::atan2(center_f_base.y(), center_f_base.x())};
+    polar_observation = {observation.id(),
+                         std::hypot(center_f_base.x(), center_f_base.y()),
+                         std::atan2(center_f_base.y(), center_f_base.x())};
   }
 
   /**
@@ -205,7 +229,7 @@ namespace mw
    * -- the marker is facing the camera
    * -- the camera and the marker are at the same height
    */
-  Observation Observer::observation(const PolarObservation &polar_observation)
+  void Observer::convert(const PolarObservation &polar_observation, Observation &observation)
   {
     assert(marker_length() != 0 && width() != 0 && height() != 0);
 
@@ -229,11 +253,11 @@ namespace mw
 
     // Project to pixels
     auto model = camera_model();
-    return {polar_observation.id(),
-            model.project3dToPixel(c0_f_cam),
-            model.project3dToPixel(c1_f_cam),
-            model.project3dToPixel(c2_f_cam),
-            model.project3dToPixel(c3_f_cam)};
+    observation = {polar_observation.id(),
+                   model.project3dToPixel(c0_f_cam),
+                   model.project3dToPixel(c1_f_cam),
+                   model.project3dToPixel(c2_f_cam),
+                   model.project3dToPixel(c3_f_cam)};
   }
 
   //=====================================================================================
@@ -262,7 +286,7 @@ namespace mw
   std::ostream &operator<<(std::ostream &os, const Header &v)
   {
     return os << std::fixed << std::setprecision(3)
-              << "{" << v.stamp().nanoseconds() << ", " << v.frame_id() << "}";
+              << "{" << v.t().nanoseconds() << ", " << v.frame_id() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Map &v)
@@ -325,6 +349,12 @@ namespace mw
               << "{" << v.position() << ", " << v.orientation() << "}";
   }
 
+  std::ostream &operator<<(std::ostream &os, const PoseStamped &v)
+  {
+    return os << std::fixed << std::setprecision(3)
+              << "{" << v.header() << ", " << v.pose() << "}";
+  }
+
   std::ostream &operator<<(std::ostream &os, const PoseWithCovariance &v)
   {
     os << v.pose();
@@ -346,8 +376,19 @@ namespace mw
 
   std::ostream &operator<<(std::ostream &os, PolarObservation const &v)
   {
+    os << std::fixed << std::setprecision(3) << "{";
+    if (v.id() == NOT_A_MARKER) {
+      os << "NOT_A_MARKER, max double";
+    } else {
+      os << v.id() << ", " << v.distance();
+    }
+    return os << ", " << v.bearing() << "}";
+  }
+
+  std::ostream &operator<<(std::ostream &os, PolarObservationStamped const &v)
+  {
     return os << std::fixed << std::setprecision(3)
-              << "{" << v.id() << ", " << v.distance() << ", " << v.bearing() << "}";
+              << "{" << v.header() << ", " << v.observation() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Quaternion &v)
@@ -356,15 +397,15 @@ namespace mw
               << "{" << v.roll() << ", " << v.pitch() << ", " << v.yaw() << "}";
   }
 
-//    Pose project(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
-//    {
-//      double dt = d.seconds();
-//      Pose result;
-//      result.x = x + v0.x * dt + 0.5 * a.x * dt * dt;
-//      result.y = y + v0.y * dt + 0.5 * a.y * dt * dt;
-//      result.z = z + v0.z * dt + 0.5 * a.z * dt * dt;
-//      result.yaw = orca::norm_angle(yaw + v0.yaw * dt + 0.5 * a.yaw * dt * dt);
-//      return result;
-//    }
+  std::ostream &operator<<(std::ostream &os, const Target &v)
+  {
+    return os << std::fixed << std::setprecision(3)
+              << "{" << v.id() << ", " << v.pose() << "}";
+  }
 
+  std::ostream &operator<<(std::ostream &os, const Twist &v)
+  {
+    return os << std::fixed << std::setprecision(3)
+              << "{" << v.x() << ", " << v.y() << ", " << v.z() << ", " << v.yaw() << "}";
+  }
 }

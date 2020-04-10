@@ -42,7 +42,7 @@ namespace orca_filter
     (void) fcam_sub_;
 
     // Create this before calling validate_parameters()
-    filtered_odom_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped2>("filtered_fp", QUEUE_SIZE);
+    filtered_odom_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped>("filtered_fp", QUEUE_SIZE);
 
     // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
@@ -79,8 +79,8 @@ namespace orca_filter
     }
 
     if (cxt_.filter_fcam_) {
-      fcam_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped2>(
-        "fcam_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped2::SharedPtr msg) -> void
+      fcam_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
+        "fcam_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
         { this->fcam_cb_.call(msg); });
     } else {
       fcam_sub_.reset();
@@ -163,7 +163,7 @@ namespace orca_filter
 #endif
   }
 
-  void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped2::SharedPtr msg, bool first)
+  void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
   {
     START_PERF()
 
@@ -174,7 +174,7 @@ namespace orca_filter
     STOP_PERF("fcam_callback")
   }
 
-  void FilterNode::process_pose(const orca_msgs::msg::FiducialPoseStamped2::SharedPtr &msg,
+  void FilterNode::process_pose(const orca_msgs::msg::FiducialPoseStamped::SharedPtr &msg,
                                 const tf2::Transform &t_sensor_base, const std::string &frame_id)
   {
     last_fp_stamp_ = msg->header.stamp;

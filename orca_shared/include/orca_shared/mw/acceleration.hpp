@@ -8,10 +8,10 @@ namespace mw
 
   class Acceleration
   {
-    double x_;
-    double y_;
-    double z_;
-    double yaw_;
+    double x_{};
+    double y_{};
+    double z_{};
+    double yaw_{};
 
   public:
 

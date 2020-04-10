@@ -19,6 +19,7 @@ find_package(ament_cmake REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(orca_description REQUIRED)
 find_package(orca_msgs REQUIRED)
@@ -68,6 +69,7 @@ ament_target_dependencies(
   fp_node
   fiducial_vlam_msgs
   geometry_msgs
+  image_geometry
   orca_description
   orca_msgs
   orca_shared
@@ -93,12 +95,13 @@ add_executable(
 
 ament_target_dependencies(
   filter_node
+  fiducial_vlam_msgs
+  geometry_msgs
+  image_geometry
+  nav_msgs
   orca_description
   orca_msgs
   orca_shared
-  fiducial_vlam_msgs
-  geometry_msgs
-  nav_msgs
   rclcpp
   ros2_shared
   tf2

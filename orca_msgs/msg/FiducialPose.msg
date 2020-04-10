@@ -1,4 +1,4 @@
 # Localization message, contains marker observations and the resulting pose
 
-orca_msgs/Observation[] observations
+Observations observations
 geometry_msgs/PoseWithCovariance pose

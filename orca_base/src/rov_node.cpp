@@ -6,8 +6,6 @@
 
 #include "orca_base/thrusters.hpp"
 
-using namespace orca;
-
 namespace orca_base
 {
 
@@ -203,7 +201,7 @@ namespace orca_base
     if (rov_mode()) {
       RCLCPP_INFO(get_logger(), "goal accepted");
       msg->pose.position.z = cxt_.planner_target_z_;
-      start_mission(msg->header.stamp, Mission::GO_TO_POSE, msg->pose);
+      start_mission(msg->header.stamp, Mission::go_to_pose, msg->pose);
     } else {
       RCLCPP_ERROR(get_logger(), "cannot start mission");
     }
@@ -236,9 +234,9 @@ namespace orca_base
           RCLCPP_ERROR(get_logger(), "barometer not ready, cannot hold pressure");
         }
       } else if (button_down(msg, joy_msg_, joy_button_auv_keep_station_)) {
-        start_mission(msg->header.stamp, Mission::KEEP_STATION);
+        start_mission(msg->header.stamp, Mission::keep_station);
       } else if (button_down(msg, joy_msg_, joy_button_auv_random_)) {
-        start_mission(msg->header.stamp, Mission::RANDOM_MARKERS);
+        start_mission(msg->header.stamp, Mission::random_markers);
       }
 
       // Z trim
@@ -251,19 +249,19 @@ namespace orca_base
 
       // Camera tilt
       if (button_down(msg, joy_msg_, joy_button_tilt_up_)) {
-        tilt_ = clamp(tilt_ + cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
+        tilt_ = orca::clamp(tilt_ + cxt_.inc_tilt_, orca::TILT_MIN, orca::TILT_MAX);
         RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
       } else if (button_down(msg, joy_msg_, joy_button_tilt_down_)) {
-        tilt_ = clamp(tilt_ - cxt_.inc_tilt_, TILT_MIN, TILT_MAX);
+        tilt_ = orca::clamp(tilt_ - cxt_.inc_tilt_, orca::TILT_MIN, orca::TILT_MAX);
         RCLCPP_INFO(get_logger(), "tilt at %d", tilt_);
       }
 
       // Lights
       if (button_down(msg, joy_msg_, joy_button_bright_)) {
-        brightness_ = clamp(brightness_ + cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+        brightness_ = orca::clamp(brightness_ + cxt_.inc_lights_, orca::BRIGHTNESS_MIN, orca::BRIGHTNESS_MAX);
         RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
       } else if (button_down(msg, joy_msg_, joy_button_dim_)) {
-        brightness_ = clamp(brightness_ - cxt_.inc_lights_, BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+        brightness_ = orca::clamp(brightness_ - cxt_.inc_lights_, orca::BRIGHTNESS_MIN, orca::BRIGHTNESS_MAX);
         RCLCPP_INFO(get_logger(), "lights at %d", brightness_);
       }
 
@@ -317,22 +315,22 @@ namespace orca_base
   {
     double dt = joy_cb_.dt();
 
-    Efforts efforts;
-    efforts.set_forward(dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
-    efforts.set_strafe(dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
-    efforts.set_yaw(dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
+    mw::Efforts efforts;
+    efforts.forward(orca::dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+    efforts.strafe(orca::dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+    efforts.yaw(orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_pressure()) {
-      efforts.set_vertical(
+      efforts.vertical(
         cxt_.model_.accel_to_effort_z(-pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
     } else {
-      efforts.set_vertical(dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
+      efforts.vertical(orca::dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) * cxt_.vertical_gain_);
     }
 
     publish_control(stamp, efforts);
   }
 
-  void ROVNode::publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts)
+  void ROVNode::publish_control(const rclcpp::Time &msg_time, const mw::Efforts &efforts)
   {
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
@@ -344,8 +342,8 @@ namespace orca_base
     control_msg.odom_lag = (now() - msg_time).seconds();
 
     // Control
-    control_msg.camera_tilt_pwm = tilt_to_pwm(tilt_);
-    control_msg.brightness_pwm = brightness_to_pwm(brightness_);
+    control_msg.camera_tilt_pwm = orca::tilt_to_pwm(tilt_);
+    control_msg.brightness_pwm = orca::brightness_to_pwm(brightness_);
     efforts_to_control(efforts, cxt_.xy_limit_, control_msg);
 
     control_pub_->publish(control_msg);
@@ -411,17 +409,17 @@ namespace orca_base
 
     auto goal_msg = MissionAction::Goal();
     switch (mission) {
-      case Mission::KEEP_STATION:
+      case Mission::keep_station:
         goal_msg.pose_targets = true;
         goal_msg.keep_station = true;
         RCLCPP_INFO(get_logger(), "keeping station at current pose");
         break;
-      case Mission::GO_TO_POSE:
+      case Mission::go_to_pose:
         goal_msg.pose_targets = true;
         goal_msg.poses.push_back(pose);
         RCLCPP_INFO(get_logger(), "go to pose");
         break;
-      case Mission::RANDOM_MARKERS:
+      case Mission::random_markers:
         goal_msg.random = true;
         RCLCPP_INFO(get_logger(), "visit all markers in a random order");
         break;

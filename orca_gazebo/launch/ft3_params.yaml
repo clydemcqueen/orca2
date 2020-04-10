@@ -26,7 +26,7 @@
     good_pose_dist: 2.0
 
     # Allow MTM recovery
-    global_plan_allow_mtm: true
+    global_plan_allow_mtm: false
 
     # Do not allow waypoints
     pose_plan_waypoints: false

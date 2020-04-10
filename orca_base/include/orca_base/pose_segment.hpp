@@ -1,8 +1,8 @@
 #ifndef ORCA_BASE_POSE_SEGMENT_HPP
 #define ORCA_BASE_POSE_SEGMENT_HPP
 
-#include "orca_shared/fp.hpp"
 #include "orca_base/segment_common.hpp"
+#include "orca_shared/mw/mw.hpp"
 
 namespace orca_base
 {
@@ -23,9 +23,9 @@ namespace orca_base
    * @param a0 Out: acceleration, apply from p0.t to p1.t, and decelerate from p2.t to p3.t
    * @param v1 Out: peak velocity runs from p1.t to p2.t
    */
-  void plan_pose_sync(const AUVContext &cxt, const orca::PoseStamped &p0,
-                      orca::PoseStamped &p1, orca::PoseStamped &p2, orca::PoseStamped &p3,
-                      orca::Acceleration &a0, orca::Twist &v1);
+  void plan_pose_sync(const AUVContext &cxt, const mw::PoseStamped &p0,
+                      mw::PoseStamped &p1, mw::PoseStamped &p2, mw::PoseStamped &p3,
+                      mw::Acceleration &a0, mw::Twist &v1);
 
   //=====================================================================================
   // Pose segments plan motion based on poses
@@ -35,25 +35,25 @@ namespace orca_base
   {
   protected:
 
-    orca::FPStamped plan_;        // Planned pose, incremented with each call to advance()
-    orca::FP goal_;               // Goal pose
+    mw::PoseStamped plan_;      // Planned pose, incremented with each call to advance()
+    mw::Pose goal_;             // Goal pose
 
-    orca::Twist twist_;           // Velocity in the world frame
-    orca::Acceleration ff_;       // Acceleration in the world frame
+    mw::Twist twist_;           // Velocity in the world frame
+    mw::Acceleration ff_;       // Acceleration in the world frame
 
   public:
-    PoseSegmentBase(const AUVContext &cxt, uint8_t type, orca::FPStamped start, orca::FP goal);
+    PoseSegmentBase(const AUVContext &cxt, uint8_t type, mw::PoseStamped start, mw::Pose goal);
 
-    const orca::FPStamped &plan() const
+    const mw::PoseStamped &plan() const
     { return plan_; }
 
-    const orca::FP &goal() const
+    const mw::Pose &goal() const
     { return goal_; }
 
-    const orca::Twist &twist() const
+    const mw::Twist &twist() const
     { return twist_; }
 
-    const orca::Acceleration &ff() const
+    const mw::Acceleration &ff() const
     { return ff_; }
   };
 
@@ -67,7 +67,7 @@ namespace orca_base
 
   public:
 
-    Pause(const AUVContext &cxt, const orca::FPStamped &start, const rclcpp::Duration &pause_duration);
+    Pause(const AUVContext &cxt, const mw::PoseStamped &start, const rclcpp::Duration &pause_duration);
 
     std::string to_str() override;
 
@@ -80,16 +80,16 @@ namespace orca_base
 
   class Trap2 : public PoseSegmentBase
   {
-    orca::PoseStamped p0_;    // Start pose
-    orca::PoseStamped p1_;
-    orca::PoseStamped p2_;
-    orca::PoseStamped p3_;    // End pose
-    orca::Acceleration a0_;   // Acceleration at p0_.t
-    orca::Twist v1_;          // Velocity at p1_.t
+    mw::PoseStamped p0_;    // Start pose
+    mw::PoseStamped p1_;
+    mw::PoseStamped p2_;
+    mw::PoseStamped p3_;    // End pose
+    mw::Acceleration a0_;   // Acceleration at p0_.t
+    mw::Twist v1_;          // Velocity at p1_.t
 
   public:
 
-    Trap2(const AUVContext &cxt, uint8_t type, const orca::FPStamped &start, const orca::FP &goal);
+    Trap2(const AUVContext &cxt, uint8_t type, const mw::PoseStamped &start, const mw::Pose &goal);
 
     /**
      * Duration of motion
@@ -113,8 +113,7 @@ namespace orca_base
      * @param z In: vertical distance to travel
      * @return Trap2 segment
      */
-    static std::shared_ptr<Trap2>
-    make_vertical(const AUVContext &cxt, orca::FPStamped &plan, double z);
+    static std::shared_ptr<Trap2> make_vertical(const AUVContext &cxt, mw::PoseStamped &plan, double z);
 
     /**
      * Construct a segment that rotates
@@ -123,8 +122,7 @@ namespace orca_base
      * @param yaw In: incremental angle
      * @return Trap2 segment
      */
-    static std::shared_ptr<Trap2>
-    make_rotate(const AUVContext &cxt, orca::FPStamped &plan, double yaw);
+    static std::shared_ptr<Trap2> make_rotate(const AUVContext &cxt, mw::PoseStamped &plan, double yaw);
 
     /**
      * Construct a segment that moves in a line
@@ -134,8 +132,7 @@ namespace orca_base
      * @param y In: y distance
      * @return Trap2 segment
      */
-    static std::shared_ptr<Trap2>
-    make_line(const AUVContext &cxt, orca::FPStamped &plan, double x, double y);
+    static std::shared_ptr<Trap2> make_line(const AUVContext &cxt, mw::PoseStamped &plan, double x, double y);
 
     /**
      * Construct a segment that rotates and moves in x, y and z
@@ -144,8 +141,7 @@ namespace orca_base
      * @param goal In: goal pose
      * @return Trap2 segment
      */
-    static std::shared_ptr<Trap2>
-    make_pose(const AUVContext &cxt, orca::FPStamped &plan, const orca::FP &goal);
+    static std::shared_ptr<Trap2> make_pose(const AUVContext &cxt, mw::PoseStamped &plan, const mw::Pose &goal);
   };
 
 } // namespace orca_base

@@ -4,6 +4,8 @@
 #include <cmath>
 
 #include "geometry_msgs/msg/point.hpp"
+#include "orca_shared/mw/acceleration.hpp"
+#include "orca_shared/mw/twist.hpp"
 
 namespace mw
 {
@@ -90,6 +92,29 @@ namespace mw
     double distance_z(const Point &that) const
     {
       return std::abs(z() - that.z());
+    }
+
+    Point move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    {
+      auto dt = d.seconds();
+      return Point{x() + v0.x() * dt + 0.5 * a.x() * dt * dt,
+                   y() + v0.y() * dt + 0.5 * a.y() * dt * dt,
+                   z() + v0.z() * dt + 0.5 * a.z() * dt * dt};
+    }
+
+    Point operator+(const Point &that) const
+    {
+      return Point{x() + that.x(), y() + that.y(), z() + that.z()};
+    }
+
+    Point operator-(const Point &that) const
+    {
+      return Point{x() - that.x(), y() - that.y(), z() - that.z()};
+    }
+
+    Point operator-() const
+    {
+      return Point{-x(), -y(), -z()};
     }
 
     bool operator==(const Point &that) const

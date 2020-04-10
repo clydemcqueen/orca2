@@ -1,9 +1,11 @@
 #ifndef ORCA_SHARED_MW_FIDUCIAL_POSE_STAMPED_HPP
 #define ORCA_SHARED_MW_FIDUCIAL_POSE_STAMPED_HPP
 
-#include "orca_msgs/msg/fiducial_pose_stamped2.hpp"
+#include <nav_msgs/msg/path__struct.hpp>
+#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
 #include "orca_shared/mw/fiducial_pose.hpp"
 #include "orca_shared/mw/header.hpp"
+#include "orca_shared/mw/pose_stamped.hpp"
 
 namespace mw
 {
@@ -17,7 +19,7 @@ namespace mw
 
     FiducialPoseStamped() = default;
 
-    explicit FiducialPoseStamped(const orca_msgs::msg::FiducialPoseStamped2 &msg) :
+    explicit FiducialPoseStamped(const orca_msgs::msg::FiducialPoseStamped &msg) :
       header_{msg.header},
       fp_{msg.fp}
     {}
@@ -36,9 +38,13 @@ namespace mw
       fp_{fp}
     {}
 
-    orca_msgs::msg::FiducialPoseStamped2 msg() const
+    FiducialPoseStamped(const Observer &observer) :
+      fp_{observer}
+    {}
+
+    orca_msgs::msg::FiducialPoseStamped msg() const
     {
-      orca_msgs::msg::FiducialPoseStamped2 msg;
+      orca_msgs::msg::FiducialPoseStamped msg;
       msg.header = header_.msg();
       msg.fp = fp_.msg();
       return msg;
@@ -62,6 +68,11 @@ namespace mw
     FiducialPose &fp()
     {
       return fp_;
+    }
+
+    void add_to_path(nav_msgs::msg::Path &path)
+    {
+      path.poses.push_back(PoseStamped{header(), fp().pose().pose()}.msg());
     }
 
     bool operator==(const FiducialPoseStamped &that) const

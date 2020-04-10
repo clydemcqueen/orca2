@@ -26,11 +26,11 @@ namespace orca_base
 
   public:
 
-    MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const orca::ObservationStamped &start,
-                        PlannerStatus &status);
+    MoveToMarkerPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PolarObservationStamped &start,
+                        mw::MissionState &state);
 
-    bool advance(const rclcpp::Duration &d, const orca::FPStamped &estimate, orca::Efforts &efforts,
-                 PlannerStatus &status) override;
+    bool advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
+                 mw::MissionState &state) override;
   };
 
 } // namespace orca_base

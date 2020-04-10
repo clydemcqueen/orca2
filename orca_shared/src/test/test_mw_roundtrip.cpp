@@ -78,7 +78,7 @@ bool test_mw_roundtrip()
     item = variance++;
   }
 
-  const mw::PoseWithCovariance pose_with_covariance1{pose1, mw::CovarianceDoF::six, covariance1};
+  const mw::PoseWithCovariance pose_with_covariance1{pose1, covariance1};
   const mw::PoseWithCovariance pose_with_covariance2 = mw::PoseWithCovariance{pose_with_covariance1.msg()};
 
   std::cout << pose_with_covariance1 << std::endl;

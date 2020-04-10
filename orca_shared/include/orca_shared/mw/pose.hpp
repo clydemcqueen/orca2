@@ -4,8 +4,10 @@
 #include <cmath>
 
 #include "geometry_msgs/msg/pose.hpp"
+#include "orca_shared/mw/acceleration.hpp"
 #include "orca_shared/mw/point.hpp"
 #include "orca_shared/mw/quaternion.hpp"
+#include "orca_shared/mw/twist.hpp"
 
 namespace mw
 {
@@ -62,6 +64,67 @@ namespace mw
       return orientation_;
     }
 
+    double x() const
+    {
+      return position_.x();
+    }
+
+    double y() const
+    {
+      return position_.y();
+    }
+
+    double z() const
+    {
+      return position_.z();
+    }
+
+    double &x()
+    {
+      return position_.x();
+    }
+
+    double &y()
+    {
+      return position_.y();
+    }
+
+    double &z()
+    {
+      return position_.z();
+    }
+
+    double roll() const
+    {
+      return orientation_.roll();
+    }
+
+    double pitch() const
+    {
+      return orientation_.pitch();
+    }
+
+    double yaw() const
+    {
+      return orientation_.yaw();
+    }
+
+    void roll(const double &v)
+    {
+      orientation_.roll(v);
+    }
+
+    void pitch(const double &v)
+    {
+      orientation_.pitch(v);
+    }
+
+    void yaw(const double &v)
+    {
+      orientation_.yaw(v);
+    }
+
+    // TODO return ref to avoid possible assignment errors, e.g., pose_.transform() = my_transform;
     tf2::Transform transform() const
     {
       tf2::Transform transform;
@@ -69,8 +132,25 @@ namespace mw
       return transform;
     }
 
-    // Project pose at time t to time t+d, given initial velocity v0 and acceleration a
-    // Pose project(const rclcpp::Duration &d, const Twist &v0, const Acceleration &a);
+    Pose move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    {
+      return Pose{position_.move(d, v0, a), orientation_.move(d, v0, a)};
+    }
+
+    Pose operator+(const Pose &that) const
+    {
+      return Pose{position_ + that.position_, orientation_ + that.orientation_};
+    }
+
+    Pose operator-(const Pose &that) const
+    {
+      return Pose{position_ - that.position_, orientation_ - that.orientation_};
+    }
+
+    Pose operator-() const
+    {
+      return Pose{-position_, -orientation_};
+    }
 
     bool operator==(const Pose &that) const
     {

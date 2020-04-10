@@ -2,7 +2,8 @@
 #define ORCA_SHARED_MW_FIDUCIAL_POSE_HPP
 
 #include "geometry_msgs/msg/pose.hpp"
-#include "orca_msgs/msg/fiducial_pose2.hpp"
+#include "orca_msgs/msg/fiducial_pose.hpp"
+#include "orca_shared/mw/map.hpp"
 #include "orca_shared/mw/observations.hpp"
 #include "orca_shared/mw/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
@@ -19,7 +20,7 @@ namespace mw
 
     FiducialPose() = default;
 
-    explicit FiducialPose(const orca_msgs::msg::FiducialPose2 &msg) :
+    explicit FiducialPose(const orca_msgs::msg::FiducialPose &msg) :
       observations_{msg.observations},
       pose_{msg.pose}
     {}
@@ -38,9 +39,13 @@ namespace mw
       pose_{pose}
     {}
 
-    orca_msgs::msg::FiducialPose2 msg() const
+    FiducialPose(const Observer &observer) :
+      observations_{observer}
+    {}
+
+    orca_msgs::msg::FiducialPose msg() const
     {
-      orca_msgs::msg::FiducialPose2 msg;
+      orca_msgs::msg::FiducialPose msg;
       msg.observations = observations_.msg();
       msg.pose = pose_.msg();
       return msg;
@@ -65,6 +70,18 @@ namespace mw
     {
       return pose_;
     }
+
+    bool good(const double &max_distance) const
+    {
+      return pose().good4() && observations().closest_distance() < max_distance;
+    }
+
+    /**
+     * Clear observations, and predict observations from a map
+     * @param map Map of markers
+     * @return Number of predicted observations
+     */
+    int predict_observations(const Map &map);
 
     bool operator==(const FiducialPose &that) const
     {

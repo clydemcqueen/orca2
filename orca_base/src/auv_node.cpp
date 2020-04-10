@@ -28,8 +28,6 @@
  * Other options are possible, e.g., filter_baro = false and fuse_depth = true
  */
 
-using namespace orca;
-
 namespace orca_base
 {
 
@@ -43,7 +41,7 @@ namespace orca_base
 
   constexpr int QUEUE_SIZE = 10;
 
-  AUVNode::AUVNode() : Node{"auv_node"}, map_{get_logger(), cxt_}
+  AUVNode::AUVNode() : Node{"auv_node"}
   {
     // Suppress IDE warnings
     (void) control_sub_;
@@ -168,7 +166,7 @@ namespace orca_base
   { return driver_cb_.receiving() && t - driver_cb_.prev() < driver_timeout_; }
 
   bool AUVNode::fp_ok(const rclcpp::Time &t)
-  { return monotonic::valid(estimate_.t) && t - estimate_.t < fp_timeout_; }
+  { return estimate_.header().valid() && t - estimate_.header().t() < fp_timeout_; }
 
   bool AUVNode::cam_info_ok()
   { return fcam_info_cb_.receiving(); }
@@ -180,7 +178,7 @@ namespace orca_base
       return false;
     }
 
-    if (!map_.ok()) {
+    if (!map_.valid()) {
       RCLCPP_ERROR(get_logger(), "no map");
       return false;
     }
@@ -205,7 +203,7 @@ namespace orca_base
       return false;
     }
 
-    if (!(estimate_.fp.good_pose(cxt_.good_pose_dist_) || estimate_.fp.has_good_observation(cxt_.good_obs_dist_))) {
+    if (!(estimate_.fp().good(cxt_.good_pose_dist_) || estimate_.fp().observations().good(cxt_.good_obs_dist_))) {
       RCLCPP_ERROR(get_logger(), "no good pose, no good observation");
       return false;
     }
@@ -294,7 +292,7 @@ namespace orca_base
 
   void AUVNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
-    map_.set_vlam_map(msg);
+    map_ = mw::Map{*msg};
   }
 
   void AUVNode::fp_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
@@ -304,11 +302,11 @@ namespace orca_base
       return;
     }
 
-    estimate_ = FPStamped{*msg};
+    estimate_ = mw::FiducialPoseStamped{*msg};
 
     // Drive the AUV loop
     if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN) {
-      auv_advance(estimate_.t, fp_cb_.d());
+      auv_advance(estimate_.header().t(), fp_cb_.d());
     }
   }
 
@@ -361,10 +359,10 @@ namespace orca_base
     std::shared_ptr<GlobalPlanner> planner;
     if (action->pose_targets) {
       // If poses.empty() then go to the current pose
-      if (action->poses.empty() && action->keep_station && estimate_.fp.good_pose(cxt_.good_pose_dist_)) {
+      if (action->poses.empty() && action->keep_station && estimate_.fp().good(cxt_.good_pose_dist_)) {
         RCLCPP_INFO(get_logger(), "keeping station at current pose");
         std::vector<geometry_msgs::msg::Pose> poses;
-        poses.push_back(estimate_.fp.pose.pose.to_msg());
+        poses.push_back(estimate_.fp().pose().pose().msg());
         planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, poses,
                                             action->random, action->repeat, action->keep_station);
       } else {
@@ -452,11 +450,13 @@ namespace orca_base
     // Fuse depth and fiducial messages
     // Be sure to turn this off if there is upstream filter fusing this data
     if (cxt_.fuse_depth_) {
-      estimate_.fp.set_good_z(base_link_z_);
+      auto msg = estimate_.msg();
+      msg.fp.pose.pose.position.z = base_link_z_;
+      estimate_ = mw::FiducialPoseStamped{msg};
     }
 
     // Publish estimated path
-    if (estimate_.fp.good_pose(cxt_.good_pose_dist_) && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
+    if (estimate_.fp().good(cxt_.good_pose_dist_) && count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
       if (estimated_path_.poses.size() > cxt_.keep_poses_) {
         estimated_path_.poses.clear();
       }
@@ -465,17 +465,17 @@ namespace orca_base
     }
 
     // Advance plan and compute efforts
-    Efforts efforts;
+    mw::Efforts efforts;
     if (mission_->advance(d, estimate_, efforts)) {
       // Publish control message
       publish_control(t, efforts);
 
-      if (mission_->status().planner == orca_msgs::msg::Control::PLAN_LOCAL &&
+      if (mission_->status().planner() == orca_msgs::msg::MissionState::PLAN_LOCAL &&
           count_subscribers(planned_pose_pub_->get_topic_name()) > 0) {
         // Publish planned pose for visualization
         geometry_msgs::msg::PoseStamped pose_msg;
         pose_msg.header.frame_id = cxt_.map_frame_;
-        pose_msg.pose = mission_->status().pose.fp.pose.pose.to_msg();
+        pose_msg.pose = mission_->status().plan().fp().pose().pose().msg();
         planned_pose_pub_->publish(pose_msg);
       }
     } else {
@@ -485,7 +485,7 @@ namespace orca_base
     }
   }
 
-  void AUVNode::publish_control(const rclcpp::Time &msg_time, const orca::Efforts &efforts)
+  void AUVNode::publish_control(const rclcpp::Time &msg_time, const mw::Efforts &efforts)
   {
     orca_msgs::msg::Control control_msg;
     control_msg.header.stamp = msg_time;
@@ -495,35 +495,18 @@ namespace orca_base
     control_msg.mode = orca_msgs::msg::Control::AUV;
     control_msg.global_plan_idx = global_plan_idx_;
     if (mission_) {
-      auto status = mission_->status();
-      control_msg.targets_total = status.targets_total;
-      control_msg.target_idx = status.target_idx;
-      control_msg.target_marker_id = status.target_marker_id;
-      control_msg.planner = status.planner;
-      control_msg.local_plan_idx = status.local_plan_idx;
-      control_msg.segments_total = status.segments_total;
-      control_msg.segment_idx = status.segment_idx;
-      control_msg.segment_info = status.segment_info;
-      control_msg.segment_type = status.segment_type;
-      control_msg.plan_pose = status.pose.fp.pose.pose.to_msg();
-      control_msg.plan_twist = status.twist.to_msg();
-      for (auto &obs : status.pose.fp.observations) {
-        control_msg.plan_observations.push_back(obs.to_msg());
-      }
+      control_msg.mission = mission_->status().msg();
     }
-    control_msg.estimate_pose = estimate_.fp.pose.pose.to_msg();
-    for (auto &obs : estimate_.fp.observations) {
-      control_msg.estimate_observations.push_back(obs.to_msg());
-    }
-    control_msg.good_pose = estimate_.fp.good_pose(cxt_.good_pose_dist_);
-    control_msg.good_z = estimate_.fp.good_z();
-    control_msg.has_good_observation = estimate_.fp.has_good_observation(cxt_.good_obs_dist_);
+    control_msg.estimate = estimate_.fp().msg();
+    control_msg.good_pose = estimate_.fp().good(cxt_.good_pose_dist_);
+    control_msg.covariance_dof = estimate_.fp().pose().dof();
+    control_msg.has_good_observation = estimate_.fp().observations().good(cxt_.good_obs_dist_);
     control_msg.efforts = efforts.to_msg();
-    control_msg.odom_lag = (now() - estimate_.t).seconds();
+    control_msg.odom_lag = (now() - estimate_.header().t()).seconds();
 
     // Control
-    control_msg.camera_tilt_pwm = tilt_to_pwm(0);
-    control_msg.brightness_pwm = brightness_to_pwm(0);
+    control_msg.camera_tilt_pwm = orca::tilt_to_pwm(0);
+    control_msg.brightness_pwm = orca::brightness_to_pwm(0);
     efforts_to_control(efforts, cxt_.xy_limit_, control_msg);
 
     control_pub_->publish(control_msg);

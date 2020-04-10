@@ -148,7 +148,7 @@ namespace orca_filter
 
   PoseFilter::PoseFilter(const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
     FilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
   {
@@ -240,7 +240,7 @@ namespace orca_filter
     FilterBase::reset(pose_to_px(pose));
   }
 
-  void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPose2 &filtered_odom)
+  void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPose &filtered_odom)
   {
     pose_from_px(filter_.x(), filtered_odom.pose.pose);
     // twist_from_px(filter_.x(), filtered_odom.twist.twist);

@@ -19,19 +19,19 @@ namespace orca_base
 
   std::string SegmentBase::type_name()
   {
-    if (type_ == orca_msgs::msg::Control::PAUSE) {
+    if (type_ == orca_msgs::msg::MissionState::PAUSE) {
       return "pause";
-    } else if (type_ == orca_msgs::msg::Control::POSE_VERTICAL) {
+    } else if (type_ == orca_msgs::msg::MissionState::POSE_VERTICAL) {
       return "pose_vertical";
-    } else if (type_ == orca_msgs::msg::Control::POSE_ROTATE) {
+    } else if (type_ == orca_msgs::msg::MissionState::POSE_ROTATE) {
       return "pose_rotate";
-    } else if (type_ == orca_msgs::msg::Control::POSE_LINE) {
+    } else if (type_ == orca_msgs::msg::MissionState::POSE_LINE) {
       return "pose_line";
-    } else if (type_ == orca_msgs::msg::Control::POSE_COMBO) {
+    } else if (type_ == orca_msgs::msg::MissionState::POSE_COMBO) {
       return "pose_combo";
-    } else if (type_ == orca_msgs::msg::Control::OBS_RTM) {
+    } else if (type_ == orca_msgs::msg::MissionState::OBS_RTM) {
       return "obs_rtm";
-    } else if (type_ == orca_msgs::msg::Control::OBS_MTM) {
+    } else if (type_ == orca_msgs::msg::MissionState::OBS_MTM) {
       return "obs_mtm";
     } else {
       return "no_segment";

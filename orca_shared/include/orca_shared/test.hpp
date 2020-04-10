@@ -8,4 +8,5 @@ bool test_mw_pose_segment();
 bool test_mw_polar_segment();
 bool test_mw_roundtrip();
 bool test_mw_observer();
-bool test_map();
+bool test_mw_header();
+bool test_mw_move();

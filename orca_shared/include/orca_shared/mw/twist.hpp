@@ -91,8 +91,14 @@ namespace mw
       msg_.angular.z = v;
     }
 
-    // Project twist at time t to time t+d, given acceleration a
-    // Twist project(const rclcpp::Duration &d, const orca::Acceleration &a) const;
+    Twist move(const rclcpp::Duration &d, const mw::Acceleration &a) const
+    {
+      double dt = d.seconds();
+      return Twist{x() + a.x() * dt,
+                   y() + a.y() * dt,
+                   z() + a.z() * dt,
+                   yaw() + a.yaw() * dt};
+    }
 
     bool operator==(const Twist &that) const
     {

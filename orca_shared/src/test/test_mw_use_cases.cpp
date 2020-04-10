@@ -1,11 +1,49 @@
 #include "orca_shared/mw/mw.hpp"
 #include "orca_shared/test.hpp"
 
-bool test_map()
+template<typename T>
+inline bool close_enough(const T &x, const T &y)
 {
-  std::cout << "=== TEST MAP ===" << std::endl;
+  return abs(x - y) < 0.001;
+}
 
-  // TODO
+bool test_mw_move()
+{
+  std::cout << "=== TEST MOVE ===" << std::endl;
+
+  mw::Point p0{};
+  rclcpp::Duration d{1, 0};
+  mw::Twist v0{1, 0, 0, 0};
+  mw::Acceleration a{0, 1, 0, 0};
+
+  auto p1 = p0.move(d, v0, a);
+
+  std::cout << "p0 " << p0 << ", p1 " << p1 << std::endl;
+
+  if (!close_enough(p1.x(), 1.) ||
+      !close_enough(p1.y(), 0.5) ||
+      !close_enough(p1.z(), 0.)) {
+    std::cout << "failure" << std::endl;
+    return false;
+  }
+
+  std::cout << "success" << std::endl;
+  return true;
+}
+
+bool test_mw_header()
+{
+  std::cout << "=== TEST HEADER ===" << std::endl;
+
+  mw::Header h1{};
+  h1.frame_id() = "map";
+  h1.t() = rclcpp::Time{0, 999, RCL_ROS_TIME};
+  std::cout << h1 << std::endl;
+
+  if (h1.frame_id() != "map" || h1.t().nanoseconds() != 999) {
+    std::cout << "failure" << std::endl;
+    return false;
+  }
 
   std::cout << "success" << std::endl;
   return true;

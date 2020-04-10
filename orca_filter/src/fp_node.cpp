@@ -72,7 +72,7 @@ namespace orca_filter
 
     // Publications
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr fp_pub_;
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_pub_;
 
     /**
      * Save the latest depth reading
@@ -151,13 +151,13 @@ namespace orca_filter
       geometry_msgs::msg::Pose cam_f_base;
       toMsg(parser_.t_base_fcam, cam_f_base); // TODO want parser.cam_f_base
 
-      // Resulting fiducial pose
-      mw::FiducialPoseStamped fp{cxt_.marker_length_, cam_f_base, *obs_msg, base_f_map};
-
       // "Fuse" depth and fiducial messages
       if (cxt_.fuse_depth_) {
-        fp.fp().pose().pose().position().z() = base_link_z_;
+        base_f_map.pose.position.z = base_link_z_;
       }
+
+      // Resulting fiducial pose
+      mw::FiducialPoseStamped fp{cxt_.marker_length_, cam_f_base, *obs_msg, base_f_map};
 
       // Publish
       fp_pub_->publish(fp.msg());
@@ -225,7 +225,7 @@ namespace orca_filter
       sync_->registerDropCallback(std::bind(&FPNode::fiducial_drop_callback, this, _1, _2));
 
       // Publication
-      fp_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped2>("fp", QUEUE_SIZE);
+      fp_pub_ = create_publisher<orca_msgs::msg::FiducialPoseStamped>("fp", QUEUE_SIZE);
 
       // Parse URDF
       if (!parser_.parse()) {

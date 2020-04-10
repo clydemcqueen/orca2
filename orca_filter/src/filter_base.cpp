@@ -38,7 +38,7 @@ namespace orca_filter
   FilterBase::FilterBase(Type type,
                          const rclcpp::Logger &logger,
                          const FilterContext &cxt,
-                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped2>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
                          rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
                          int state_dim) :
 
@@ -227,7 +227,7 @@ namespace orca_filter
     odom_time_ = filter_time_;
 
     // Get pose from the filter
-    orca_msgs::msg::FiducialPoseStamped2 odom;
+    orca_msgs::msg::FiducialPoseStamped odom;
     odom.header.stamp = odom_time_;
     odom.header.frame_id = cxt_.frame_id_map_;
     odom_from_filter(odom.fp);
