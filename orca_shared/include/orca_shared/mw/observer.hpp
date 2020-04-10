@@ -17,13 +17,22 @@ namespace mw
     tf2::Transform t_base_cam_;
     tf2::Transform t_cam_base_;
 
+    void init()
+    {
+      camera_model_.fromCameraInfo(msg_.camera_info);
+      tf2::fromMsg(msg_.cam_f_base, t_base_cam_);
+      t_cam_base_ = t_base_cam_.inverse();
+    }
+
   public:
 
     Observer() = default;
 
     explicit Observer(const orca_msgs::msg::Observer &msg) :
       msg_{msg}
-    {}
+    {
+      init();
+    }
 
     // From sensor_msgs + geometry_msgs
     Observer(const double &marker_length,
@@ -34,17 +43,15 @@ namespace mw
       msg_.camera_info = camera_info;
       msg_.cam_f_base = cam_f_base;
 
-      camera_model_.fromCameraInfo(camera_info);
-      tf2::fromMsg(cam_f_base, t_base_cam_);
-      t_cam_base_ = t_base_cam_.inverse();
+      init();
     }
 
     Observer(const double &marker_length,
              const image_geometry::PinholeCameraModel &camera_model,
              const tf2::Transform &t_base_cam) :
-             camera_model_{camera_model},
-             t_base_cam_{t_base_cam},
-             t_cam_base_{t_base_cam.inverse()}
+      camera_model_{camera_model},
+      t_base_cam_{t_base_cam},
+      t_cam_base_{t_base_cam.inverse()}
     {
       msg_.marker_length = marker_length;
       msg_.camera_info = camera_model.cameraInfo();

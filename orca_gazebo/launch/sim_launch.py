@@ -89,7 +89,7 @@ def generate_launch_description():
              node_name='vmap_node', parameters=[{
                 'use_sim_time': use_sim_time,
                 'publish_tfs': 1,  # Publish marker /tf
-                'marker_length': 0.1778,  # Marker length
+                'marker_length': 0.1778,  # Marker length for new maps
                 'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
                 'make_not_use_map': 0  # Don't modify the map
             }]),

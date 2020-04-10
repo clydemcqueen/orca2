@@ -36,10 +36,6 @@ namespace orca_base
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
-  CXT_MACRO_MEMBER(fcam_hfov, double, 1.4)                    /* Forward camera horiz field of view in radians  */ \
-  CXT_MACRO_MEMBER(fcam_hres, double, 800)                    /* Forward camera horiz resolution in pixels  */ \
-  CXT_MACRO_MEMBER(fcam_vres, double, 600)                    /* Forward camera vertical resolution in pixels  */ \
-  \
   CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Limit fwd/strafe motion, rest is yaw  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6)                 /* AUV x pid Kp  */ \

@@ -42,8 +42,8 @@ namespace orca_base
 
   public:
 
-    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PoseStamped &start, mw::Target target,
-                mw::Map map, bool keep_station, mw::MissionState &state);
+    PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PoseStamped &start,
+                const mw::Target &target, mw::Map map, bool keep_station, mw::MissionState &state);
 
     bool advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
                  mw::MissionState &state) override;

@@ -83,9 +83,6 @@ namespace orca_base
     driver_sub_ = create_subscription<orca_msgs::msg::Driver>(
       "driver_status", QUEUE_SIZE, [this](const orca_msgs::msg::Driver::SharedPtr msg) -> void
       { this->driver_cb_.call(msg); });
-    fcam_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
-      "fcam_info", camera_info_qos, [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) -> void
-      { this->fcam_info_cb_.call(msg); });
     fp_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
       "filtered_fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
       { this->fp_cb_.call(msg); });
@@ -109,11 +106,6 @@ namespace orca_base
       std::bind(&AUVNode::mission_goal, this, _1, _2),
       std::bind(&AUVNode::mission_cancel, this, _1),
       std::bind(&AUVNode::mission_accepted, this, _1));
-
-    // Parse URDF
-    if (!parser_.parse()) {
-      RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
-    }
 
     RCLCPP_INFO(get_logger(), "auv_node ready");
   }
@@ -168,9 +160,6 @@ namespace orca_base
   bool AUVNode::fp_ok(const rclcpp::Time &t)
   { return estimate_.header().valid() && t - estimate_.header().t() < fp_timeout_; }
 
-  bool AUVNode::cam_info_ok()
-  { return fcam_info_cb_.receiving(); }
-
   bool AUVNode::ready_to_start_mission(const rclcpp::Time &t)
   {
     if (mission_) {
@@ -180,11 +169,6 @@ namespace orca_base
 
     if (!map_.valid()) {
       RCLCPP_ERROR(get_logger(), "no map");
-      return false;
-    }
-
-    if (!cam_info_ok()) {
-      RCLCPP_ERROR(get_logger(), "no camera info");
       return false;
     }
 
@@ -285,11 +269,6 @@ namespace orca_base
     }
   }
 
-  void AUVNode::fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg)
-  {
-    fcam_model_.fromCameraInfo(msg);
-  }
-
   void AUVNode::map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
     map_ = mw::Map{*msg};
@@ -363,15 +342,15 @@ namespace orca_base
         RCLCPP_INFO(get_logger(), "keeping station at current pose");
         std::vector<geometry_msgs::msg::Pose> poses;
         poses.push_back(estimate_.fp().pose().pose().msg());
-        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, poses,
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), poses,
                                             action->random, action->repeat, action->keep_station);
       } else {
-        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, parser_, fcam_model_, action->poses,
-                                            action->random, action->repeat, action->keep_station);
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(),
+                                            action->poses, action->random, action->repeat, action->keep_station);
       }
     } else {
-      planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, parser_, fcam_model_, action->marker_ids,
-                                            action->random, action->repeat, action->keep_station);
+      planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, estimate_.fp().observations().observer(),
+                                            action->marker_ids, action->random, action->repeat, action->keep_station);
     }
 
     if (!planner) {

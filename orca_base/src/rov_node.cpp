@@ -80,9 +80,6 @@ namespace orca_base
     // Publications
     control_pub_ = create_publisher<orca_msgs::msg::Control>("control", QUEUE_SIZE);
 
-    // Camera info may be published with a different QoS
-    auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};
-
     // Monotonic subscriptions
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
       "barometer", QUEUE_SIZE, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void

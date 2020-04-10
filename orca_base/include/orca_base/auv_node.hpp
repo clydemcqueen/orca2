@@ -33,12 +33,6 @@ namespace orca_base
     rclcpp::Duration driver_timeout_{0};
     rclcpp::Duration fp_timeout_{0};
 
-    // Parsed URDF
-    orca_description::Parser parser_;
-
-    // Camera model
-    image_geometry::PinholeCameraModel fcam_model_;
-
     // Most recent depth message
     double base_link_z_{};
 
@@ -71,8 +65,6 @@ namespace orca_base
 
     bool fp_ok(const rclcpp::Time &t);
 
-    bool cam_info_ok();
-
     bool ready_to_start_mission(const rclcpp::Time &t);
 
     void timer_callback(bool first);
@@ -93,8 +85,6 @@ namespace orca_base
 
     void driver_callback(orca_msgs::msg::Driver::SharedPtr msg);
 
-    void fcam_info_callback(sensor_msgs::msg::CameraInfo::SharedPtr msg);
-
     void fp_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first);
 
     void map_callback(fiducial_vlam_msgs::msg::Map::SharedPtr msg);
@@ -106,8 +96,6 @@ namespace orca_base
       depth_cb_{this, &AUVNode::depth_callback};
     monotonic::Valid<AUVNode *, orca_msgs::msg::Driver::SharedPtr>
       driver_cb_{this, &AUVNode::driver_callback};
-    monotonic::Valid<AUVNode *, sensor_msgs::msg::CameraInfo::SharedPtr>
-      fcam_info_cb_{this, &AUVNode::fcam_info_callback};
     monotonic::Monotonic<AUVNode *, orca_msgs::msg::FiducialPoseStamped::SharedPtr>
       fp_cb_{this, &AUVNode::fp_callback};
     monotonic::Valid<AUVNode *, fiducial_vlam_msgs::msg::Map::SharedPtr>

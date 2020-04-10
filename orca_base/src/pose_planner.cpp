@@ -12,11 +12,11 @@ namespace orca_base
   //=====================================================================================
 
   PosePlanner::PosePlanner(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::PoseStamped &start,
-                           mw::Target target, mw::Map map, bool keep_station, mw::MissionState &state) :
+                           const mw::Target &target, mw::Map map, bool keep_station, mw::MissionState &state) :
     LocalPlanner{LocalPlannerType::POSE_PLANNER},
     logger_{logger},
     cxt_{cxt},
-    target_{std::move(target)},
+    target_{target},
     map_{std::move(map)},
     keep_station_{keep_station},
     controller_{std::make_shared<PoseController>(cxt_)}

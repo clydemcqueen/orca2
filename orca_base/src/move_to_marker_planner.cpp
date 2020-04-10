@@ -41,8 +41,8 @@ namespace orca_base
     state.twist() = {}; // Don't know yaw in the world frame, so can't convert TwistBody into Twist
   }
 
-  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
-                                    mw::MissionState &state)
+  bool MoveToMarkerPlanner::advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate,
+                                    mw::Efforts &efforts, mw::MissionState &state)
   {
     // Advance the plan
     if (segments_[state.segment_idx()]->advance(d)) {
@@ -50,7 +50,8 @@ namespace orca_base
     } else if (state.segment_idx() + 1 < segments_.size()) {
       // Move to next segment
       state.next_segment(segments_[state.segment_idx() + 1]->to_str(), segments_[state.segment_idx() + 1]->type());
-      RCLCPP_INFO_STREAM(logger_, "segment " << state.segment_idx() + 1 << " of " << segments_.size() << ", " << state.segment_info());
+      RCLCPP_INFO_STREAM(logger_, "segment " << state.segment_idx() + 1 << " of " << segments_.size() << ", "
+                                             << state.segment_info());
     } else {
       // Recovery action is complete
       return false;

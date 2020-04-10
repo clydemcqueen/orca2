@@ -38,6 +38,7 @@ git clone https://github.com/clydemcqueen/ukf.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 git clone https://github.com/clydemcqueen/sim_fiducial.git
+git clone https://github.com/clydemcqueen/astar.git
 cd ~/ros2/orca2_ws
 source /opt/ros/eloquent/setup.bash
 colcon build

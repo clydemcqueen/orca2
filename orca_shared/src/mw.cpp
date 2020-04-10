@@ -115,25 +115,6 @@ namespace mw
     }
   }
 
-  int Map::predict_observations(const Pose &base_f_map, Observations &observations)
-  {
-    auto t_cam_map = observations.observer().t_cam_base() * base_f_map.transform().inverse();
-    auto model = observations.observer().camera_model();
-
-    observations.clear();
-    int num_observations = 0;
-
-    for (const auto &marker : markers_) {
-      Observation observation = marker.predict_observation(model, t_cam_map);
-      if (observation != Observation::None) {
-        ++num_observations;
-        observations.add(observation);
-      }
-    }
-
-    return num_observations;
-  }
-
   //=====================================================================================
   // Marker
   //=====================================================================================
@@ -266,53 +247,58 @@ namespace mw
 
   std::ostream &operator<<(std::ostream &os, Acceleration const &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.x() << ", " << v.y() << ", " << v.z() << ", " << v.yaw() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.x() << ", "
+              << v.y() << ", "
+              << v.z() << ", "
+              << v.yaw() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const FiducialPose &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << ", " << v.observations()
-              << ", " << v.pose() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.observations() << ", "
+              << v.pose() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const FiducialPoseStamped &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.header() << ", " << v.fp() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.header() << ", "
+              << v.fp() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Header &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.t().nanoseconds() << ", " << v.frame_id() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.t().nanoseconds() << ", "
+              << v.frame_id() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Map &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.msg_.poses.size() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.msg_.poses.size() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Marker &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.id_
-              << ", " << v.corner0_f_map_
-              << ", " << v.corner1_f_map_
-              << ", " << v.corner2_f_map_
-              << ", " << v.corner3_f_map_ << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.id_ << ", "
+              << v.corner0_f_map_ << ", "
+              << v.corner1_f_map_ << ", "
+              << v.corner2_f_map_ << ", "
+              << v.corner3_f_map_ << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Observation &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.id()
-              << ", {" << v.c0().x << ", " << v.c0().y
-              << "}, {" << v.c1().x << ", " << v.c1().y
-              << "}, {" << v.c2().x << ", " << v.c2().y
-              << "}, {" << v.c3().x << ", " << v.c3().y << "}}";
+    return os << std::fixed << std::setprecision(3) << "{" <<
+              v.id() << ", {" <<
+              v.c0().x << ", " << v.c0().y << "}, {" <<
+              v.c1().x << ", " << v.c1().y << "}, {" <<
+              v.c2().x << ", " << v.c2().y << "}, {" <<
+              v.c3().x << ", " << v.c3().y << "}}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Observations &v)
@@ -331,28 +317,33 @@ namespace mw
 
   std::ostream &operator<<(std::ostream &os, const Observer &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{marker_length: " << v.marker_length()
-              << ", width: " << v.width()
-              << ", height: " << v.height() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.marker_length() << ", "
+              << v.width() << ", "
+              << v.height() << ", "
+              << mw::Pose(v.msg_.cam_f_base) << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Point &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.x() << ", " << v.y() << ", " << v.z() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.x() << ", "
+              << v.y() << ", "
+              << v.z() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Pose &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.position() << ", " << v.orientation() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.position() << ", "
+              << v.orientation() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const PoseStamped &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.header() << ", " << v.pose() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.header() << ", "
+              << v.pose() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const PoseWithCovariance &v)
@@ -370,8 +361,9 @@ namespace mw
 
   std::ostream &operator<<(std::ostream &os, PoseWithCovarianceStamped const &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.header() << ", " << v.pose() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.header() << ", "
+              << v.pose() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, PolarObservation const &v)
@@ -387,25 +379,32 @@ namespace mw
 
   std::ostream &operator<<(std::ostream &os, PolarObservationStamped const &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.header() << ", " << v.observation() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.header() << ", "
+              << v.observation() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Quaternion &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.roll() << ", " << v.pitch() << ", " << v.yaw() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.roll() << ", "
+              << v.pitch() << ", "
+              << v.yaw() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Target &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.id() << ", " << v.pose() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.id() << ", "
+              << v.pose() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Twist &v)
   {
-    return os << std::fixed << std::setprecision(3)
-              << "{" << v.x() << ", " << v.y() << ", " << v.z() << ", " << v.yaw() << "}";
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.x() << ", "
+              << v.y() << ", "
+              << v.z() << ", "
+              << v.yaw() << "}";
   }
 }

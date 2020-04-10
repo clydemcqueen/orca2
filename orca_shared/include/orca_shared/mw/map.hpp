@@ -72,14 +72,6 @@ namespace mw
     bool get_waypoints(const double &target_z, const double &max_dead_reckon_dist,
                        const Pose &start_pose, const Pose &destination_pose, std::vector<Pose> &waypoints) const;
 
-    /**
-     * @deprecated
-     * @param base_f_map
-     * @param observations
-     * @return
-     */
-    int predict_observations(const Pose &base_f_map, Observations &observations);
-
     bool operator==(const Map &that) const
     {
       return msg_ == that.msg_;

@@ -16,10 +16,10 @@ namespace mw
     int id_{};
     double marker_length_{};
     Pose pose_;
-    tf2::Vector3 corner0_f_map_; // TODO mw::Point
-    tf2::Vector3 corner1_f_map_; // TODO mw::Point
-    tf2::Vector3 corner2_f_map_; // TODO mw::Point
-    tf2::Vector3 corner3_f_map_; // TODO mw::Point
+    tf2::Vector3 corner0_f_map_;
+    tf2::Vector3 corner1_f_map_;
+    tf2::Vector3 corner2_f_map_;
+    tf2::Vector3 corner3_f_map_;
 
   public:
 

@@ -46,9 +46,6 @@ namespace orca_base
     bool is_pose_planner()
     { return type_ == LocalPlannerType::POSE_PLANNER; }
 
-    bool is_mtm_planner()
-    { return type_ == LocalPlannerType::MTM_PLANNER; }
-
     virtual bool advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
                          mw::MissionState &status) = 0;
   };

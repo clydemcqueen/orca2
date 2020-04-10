@@ -16,7 +16,7 @@ namespace orca_base
                                                  mw::PolarObservation goal) :
     SegmentBase{cxt, type},
     plan_{std::move(start)},
-    goal_{std::move(goal)}
+    goal_{goal}
   {
     // Default ff includes acceleration to counteract buoyancy
     ff_ = mw::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
@@ -133,7 +133,8 @@ namespace orca_base
 
     if (distance_fwd > 0) {
       // Plan forward motion, start phase 1
-      plan_obs_fast(false, cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.header().t(), f_run_, f_decel_, f_stop_);
+      plan_obs_fast(false, cxt_.mtm_fwd_accel_, cxt_.mtm_fwd_velo_, distance_fwd, plan_.header().t(),
+                    f_run_, f_decel_, f_stop_);
       initial_accel_.forward() = cxt_.mtm_fwd_accel_; // Always moving foward, so always +accel to start
     } else {
       f_run_ = f_decel_ = f_stop_ = start_;

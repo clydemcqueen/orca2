@@ -10,27 +10,19 @@
 namespace orca_base
 {
 
-  // TODO simplify this signature... perhaps all we need is mw::Observer?
   GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, mw::Map map,
-                               orca_description::Parser parser,
-                               const image_geometry::PinholeCameraModel &fcam_model, std::vector<mw::Target> targets,
-                               bool keep_station) :
+                               const mw::Observer &observer, std::vector<mw::Target> targets, bool keep_station) :
     logger_{logger},
     cxt_{cxt},
     map_{std::move(map)},
-    parser_{std::move(parser)},
-    fcam_model_{fcam_model},
     targets_{std::move(targets)},
     keep_station_{keep_station},
-    state_{mw::Observer{map_.marker_length(), fcam_model_, parser_.t_base_fcam}, (int)targets_.size(), (int)targets_[0].id()}
+    state_{observer, (int)targets_.size(), (int)targets_[0].id()}
   {
     RCLCPP_INFO_STREAM(logger_, targets_.size() << " targets:");
     for (auto &i : targets_) {
       RCLCPP_INFO_STREAM(logger_, i);
     }
-
-    // Init status
-//    state_.first_target(targets_.size(), targets_[0].id());
 
     // Write global_path_
     global_path_.header.frame_id = cxt_.map_frame_;
@@ -42,13 +34,11 @@ namespace orca_base
     }
   }
 
-  void GlobalPlanner::create_pose_planner(const mw::FiducialPoseStamped &start)
+  void GlobalPlanner::create_pose_planner(const mw::PoseStamped &start)
   {
     int foo = state_.target_idx();
     auto keep_station = state_.target_idx() == targets_.size() - 1 ? keep_station_ : false;
-    local_planner_ = std::make_shared<PosePlanner>(logger_, cxt_,
-                                                   mw::PoseStamped{start.header(), start.fp().pose().pose()},
-                                                   targets_[state_.target_idx()], map_,
+    local_planner_ = std::make_shared<PosePlanner>(logger_, cxt_, start, targets_[state_.target_idx()], map_,
                                                    keep_station, state_);
   }
 
@@ -61,7 +51,7 @@ namespace orca_base
   {
     if (estimate.fp().good(cxt_.good_pose_dist_)) {
       RCLCPP_INFO(logger_, "create a pose planner");
-      create_pose_planner(estimate);
+      create_pose_planner(mw::PoseStamped{estimate.header(), estimate.fp().pose().pose()});
       return true;
     }
 
@@ -107,7 +97,7 @@ namespace orca_base
           if (estimate.fp().pose().pose().position().distance_xy(state_.plan().fp().pose().pose().position()) >
               cxt_.global_plan_max_xy_err_) {
             RCLCPP_INFO(logger_, "large pose error, re-plan");
-            create_pose_planner(estimate);
+            create_pose_planner(mw::PoseStamped{estimate.header(), estimate.fp().pose().pose()});
             return AdvanceRC::CONTINUE;
           }
 
@@ -165,9 +155,8 @@ namespace orca_base
 
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                              const orca_description::Parser &parser,
-                              const image_geometry::PinholeCameraModel &fcam_model,
-                              const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station)
+                              const mw::Observer &observer, const std::vector<int> &markers_ids, bool random,
+                              bool repeat, bool keep_station)
   {
     // TODO repeat
 
@@ -202,15 +191,13 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, targets, keep_station);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, targets, keep_station);
   }
 
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                            const orca_description::Parser &parser,
-                            const image_geometry::PinholeCameraModel &fcam_model,
-                            const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat,
-                            bool keep_station)
+                            const mw::Observer &observer, const std::vector<geometry_msgs::msg::Pose> &poses,
+                            bool random, bool repeat, bool keep_station)
   {
     // TODO repeat
 
@@ -232,7 +219,7 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, parser, fcam_model, targets, keep_station);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, targets, keep_station);
   }
 
 } // namespace orca_base

@@ -97,9 +97,7 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
 
       if (image_pub_->get_subscription_count() > 0) {
         // Scale up for high res images
-        // TODO
-//        int scale = (int)std::round(control_msg_.estimate_observations.camera_info.width / 800.);
-        int scale = 1;
+        int scale = (int)std::round(control_msg_.estimate.observations.observer.camera_info.width / 800.);
 
         cv_bridge::CvImagePtr marked;
         marked = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);

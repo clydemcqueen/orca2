@@ -23,6 +23,7 @@ The `mw` (message wrapper) library provides core classes for Orca.
 | Header | std_msgs::msg::Header | Time stamp + frame id |
 | Map | fiducial_vlam_msgs::msg::Map | Marker[] |
 | Marker | n/a | Marker location in the world frame |
+| MissionState | orca_msgs::msg::MissionState | Current status of mission |
 | Observation | fiducial_vlam_msgs::msg::Observation | Marker location in the camera frame |
 | ObservationStamped | n/a | Header + Observation |
 | Observations | fiducial_vlam_msgs::msg::Observations | Observer + Observation[] + PolarObservation[] |
@@ -44,6 +45,6 @@ The `mw` (message wrapper) library provides core classes for Orca.
 | Message | Description |
 |-----|-----|
 | orca_msgs::msg::Barometer | Barometer reading |
-| orca_msgs::msg::Control | Driver control |
+| orca_msgs::msg::Control | Driver control (includes orca_msgs::msg::MissionState) |
 | orca_msgs::msg::Depth | Depth reading |
 | orca_msgs::msg::Driver | Driver status |

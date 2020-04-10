@@ -27,8 +27,6 @@ namespace orca_filter
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   \
   CXT_MACRO_MEMBER(marker_length, double, 0.1778)             /* Marker length in meters  */ \
-  CXT_MACRO_MEMBER(cam_hfov, double, 1.4)                     /* Camera horiz field of view in radians  */ \
-  CXT_MACRO_MEMBER(cam_hres, double, 800)                     /* Camera horiz resolution in pixels  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

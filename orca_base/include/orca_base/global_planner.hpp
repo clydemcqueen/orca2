@@ -18,23 +18,19 @@ namespace orca_base
     rclcpp::Logger logger_;
     const AUVContext &cxt_;
     mw::Map map_;
-    orca_description::Parser parser_;
-    image_geometry::PinholeCameraModel fcam_model_;
 
     // Plan
     std::vector<mw::Target> targets_;                         // Global plan
     bool keep_station_;                                       // True: keep station at last target
     nav_msgs::msg::Path global_path_;                         // Path to all targets
     std::shared_ptr<LocalPlanner> local_planner_;             // Local planner
-
-    // State
     mw::MissionState state_;                                  // Mission state
 
     /**
      * Create a pose planner
      * @param start Initial pose
      */
-    void create_pose_planner(const mw::FiducialPoseStamped &start);
+    void create_pose_planner(const mw::PoseStamped &start);
 
     /**
      * Create a move-to-marker planner
@@ -47,14 +43,12 @@ namespace orca_base
      * @param estimate Current pose
      * @return True if successful
      */
-    bool create_local_planner(const mw::FiducialPoseStamped &estimate); // TODO PoseStamped
+    bool create_local_planner(const mw::FiducialPoseStamped &estimate);
 
   public:
 
     explicit GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, mw::Map map,
-                           orca_description::Parser parser,
-                           const image_geometry::PinholeCameraModel &fcam_model, std::vector<mw::Target> targets,
-                           bool keep_station);
+                           const mw::Observer &observer, std::vector<mw::Target> targets, bool keep_station);
 
     const mw::MissionState &status() const
     { return state_; }
@@ -69,15 +63,14 @@ namespace orca_base
     // Factory: visit a list markers, if list is empty all markers will be visited
     static std::shared_ptr<GlobalPlanner>
     plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                 const orca_description::Parser &parser,
-                 const image_geometry::PinholeCameraModel &fcam_model,
-                 const std::vector<int> &markers_ids, bool random, bool repeat, bool keep_station);
+                 const mw::Observer &observer, const std::vector<int> &markers_ids, bool random, bool repeat,
+                 bool keep_station);
 
     // Factory: visit a list of poses, list cannot be empty
     static std::shared_ptr<GlobalPlanner>
     plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-               const orca_description::Parser &parser, const image_geometry::PinholeCameraModel &fcam_model,
-               const std::vector<geometry_msgs::msg::Pose> &poses, bool random, bool repeat, bool keep_station);
+               const mw::Observer &observer, const std::vector<geometry_msgs::msg::Pose> &poses, bool random,
+               bool repeat, bool keep_station);
   };
 
 } // namespace orca_base

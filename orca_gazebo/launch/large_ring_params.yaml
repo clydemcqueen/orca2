@@ -22,8 +22,15 @@
     # filter_node is running:
     publish_tf: false
 
-    # How far in front of a marker is a good pose?
+    # How far away from a single marker is a good pose?
+    # 800x600: 2.0
+    # 1920x1280: 4.0
     good_pose_dist: 2.0
+
+    # How far away from a single marker is a good observation?
+    # 800x600: 10.0
+    # 1920x1280: 14.0
+    good_obs_dist: 10.0
 
     # Allow MTM recovery
     global_plan_allow_mtm: true
@@ -50,5 +57,5 @@
     filter_fcam: true
     publish_tf: true
 
-    # How far in front of a marker is a good pose?
     good_pose_dist: 2.0
+    good_obs_dist: 10.0
