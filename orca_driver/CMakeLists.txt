@@ -63,7 +63,6 @@ add_executable(
 )
 ament_target_dependencies(
   driver_node
-  br_ms5837
   mraa
   orca_msgs
   rclcpp

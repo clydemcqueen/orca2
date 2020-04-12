@@ -17,8 +17,7 @@ namespace orca_driver
   constexpr int QUEUE_SIZE = 10;
 
   DriverNode::DriverNode() :
-    Node{"driver_node"},
-    barometer_{0}
+    Node{"driver_node"}
   {
     // Suppress IDE warnings
     (void) control_sub_;
@@ -44,8 +43,7 @@ namespace orca_driver
       RCLCPP_INFO(get_logger(), "thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
     }
 
-    // Publish battery and leak messages TODO msg
-    barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", QUEUE_SIZE);
+    // Publish driver status messages
     driver_pub_ = create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);
 
     // Subscribe to control messages
@@ -131,7 +129,7 @@ namespace orca_driver
       return;
     }
 
-    if (!read_barometer() || !read_battery() || !read_leak() || driver_msg_.low_battery || driver_msg_.leak_detected) {
+    if (!read_battery() || !read_leak() || driver_msg_.low_battery || driver_msg_.leak_detected) {
       // Huge problem, we're done
       abort();
       return;
@@ -145,20 +143,8 @@ namespace orca_driver
       all_stop();
     }
 
-    barometer_pub_->publish(barometer_msg_);
-
     driver_msg_.header.stamp = now();
     driver_pub_->publish(driver_msg_);
-  }
-
-  // Read barometer sensor, return true if successful
-  bool DriverNode::read_barometer()
-  {
-    barometer_.read(); // Takes 40ms+
-    barometer_msg_.header.stamp = now();
-    barometer_msg_.pressure = barometer_.pressure() * 100; // Pascals
-    barometer_msg_.temperature = barometer_.temperature(); // Celsius
-    return true;
   }
 
   // Read battery sensor, return true if successful
@@ -246,20 +232,6 @@ namespace orca_driver
     return true;
   }
 
-  // Connect to the barometer and run pre-dive checks, return true if successful
-  bool DriverNode::connect_barometer()
-  {
-    if (!barometer_.init()) {
-      RCLCPP_ERROR(get_logger(), "can't connect to barometer, correct bus? member of i2c?");
-      return false;
-    }
-    RCLCPP_INFO(get_logger(), "barometer initialized");
-
-    // TODO pre-dive checks
-
-    return true;
-  }
-
   // Connect to the battery sensor and run pre-dive checks, return true if successful
   bool DriverNode::connect_battery()
   {
@@ -288,7 +260,7 @@ namespace orca_driver
   bool DriverNode::connect()
   {
     set_status(orca_msgs::msg::Driver::STATUS_NONE);
-    if (!connect_barometer() || !connect_battery() || !connect_controller() || !connect_leak()) {
+    if (!connect_battery() || !connect_controller() || !connect_leak()) {
       abort();
       return false;
     }
