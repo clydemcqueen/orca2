@@ -36,6 +36,23 @@ include_directories(
 )
 
 #=============
+# Barometer node
+#=============
+
+add_executable(
+  barometer_node
+  src/barometer_node.cpp
+)
+ament_target_dependencies(
+  barometer_node
+  br_ms5837
+  mraa
+  orca_msgs
+  rclcpp
+  ros2_shared
+)
+
+#=============
 # Driver node
 #=============
 
@@ -73,7 +90,7 @@ ament_target_dependencies(
 
 # Install C++ targets
 install(
-  TARGETS driver_node test_node
+  TARGETS barometer_node driver_node test_node
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
   RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2
 )

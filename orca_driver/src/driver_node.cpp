@@ -17,7 +17,7 @@ namespace orca_driver
   constexpr int QUEUE_SIZE = 10;
 
   DriverNode::DriverNode() :
-    Node{"orca_driver"},
+    Node{"driver_node"},
     barometer_{0}
   {
     // Suppress IDE warnings
@@ -44,7 +44,7 @@ namespace orca_driver
       RCLCPP_INFO(get_logger(), "thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
     }
 
-    // Publish battery and leak messages
+    // Publish battery and leak messages TODO msg
     barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", QUEUE_SIZE);
     driver_pub_ = create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);
 
