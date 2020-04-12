@@ -11,6 +11,7 @@ namespace orca_driver
   {
     MS5837 barometer_;
     std::thread sensor_thread_;
+    std::atomic<bool> stop_signal_;
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_pub_;
 
   public:
@@ -27,9 +28,9 @@ namespace orca_driver
           if (!barometer_.init()) {
             RCLCPP_ERROR(get_logger(), "can't connect to barometer, correct bus? member of i2c?");
           } else {
-            RCLCPP_INFO(get_logger(), "barometer initialized");
+            RCLCPP_INFO(get_logger(), "sensor thread running");
 
-            while (rclcpp::ok()) {
+            while (!stop_signal_ && rclcpp::ok()) {
               orca_msgs::msg::Barometer barometer_msg_;
               barometer_.read(); // Takes 40ms+
               barometer_msg_.header.stamp = now();
@@ -39,10 +40,16 @@ namespace orca_driver
             }
           }
 
-          RCLCPP_INFO(get_logger(), "barometer_node stopped");
+          RCLCPP_INFO(get_logger(), "sensor thread stopped");
         });
 
       RCLCPP_INFO(get_logger(), "barometer_node running");
+    }
+
+    ~BarometerNode()
+    {
+      stop_signal_ = true;
+      sensor_thread_.join();
     }
   };
 
