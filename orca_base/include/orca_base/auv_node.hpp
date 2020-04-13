@@ -25,9 +25,6 @@ namespace orca_base
     // Parameters and dynamics model
     AUVContext cxt_;
 
-    // Timer period, set by parameter
-    std::chrono::milliseconds spin_period_{0};
-
     // Timeouts, set by parameters
     rclcpp::Duration depth_timeout_{0};
     rclcpp::Duration driver_timeout_{0};

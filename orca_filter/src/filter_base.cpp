@@ -148,7 +148,7 @@ namespace orca_filter
       if (filter_.update(m.z_, m.R_)) {
         inliers++;
 
-        /* If we're running a pose filter and getting both pose messages at 30Hz and depth messages at 10Hz
+        /* If we're running a pose filter and getting both pose messages at 30Hz and depth messages at 20Hz
          * we can get into a state where the pose messages and depth messages have roughly the same timestamps,
          * but the depth messages arrive at the filter first. This is because vloc_node takes longer to calculate
          * a pose from an image -- so the "odom lag" for pose messages is higher than depth messages. The filter

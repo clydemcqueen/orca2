@@ -14,7 +14,7 @@
  * FilterNode can be in one of two states:
  *
  * !good_pose_:      There are no marker observations, or the markers are too far away to be useful
- *                   Use a DepthFilter at the barometer rate -- 10Hz
+ *                   Use a DepthFilter at the barometer rate -- 20Hz
  *                   Output pose is (0, 0, filtered z, 0, 0, 0)
  *                   Output observations are copied from the last FiducialPoseStamped message received,
  *                   or no observations if the last FiducialPoseStamped message is stale

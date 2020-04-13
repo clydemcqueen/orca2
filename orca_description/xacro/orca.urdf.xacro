@@ -382,7 +382,7 @@
     -->
     <gazebo reference="baro_link">
         <sensor name="barometer_sensor" type="altimeter">
-            <update_rate>10</update_rate> <!-- Match orca_driver rate -->
+            <update_rate>24</update_rate> <!-- Match measured barometer_node rate -->
             <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
                 <fluid_density>${FLUID_DENSITY}</fluid_density>
             </plugin>

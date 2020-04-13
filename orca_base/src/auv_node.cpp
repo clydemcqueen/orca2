@@ -139,15 +139,14 @@ namespace orca_base
     cxt_.model_.drag_coef_tether_ = cxt_.drag_coef_tether_;
     cxt_.model_.drag_partial_const_yaw_ = cxt_.drag_partial_const_yaw_;
 
-    // Update timer period and timeouts
-    spin_period_ = std::chrono::milliseconds{cxt_.timer_period_ms_};
+    // Update timeouts
     depth_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_depth_ms_)};
     driver_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_driver_ms_)};
     fp_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_fp_ms_)};
 
     // [Re-]start loop
     // Loop will run at ~constant wall speed, switch to ros_timer when it exists
-    spin_timer_ = create_wall_timer(spin_period_, [this]() -> void
+    spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
     { this->timer_cb_.call(); });
   }
 
@@ -399,7 +398,7 @@ namespace orca_base
    * DEPTH_DRIVEN         Called by depth_callback
    *                      Pros:
    *                      -- no lag between new depth data & controller response
-   *                      -- should provide a consistent 10Hz rate [but messages may be lost or delayed]
+   *                      -- should provide a consistent ~20Hz rate [but messages may be lost or delayed]
    *
    * FIDUCIAL_DRIVEN      Called by fp_callback
    *                      Pros:
@@ -408,12 +407,12 @@ namespace orca_base
    *                         a consistent stream of messages at 10-40Hz [but messages may be lost or delayed]
    *
    * The gating factor for depth messages is the barometer driver in orca_driver: it takes at least 40ms
-   * to get a good reading. 10Hz seems like a reasonable rate.
+   * to get a good reading.
    *
    * The image message rates depend on many factors, but 15-30Hz is typical.
    *
-   * filter_node can run at the sum of all of the sensor rates, so 1 camera at 15fps + 1 barometer at 10Hz
-   * might provide 25Hz when there's a marker in view, and 10Hz when there isn't.
+   * filter_node can run at the sum of all of the sensor rates, so 1 camera at 30fps + 1 barometer at 20Hz
+   * might provide 50Hz when there's a marker in view, and 20Hz when there isn't.
    *
    * The planners require that curr_time = prev_time + d, so we can't limit d.
    *
