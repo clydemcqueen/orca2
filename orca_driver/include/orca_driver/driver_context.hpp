@@ -10,6 +10,9 @@ namespace orca_driver
 {
 
 #define DRIVER_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(timer_period_ms, int, 100)                     /* Timer period in ms  */ \
+  CXT_MACRO_MEMBER(timeout_control_ms, int, 1000)                 /* Control msg timeout */ \
+  \
   CXT_MACRO_MEMBER(num_thrusters, int, 6)                         /* Number of thrusters */ \
   CXT_MACRO_MEMBER(lights_channel, int, 8)                        /* PWM lights channel */ \
   CXT_MACRO_MEMBER(tilt_channel, int, 9)                          /* PWM tilt channel */ \

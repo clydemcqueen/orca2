@@ -3,8 +3,6 @@
 namespace orca_driver
 {
 
-  const rclcpp::Duration CONTROL_TIMEOUT{RCL_S_TO_NS(1)}; // All-stop if control messages stop TODO move to param
-
   bool valid(const rclcpp::Time &t)
   {
     return t.nanoseconds() > 0;
@@ -23,7 +21,7 @@ namespace orca_driver
     (void) control_sub_;
     (void) spin_timer_;
 
-    // Get parameters
+    // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
     CXT_MACRO_INIT_PARAMETERS(DRIVER_NODE_ALL_PARAMS, validate_parameters)
@@ -32,6 +30,11 @@ namespace orca_driver
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
     CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), DRIVER_NODE_ALL_PARAMS, validate_parameters)
+
+    // Log parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    DRIVER_NODE_ALL_PARAMS
 
     // Get thruster parameters
     RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
@@ -51,18 +54,57 @@ namespace orca_driver
     auto control_cb = std::bind(&DriverNode::control_callback, this, _1);
     control_sub_ = create_subscription<orca_msgs::msg::Control>("control", QUEUE_SIZE, control_cb);
 
-    // Spin timer
-    // TODO move to param
-    // TODO run at 100ms... or change how auv_advance works
-    using namespace std::chrono_literals;
-    spin_timer_ = create_wall_timer(500ms, std::bind(&DriverNode::timer_callback, this));
+    // Initialize all hardware
+    if (!connect_controller() || !read_battery() || !read_leak()) {
+      abort();
+    } else {
+      set_status(orca_msgs::msg::Driver::STATUS_OK);
+      RCLCPP_INFO(get_logger(), "driver_node running");
+    }
   }
 
   void DriverNode::validate_parameters()
   {
-#undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
-    DRIVER_NODE_ALL_PARAMS
+    control_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_control_ms_)};
+
+    spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_},
+                                    std::bind(&DriverNode::timer_callback, this));
+  }
+
+  DriverNode::~DriverNode()
+  {
+    set_status(orca_msgs::msg::Driver::STATUS_NONE);
+    all_stop();
+    maestro_.disconnect();
+  }
+
+  // Connect to Maestro and run pre-dive checks, return true if successful
+  bool DriverNode::connect_controller()
+  {
+    maestro_.connect(cxt_.maestro_port_);
+    if (!maestro_.ready()) {
+      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", cxt_.maestro_port_.c_str());
+      return false;
+    }
+    RCLCPP_INFO(get_logger(), "port %s open", cxt_.maestro_port_.c_str());
+
+    // When the Maestro boots, it should set all thruster channels to 1500.
+    // But on a system restart it might be a bad state. Force an all-stop.
+    all_stop();
+
+    // Check to see that all thrusters are stopped.
+    for (size_t i = 0; i < thrusters_.size(); ++i) {
+      uint16_t value = 0;
+      maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
+      RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
+      if (value != orca_msgs::msg::Control::THRUST_STOP) {
+        RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
+        maestro_.disconnect();
+        return false;
+      }
+    }
+
+    return true;
   }
 
   void DriverNode::set_status(uint8_t status)
@@ -70,19 +112,19 @@ namespace orca_driver
     if (status != driver_msg_.status) {
       driver_msg_.status = status;
 
-      led_ready_.setBrightness(0);
-      led_mission_.setBrightness(0);
-      led_problem_.setBrightness(0);
+      LED_READY_OFF();
+      LED_MISSION_OFF();
+      LED_PROBLEM_OFF();
 
       switch (driver_msg_.status) {
         case orca_msgs::msg::Driver::STATUS_OK:
-          led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2);
+          LED_READY_ON();
           break;
         case orca_msgs::msg::Driver::STATUS_OK_MISSION:
-          led_mission_.setBrightness(led_mission_.readMaxBrightness() / 2);
+          LED_MISSION_ON();
           break;
         case orca_msgs::msg::Driver::STATUS_ABORT:
-          led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2);
+          LED_PROBLEM_ON();
           break;
         default:
           break;
@@ -129,13 +171,13 @@ namespace orca_driver
       return;
     }
 
-    if (!read_battery() || !read_leak() || driver_msg_.low_battery || driver_msg_.leak_detected) {
+    if (!read_battery() || !read_leak()) {
       // Huge problem, we're done
       abort();
       return;
     }
 
-    if (valid(control_msg_time_) && now() - control_msg_time_ > CONTROL_TIMEOUT) {
+    if (valid(control_msg_time_) && now() - control_msg_time_ > control_timeout_) {
       // We were receiving control messages, but they stopped.
       // This is normal, but it might also indicate that a node died.
       RCLCPP_INFO(get_logger(), "control timeout");
@@ -147,40 +189,44 @@ namespace orca_driver
     driver_pub_->publish(driver_msg_);
   }
 
-  // Read battery sensor, return true if successful
+  // Read battery sensor, return true if everything is OK
   bool DriverNode::read_battery()
   {
     double value = 0.0;
-    if (maestro_.ready() && maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
-      driver_msg_.voltage = value * cxt_.voltage_multiplier_;
-      driver_msg_.low_battery = static_cast<uint8_t>(driver_msg_.voltage < cxt_.voltage_min_);
-      if (driver_msg_.low_battery) {
-        RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", driver_msg_.voltage, cxt_.voltage_min_);
-      }
-      return true;
-    } else {
-      RCLCPP_ERROR(get_logger(), "can't read battery");
+    if (!maestro_.ready() || !maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
+      RCLCPP_ERROR(get_logger(), "can't read the battery, correct bus? member of i2c?");
       driver_msg_.voltage = 0;
       driver_msg_.low_battery = 1;
       return false;
     }
+
+    driver_msg_.voltage = value * cxt_.voltage_multiplier_;
+    driver_msg_.low_battery = static_cast<uint8_t>(driver_msg_.voltage < cxt_.voltage_min_);
+    if (driver_msg_.low_battery) {
+      RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", driver_msg_.voltage, cxt_.voltage_min_);
+      return false;
+    }
+
+    return true;
   }
 
-  // Read leak sensor, return true if successful
+  // Read leak sensor, return true if everything is OK
   bool DriverNode::read_leak()
   {
     bool value = 0.0;
-    if (maestro_.ready() && maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
-      driver_msg_.leak_detected = static_cast<uint8_t>(value);
-      if (driver_msg_.leak_detected) {
-        RCLCPP_ERROR(get_logger(), "leak detected");
-      }
-      return true;
-    } else {
-      RCLCPP_ERROR(get_logger(), "can't read leak sensor");
+    if (!maestro_.ready() || !maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
+      RCLCPP_ERROR(get_logger(), "can't read the leak sensor");
       driver_msg_.leak_detected = 1;
       return false;
     }
+
+    driver_msg_.leak_detected = static_cast<uint8_t>(value);
+    if (driver_msg_.leak_detected) {
+      RCLCPP_ERROR(get_logger(), "leak detected");
+      return false;
+    }
+
+    return true;
   }
 
   // Stop all motion
@@ -203,82 +249,6 @@ namespace orca_driver
     maestro_.disconnect();
   }
 
-  // Connect to Maestro and run pre-dive checks, return true if successful
-  bool DriverNode::connect_controller()
-  {
-    maestro_.connect(cxt_.maestro_port_);
-    if (!maestro_.ready()) {
-      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", cxt_.maestro_port_.c_str());
-      return false;
-    }
-    RCLCPP_INFO(get_logger(), "port %s open", cxt_.maestro_port_.c_str());
-
-    // When the Maestro boots, it should set all thruster channels to 1500.
-    // But on a system restart it might be a bad state. Force an all-stop.
-    all_stop();
-
-    // Check to see that all thrusters are stopped.
-    for (size_t i = 0; i < thrusters_.size(); ++i) {
-      uint16_t value = 0;
-      maestro_.getPWM(static_cast<uint8_t>(thrusters_[i].channel_), value);
-      RCLCPP_INFO(get_logger(), "thruster %d is set at %d", i + 1, value);
-      if (value != orca_msgs::msg::Control::THRUST_STOP) {
-        RCLCPP_ERROR(get_logger(), "thruster %d didn't initialize properly (and possibly others)", i + 1);
-        maestro_.disconnect();
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  // Connect to the battery sensor and run pre-dive checks, return true if successful
-  bool DriverNode::connect_battery()
-  {
-    if (!read_battery()) {
-      RCLCPP_ERROR(get_logger(), "can't read the battery, correct bus? member of i2c?");
-      return false;
-    }
-
-    RCLCPP_INFO(get_logger(), "voltage is %g", driver_msg_.voltage);
-    return !driver_msg_.low_battery;
-  }
-
-  // Connect to the leak sensor and run pre-dive checks, return true if successful
-  bool DriverNode::connect_leak()
-  {
-    if (!read_leak()) {
-      RCLCPP_ERROR(get_logger(), "can't read the leak sensor");
-      return false;
-    }
-
-    RCLCPP_INFO(get_logger(), "leak status is %d", driver_msg_.leak_detected);
-    return !driver_msg_.leak_detected;
-  }
-
-  // Connect to all hardware and run pre-dive checks, return true if we're ready to dive
-  bool DriverNode::connect()
-  {
-    set_status(orca_msgs::msg::Driver::STATUS_NONE);
-    if (!connect_battery() || !connect_controller() || !connect_leak()) {
-      abort();
-      return false;
-    }
-
-    RCLCPP_INFO(get_logger(), "hardware initialized, pre-dive checks passed");
-    set_status(orca_msgs::msg::Driver::STATUS_OK);
-    return true;
-  }
-
-  // Normal exit
-  void DriverNode::disconnect()
-  {
-    RCLCPP_INFO(get_logger(), "normal exit");
-    set_status(orca_msgs::msg::Driver::STATUS_NONE);
-    all_stop();
-    maestro_.disconnect();
-  }
-
 } // namespace orca_driver
 
 //=============================================================================
@@ -296,14 +266,8 @@ int main(int argc, char **argv)
   // Init node
   auto node = std::make_shared<orca_driver::DriverNode>();
 
-  // Connect and run pre-dive checks
-  if (node->connect()) {
-    // Spin node
-    rclcpp::spin(node);
-  }
-
-  // Disconnect
-  node->disconnect();
+  // Spin node
+  rclcpp::spin(node);
 
   // Shut down ROS
   rclcpp::shutdown();

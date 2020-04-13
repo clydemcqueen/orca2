@@ -17,6 +17,25 @@
 namespace orca_driver
 {
 
+  // LEDs on the UP board
+  // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
+#define LEDS
+#ifdef LEDS
+#define LED_READY_ON() led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2)
+#define LED_MISSION_ON() led_mission_.setBrightness(led_mission_.readMaxBrightness() / 2)
+#define LED_PROBLEM_ON() led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2)
+#define LED_READY_OFF() led_ready_.setBrightness(0)
+#define LED_MISSION_OFF() led_mission_.setBrightness(0)
+#define LED_PROBLEM_OFF() led_problem_.setBrightness(0)
+#else
+#define LED_READY_ON()
+#define LED_MISSION_ON()
+#define LED_PROBLEM_ON()
+#define LED_READY_OFF()
+#define LED_MISSION_OFF()
+#define LED_PROBLEM_OFF()
+#endif
+
   struct Thruster
   {
     int channel_;
@@ -30,6 +49,9 @@ namespace orca_driver
     // Parameters
     DriverContext cxt_;
     std::vector<Thruster> thrusters_;
+
+    // Timeout, set by parameter
+    rclcpp::Duration control_timeout_{0};
 
     // State
     maestro::Maestro maestro_;
@@ -45,11 +67,11 @@ namespace orca_driver
     // Publication
     rclcpp::Publisher<orca_msgs::msg::Driver>::SharedPtr driver_pub_;
 
-    // LEDs on the UP board
-    // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
+#ifdef LEDS
     mraa::Led led_ready_{"yellow"};
     mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};
+#endif
 
     void validate_parameters();
 
@@ -65,10 +87,6 @@ namespace orca_driver
 
     bool connect_controller();
 
-    bool connect_battery();
-
-    bool connect_leak();
-
     void all_stop();
 
     void abort();
@@ -76,12 +94,7 @@ namespace orca_driver
   public:
     explicit DriverNode();
 
-    ~DriverNode()
-    {}; // Suppress default copy and move constructors
-
-    bool connect();
-
-    void disconnect();
+    ~DriverNode() override;
   };
 
 } // namespace orca_driver
