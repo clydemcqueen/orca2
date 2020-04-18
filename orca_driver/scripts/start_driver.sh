@@ -8,4 +8,4 @@
 # To start on boot:     sudo systemctl enable orca_driver.service
 # To not start on boot: sudo systemctl disable orca_driver.service
 
-screen -dmS orca bash -c "cd ~/ros2/orca_ws; . setup.bash; ros2 launch orca_driver sub_launch.py; exec bash"
+screen -dmS orca_driver bash -c "cd ~/ros2/orca_ws; . setup.bash; ros2 launch orca_driver sub_launch.py; exec bash"
