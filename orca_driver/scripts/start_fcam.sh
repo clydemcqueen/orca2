@@ -2,11 +2,11 @@
 
 # Start forward camera driver
 
-# To install:           sudo cp fcam.service /lib/systemd/system
-# To start:             sudo systemctl start fcam.service
-# To stop:              sudo systemctl stop fcam.service
-# To start on boot:     sudo systemctl enable fcam.service
-# To not start on boot: sudo systemctl disable fcam.service
+# To install:           sudo cp orca_fcam.service /lib/systemd/system
+# To start:             sudo systemctl start orca_fcam.service
+# To stop:              sudo systemctl stop orca_fcam.service
+# To start on boot:     sudo systemctl enable orca_fcam.service
+# To not start on boot: sudo systemctl disable orca_fcam.service
 
 screen -dmS fcam bash -c "gst-launch-1.0 -v v4l2src device=/dev/video1 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! rtph264pay config-interval=10 ! udpsink host=192.168.86.105 port=5600; exec bash"
 
