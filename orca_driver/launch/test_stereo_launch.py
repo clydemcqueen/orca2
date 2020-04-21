@@ -5,7 +5,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
-# Experimental GSCam launch, useful for testing the image processing pipeline
+# Useful for testing the stereo image processing pipeline
 # Uses ROS2 components and IPC
 # Requires gscam2 driver
 # Not used in ft3
