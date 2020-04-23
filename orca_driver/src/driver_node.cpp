@@ -109,6 +109,9 @@ namespace orca_driver
 
   void DriverNode::set_status(uint8_t status)
   {
+    // Note: mraa bug might log bogus error messages, ignore these
+    // https://github.com/eclipse/mraa/issues/957
+
     if (status != driver_msg_.status) {
       driver_msg_.status = status;
 

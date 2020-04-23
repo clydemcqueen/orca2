@@ -10,6 +10,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Must match camera name in URDF file
+    # Should also match the camera name in the camera info file
     camera_name = 'forward_camera'
     camera_frame = 'forward_camera_frame'
 
@@ -18,8 +19,8 @@ def generate_launch_description():
 
     orca_driver_path = get_package_share_directory('orca_driver')
     params_path = os.path.join(orca_driver_path, 'launch', 'ft3_params.yaml')
-    camera_info_url = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')  # TODO 1920x1080
-    map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
+    camera_info_url = 'file://' + os.path.join(orca_driver_path, 'cfg', 'brusb_dry_1920x1280.ini')
+    map_path = os.path.join(orca_driver_path, 'maps', 'ft3_map.yaml')
 
     return LaunchDescription([
         # Publish static joints
