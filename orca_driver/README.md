@@ -1,78 +1,121 @@
-Hardware interface for [Orca2](https://github.com/clydemcqueen/orca2).
+# Hardware Interface
 
-Install MRAA header (required for the hardware interface, not required to run the simulation):
+## Hardware Build
+
+The current hardware build is called FT3 (Field Test #3).
+This configuration includes a tether, with most nodes running on a desktop.
+
+I made the following standard modifications to my 2017 BlueRobotics BlueROV2:
+
+* Replaced the Raspberry Pi camera with the BlueRobotics USB low-light camera
+* Replaced the R2 ESCs with BlueRobotics R3 ESCs
+* Replaced the 8-conductor tether with the 2-conductor slim tether
+
+I made the following custom modifications -- YMMV:
+
+* Replaced the Pixhawk with a Pololu Maestro 18
+* Built a voltage divider to provide a voltage signal from the battery (0-17V) to a Maestro analog input (0-5V)
+* There is no current sensor
+* There is no IMU
+
+## Raspberry Pi Software Installation
+
+The Raspberry Pi is now the primary controller.
+Below I've outlined rough instructions... you'll need to dive into the system-specific instructions for details.
+
+### Install Ubuntu 18.04.4 LTS Server
+
+Install Ubuntu 18.04.4 LTS Server for ARM64
+[using these instructions](https://wiki.ubuntu.com/ARM/RaspberryPi).
+
+### Install ROS2 Eloquent
+
+Install ROS2 Eloquent
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
+Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
+
+Install Colcon (the build tool for ROS2)
+[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+
+### Install GStreamer
+
+GStreamer is used to read the h264 stream from the USB camera and forward it to the desktop over UDP.
+
+Install GStreamer
+[using these instructions](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c#).
+
+### Install MRAA
+
+MRAA is a standard hardware interface for small boards.
 
 ~~~
 sudo add-apt-repository ppa:mraa/mraa
 sudo apt-get update
-sudo apt-get install libmraa2 libmraa-dev libmraa-java python-mraa python3-mraa node-mraa mraa-tools
+sudo apt-get install libmraa2 libmraa-dev libmraa-java python3-mraa node-mraa mraa-tools
 ~~~
 
-Minimal ROS install:
-~~~
-sudo apt install ros-eloquent-ros-base ros-eloquent-cv-bridge ros-eloquent-yaml-cpp-vendor
-~~~
+### Install Orca
 
-Don't build orca_gazebo (and possibly other packages) on the sub:
 ~~~
-touch ~/ros2/orca_ws/src/orca2/orca_gazebo/COLCON_IGNORE
-touch ~/ros2/orca_ws/src/orca2/orca_base/COLCON_IGNORE
-touch ~/ros2/orca_ws/src/orca2/orca_description/COLCON_IGNORE
-touch ~/ros2/orca_ws/src/orca2/orca_filter/COLCON_IGNORE
-touch ~/ros2/orca_ws/src/orca2/orca_shared/COLCON_IGNORE
-~~~
-
-For the Raspberry Pi camera:
-~~~
-cd ~/ros2/orca2_ws/src
-git clone https://github.com/clydemcqueen/gscam2.git
-cd ~/ros2/orca2_ws
-colcon build
-~~~
-
-For the USB camera:
-~~~
-sudo usermod -a -G video ${USER}
-# Log out and back in again
-
-sudo apt install ros-eloquent-camera-calibration-parsers
-
-cd ~/ros2/orca2_ws/src
-git clone https://github.com/clydemcqueen/opencv_cam.git
-cd ~/ros2/orca2_ws
-colcon build
-~~~
-
-For mraa on the UP Board, see https://wiki.up-community.org/MRAA/UPM:
-~~~
-sudo add-apt-repository ppa:mraa/mraa
-sudo apt-get update
-sudo apt-get install mraa-tools mraa-examples libmraa1 libmraa-dev libupm-dev libupm1 upm-examples
-sudo apt-get install python-mraa python3-mraa node-mraa libmraa-java
-~~~
-
-For the Bar30 (requires MRAA):
-~~~
-cd ~/ros2/orca2_ws/src
+mkdir -p ~/ros2/orca_ws/src
+cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
-cd ~/ros2/orca2_ws
+git clone https://github.com/ptrmu/ros2_shared.git
+git clone https://github.com/ptrmu/fiducial_vlam.git
+touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
+git clone https://github.com/clydemcqueen/orca2.git
+touch orca2/orca_base/COLCON_IGNORE
+touch orca2/orca_description/COLCON_IGNORE
+touch orca2/orca_filter/COLCON_IGNORE
+touch orca2/orca_gazebo/COLCON_IGNORE
+touch orca2/orca_shared/COLCON_IGNORE
+cd ~/ros2/orca_ws
+source /opt/ros/eloquent/setup.bash
 colcon build
+source install/local_setup.bash
 ~~~
 
-To record bags:
-~~~
-sudo apt install sqlite3 ros-eloquent-rosbag2* ros-eloquent-ros2bag
+### Manual Launch
 
-ros2 bag record -a  # Everything, or just some things:
-ros2 bag record /rosout /barometer /battery /control /error /leak /tf /forward_camera/base_odom /filtered_path /fiducial_map /fiducial_markers /fiducial_observations /forward_camera/camera_info
-~~~
+In terminal 1 on the Raspberry Pi:
 
-To isolate ROS2 networks:
 ~~~
-export ROS_DOMAIN_ID=42
+cd ~/ros2/orca_ws
+source /opt/ros/eloquent/setup.bash
+source install/local_setup.bash
+ros2 launch orca_driver sub_launch.py
 ~~~
 
-To display timestamps on console messages:
+In terminal 2 on the Raspberry Pi:
+
 ~~~
-export RCUTILS_CONSOLE_OUTPUT_FORMAT="[{severity}] [{name}] [{time}]: {message}"
+gst-launch-1.0 -v v4l2src device=/dev/video1 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! rtph264pay config-interval=10 ! udpsink host=192.168.86.105 port=5600
 ~~~
+
+In terminal 1 on the desktop computer:
+
+~~~
+cd ~/ros2/orca_ws
+source /opt/ros/eloquent/setup.bash
+source install/local_setup.bash
+ros2 launch orca_driver topside_launch.py
+~~~
+
+### Launch on Boot
+
+To configure the Raspberry Pi to launch on boot:
+
+~~~
+sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_fcam.service /lib/systemd/system
+sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_driver.service /lib/systemd/system
+sudo systemctl enable orca_fcam.service
+sudo systemctl enable orca_driver.service
+~~~
+
+## Troubleshooting
+
+* Test the i2c bus using `i2cdetect 1`
+* `raspi-config` isn't installed as part of Ubuntu 18.04.4, and the PPA I found has a few bugs.
+I hand-edited the boot sector config files on the SD card and added `dtparam=i2c_arm=on`.
+* Make sure that `$USER` is in the dialout, video and i2c groups.
+Remember to log out and log back in after changing groups.

@@ -17,10 +17,15 @@
 namespace orca_driver
 {
 
+#ifdef PROCESSOR_X86_64
+#define UP_LEDS
+#else
+#undef UP_LEDS
+#endif
+
+#ifdef UP_LEDS
   // LEDs on the UP board
   // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
-#define LEDS
-#ifdef LEDS
 #define LED_READY_ON() led_ready_.setBrightness(led_ready_.readMaxBrightness() / 2)
 #define LED_MISSION_ON() led_mission_.setBrightness(led_mission_.readMaxBrightness() / 2)
 #define LED_PROBLEM_ON() led_problem_.setBrightness(led_problem_.readMaxBrightness() / 2)
@@ -67,7 +72,7 @@ namespace orca_driver
     // Publication
     rclcpp::Publisher<orca_msgs::msg::Driver>::SharedPtr driver_pub_;
 
-#ifdef LEDS
+#ifdef UP_LEDS
     mraa::Led led_ready_{"yellow"};
     mraa::Led led_mission_{"green"};
     mraa::Led led_problem_{"red"};

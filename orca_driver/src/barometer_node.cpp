@@ -9,16 +9,20 @@ namespace orca_driver
 
   class BarometerNode : public rclcpp::Node
   {
-    MS5837 barometer_;
+#ifdef PROCESSOR_X86_64
+    // UP board
+    MS5837 barometer_{0};
+#else
+    // Raspberry Pi
+     MS5837 barometer_{1, true};
+#endif
     std::thread sensor_thread_;
-    std::atomic<bool> stop_signal_;
+    std::atomic<bool> stop_signal_{};
     rclcpp::Publisher<orca_msgs::msg::Barometer>::SharedPtr barometer_pub_;
 
   public:
 
-    BarometerNode() :
-      Node{"barometer_node"},
-      barometer_{0}
+    BarometerNode() : Node{"barometer_node"}
     {
       barometer_pub_ = create_publisher<orca_msgs::msg::Barometer>("barometer", QUEUE_SIZE);
 
