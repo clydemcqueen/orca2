@@ -1,7 +1,7 @@
 #ifndef ORCA_DRIVER_DRIVER_CONTEXT_HPP
 #define ORCA_DRIVER_DRIVER_CONTEXT_HPP
 
-#include <math.h>
+#include <cmath>
 #include <string>
 
 #include "ros2_shared/context_macros.hpp"

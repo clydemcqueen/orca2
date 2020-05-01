@@ -38,8 +38,7 @@ int main(int argc, char **argv)
   test_mw_header() &&
       test_mw_observer() &&
       test_mw_roundtrip() &&
-      test_mw_pose_segment() &&
-      test_mw_polar_segment()) {
+      test_mw_pose_segment()) {
     std::cout << "all successful" << std::endl;
   }
 }

@@ -90,7 +90,7 @@ namespace orca_filter
     mean_z_fn_ = six_state_mean;
   }
 
-  std::string Measurement::name()
+  std::string Measurement::name() const
   {
     if (type_ == Type::depth) {
       return "z";

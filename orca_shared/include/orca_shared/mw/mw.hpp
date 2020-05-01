@@ -26,7 +26,4 @@
 #include "orca_shared/mw/twist_body.hpp"
 #include "orca_shared/mw/quaternion.hpp"
 
-// TODO Barometer
-// TODO Depth
-
 #endif //ORCA_SHARED_MW_HPP

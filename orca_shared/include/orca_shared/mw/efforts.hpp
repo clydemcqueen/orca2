@@ -92,7 +92,7 @@ namespace mw
       msg_.yaw = 0;
     }
 
-    Acceleration acceleration(const orca::Model &model, const double current_yaw)
+    Acceleration acceleration(const orca::Model &model, const double current_yaw) const
     {
       // Acceleration to effort
       double forward_accel = model.effort_to_accel_xy(msg_.forward);

@@ -39,7 +39,7 @@ namespace mw
       pose_{pose}
     {}
 
-    FiducialPose(const Observer &observer) :
+    explicit FiducialPose(const Observer &observer) :
       observations_{observer}
     {}
 

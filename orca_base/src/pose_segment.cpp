@@ -152,18 +152,18 @@ namespace orca_base
     if (plan_.header().t() >= p0_.header().t() && plan_.header().t() < p1_.header().t()) {
       // Phase 1: accelerate
       accel = a0_;
-      twist_ = mw::Twist{}.move(plan_.header().t() - p0_.header().t(), accel);
-      plan_.pose() = p0_.pose().move(plan_.header().t() - p0_.header().t(), {}, accel);
+      twist_ = mw::Twist{}.motion(plan_.header().t() - p0_.header().t(), accel);
+      plan_.pose() = p0_.pose().motion(plan_.header().t() - p0_.header().t(), {}, accel);
     } else if (plan_.header().t() < p2_.header().t()) {
       // Phase 2: run at constant velocity
       accel = {};
       twist_ = v1_;
-      plan_.pose() = p1_.pose().move(plan_.header().t() - p1_.header().t(), v1_, accel);
+      plan_.pose() = p1_.pose().motion(plan_.header().t() - p1_.header().t(), v1_, accel);
     } else if (plan_.header().t() < p3_.header().t()) {
       // Phase 3: decelerate
       accel = -a0_;
-      twist_ = v1_.move(plan_.header().t() - p2_.header().t(), accel);
-      plan_.pose() = p2_.pose().move(plan_.header().t() - p2_.header().t(), v1_, accel);
+      twist_ = v1_.motion(plan_.header().t() - p2_.header().t(), accel);
+      plan_.pose() = p2_.pose().motion(plan_.header().t() - p2_.header().t(), v1_, accel);
     } else {
       // Outside the plan
       return false;

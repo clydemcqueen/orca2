@@ -11,13 +11,15 @@ public:
 
   TestNode() : Node("test_node")
   {
+    (void)sub_;
+
     sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       "pose", 10,
       [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) -> void
       { this->cb_.call(msg); });
   }
 
-  void process_pose(const geometry_msgs::msg::PoseStamped::SharedPtr msg, bool first)
+  void process_pose(const geometry_msgs::msg::PoseStamped::SharedPtr, bool first)
   {
     RCLCPP_INFO(get_logger(), "joy %d", first);
   }

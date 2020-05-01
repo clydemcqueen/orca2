@@ -2,7 +2,7 @@
 
 # Start forward camera driver
 
-# To install:           sudo cp orca_fcam.service /lib/systemd/system
+# To install:           sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_fcam.service /lib/systemd/system
 # To start:             sudo systemctl start orca_fcam.service
 # To stop:              sudo systemctl stop orca_fcam.service
 # To start on boot:     sudo systemctl enable orca_fcam.service

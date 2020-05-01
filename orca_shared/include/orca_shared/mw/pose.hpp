@@ -132,9 +132,9 @@ namespace mw
       return transform;
     }
 
-    Pose move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    Pose motion(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
     {
-      return Pose{position_.move(d, v0, a), orientation_.move(d, v0, a)};
+      return Pose{position_.motion(d, v0, a), orientation_.motion(d, v0, a)};
     }
 
     Pose operator+(const Pose &that) const

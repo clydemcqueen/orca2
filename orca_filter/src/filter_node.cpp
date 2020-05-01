@@ -234,6 +234,7 @@ int main(int argc, char **argv)
 
   // Set logger level
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) result;
 
   // Spin node
   rclcpp::spin(node);

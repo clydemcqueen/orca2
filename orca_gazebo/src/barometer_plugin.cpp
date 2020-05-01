@@ -58,14 +58,16 @@ namespace gazebo
     orca::Model orca_model_;
 
     // Normal distribution
-    std::default_random_engine generator_;
-    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
+//    std::default_random_engine generator_;
+//    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
 
   public:
 
     // Called once when the plugin is loaded.
-    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf)
+    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf) override
     {
+      (void) update_connection_;
+
       GZ_ASSERT(sensor != nullptr, "Sensor is null");
       GZ_ASSERT(sdf != nullptr, "SDF is null");
 

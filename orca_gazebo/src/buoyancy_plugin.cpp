@@ -45,6 +45,8 @@ namespace gazebo
     // Called once when the plugin is loaded
     void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
     {
+      (void) update_connection_;
+
       GZ_ASSERT(model != nullptr, "Model is null");
       GZ_ASSERT(sdf != nullptr, "SDF is null");
 

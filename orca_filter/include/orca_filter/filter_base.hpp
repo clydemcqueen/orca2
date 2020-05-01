@@ -99,7 +99,7 @@ namespace orca_filter
     }
 
     // Type name
-    std::string name();
+    std::string name() const;
   };
 
   //=============================================================================

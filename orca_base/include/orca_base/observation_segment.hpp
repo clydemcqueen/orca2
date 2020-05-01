@@ -30,9 +30,6 @@ namespace orca_base
     const mw::PolarObservationStamped &plan() const
     { return plan_; }
 
-    const mw::TwistBody &twist() const
-    { return twist_; }
-
     const mw::AccelerationBody &ff() const
     { return ff_; }
   };

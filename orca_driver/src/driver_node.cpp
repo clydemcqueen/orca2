@@ -39,7 +39,7 @@ namespace orca_driver
     // Get thruster parameters
     RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
     for (int i = 0; i < cxt_.num_thrusters_; ++i) {
-      Thruster t;
+      Thruster t{};
       get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for conflicts!
       get_parameter_or("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
       thrusters_.push_back(t);
@@ -199,7 +199,7 @@ namespace orca_driver
     if (!maestro_.ready() || !maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
       RCLCPP_ERROR(get_logger(), "can't read the battery, correct bus? member of i2c?");
       driver_msg_.voltage = 0;
-      driver_msg_.low_battery = 1;
+      driver_msg_.low_battery = true;
       return false;
     }
 
@@ -216,10 +216,10 @@ namespace orca_driver
   // Read leak sensor, return true if everything is OK
   bool DriverNode::read_leak()
   {
-    bool value = 0.0;
+    bool value = false;
     if (!maestro_.ready() || !maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
       RCLCPP_ERROR(get_logger(), "can't read the leak sensor");
-      driver_msg_.leak_detected = 1;
+      driver_msg_.leak_detected = true;
       return false;
     }
 
@@ -237,8 +237,8 @@ namespace orca_driver
   {
     RCLCPP_INFO(get_logger(), "all stop");
     if (maestro_.ready()) {
-      for (size_t i = 0; i < thrusters_.size(); ++i) {
-        maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), orca_msgs::msg::Control::THRUST_STOP);
+      for (auto &thruster : thrusters_) {
+        maestro_.setPWM(static_cast<uint8_t>(thruster.channel_), orca_msgs::msg::Control::THRUST_STOP);
       }
     }
   }
@@ -261,7 +261,7 @@ namespace orca_driver
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);

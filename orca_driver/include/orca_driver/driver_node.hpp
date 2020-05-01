@@ -82,7 +82,7 @@ namespace orca_driver
 
     void set_status(uint8_t status);
 
-    void control_callback(const orca_msgs::msg::Control::SharedPtr msg);
+    void control_callback(orca_msgs::msg::Control::SharedPtr msg);
 
     void timer_callback();
 

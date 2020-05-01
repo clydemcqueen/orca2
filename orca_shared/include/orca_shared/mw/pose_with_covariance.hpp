@@ -12,7 +12,7 @@ namespace mw
   class PoseWithCovariance
   {
     Pose pose_;
-    CovarianceType covariance_;
+    CovarianceType covariance_{};
 
   public:
 
@@ -85,7 +85,7 @@ namespace mw
       return covariance_;
     }
 
-    const int dof() const
+    int dof() const
     {
       if (covariance_[Z_IX] > THRESHOLD) {
         return DOF_NONE;

@@ -44,6 +44,8 @@ namespace gazebo
     // Called once when the plugin is loaded.
     void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
     {
+      (void) update_connection_;
+
       std::string link_name{"base_link"};
 
       // Get default drag constants

@@ -50,7 +50,7 @@ namespace orca_driver
       RCLCPP_INFO(get_logger(), "barometer_node running");
     }
 
-    ~BarometerNode()
+    ~BarometerNode() override
     {
       stop_signal_ = true;
       sensor_thread_.join();
@@ -61,7 +61,7 @@ namespace orca_driver
 
 int main(int argc, char **argv)
 {
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
   rclcpp::init(argc, argv);
   auto node = std::make_shared<orca_driver::BarometerNode>();
   rclcpp::spin(node);

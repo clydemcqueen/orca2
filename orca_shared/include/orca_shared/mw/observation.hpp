@@ -11,7 +11,7 @@ namespace mw
 
   class Observation
   {
-    int id_;
+    int id_{NOT_A_MARKER};
     cv::Point2d c0_;
     cv::Point2d c1_;
     cv::Point2d c2_;
@@ -77,31 +77,6 @@ namespace mw
     }
 
     const cv::Point2d &c3() const
-    {
-      return c3_;
-    }
-
-    int id()
-    {
-      return id_;
-    }
-
-    const cv::Point2d &c0()
-    {
-      return c0_;
-    }
-
-    const cv::Point2d &c1()
-    {
-      return c1_;
-    }
-
-    const cv::Point2d &c2()
-    {
-      return c2_;
-    }
-
-    const cv::Point2d &c3()
     {
       return c3_;
     }

@@ -21,9 +21,9 @@ namespace orca_driver
       orca_msgs::msg::Control msg;
       msg.header.stamp = now();
       msg.odom_lag = 0.0;
-      msg.mode = msg.ROV;
-      msg.camera_tilt_pwm = msg.TILT_0;
-      msg.brightness_pwm = msg.LIGHTS_OFF;
+      msg.mode = orca_msgs::msg::Control::ROV;
+      msg.camera_tilt_pwm = orca_msgs::msg::Control::TILT_0;
+      msg.brightness_pwm = orca_msgs::msg::Control::LIGHTS_OFF;
 
       // Rotate through all 6 thrusters, and send fwd and rev signals
       // Each thruster gets 5s, so a cycle is 30s
@@ -32,18 +32,18 @@ namespace orca_driver
       int pwm;
       switch (cycle % 5) {
         case 1:
-          pwm = msg.THRUST_STOP + THRUST_DIFF;
+          pwm = orca_msgs::msg::Control::THRUST_STOP + THRUST_DIFF;
           break;
         case 3:
-          pwm = msg.THRUST_STOP - THRUST_DIFF;
+          pwm = orca_msgs::msg::Control::THRUST_STOP - THRUST_DIFF;
           break;
         default:
-          pwm = msg.THRUST_STOP;
+          pwm = orca_msgs::msg::Control::THRUST_STOP;
           break;
       }
 
       for (int i = 0; i < 6; ++i) {
-        msg.thruster_pwm.push_back(i == thruster ? pwm : msg.THRUST_STOP);
+        msg.thruster_pwm.push_back(i == thruster ? pwm : orca_msgs::msg::Control::THRUST_STOP);
       }
 
       control_pub_->publish(msg);
@@ -64,7 +64,7 @@ namespace orca_driver
       spin_timer_ = create_wall_timer(100ms, std::bind(&TestNode::spin_once, this));
     }
 
-    ~TestNode()
+    ~TestNode() override
     {
     }
   };
@@ -78,7 +78,7 @@ namespace orca_driver
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);

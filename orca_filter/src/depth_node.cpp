@@ -74,6 +74,8 @@ namespace orca_filter
 
     explicit DepthNode() : Node{"depth_node"}
     {
+      (void) baro_sub_;
+
       // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
@@ -122,6 +124,7 @@ int main(int argc, char **argv)
 
   // Set logger level
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) result;
 
   // Spin node
   rclcpp::spin(node);

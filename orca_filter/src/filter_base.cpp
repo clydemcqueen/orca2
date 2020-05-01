@@ -45,8 +45,8 @@ namespace orca_filter
     type_{type},
     logger_{logger},
     cxt_{cxt},
-    filtered_odom_pub_{filtered_odom_pub},
-    tf_pub_{tf_pub},
+    filtered_odom_pub_{std::move(filtered_odom_pub)},
+    tf_pub_{std::move(tf_pub)},
     state_dim_{state_dim},
     filter_{state_dim, cxt_.ukf_alpha_, cxt_.ukf_beta_, cxt_.ukf_kappa_},
     odom_time_{0, 0, RCL_ROS_TIME}

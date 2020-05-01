@@ -20,7 +20,7 @@ namespace orca_base
 
   public:
 
-    explicit SegmentBase(AUVContext cxt, uint8_t type);
+    SegmentBase(AUVContext cxt, uint8_t type);
 
     // Return a string suitable for logging
     virtual std::string to_str() = 0;
@@ -31,7 +31,7 @@ namespace orca_base
     __uint8_t type()
     { return type_; }
 
-    std::string type_name();
+    std::string type_name() const;
   };
 
   //=====================================================================================

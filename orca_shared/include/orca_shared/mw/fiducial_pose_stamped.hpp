@@ -38,7 +38,7 @@ namespace mw
       fp_{fp}
     {}
 
-    FiducialPoseStamped(const Observer &observer) :
+    explicit FiducialPoseStamped(const Observer &observer) :
       fp_{observer}
     {}
 

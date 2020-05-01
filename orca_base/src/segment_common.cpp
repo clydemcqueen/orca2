@@ -17,7 +17,7 @@ namespace orca_base
   {
   }
 
-  std::string SegmentBase::type_name()
+  std::string SegmentBase::type_name() const
   {
     if (type_ == orca_msgs::msg::MissionState::PAUSE) {
       return "pause";

@@ -74,7 +74,6 @@ namespace orca_base
     esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", QUEUE_SIZE);
     planned_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("planned_pose", QUEUE_SIZE);
     target_path_pub_ = create_publisher<nav_msgs::msg::Path>("target_path", QUEUE_SIZE);
-    tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QUEUE_SIZE);
 
     // Camera info may be published with a different QoS
     auto camera_info_qos = rclcpp::QoS{rclcpp::SensorDataQoS()};

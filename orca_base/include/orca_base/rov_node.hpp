@@ -80,17 +80,17 @@ namespace orca_base
     void validate_parameters();
 
     // State testers
-    bool holding_pressure();
+    bool holding_pressure() const;
 
-    bool rov_mode();
+    bool rov_mode() const;
 
-    bool auv_mode();
+    bool auv_mode() const;
 
-    bool baro_ok(const rclcpp::Time &t);
+    bool baro_ok(const rclcpp::Time &t) const;
 
-    bool driver_ok(const rclcpp::Time &t);
+    bool driver_ok(const rclcpp::Time &t) const;
 
-    bool joy_ok(const rclcpp::Time &t);
+    bool joy_ok(const rclcpp::Time &t) const;
 
     // Timer callback
     void spin_once();

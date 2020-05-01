@@ -91,7 +91,7 @@ namespace mw
       msg_.angular.z = v;
     }
 
-    Twist move(const rclcpp::Duration &d, const mw::Acceleration &a) const
+    Twist motion(const rclcpp::Duration &d, const mw::Acceleration &a) const
     {
       double dt = d.seconds();
       return Twist{x() + a.x() * dt,

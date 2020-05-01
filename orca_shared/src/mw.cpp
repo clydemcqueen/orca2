@@ -245,12 +245,21 @@ namespace mw
   // operator<<
   //=====================================================================================
 
-  std::ostream &operator<<(std::ostream &os, Acceleration const &v)
+  std::ostream &operator<<(std::ostream &os, const Acceleration &v)
   {
     return os << std::fixed << std::setprecision(3) << "{"
               << v.x() << ", "
               << v.y() << ", "
               << v.z() << ", "
+              << v.yaw() << "}";
+  }
+
+  std::ostream &operator<<(std::ostream &os, const AccelerationBody &v)
+  {
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.forward() << ", "
+              << v.strafe() << ", "
+              << v.vertical() << ", "
               << v.yaw() << "}";
   }
 
@@ -291,6 +300,13 @@ namespace mw
               << v.corner3_f_map_ << "}";
   }
 
+  std::ostream &operator<<(std::ostream &os, const MissionState &v)
+  {
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.plan() << ", "
+              << v.twist() << "}";
+  }
+
   std::ostream &operator<<(std::ostream &os, const Observation &v)
   {
     return os << std::fixed << std::setprecision(3) << "{" <<
@@ -299,6 +315,13 @@ namespace mw
               v.c1().x << ", " << v.c1().y << "}, {" <<
               v.c2().x << ", " << v.c2().y << "}, {" <<
               v.c3().x << ", " << v.c3().y << "}}";
+  }
+
+  std::ostream &operator<<(std::ostream &os, ObservationStamped const &v)
+  {
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.header() << ", "
+              << v.observation() << "}";
   }
 
   std::ostream &operator<<(std::ostream &os, const Observations &v)
@@ -407,4 +430,14 @@ namespace mw
               << v.z() << ", "
               << v.yaw() << "}";
   }
+
+  std::ostream &operator<<(std::ostream &os, const TwistBody &v)
+  {
+    return os << std::fixed << std::setprecision(3) << "{"
+              << v.forward() << ", "
+              << v.strafe() << ", "
+              << v.vertical() << ", "
+              << v.yaw() << "}";
+  }
+
 }

@@ -59,7 +59,7 @@ namespace gazebo
   public:
 
     // Called once when the plugin is loaded.
-    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf)
+    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf) override
     {
       // Get the GazeboROS node
       node_ = gazebo_ros::Node::Get(sdf);

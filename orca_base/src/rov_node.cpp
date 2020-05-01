@@ -132,22 +132,22 @@ namespace orca_base
     spin_timer_ = create_wall_timer(spin_period_, std::bind(&ROVNode::spin_once, this));
   }
 
-  bool ROVNode::holding_pressure()
+  bool ROVNode::holding_pressure() const
   { return is_hold_pressure_mode(mode_); }
 
-  bool ROVNode::rov_mode()
+  bool ROVNode::rov_mode() const
   { return is_rov_mode(mode_); }
 
-  bool ROVNode::auv_mode()
+  bool ROVNode::auv_mode() const
   { return is_auv_mode(mode_); }
 
-  bool ROVNode::baro_ok(const rclcpp::Time &t)
+  bool ROVNode::baro_ok(const rclcpp::Time &t) const
   { return baro_cb_.receiving() && t - baro_cb_.prev() < baro_timeout_; }
 
-  bool ROVNode::driver_ok(const rclcpp::Time &t)
+  bool ROVNode::driver_ok(const rclcpp::Time &t) const
   { return driver_cb_.receiving() && t - driver_cb_.prev() < driver_timeout_; }
 
-  bool ROVNode::joy_ok(const rclcpp::Time &t)
+  bool ROVNode::joy_ok(const rclcpp::Time &t) const
   { return joy_cb_.receiving() && t - joy_cb_.prev() < joy_timeout_; }
 
   // New barometer reading

@@ -5,7 +5,6 @@ sensor_msgs::msg::CameraInfo make_camera_info();
 geometry_msgs::msg::Pose make_cam_f_base();
 
 bool test_mw_pose_segment();
-bool test_mw_polar_segment();
 bool test_mw_roundtrip();
 bool test_mw_observer();
 bool test_mw_header();

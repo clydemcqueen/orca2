@@ -94,7 +94,7 @@ namespace mw
       return std::abs(z() - that.z());
     }
 
-    Point move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    Point motion(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
     {
       auto dt = d.seconds();
       return Point{x() + v0.x() * dt + 0.5 * a.x() * dt * dt,

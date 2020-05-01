@@ -94,8 +94,11 @@ namespace gazebo
   public:
 
     // Called once when the plugin is loaded.
-    void Load(physics::ModelPtr model, sdf::ElementPtr sdf)
+    void Load(physics::ModelPtr model, sdf::ElementPtr sdf) override
     {
+      (void) control_sub_;
+      (void) update_connection_;
+
       // Get the GazeboROS node
       node_ = gazebo_ros::Node::Get(sdf);
 
@@ -181,8 +184,8 @@ namespace gazebo
     // Stop thrusters
     void AllStop()
     {
-      for (int i = 0; i < thrusters_.size(); ++i) {
-        thrusters_[i].effort = 0;
+      for (auto &thruster : thrusters_) {
+        thruster.effort = 0;
       }
     }
 
@@ -214,7 +217,7 @@ namespace gazebo
         driver_pub_->publish(driver_msg_);
       }
 
-      for (Thruster t : thrusters_) {
+      for (const Thruster &t : thrusters_) {
         // Default thruster force points directly up
         ignition::math::Vector3d force = {0.0, 0.0, t.effort * (t.effort < 0 ? t.neg_force : t.pos_force)};
 

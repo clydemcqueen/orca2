@@ -77,7 +77,7 @@ namespace mw
       return std::abs(orca::norm_angle(yaw() - that.yaw()));
     }
 
-    Quaternion move(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
+    Quaternion motion(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
     {
       auto dt = d.seconds();
       return Quaternion{roll_, pitch_, orca::norm_angle(yaw_ + v0.yaw() * dt + 0.5 * a.yaw() * dt * dt)};

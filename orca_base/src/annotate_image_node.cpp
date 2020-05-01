@@ -164,6 +164,9 @@ std::cout << msg << " " << std::chrono::duration_cast<std::chrono::microseconds>
 
     explicit AnnotateNode() : Node{"annotate_image_node"}
     {
+      (void) control_sub_;
+      (void) image_sub_;
+
       // Subscribe
       control_sub_ = create_subscription<orca_msgs::msg::Control>(
         "/control", QUEUE_SIZE, [this](const orca_msgs::msg::Control::SharedPtr msg) -> void
@@ -200,6 +203,7 @@ int main(int argc, char **argv)
 
   // Set logger level
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) result;
 
   // Spin node
   rclcpp::spin(node);

@@ -2,7 +2,6 @@
 #define ORCA_BASE_AUV_NODE_HPP
 
 #include "image_geometry/pinhole_camera_model.h"
-#include "tf2_msgs/msg/tf_message.hpp"
 
 #include "orca_description/parser.hpp"
 #include "orca_msgs/msg/control.hpp"
@@ -103,7 +102,6 @@ namespace orca_base
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr esimated_path_pub_;             // Actual path
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr planned_pose_pub_;  // Planned pose
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr target_path_pub_;               // Planned path
-    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
     using MissionAction = orca_msgs::action::Mission;
     using MissionHandle = rclcpp_action::ServerGoalHandle<MissionAction>;

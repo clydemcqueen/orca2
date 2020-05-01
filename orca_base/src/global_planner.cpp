@@ -36,7 +36,6 @@ namespace orca_base
 
   void GlobalPlanner::create_pose_planner(const mw::PoseStamped &start)
   {
-    int foo = state_.target_idx();
     auto keep_station = state_.target_idx() == targets_.size() - 1 ? keep_station_ : false;
     local_planner_ = std::make_shared<PosePlanner>(logger_, cxt_, start, targets_[state_.target_idx()], map_,
                                                    keep_station, state_);
@@ -78,7 +77,7 @@ namespace orca_base
   }
 
   int GlobalPlanner::advance(const rclcpp::Duration &d, const mw::FiducialPoseStamped &estimate, mw::Efforts &efforts,
-                             const std::function<void(double completed, double total)> &send_feedback)
+                             const std::function<void(double, double)> &send_feedback)
   {
     // Create a local planner if necessary
     if (!local_planner_ && !create_local_planner(estimate)) {
@@ -159,6 +158,7 @@ namespace orca_base
                               bool repeat, bool keep_station)
   {
     // TODO repeat
+    (void) repeat;
 
     std::vector<mw::Target> targets{};
 
@@ -200,6 +200,7 @@ namespace orca_base
                             bool random, bool repeat, bool keep_station)
   {
     // TODO repeat
+    (void) repeat;
 
     std::vector<mw::Target> targets{};
 

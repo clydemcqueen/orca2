@@ -16,7 +16,7 @@ bool test_mw_move()
   mw::Twist v0{1, 0, 0, 0};
   mw::Acceleration a{0, 1, 0, 0};
 
-  auto p1 = p0.move(d, v0, a);
+  auto p1 = p0.motion(d, v0, a);
 
   std::cout << "p0 " << p0 << ", p1 " << p1 << std::endl;
 
@@ -100,16 +100,6 @@ bool test_mw_pose_segment()
     plan.pose().orientation().yaw(plan.pose().orientation().yaw() + yaw_distance / num_iter);
     std::cout << plan.pose() << std::endl;
   }
-
-  std::cout << "success" << std::endl;
-  return true;
-}
-
-bool test_mw_polar_segment()
-{
-  std::cout << "=== TEST POLAR SEGMENT ===" << std::endl;
-
-  // TODO
 
   std::cout << "success" << std::endl;
   return true;

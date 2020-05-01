@@ -19,14 +19,14 @@ namespace maestro
   }
 
   // Open the virtual serial port, return true if successful
-  bool Maestro::connect(std::string port)
+  bool Maestro::connect(const std::string &port)
   {
     fd_ = open(port.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ == -1) {
       // Likely causes of failure: (a) we're not root, (b) wrong port
       return false;
     } else {
-      struct termios port_settings;
+      struct termios port_settings{};
       tcgetattr(fd_, &port_settings);
       port_settings.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
       port_settings.c_oflag &= ~(ONLCR | OCRNL);
@@ -44,7 +44,7 @@ namespace maestro
   }
 
   // Return true if the port is open
-  bool Maestro::ready()
+  bool Maestro::ready() const
   {
     return fd_ != -1;
   }
@@ -119,13 +119,13 @@ namespace maestro
   }
 
   // Write bytes to the serial port, return true if successful
-  bool Maestro::writeBytes(const uint8_t *bytes, ssize_t size)
+  bool Maestro::writeBytes(const uint8_t *bytes, ssize_t size) const
   {
     return ready() && write(fd_, bytes, size) == size;
   }
 
   // Read bytes from the serial port, return true if successful
-  bool Maestro::readBytes(uint8_t *bytes, ssize_t size)
+  bool Maestro::readBytes(uint8_t *bytes, ssize_t size) const
   {
     return ready() && read(fd_, bytes, size) == size;
   }
