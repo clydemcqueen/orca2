@@ -5,7 +5,8 @@ Description=Orca ROS driver
 Type=forking
 User=ubuntu
 SupplementaryGroups=dialout
-SupplementaryGroups=leds
+# Required for LED access on the UP board, won't work on Raspberry Pi:
+# SupplementaryGroups=leds
 SupplementaryGroups=i2c
 SupplementaryGroups=gpio
 ExecStart=/home/ubuntu/ros2/orca_ws/install/orca_driver/lib/orca_driver/start_driver.sh
