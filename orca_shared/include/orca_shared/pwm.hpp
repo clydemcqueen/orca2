@@ -62,15 +62,7 @@ namespace orca
   constexpr uint16_t THRUST_DZ_PWM = 0;  // ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
   constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
 
-  uint16_t effort_to_pwm(const double effort)
-  {
-    return orca::clamp(
-      static_cast<uint16_t>(orca_msgs::msg::Control::THRUST_STOP +
-                            (effort > THRUST_STOP ? THRUST_DZ_PWM : (effort < THRUST_STOP ? -THRUST_DZ_PWM : 0)) +
-                            std::round(effort * THRUST_RANGE_PWM)),
-      orca_msgs::msg::Control::THRUST_FULL_REV,
-      orca_msgs::msg::Control::THRUST_FULL_FWD);
-  }
+  uint16_t effort_to_pwm(const double effort);
 
   constexpr double pwm_to_effort(const uint16_t pwm)
   {
@@ -80,6 +72,6 @@ namespace orca
               (pwm < orca_msgs::msg::Control::THRUST_STOP ? THRUST_DZ_PWM : 0))) / THRUST_RANGE_PWM;
   }
 
-} // namespace orca_base
+} // namespace orca
 
 #endif // ORCA_BASE_PWM_HPP

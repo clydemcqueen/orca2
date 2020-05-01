@@ -26,6 +26,8 @@ endif ()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
+find_package(fiducial_vlam_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
 
@@ -34,15 +36,17 @@ rosidl_generate_interfaces(
   orca_msgs
   action/Mission.action
   msg/Barometer.msg
-  msg/Battery.msg
   msg/Control.msg
   msg/Depth.msg
+  msg/Driver.msg
   msg/Efforts.msg
-  msg/Leak.msg
-  msg/Proc.msg
-  msg/Pose.msg
-  msg/PoseStamped.msg
-  DEPENDENCIES std_msgs
+  msg/FiducialPose.msg
+  msg/FiducialPoseStamped.msg
+  msg/MissionState.msg
+  msg/Observations.msg
+  msg/Observer.msg
+  msg/PolarObservation.msg
+  DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

@@ -3,7 +3,7 @@
 <package format="3">
 
     <name>orca_base</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <description>Orca controller</description>
 
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
@@ -16,9 +16,12 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
+    <depend>cv_bridge</depend>
     <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
+    <depend>image_geometry</depend>
     <depend>nav_msgs</depend>
+    <depend>orca_description</depend>
     <depend>orca_msgs</depend>
     <depend>orca_shared</depend>
     <depend>rclcpp</depend>
@@ -29,7 +32,6 @@
     <depend>tf2</depend>
     <depend>tf2_ros</depend>
     <depend>ukf</depend>
-    <depend>urdf</depend>
     <depend>visualization_msgs</depend>
 
     <export>

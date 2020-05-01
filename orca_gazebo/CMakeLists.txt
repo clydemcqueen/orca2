@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 project(orca_gazebo)
 
+# Default to C99
+if (NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif ()
+
 # Default to C++14
 if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
@@ -31,7 +36,28 @@ include_directories(
   include
 )
 
+#=============
+# Run build_world.py to generate .yaml (vlam maps) and .world files
+# Use simple.world as the marker file, if this is stale, re-run build_world.py
+#=============
+
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/worlds")
+
+set(MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/worlds/simple.world")
+
+add_custom_command(
+  OUTPUT ${MARKER_FILE}
+  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_world.py" "worlds"
+  DEPENDS scripts/build_world.py
+  COMMENT "Generate vlam maps and world files"
+  VERBATIM
+)
+
+add_custom_target(generate_maps_and_worlds ALL DEPENDS ${MARKER_FILE})
+
+#=============
 # Create plugins (shared libraries) and executables
+#=============
 
 add_library(OrcaBarometerPlugin SHARED src/barometer_plugin.cpp)
 ament_target_dependencies(
@@ -108,9 +134,15 @@ install(
   RUNTIME DESTINATION bin
 )
 
-## Install various directories
+## Install launch directory
 install(
-  DIRECTORY launch worlds
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+## Install worlds directory
+install(
+  DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/worlds"
   DESTINATION share/${PROJECT_NAME}
 )
 

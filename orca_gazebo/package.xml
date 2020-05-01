@@ -3,7 +3,7 @@
 <package format="3">
 
     <name>orca_gazebo</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <description>Orca simulation environment</description>
 
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
@@ -20,6 +20,7 @@
     <depend>gazebo_dev</depend>
     <depend>gazebo_ros</depend>
     <depend>geometry_msgs</depend>
+    <depend>orca_description</depend>
     <depend>orca_msgs</depend>
     <depend>orca_shared</depend>
     <depend>rclcpp</depend>

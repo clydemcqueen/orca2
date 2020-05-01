@@ -19,7 +19,9 @@ find_package(ament_cmake REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(orca_description REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(orca_shared REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -30,7 +32,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(ukf REQUIRED)
-find_package(urdf REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 # Package includes not needed for CMake >= 2.8.11
@@ -39,30 +40,73 @@ include_directories(
 )
 
 #=============
+# Depth node
+#=============
+
+add_executable(
+  depth_node
+  src/depth_node.cpp
+)
+
+ament_target_dependencies(
+  depth_node
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+)
+
+#=============
+# Fiducial pose node
+#=============
+
+add_executable(
+  fp_node
+  src/fp_node.cpp
+)
+
+ament_target_dependencies(
+  fp_node
+  fiducial_vlam_msgs
+  geometry_msgs
+  image_geometry
+  orca_description
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+  tf2
+  tf2_ros
+)
+
+#=============
 # Filter node
 #=============
 
 add_executable(
   filter_node
+  src/depth_filter.cpp
   src/filter_node.cpp
   src/filter_base.cpp
-  src/depth_filter.cpp
   src/four_filter.cpp
+  src/measurement.cpp
   src/pose_filter.cpp
 )
 
 ament_target_dependencies(
   filter_node
+  fiducial_vlam_msgs
+  geometry_msgs
+  image_geometry
+  nav_msgs
+  orca_description
   orca_msgs
   orca_shared
-  geometry_msgs
-  nav_msgs
   rclcpp
   ros2_shared
   tf2
   tf2_ros
   ukf
-  urdf
 )
 
 #=============
@@ -70,6 +114,6 @@ ament_target_dependencies(
 #=============
 
 # Install C++ targets
-install(TARGETS filter_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

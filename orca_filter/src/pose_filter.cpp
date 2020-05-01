@@ -1,12 +1,10 @@
 #include "orca_filter/filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
+#include "geometry_msgs/msg/twist.hpp"
 #include "orca_shared/model.hpp"
 #include "orca_shared/util.hpp"
-
-using namespace orca;
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_filter
 {
@@ -46,12 +44,10 @@ namespace orca_filter
     px_y = pose.position.y;
     px_z = pose.position.z;
 
-    double roll, pitch, yaw;
-    get_rpy(pose.orientation, roll, pitch, yaw);
-
-    px_roll = roll;
-    px_pitch = pitch;
-    px_yaw = yaw;
+    mw::Quaternion q{pose.orientation};
+    px_roll = q.roll();
+    px_pitch = q.pitch();
+    px_yaw = q.yaw();
 
     return x;
   }
@@ -110,9 +106,9 @@ namespace orca_filter
     Eigen::VectorXd residual = x - mean;
 
     // Normalize roll, pitch and yaw
-    residual(3) = norm_angle(residual(3));
-    residual(4) = norm_angle(residual(4));
-    residual(5) = norm_angle(residual(5));
+    residual(3) = orca::norm_angle(residual(3));
+    residual(4) = orca::norm_angle(residual(4));
+    residual(5) = orca::norm_angle(residual(5));
 
     return residual;
   }
@@ -150,8 +146,11 @@ namespace orca_filter
     return mean;
   }
 
-  PoseFilter::PoseFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
-    FilterBase{logger, cxt, POSE_STATE_DIM}
+  PoseFilter::PoseFilter(const rclcpp::Logger &logger,
+                         const FilterContext &cxt,
+                         rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+                         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
+    FilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(POSE_STATE_DIM, POSE_STATE_DIM) * 0.01);
 
@@ -180,8 +179,8 @@ namespace orca_filter
             // Add acceleration due to drag
             // TODO create & use AddLinkForce(drag_force, c_of_mass) and AddRelativeTorque(drag_torque)
             // Simple approximation:
-            px_ax += cxt.model_.drag_accel_x(px_vx);
-            px_ay += cxt.model_.drag_accel_y(px_vy);
+            px_ax += cxt.model_.drag_accel_f(px_vx);  // TODO f or x?
+            px_ay += cxt.model_.drag_accel_s(px_vy);  // TODO s or y?
             px_az += cxt.model_.drag_accel_z(px_vz);
             px_aroll += cxt.model_.drag_accel_yaw(px_vroll);
             px_apitch += cxt.model_.drag_accel_yaw(px_vpitch);
@@ -199,12 +198,12 @@ namespace orca_filter
         }
 
         // Clamp acceleration
-        px_ax = clamp(px_ax, MAX_PREDICTED_ACCEL_XYZ);
-        px_ay = clamp(px_ay, MAX_PREDICTED_ACCEL_XYZ);
-        px_az = clamp(px_az, MAX_PREDICTED_ACCEL_XYZ);
-        px_aroll = clamp(px_aroll, MAX_PREDICTED_ACCEL_RPY);
-        px_apitch = clamp(px_apitch, MAX_PREDICTED_ACCEL_RPY);
-        px_ayaw = clamp(px_ayaw, MAX_PREDICTED_ACCEL_RPY);
+        px_ax = orca::clamp(px_ax, MAX_PREDICTED_ACCEL_XYZ);
+        px_ay = orca::clamp(px_ay, MAX_PREDICTED_ACCEL_XYZ);
+        px_az = orca::clamp(px_az, MAX_PREDICTED_ACCEL_XYZ);
+        px_aroll = orca::clamp(px_aroll, MAX_PREDICTED_ACCEL_RPY);
+        px_apitch = orca::clamp(px_apitch, MAX_PREDICTED_ACCEL_RPY);
+        px_ayaw = orca::clamp(px_ayaw, MAX_PREDICTED_ACCEL_RPY);
 
         // Velocity, vx += ax * dt
         px_vx += px_ax * dt;
@@ -215,20 +214,20 @@ namespace orca_filter
         px_vyaw += px_ayaw * dt;
 
         // Clamp velocity
-        px_vx = clamp(px_vx, MAX_PREDICTED_VELO_XYZ);
-        px_vy = clamp(px_vy, MAX_PREDICTED_VELO_XYZ);
-        px_vz = clamp(px_vz, MAX_PREDICTED_VELO_XYZ);
-        px_vroll = clamp(px_vroll, MAX_PREDICTED_VELO_RPY);
-        px_vpitch = clamp(px_vpitch, MAX_PREDICTED_VELO_RPY);
-        px_vyaw = clamp(px_vyaw, MAX_PREDICTED_VELO_RPY);
+        px_vx = orca::clamp(px_vx, MAX_PREDICTED_VELO_XYZ);
+        px_vy = orca::clamp(px_vy, MAX_PREDICTED_VELO_XYZ);
+        px_vz = orca::clamp(px_vz, MAX_PREDICTED_VELO_XYZ);
+        px_vroll = orca::clamp(px_vroll, MAX_PREDICTED_VELO_RPY);
+        px_vpitch = orca::clamp(px_vpitch, MAX_PREDICTED_VELO_RPY);
+        px_vyaw = orca::clamp(px_vyaw, MAX_PREDICTED_VELO_RPY);
 
         // Position, x += vx * dt
         px_x += px_vx * dt;
         px_y += px_vy * dt;
         px_z += px_vz * dt;
-        px_roll = norm_angle(px_roll + px_vroll * dt);
-        px_pitch = norm_angle(px_pitch + px_vpitch * dt);
-        px_yaw = norm_angle(px_yaw + px_vyaw * dt);
+        px_roll = orca::norm_angle(px_roll + px_vroll * dt);
+        px_pitch = orca::norm_angle(px_pitch + px_vpitch * dt);
+        px_yaw = orca::norm_angle(px_yaw + px_vyaw * dt);
       });
 
     // Custom residual and mean functions
@@ -241,28 +240,30 @@ namespace orca_filter
     FilterBase::reset(pose_to_px(pose));
   }
 
-  void PoseFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
+  void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPose &filtered_odom)
   {
     pose_from_px(filter_.x(), filtered_odom.pose.pose);
-    twist_from_px(filter_.x(), filtered_odom.twist.twist);
+    // twist_from_px(filter_.x(), filtered_odom.twist.twist);
     flatten_6x6_covar(filter_.P(), filtered_odom.pose.covariance, 0);
-    flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
+    // flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
   }
 
-  Measurement PoseFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
+  Measurement PoseFilter::to_measurement(const orca_msgs::msg::Depth &depth,
+                                         const mw::Observations &observations) const
   {
     Measurement m;
-    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_z(depth, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = px_z;
     });
     return m;
   }
 
-  Measurement PoseFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
+  Measurement PoseFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                                         const mw::Observations &observations) const
   {
     Measurement m;
-    m.init_6dof(pose, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_6dof(pose, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = px_x;
       z(1) = px_y;

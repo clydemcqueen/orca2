@@ -35,6 +35,7 @@ namespace gazebo
   constexpr double GYRO_STDDEV = 0.02 * (M_PI / 180.0);
   constexpr double MAG_STDDEV = 0.095 * (M_PI / 180.0);
   constexpr double ORIENTATION_STDDEV = MAG_STDDEV; // Temporary hack
+  constexpr int QUEUE_SIZE = 10;
 
   const std::string IMU_TOPIC = "/imu/data";
 
@@ -58,13 +59,13 @@ namespace gazebo
   public:
 
     // Called once when the plugin is loaded.
-    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf)
+    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf) override
     {
       // Get the GazeboROS node
       node_ = gazebo_ros::Node::Get(sdf);
 
       // Prepare to publish
-      imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(IMU_TOPIC, 1);
+      imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(IMU_TOPIC, QUEUE_SIZE);
       imu_msg_.header.frame_id = "base_link";
       imu_msg_.linear_acceleration_covariance[0] = ACCEL_STDDEV * ACCEL_STDDEV;
       imu_msg_.linear_acceleration_covariance[4] = ACCEL_STDDEV * ACCEL_STDDEV;

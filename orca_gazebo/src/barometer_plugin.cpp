@@ -30,11 +30,17 @@
 namespace gazebo
 {
 
-  constexpr double FRESHWATER_DENSITY = 997;
+  constexpr double FRESHWATER_DENSITY = 997;          // Default water density
+  constexpr double ATMOSPHERIC_PRESSURE = 101300;     // Default air pressure at the surface of the water
+  constexpr int QUEUE_SIZE = 10;
 
   class OrcaBarometerPlugin : public SensorPlugin
   {
-    const rclcpp::Time IN_WATER{RCL_S_TO_NS(1), RCL_ROS_TIME};  // Simulate barometer "in air" for 1s
+    // Simulate the barometer "in air" for a few seconds
+    // This gives auv_node time to calibrate the barometer
+    rclcpp::Time in_air_start_time_;
+    const rclcpp::Duration TIME_IN_AIR{RCL_S_TO_NS(2)};
+    bool in_air_{true};
 
     // Our parent sensor is an altimeter
     sensors::AltimeterSensorPtr altimeter_;
@@ -52,14 +58,16 @@ namespace gazebo
     orca::Model orca_model_;
 
     // Normal distribution
-    std::default_random_engine generator_;
-    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
+//    std::default_random_engine generator_;
+//    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
 
   public:
 
     // Called once when the plugin is loaded.
-    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf)
+    void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf) override
     {
+      (void) update_connection_;
+
       GZ_ASSERT(sensor != nullptr, "Sensor is null");
       GZ_ASSERT(sdf != nullptr, "SDF is null");
 
@@ -74,7 +82,7 @@ namespace gazebo
         baro_topic = sdf->GetElement("baro_topic")->Get<std::string>();
       }
       RCLCPP_INFO(node_->get_logger(), "baro topic: %s", baro_topic.c_str());
-      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, 1);
+      baro_pub_ = node_->create_publisher<orca_msgs::msg::Barometer>(baro_topic, QUEUE_SIZE);
 
       if (sdf->HasElement("fluid_density")) {
         fluid_density = sdf->GetElement("fluid_density")->Get<double>();
@@ -119,23 +127,43 @@ namespace gazebo
       auto t = std::chrono::high_resolution_clock::now();
       rclcpp::Time msg_time{t.time_since_epoch().count(), RCL_ROS_TIME};
 
-      // TODO pull these from the URDF
-      static const double z_top_to_baro_link = -0.05;
-      static const double z_baro_link_to_base_link = -0.085;
+      // TODO get from urdf or tf tree
+      static const double baro_link_to_base_link_z = -0.05;
 
       if (node_->count_subscribers(baro_pub_->get_topic_name()) > 0) {
         orca_msgs::msg::Barometer baro_msg;
         baro_msg.header.frame_id = "map";
         baro_msg.header.stamp = msg_time;
 
-        // The altimeter sensor zeros out when it starts, so it must start at (0, 0, 0).
-        double z = altimeter_->Altitude() + distribution_(generator_) - z_baro_link_to_base_link;
+        // Start the "in air" time
+        if (in_air_start_time_.nanoseconds() == 0) {
+          in_air_start_time_ = msg_time;
+          std::cout << "barometer is in air" << std::endl;
+        }
 
-        if (msg_time > IN_WATER && z < 0.0) {
-          baro_msg.pressure = orca_model_.z_to_pressure(z); // Pascals
+        // Move to the water after a few seconds
+        if (in_air_ && msg_time > (in_air_start_time_ + TIME_IN_AIR)) {
+          in_air_ = false;
+          std::cout << "barometer is in water" << std::endl;
+        }
+
+        /************************************************
+         * A bit tricky...
+         *
+         * The model is injected at {0, 0, 0}, which means base_link is {0, 0, 0}.
+         * The altimeter will calibrate right away, but since baro_link is 5cm higher than base_link,
+         * calls to Altitude() will be too low by 5cm. Compensate.
+         */
+
+        // TODO re-enable noise
+        double baro_link_z = altimeter_->Altitude() /* + distribution_(generator_) */ - baro_link_to_base_link_z;
+//        std::cout << "Altitude() " << altimeter_->Altitude() << "baro_link_z " << baro_link_z << std::endl;
+
+        if (!in_air_ && baro_link_z < 0.0) {
+          baro_msg.pressure = orca_model_.z_to_pressure(ATMOSPHERIC_PRESSURE, baro_link_z); // Pascals
           baro_msg.temperature = 10; // Celsius
         } else {
-          baro_msg.pressure = orca::Model::ATMOSPHERIC_PRESSURE;
+          baro_msg.pressure = ATMOSPHERIC_PRESSURE;
           baro_msg.temperature = 20;
         }
 

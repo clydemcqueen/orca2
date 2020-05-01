@@ -2,12 +2,19 @@
 
 <robot name="orca" xmlns:xacro="http://ros.org/wiki/xacro">
 
-    <!-- Orca constants -->
+    <!--
+        Orca constants
+
+        Flight dynamics are hugely driven by these 3 constants, all in the body frame:
+            {x, y, THRUSTER_Z}: where forward/back/strafe/yaw thrust forces are applied
+            {0, 0, MASS_Z}: where the linear and angular drag force is applied
+            {0, 0, VOLUME_Z}: where the buoyancy force is applied
+     -->
     <xacro:property name="TOTAL_MASS" value="9.75"/>  <!-- 9.75 floats in freshwater, 10.0 for seawater -->
     <xacro:property name="TOTAL_VOLUME" value="0.01"/>
     <xacro:property name="LENGTH" value="0.457"/>
     <xacro:property name="WIDTH" value="0.338"/>
-    <xacro:property name="HEIGHT" value="0.254"/>
+    <xacro:property name="HEIGHT" value="0.25"/>
     <xacro:property name="IXX" value="${TOTAL_MASS / 12 * (WIDTH * WIDTH + HEIGHT * HEIGHT)}"/>
     <xacro:property name="IYY" value="${TOTAL_MASS / 12 * (LENGTH * LENGTH + HEIGHT * HEIGHT)}"/>
     <xacro:property name="IZZ" value="${TOTAL_MASS / 12 * (LENGTH * LENGTH + WIDTH * WIDTH)}"/>
@@ -20,6 +27,7 @@
     <xacro:property name="VERT_THRUSTER_Y" value="0.105"/>
     <xacro:property name="VERT_THRUSTER_Z" value="0.09"/>
     <xacro:property name="MASS_Z" value="0.011"/>
+    <xacro:property name="VOLUME_Z" value="0.06"/>
     <xacro:property name="FORWARD_FORCE" value="50"/>
     <xacro:property name="REVERSE_FORCE" value="40"/>
     <xacro:property name="HAS_TETHER" default="false"/>
@@ -176,10 +184,10 @@
         </collision>
     </link>
 
-    <!-- Barometer link TODO /tf too low -->
+    <!-- Barometer link -->
     <link name="baro_link">
         <visual>
-            <origin xyz="0 0 0.05" rpy="0 ${PI/2} 0"/>
+            <origin xyz="0 0 0" rpy="0 ${PI/2} 0"/>
             <geometry>
                 <cylinder length="0.01" radius="0.01"/>
             </geometry>
@@ -189,7 +197,7 @@
 
     <!-- Attach baro_link to base_link -->
     <joint name="baro_joint" type="fixed">
-        <origin xyz="-0.16 0 0" rpy="0 0 0"/>
+        <origin xyz="-0.16 0 0.05" rpy="0 0 0"/>
         <parent link="base_link"/>
         <child link="baro_link"/>
     </joint>
@@ -310,7 +318,7 @@
         <plugin name="OrcaBuoyancyPlugin" filename="libOrcaBuoyancyPlugin.so">
             <fluid_density>${FLUID_DENSITY}</fluid_density>
             <link name="base_link">
-                <center_of_volume>0 0 0.06</center_of_volume>
+                <center_of_volume>0 0 ${VOLUME_Z}</center_of_volume>
                 <volume>${TOTAL_VOLUME}</volume>
             </link>
         </plugin>
@@ -323,10 +331,8 @@
         <plugin name="OrcaDragPlugin" filename="libOrcaDragPlugin.so">
             <link name="base_link">
                 <center_of_mass>0 0 ${MASS_Z}</center_of_mass>
-                <tether_attach>-0.25 0 ${THRUSTER_Z}</tether_attach>
-                <xacro:unless value="${HAS_TETHER}">
-                    <tether_drag>0</tether_drag>
-                </xacro:unless>
+                <center_of_volume>0 0 ${VOLUME_Z}</center_of_volume>
+                <angular_drag>4 4 4</angular_drag>
             </link>
         </plugin>
     </gazebo>
@@ -376,7 +382,7 @@
     -->
     <gazebo reference="baro_link">
         <sensor name="barometer_sensor" type="altimeter">
-            <update_rate>10</update_rate> <!-- Match orca_driver rate -->
+            <update_rate>24</update_rate> <!-- Match measured barometer_node rate -->
             <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
                 <fluid_density>${FLUID_DENSITY}</fluid_density>
             </plugin>
@@ -386,14 +392,14 @@
     <!--
       The OrcaIMUPlugin (wraps a Gazebo IMU sensor) simulates an IMU sensor such as the Phidgets 1044.
     -->
-    <gazebo reference="base_link">
-        <gravity>true</gravity>
-        <sensor name="imu_sensor" type="imu">
-            <update_rate>50</update_rate> <!-- Gazebeo max seems to be 50Hz -->
-            <plugin name="OrcaIMUPlugin" filename="libOrcaIMUPlugin.so"/>
-            <pose>0 0 0 0 0 0</pose>
-        </sensor>
-    </gazebo>
+<!--    <gazebo reference="base_link">-->
+<!--        <gravity>true</gravity>-->
+<!--        <sensor name="imu_sensor" type="imu">-->
+<!--            <update_rate>50</update_rate> &lt;!&ndash; Gazebeo max seems to be 50Hz &ndash;&gt;-->
+<!--            <plugin name="OrcaIMUPlugin" filename="libOrcaIMUPlugin.so"/>-->
+<!--            <pose>0 0 0 0 0 0</pose>-->
+<!--        </sensor>-->
+<!--    </gazebo>-->
 
     <!--
     The camera_controller plugin (wraps a Gazebo camera sensor) simulates a camera driver.
@@ -442,13 +448,13 @@
     </xacro:macro>
 
     <!-- Forward-facing camera: -->
-<!--    <xacro:camera_plugin prefix="forward"/>-->
+    <xacro:camera_plugin prefix="forward" width="800" height="600" horizontal_fov="1.4"/>
 
     <!-- Left down-facing camera: -->
-    <xacro:camera_plugin prefix="left" width="800" height="600" horizontal_fov="1.4"/>
+<!--    <xacro:camera_plugin prefix="left" width="800" height="600" horizontal_fov="1.4"/>-->
 
     <!-- Right down-facing camera: -->
-    <xacro:camera_plugin prefix="right" width="800" height="600" horizontal_fov="1.4"/>
+<!--    <xacro:camera_plugin prefix="right" width="800" height="600" horizontal_fov="1.4"/>-->
 
     <gazebo>
         <plugin name="p3d_test" filename="libgazebo_ros_p3d.so">

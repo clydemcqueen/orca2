@@ -12,23 +12,17 @@ from typing import List
 
 import matplotlib
 import matplotlib.pyplot as plt
-import nees
 import numpy as np
 import rclpy
-import transformations as xf
-from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 from orca_msgs.msg import Depth
 from rclpy.node import Node
 
+import nees
+from orca_util import seconds, q_to_rpy
+
 QUEUE_FOR = 10.0  # Seconds
-
-
-def q_to_rpy(q):
-    m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
-    rpy = xf.euler_from_matrix(m)
-    return rpy
 
 
 def diag_index(dim):
@@ -96,10 +90,6 @@ def plot_subplot(subplot, name,
         subplot.set_title('{}, no stats'.format(name))
 
 
-def seconds(stamp: Time) -> float:
-    return float(stamp.sec) + float(stamp.nanosec) / 1e9
-
-
 class PlotFilterNode(Node):
 
     def __init__(self):
@@ -116,9 +106,9 @@ class PlotFilterNode(Node):
 
         if plot_baro:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
-        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/fcam_f_base', self.pre_callback, 5)
-        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/lcam_f_base', self.pre_callback, 5)
-        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/rcam_f_base', self.pre_callback, 5)
+        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_fcam_f_base', self.pre_callback, 5)
+        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_lcam_f_base', self.pre_callback, 5)
+        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_rcam_f_base', self.pre_callback, 5)
         self._post_sub = self.create_subscription(Odometry, '/odom', self.post_callback, 5)
         if plot_gt:
             self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_callback, 5)
@@ -182,10 +172,10 @@ class PlotFilterNode(Node):
               (axproll, axppitch, axpyaw), (axtroll, axtpitch, axtyaw)) = plt.subplots(4, 3)
 
         # Build lists of items to plot
-        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]
-        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]
-        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]
-        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]
+        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
+        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]  # Pre-filter pose messages
+        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]  # Pose-filter pose messages
+        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]  # Ground truth messages
 
         subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
         names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']

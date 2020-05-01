@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 
+#include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "rclcpp/time.hpp"
 #include "sensor_msgs/msg/joy.hpp"
@@ -93,6 +94,10 @@ namespace orca
   // True if a rclcpp::Time is valid (non-zero)
   bool valid_stamp(const rclcpp::Time &stamp);
 
-} // namespace orca_shared
+  tf2::Transform pose_to_transform(const geometry_msgs::msg::Pose &pose);
+
+  geometry_msgs::msg::Pose transform_to_pose(const tf2::Transform &transform);
+
+} // namespace orca
 
 #endif // ORCA_SHARED_UTIL_HPP

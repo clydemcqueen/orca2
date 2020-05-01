@@ -1,11 +1,9 @@
 #include "orca_filter/filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-
+#include "geometry_msgs/msg/twist.hpp"
 #include "orca_shared/util.hpp"
-
-using namespace orca;
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_filter
 {
@@ -64,8 +62,11 @@ namespace orca_filter
     flatten_6x6_covar(m, pose_covar, 0);
   }
 
-  DepthFilter::DepthFilter(const rclcpp::Logger &logger, const FilterContext &cxt) :
-    FilterBase{logger, cxt, DEPTH_STATE_DIM}
+  DepthFilter::DepthFilter(const rclcpp::Logger &logger,
+                           const FilterContext &cxt,
+                           rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+                           rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub) :
+    FilterBase{Type::depth, logger, cxt, filtered_odom_pub, tf_pub, DEPTH_STATE_DIM}
   {
     filter_.set_Q(Eigen::MatrixXd::Identity(DEPTH_STATE_DIM, DEPTH_STATE_DIM) * 0.01);
 
@@ -98,13 +99,13 @@ namespace orca_filter
         }
 
         // Clamp acceleration
-        dx_az = clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
+        dx_az = orca::clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
 
         // Velocity, vx += ax * dt
         dx_vz += dx_az * dt;
 
         // Clamp velocity
-        dx_vz = clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
+        dx_vz = orca::clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
 
         // Position, x += vx * dt
         dx_z += dx_vz * dt;
@@ -116,25 +117,27 @@ namespace orca_filter
     FilterBase::reset(pose_to_dx(pose));
   }
 
-  void DepthFilter::odom_from_filter(nav_msgs::msg::Odometry &filtered_odom)
+  void DepthFilter::odom_from_filter(orca_msgs::msg::FiducialPose &filtered_odom)
   {
     pose_from_dx(filter_.x(), filtered_odom.pose.pose);
-    twist_from_dx(filter_.x(), filtered_odom.twist.twist);
+    // twist_from_dx(filter_.x(), filtered_odom.twist.twist);
     flatten_1x1_covar(filter_.P(), filtered_odom.pose.covariance, true);
-    flatten_1x1_covar(filter_.P(), filtered_odom.twist.covariance, false);
+    // flatten_1x1_covar(filter_.P(), filtered_odom.twist.covariance, false);
   }
 
-  Measurement DepthFilter::to_measurement(const orca_msgs::msg::Depth &depth) const
+  Measurement DepthFilter::to_measurement(const orca_msgs::msg::Depth &depth,
+                                          const mw::Observations &observations) const
   {
     Measurement m;
-    m.init_z(depth, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
+    m.init_z(depth, observations, [](const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> z)
     {
       z(0) = dx_z;
     });
     return m;
   }
 
-  Measurement DepthFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose) const
+  Measurement DepthFilter::to_measurement(const geometry_msgs::msg::PoseWithCovarianceStamped &pose,
+                                          const mw::Observations &observations) const
   {
     // Not supported
     assert(false);

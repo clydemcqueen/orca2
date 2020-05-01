@@ -1,174 +1,86 @@
 #include "orca_base/controller.hpp"
 
-using namespace orca;
+#include "orca_shared/util.hpp"
 
 namespace orca_base
 {
 
-  void SimpleController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                              const nav_msgs::msg::Odometry &estimate,
-                              const Acceleration &ff, Acceleration &u_bar)
+  PoseController::PoseController(const AUVContext &cxt) :
+    cxt_{cxt},
+    x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
+    y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
+    z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
+    yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_}
+  {}
+
+  void PoseController::calc(const rclcpp::Duration &d, const mw::FiducialPose &plan, const mw::FiducialPose &estimate,
+                            const mw::Acceleration &ff, mw::Efforts &efforts)
   {
-#define UNCERTAINTY_TEST
-#ifdef UNCERTAINTY_TEST
-    // Required for dead reckoning
+    auto dt = d.seconds();
 
-    u_bar = ff;
+    // Init u_bar to feedforward
+    auto u_bar = ff;
 
-    if (estimate.pose.covariance[0 * 7] < 1e4) {
-      x_controller_.set_target(plan.x);
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
+    // Trust x, y and yaw if the covar is low and we have a fairly close observation
+    if (estimate.good(cxt_.good_pose_dist_)) {
+      x_controller_.set_target(plan.pose().pose().x());
+      u_bar.x() = x_controller_.calc(estimate.pose().pose().x(), dt) + ff.x();
+
+      y_controller_.set_target(plan.pose().pose().y());
+      u_bar.y() = y_controller_.calc(estimate.pose().pose().y(), dt) + ff.y();
+
+      yaw_controller_.set_target(plan.pose().pose().yaw());
+      u_bar.yaw() = yaw_controller_.calc(estimate.pose().pose().yaw(), dt) + ff.yaw();
     }
 
-    if (estimate.pose.covariance[1 * 7] < 1e4) {
-      y_controller_.set_target(plan.y);
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
+    // Trust z if we're getting it from baro
+    if (estimate.pose().good1()) {
+      z_controller_.set_target(plan.pose().pose().z());
+      u_bar.z() = z_controller_.calc(estimate.pose().pose().z(), dt) + ff.z();
     }
 
-    if (estimate.pose.covariance[2 * 7] < 1e4) {
-      z_controller_.set_target(plan.z);
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
-    }
-
-    if (estimate.pose.covariance[5 * 7] < 1e4) {
-      yaw_controller_.set_target(plan.yaw);
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
-    }
-#else
-    // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
-
-    // Calculate response to the error
-    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
-    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
-    u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
-#endif
+    efforts = {cxt_.model_, plan.pose().pose().yaw(), u_bar};
   }
 
-  void DeadzoneController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                                const nav_msgs::msg::Odometry &estimate,
-                                const Acceleration &ff, Acceleration &u_bar)
+  ObservationController::ObservationController(const AUVContext &cxt) :
+    cxt_{cxt},
+    forward_controller_{false, cxt.mtm_fwd_pid_kp_, cxt.mtm_fwd_pid_ki_, cxt.mtm_fwd_pid_kd_},
+    vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_}, // Re-use auv_z
+    bearing_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_} // Re-use auv_yaw
+  {}
+
+  // Observations are in the camera_link frame, not the base_link frame
+  // This means that the sub is ~20cm further away than obs.distance, and obs.bearing is exaggerated
+  // In practice we can ignore this
+  void ObservationController::calc(const rclcpp::Duration &d, const mw::PolarObservation &plan, double plan_z,
+                                   const mw::PolarObservation &estimate, double estimate_z, const mw::AccelerationBody &ff,
+                                   mw::Efforts &efforts)
   {
-    // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
+    auto dt = d.seconds();
 
-    // Call PID controllers iff error is large enough
-    if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt) + ff.x;
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt) + ff.y;
-    } else {
-      u_bar.x = ff.x;
-      u_bar.y = ff.y;
+    // Init u_bar to feedforward
+    auto u_bar = ff;
+
+    // If we have a fairly close observation run the PID controllers
+    // Running the PID controllers from too far away causes a lot of jerk
+    // TODO estimate bearing and distance uncertainty and use these to attenuate the PID controllers
+    if (estimate.id() != mw::NOT_A_MARKER && estimate.distance() < 5 /* TODO param */) {
+      bearing_controller_.set_target(plan.bearing());
+      u_bar.yaw() = bearing_controller_.calc(estimate.bearing(), dt) + ff.yaw();
+
+      forward_controller_.set_target(plan.distance());
+      u_bar.forward() = -forward_controller_.calc(estimate.distance(), dt) + ff.forward();
     }
 
-    if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
-    } else {
-      u_bar.z = ff.z;
-    }
+    // Always run the vertical PID controller
+    vertical_controller_.set_target(plan_z);
+    u_bar.vertical() = vertical_controller_.calc(estimate_z, dt) + ff.vertical();
 
-    if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt) + ff.yaw;
-    } else {
-      u_bar.yaw = ff.yaw;
-    }
-  }
-
-  double limit(const double previous, const double next, const double dt, const double rate)
-  {
-    double diff = std::min(std::abs(next - previous), dt * rate);
-    return next - previous < 0 ? previous - diff : previous + diff;
-  }
-
-  void JerkController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const nav_msgs::msg::Odometry &estimate,
-                            const Acceleration &ff, Acceleration &u_bar)
-  {
-    // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
-
-    // Feedforward doesn't count toward the limit
-    u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
-    u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
-    u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
-
-    // Limit jerk
-    u_bar.x = limit(prev_u_bar_.x, u_bar.x, dt, cxt.auv_jerk_xy_);
-    u_bar.y = limit(prev_u_bar_.y, u_bar.y, dt, cxt.auv_jerk_xy_);
-    u_bar.z = limit(prev_u_bar_.z, u_bar.z, dt, cxt.auv_jerk_z_);
-    u_bar.yaw = limit(prev_u_bar_.yaw, u_bar.yaw, dt, cxt.auv_jerk_yaw_);
-
-    // Save u_bar for next time
-    prev_u_bar_ = u_bar;
-
-    // Now apply the feedforward
-    u_bar.add(ff);
-  }
-
-  void BestController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                            const nav_msgs::msg::Odometry &estimate,
-                            const Acceleration &ff, Acceleration &u_bar)
-  {
-    // Set targets
-    x_controller_.set_target(plan.x);
-    y_controller_.set_target(plan.y);
-    z_controller_.set_target(plan.z);
-    yaw_controller_.set_target(plan.yaw);
-
-    // Call PID controllers iff error is large enough
-    // Don't include feedforward
-    if (plan.distance_xy(estimate) > cxt.auv_epsilon_xy_) {
-      u_bar.x = x_controller_.calc(estimate.pose.pose.position.x, dt);
-      u_bar.y = y_controller_.calc(estimate.pose.pose.position.y, dt);
-    } else {
-      u_bar.x = 0;
-      u_bar.y = 0;
-    }
-
-    if (plan.distance_z(estimate) > cxt.auv_epsilon_z_) {
-      u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt);
-    } else {
-      u_bar.z = 0;
-    }
-
-    if (plan.distance_yaw(estimate) > cxt.auv_epsilon_yaw_) {
-      u_bar.yaw = yaw_controller_.calc(get_yaw(estimate.pose.pose.orientation), dt);
-    } else {
-      u_bar.yaw = 0;
-    }
-
-    // Limit jerk
-    u_bar.x = limit(prev_u_bar_.x, u_bar.x, dt, cxt.auv_jerk_xy_);
-    u_bar.y = limit(prev_u_bar_.y, u_bar.y, dt, cxt.auv_jerk_xy_);
-    u_bar.z = limit(prev_u_bar_.z, u_bar.z, dt, cxt.auv_jerk_z_);
-    u_bar.yaw = limit(prev_u_bar_.yaw, u_bar.yaw, dt, cxt.auv_jerk_yaw_);
-
-    // Save u_bar for next time
-    prev_u_bar_ = u_bar;
-
-    // Now apply the feedforward
-    u_bar.add(ff);
-  }
-
-  void DepthController::calc(const BaseContext &cxt, double dt, const Pose &plan,
-                             const nav_msgs::msg::Odometry &estimate,
-                             const Acceleration &ff, Acceleration &u_bar)
-  {
-    u_bar = ff;
-
-    z_controller_.set_target(plan.z);
-    u_bar.z = z_controller_.calc(estimate.pose.pose.position.z, dt) + ff.z;
+    // Compute efforts
+    efforts.forward(cxt_.model_.accel_to_effort_xy(u_bar.forward()));
+    efforts.strafe(0);
+    efforts.vertical(cxt_.model_.accel_to_effort_z(u_bar.vertical()));
+    efforts.yaw(-cxt_.model_.accel_to_effort_yaw(u_bar.yaw()));
   }
 
 }

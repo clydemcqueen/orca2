@@ -63,4 +63,18 @@ namespace orca
     return stamp.nanoseconds() > 0;
   }
 
-} // namespace orca_shared
+  tf2::Transform pose_to_transform(const geometry_msgs::msg::Pose &pose)
+  {
+    tf2::Transform result;
+    tf2::fromMsg(pose, result);
+    return result;
+  }
+
+  geometry_msgs::msg::Pose transform_to_pose(const tf2::Transform &transform)
+  {
+    geometry_msgs::msg::Pose result;
+    tf2::toMsg(transform, result);
+    return result;
+  }
+
+} // namespace orca

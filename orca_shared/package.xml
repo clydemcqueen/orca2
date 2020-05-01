@@ -3,7 +3,7 @@
 <package format="3">
 
     <name>orca_shared</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <description>Orca shared headers and code</description>
 
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
@@ -16,7 +16,10 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
+    <depend>astar</depend>
+    <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
+    <depend>image_geometry</depend>
     <depend>orca_msgs</depend>
     <depend>rclcpp</depend>
     <depend>tf2</depend>
