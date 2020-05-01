@@ -3,7 +3,7 @@
 <package format="3">
 
     <name>orca_driver</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <description>Orca driver</description>
 
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>

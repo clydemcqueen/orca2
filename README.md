@@ -30,7 +30,7 @@ sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers 
 pip3 install numpy transformations
 ~~~
 
-* Build Orca2 (but not the orca_driver hardware interface):
+* Build Orca2 (orca_driver is not required for the simulation):
 ~~~
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
@@ -98,12 +98,14 @@ If the mission fails to start there might be no marker in view, or the closest m
 ## Packages
 
 Orca consists of 7 packages:
+
 * `orca_msgs` defines custom messages
+
 * `orca_description` provides the URDF file and an URDF parser
-* `orca_driver` consists of 1 node:
-  * `driver_node` must run on the sub hardware. It subscribes to `Control` messages and 
-  publishes `Barometer` and `Driver` messages. This node can't be tested in simulation,
-  so it is kept small as possible, with the least number of dependencies.
+
+* `orca_driver` runs on the sub hardware, and consists of 2 nodes:
+  * `barometer_node` reads the Bar30 and publishes `Barometer` messages
+  * `driver_node` subscribes to `Control` messages and publishes `Driver` messages
   * Depends on `orca_msgs`
 
 * `orca_shared` contains various shared utilities.
@@ -131,22 +133,3 @@ It also calls the `Mission` action server to start missions
   * Depends on `orca_description`
   * Depends on `orca_msgs`
   * Depends on `orca_shared`
-
-## Hardware modifications
-
-This is rough sketch of the hardware modifications I made to my 2017 BlueROV2. YMMV.
-
-* Remove the Pixhawk and its UBEC
-* Remove the Raspberry Pi and its UBEC
-* Replace the Raspberry Pi camera with the BlueRobotics USB low-light camera
-* Replace the R2 ESCs with BlueRobotics R3 ESCs
-* Replace the 8-conductor tether with the BlueRobotics slim tether
-* Install the UP Board and a 4A UBEC
-* Install the Maestro and connect to UP via USB; set the jumper to isolate the Maestro power rail from USB-provide power
-* Connect the Bar30 to the UP I2C and 3.3V power pins
-* Connect the ESCs to the Maestro; cut the power wire on all but one ESC
-* Connect the camera tilt servo to the Maestro
-* Connect the lights signal wire to the Maestro; provide power and ground directly from the battery
-* Connect the leak detector to a Maestro digital input
-* Build a voltage divider to provide a voltage signal from the battery (0-17V) to a Maestro analog input (0-5V)
-* Connect the camera to the UP Board
