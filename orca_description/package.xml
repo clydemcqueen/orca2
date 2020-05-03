@@ -17,6 +17,8 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>xacro</buildtool_depend>
 
+    <depend>rclcpp</depend>
+    <depend>std_msgs</depend>
     <depend>tf2</depend>
     <depend>urdf</depend>
 

@@ -37,7 +37,7 @@ def generate_launch_description():
                 'camera_info_url': camera_info_url,
                 'camera_name': camera_name,
                 'frame_id': camera_frame,
-                'image_encoding': "mono8",
+                'image_encoding': 'mono8',
                 'preroll': True,
             }]),
 

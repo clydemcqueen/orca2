@@ -81,7 +81,7 @@ ament_target_dependencies(
 )
 
 #=============
-# Test node
+# Test node -- send simple Control messages to the driver
 #=============
 
 add_executable(

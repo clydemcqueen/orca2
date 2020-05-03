@@ -13,6 +13,8 @@ endif ()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(urdf REQUIRED)
 find_package(xacro REQUIRED)
@@ -64,6 +66,32 @@ ament_target_dependencies(
 )
 
 #=============
+# Utilities for testing pipeline performance
+#=============
+
+add_executable(
+  time_send_node
+  src/time_send.cpp
+)
+
+ament_target_dependencies(
+  time_send_node
+  std_msgs
+  rclcpp
+)
+
+add_executable(
+  time_receive_node
+  src/time_receive.cpp
+)
+
+ament_target_dependencies(
+  time_receive_node
+  std_msgs
+  rclcpp
+)
+
+#=============
 # Install
 #=============
 
@@ -87,6 +115,13 @@ install(
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
+)
+
+# Install nodes
+install(
+  TARGETS time_send_node time_receive_node
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()
