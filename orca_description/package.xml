@@ -9,16 +9,14 @@
     <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
     <license>BSD</license>
 
-    <url type="repository">https://github.com/clydemcqueen/orca.git</url>
-    <url type="bugtracker">https://github.com/clydemcqueen/orca/issues</url>
+    <url type="repository">https://github.com/clydemcqueen/orca2.git</url>
+    <url type="bugtracker">https://github.com/clydemcqueen/orca2/issues</url>
 
     <author>Clyde McQueen</author>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>xacro</buildtool_depend>
 
-    <depend>rclcpp</depend>
-    <depend>std_msgs</depend>
     <depend>tf2</depend>
     <depend>urdf</depend>
 
