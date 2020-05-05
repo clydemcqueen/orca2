@@ -1,5 +1,15 @@
 # Hardware Interface
 
+## TODO TODO TODO: replace gscam2 with opencv_cam
+
+* don't install gstreamer
+* do install ros-eloquent-cv-bridge, ros-eloquent-camera-calibration-parsers
+* do install opencv_cam
+* don't touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
+* manual launch no longer has terminal 2
+* add opencv_cam to orca_driver.service
+* eliminate orca_fcam.service
+
 ## Hardware Build
 
 The current hardware build is called FT3 (Field Test #3).
@@ -114,8 +124,17 @@ sudo systemctl enable orca_driver.service
 
 ## Troubleshooting
 
-* Test the i2c bus using `i2cdetect 1`
-* `raspi-config` isn't installed as part of Ubuntu 18.04.4, and the PPA I found has a few bugs.
+The compiler (`cc1plus`) sometimes dies during build, try restarting `colcon build`.
+If that fails, try:
+~~~
+export MAKEFLAGS='-j 1'
+colcon build
+~~~
+
+Test the i2c bus using `i2cdetect 1`.
+
+`raspi-config` isn't installed as part of Ubuntu 18.04.4, and the PPA I found has a few bugs.
 I hand-edited the boot sector config files on the SD card and added `dtparam=i2c_arm=on`.
-* Make sure that `$USER` is in the dialout, video and i2c groups.
+
+Make sure that `$USER` is in the dialout, video and i2c groups.
 Remember to log out and log back in after changing groups.

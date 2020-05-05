@@ -38,6 +38,7 @@ def generate_launch_description():
         Node(package='gscam', node_executable='gscam_main', output='screen',
              node_name='gscam_node', node_namespace=camera_name, parameters=[{
                 'gscam_config': cfg_rcv_ros,
+                'use_gst_timestamps': True,
                 'image_encoding': 'mono8',
                 'preroll': True, # Forces pipeline to negotiate early, catching errors
                 'camera_info_url': camera_info_url,
