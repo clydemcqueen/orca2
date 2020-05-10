@@ -2,7 +2,7 @@
   ros__parameters:
     publish_tfs: 0
     publish_tfs_per_marker: 0
-    sub_camera_info_best_effort_not_reliable: 1
+    sub_camera_info_best_effort_not_reliable: 0
     publish_camera_pose: 1
     publish_base_pose: 0
     publish_camera_odom: 0

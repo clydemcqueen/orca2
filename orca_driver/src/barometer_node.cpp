@@ -35,12 +35,12 @@ namespace orca_driver
             RCLCPP_INFO(get_logger(), "sensor thread running");
 
             while (!stop_signal_ && rclcpp::ok()) {
-              orca_msgs::msg::Barometer barometer_msg_;
+              orca_msgs::msg::Barometer barometer_msg;
               barometer_.read(); // Takes 40ms+
-              barometer_msg_.header.stamp = now();
-              barometer_msg_.pressure = barometer_.pressure() * 100; // Pascals
-              barometer_msg_.temperature = barometer_.temperature(); // Celsius
-              barometer_pub_->publish(barometer_msg_);
+              barometer_msg.header.stamp = now();
+              barometer_msg.pressure = barometer_.pressure() * 100; // Pascals
+              barometer_msg.temperature = barometer_.temperature(); // Celsius
+              barometer_pub_->publish(barometer_msg);
             }
           }
 

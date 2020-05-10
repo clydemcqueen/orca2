@@ -14,6 +14,7 @@ endif ()
 if ($ENV{CLION_IDE})
   message("Running inside CLion")
   set(br_ms5837_DIR "${PROJECT_SOURCE_DIR}/../../../install/br_ms5837/share/br_ms5837/cmake")
+  set(h264_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/h264_msgs/share/h264_msgs/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
@@ -21,10 +22,18 @@ endif ()
 
 find_package(ament_cmake REQUIRED)
 find_package(br_ms5837 REQUIRED)
+find_package(h264_msgs REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(ros2_shared REQUIRED)
+
+# Find ffmpeg libraries for h264_cam_node
+find_package(PkgConfig)
+pkg_check_modules(PC_AVDEVICE REQUIRED libavdevice>=57.10.100)
+pkg_check_modules(PC_AVFORMAT REQUIRED libavformat>=57.83.100)
+pkg_check_modules(PC_AVCODEC REQUIRED libavcodec>=57.107.100)
+pkg_check_modules(PC_AVUTIL REQUIRED libavutil>=55.78.100)
 
 # Hack for MRAA
 set(mraa_INCLUDE_DIRS "/usr/include")
@@ -60,7 +69,6 @@ ament_target_dependencies(
   mraa
   orca_msgs
   rclcpp
-  ros2_shared
 )
 
 #=============
@@ -95,12 +103,35 @@ ament_target_dependencies(
 )
 
 #=============
+# H264 camera node
+#=============
+
+add_executable(
+  h264_cam_node
+  src/h264_cam_node.cpp
+)
+ament_target_dependencies(
+  h264_cam_node
+  h264_msgs
+  rclcpp
+  ros2_shared # TODO maybe
+)
+
+target_link_libraries(
+  h264_cam_node
+  ${PC_AVDEVICE_LIBRARIES}
+  ${PC_AVFORMAT_LIBRARIES}
+  ${PC_AVCODEC_LIBRARIES}
+  ${PC_AVUTIL_LIBRARIES}
+)
+
+#=============
 # Install
 #=============
 
 # Install C++ targets
 install(
-  TARGETS barometer_node driver_node test_node
+  TARGETS barometer_node driver_node test_node h264_cam_node
   LIBRARY DESTINATION lib                 # Shared libraries must be in lib
   RUNTIME DESTINATION lib/${PROJECT_NAME} # Node executables must be in lib/<pkg> for ros2
 )
