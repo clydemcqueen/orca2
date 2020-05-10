@@ -17,6 +17,7 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
 
     <depend>br_ms5837</depend>
+    <depend>h264_msgs</depend>
     <depend>orca_msgs</depend>
     <depend>rclcpp</depend>
     <depend>rclpy</depend>

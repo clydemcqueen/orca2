@@ -27,18 +27,27 @@ def generate_launch_description():
     # udp stream => ROS images
     cfg_rcv_ros = 'udpsrc port=5600 ! queue ! application/x-rtp ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert'
 
+    # udp stream => ROS images, pipeline from qgroundcontrol with rtpjitterbuffer
+    # Adds some latency but improves image stability
+    # https://github.com/mavlink/qgroundcontrol/blob/8512a64170dafe9f8dfd49762cd9dbf95064ed00/src/VideoReceiver/README.md
+    # https://github.com/mavlink/qgroundcontrol/blob/8512a64170dafe9f8dfd49762cd9dbf95064ed00/src/VideoReceiver/GstVideoReceiver.cc
+    cfg_rcv_qgc_ros = 'udpsrc port=5600 ! queue ! application/x-rtp,media=video,clock-rate=90000,encoding-name=H264 ! rtpjitterbuffer ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert'
+
     # v4l camera => udp stream and ROS images
     cfg_v4l_snd_and_ros = 'v4l2src device=/dev/video2 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! tee name=fork ! queue ! rtph264pay config-interval=10 ! udpsink host=127.0.0.1 port=5600 fork. ! queue ! avdec_h264 ! videoconvert'
 
     # v4l camera => compressed ROS images
     cfg_v4l_jpeg_ros = 'v4l2src device=/dev/video2 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! avdec_h264 ! jpegenc'
 
+    # tcp stream => ROS images
+    cfg_rcv_tcp_ros = ' tcpclientsrc port=5601 host=192.168.86.101 ! application/x-rtp-stream,encoding-name=H264 ! rtpstreamdepay ! application/x-rtp ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert'
+
     return LaunchDescription([
         # Forward camera
         Node(package='gscam', node_executable='gscam_main', output='screen',
              node_name='gscam_node', node_namespace=camera_name, parameters=[{
-                'gscam_config': cfg_rcv_ros,
-                'use_gst_timestamps': True,
+                'gscam_config': cfg_rcv_qgc_ros,
+                'use_gst_timestamps': False, # TODO bug -- this isn't working
                 'image_encoding': 'mono8',
                 'preroll': True, # Forces pipeline to negotiate early, catching errors
                 'camera_info_url': camera_info_url,
@@ -63,8 +72,8 @@ def generate_launch_description():
         #         }]),
 
         # Measure lag
-        Node(package='gscam', node_executable='subscriber_main', output='screen',
-             node_name='subscriber_raw', node_namespace=camera_name),
+        # Node(package='gscam', node_executable='subscriber_main', output='screen',
+        #      node_name='subscriber_raw', node_namespace=camera_name),
         # Node(package='gscam', node_executable='subscriber_main', output='screen',
         #      node_name='subscriber_marked', node_namespace=camera_name, remappings=[
         #         ('image_raw', 'image_marked'),
