@@ -15,7 +15,7 @@ def generate_launch_description():
     camera_frame = 'forward_camera_frame'
 
     orca_driver_path = get_package_share_directory('orca_driver')
-    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')
+    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_1920x1080.ini')
 
 
     return LaunchDescription([
@@ -30,7 +30,7 @@ def generate_launch_description():
              node_name='v4l_cam_node', node_namespace=camera_name, parameters=[{
                 'input_fn': '/dev/video2',
                 'fps': '30',
-                'size': '640x480',
+                'size': '1920x1080',
                 'frame_id': camera_frame,
                 'camera_info_path': camera_info_path,
             }]),

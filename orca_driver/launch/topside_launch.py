@@ -19,7 +19,6 @@ def generate_launch_description():
 
     orca_driver_path = get_package_share_directory('orca_driver')
     params_path = os.path.join(orca_driver_path, 'launch', 'ft3_params.yaml')
-    camera_info_url = 'file://' + os.path.join(orca_driver_path, 'cfg', 'brusb_dry_1920x1280.ini')
     map_path = os.path.join(orca_driver_path, 'maps', 'ft3_map.yaml')
 
     return LaunchDescription([
@@ -27,19 +26,21 @@ def generate_launch_description():
         Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='log',
              arguments=[urdf_path]),
 
-        # Forward camera
-        Node(package='gscam', node_executable='gscam_main', output='log',
-             node_name='gscam_node', node_namespace=camera_name, remappings=[
-                ('image_raw', '/' + camera_name + '/image_raw'),
-                ('camera_info', '/' + camera_name + '/camera_info'),
-            ], parameters=[{
-                'gscam_config': 'udpsrc port=5600 ! application/x-rtp ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert',
-                'camera_info_url': camera_info_url,
-                'camera_name': camera_name,
-                'frame_id': camera_frame,
-                'image_encoding': 'mono8',
-                'preroll': True,
-            }]),
+        # Decode h264 stream
+        Node(package='image_transport', node_executable='republish', output='screen',
+             node_name='republish_node', node_namespace=camera_name, arguments=[
+                'h264',  # Input
+                'raw'  # Output
+            ], remappings=[
+                ('in', 'image_raw'),
+                ('in/compressed', 'image_raw/compressed'),
+                ('in/theora', 'image_raw/theora'),
+                ('in/h264', 'image_raw/h264'),
+                ('out', 'repub_raw'),
+                ('out/compressed', 'repub_raw/compressed'),
+                ('out/theora', 'repub_raw/theora'),
+                ('out/theora', 'repub_raw/h264'),
+            ]),
 
         # Joystick driver, generates joy messages
         Node(package='joy', node_executable='joy_node', output='screen',
@@ -74,7 +75,9 @@ def generate_launch_description():
              node_name='vloc_node', node_namespace=camera_name, parameters=[
                 params_path, {
                     'camera_frame_id': camera_frame,
-                }]),
+                }], remappings=[
+                ('image_raw', 'repub_raw'),
+            ]),
 
         # FP node, generate fiducial poses from observations and poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',

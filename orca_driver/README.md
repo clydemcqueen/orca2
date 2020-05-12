@@ -1,15 +1,5 @@
 # Hardware Interface
 
-## TODO TODO TODO: replace gscam2 with h264_cam_node
-
-* don't install gstreamer
-* do install ros-eloquent-image-transport
-* do git clone h264_image_transport
-* sudo apt-get install libavdevice-dev
-* manual launch no longer has terminal 2
-* add h264_cam_node to orca_driver.service
-* eliminate orca_fcam.service
-
 ## Hardware Build
 
 The current hardware build is called FT3 (Field Test #3).
@@ -38,6 +28,11 @@ Below I've outlined rough instructions... you'll need to dive into the system-sp
 Install Ubuntu 18.04.4 LTS Server for ARM64
 [using these instructions](https://wiki.ubuntu.com/ARM/RaspberryPi).
 
+### Install ffmpeg
+
+Check the requirements for [h264_image_transport](https://github.com/clydemcqueen/h264_image_transport)
+and install any missing ffmpeg libraries.
+
 ### Install ROS2 Eloquent
 
 Install ROS2 Eloquent
@@ -47,12 +42,10 @@ Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
 Install Colcon (the build tool for ROS2)
 [using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
 
-### Install GStreamer
-
-GStreamer is used to read the h264 stream from the USB camera and forward it to the desktop over UDP.
-
-Install GStreamer
-[using these instructions](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c#).
+Install these additional packages:
+~~~
+sudo apt-get install ros-eloquent-image-transport ros-eloquent-image-transport-plugins ros-eloquent-camera-calibration-parsers
+~~~
 
 ### Install MRAA
 
@@ -73,6 +66,7 @@ git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mra
 git clone https://github.com/ptrmu/ros2_shared.git
 git clone https://github.com/ptrmu/fiducial_vlam.git
 touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
+git clone https://github.com/clydemcqueen/h264_image_transport.git
 git clone https://github.com/clydemcqueen/orca2.git
 touch orca2/orca_base/COLCON_IGNORE
 touch orca2/orca_description/COLCON_IGNORE
@@ -85,9 +79,9 @@ colcon build
 source install/local_setup.bash
 ~~~
 
-### Manual Launch
+## Manual Launch
 
-In terminal 1 on the Raspberry Pi:
+On the Raspberry Pi:
 
 ~~~
 cd ~/ros2/orca_ws
@@ -96,13 +90,7 @@ source install/local_setup.bash
 ros2 launch orca_driver sub_launch.py
 ~~~
 
-In terminal 2 on the Raspberry Pi:
-
-~~~
-gst-launch-1.0 -v v4l2src device=/dev/video1 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! rtph264pay config-interval=10 ! udpsink host=192.168.86.105 port=5600
-~~~
-
-In terminal 1 on the desktop computer:
+On the desktop computer:
 
 ~~~
 cd ~/ros2/orca_ws
@@ -111,14 +99,12 @@ source install/local_setup.bash
 ros2 launch orca_driver topside_launch.py
 ~~~
 
-### Launch on Boot
+## Launch on Boot
 
 To configure the Raspberry Pi to launch on boot:
 
 ~~~
-sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_fcam.service /lib/systemd/system
 sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_driver.service /lib/systemd/system
-sudo systemctl enable orca_fcam.service
 sudo systemctl enable orca_driver.service
 ~~~
 
