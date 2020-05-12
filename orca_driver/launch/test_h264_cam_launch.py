@@ -19,8 +19,14 @@ def generate_launch_description():
     return LaunchDescription([
         # Forward camera h264
         # Will publish on image_raw/h264
-        Node(package='orca_driver', node_executable='h264_cam_node', output='screen',
-             node_name='h264_cam_node'),
+        Node(package='h264_image_transport', node_executable='v4l_cam_node', output='screen',
+             node_name='v4l_cam_node', parameters=[{
+                'input_fn': '/dev/video2',
+                'fps': '30',
+                'size': '640x480',
+                'frame_id': 'camera_frame',
+                'camera_info_path': camera_info_path,
+            }]),
 
         # Load and publish a known map
         # Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

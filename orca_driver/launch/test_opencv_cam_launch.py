@@ -19,17 +19,16 @@ def generate_launch_description():
     return LaunchDescription([
         # Forward camera with image_transport
         # Will publish on image_raw, image_raw/compressed, image_raw/theora
-        # Node(package='opencv_cam', node_executable='opencv_cam_main', output='screen',
-        #      node_name='opencv_cam_main', parameters=[{
-        #         'index': 200,  # V4L index 0
-        #         'codec': 'YUYV',
-        #         'fps': 30,
-        #         'width': 640,
-        #         'height': 480,
-        #         'camera_info_path': camera_info_path,
-        #         'camera_frame_id': camera_frame,
-        #     }], remappings=[
-        #     ]),
+        Node(package='opencv_cam', node_executable='opencv_cam_main', output='screen',
+             node_name='opencv_cam_main', parameters=[{
+                'index': 200,  # V4L index 0
+                'fps': 30,
+                'width': 640,
+                'height': 480,
+                'camera_info_path': camera_info_path,
+                'camera_frame_id': camera_frame,
+            }], remappings=[
+            ]),
 
         # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
@@ -62,6 +61,8 @@ def generate_launch_description():
             ]),
 
         # Measure lag
-        # Node(package='pipe_perf', node_executable='image_transport_sub_node', output='screen',
-        #      node_name='image_transport_sub_node'),
+        Node(package='pipe_perf', node_executable='image_sub_node', output='screen',
+             node_name='image_sub_node', remappings=[
+                ('image_raw', 'repub_raw'),
+            ]),
     ])

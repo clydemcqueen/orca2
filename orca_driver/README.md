@@ -1,13 +1,13 @@
 # Hardware Interface
 
-## TODO TODO TODO: replace gscam2 with opencv_cam
+## TODO TODO TODO: replace gscam2 with h264_cam_node
 
 * don't install gstreamer
-* do install ros-eloquent-cv-bridge, ros-eloquent-camera-calibration-parsers
-* do install opencv_cam
-* don't touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
+* do install ros-eloquent-image-transport
+* do git clone h264_image_transport
+* sudo apt-get install libavdevice-dev
 * manual launch no longer has terminal 2
-* add opencv_cam to orca_driver.service
+* add h264_cam_node to orca_driver.service
 * eliminate orca_fcam.service
 
 ## Hardware Build

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Start forward camera driver
+# Not used for ft3
 
 # To install:           sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_fcam.service /lib/systemd/system
 # To start:             sudo systemctl start orca_fcam.service
