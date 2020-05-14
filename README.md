@@ -20,11 +20,6 @@ Use the `ros-eloquent-desktop` option.
 sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 ~~~
 
-* Install these additional ROS2 packages:
-~~~
-sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs ros-eloquent-xacro
-~~~
-
 * Use your favorite Python package manager to install these Python packages:
 ~~~
 pip3 install numpy transformations
@@ -43,6 +38,8 @@ git clone https://github.com/clydemcqueen/sim_fiducial.git
 git clone https://github.com/clydemcqueen/astar.git
 cd ~/ros2/orca2_ws
 source /opt/ros/eloquent/setup.bash
+# Install system dependencies:
+rosdep install --from-paths . --ignore-src
 colcon build
 ~~~
 

@@ -42,11 +42,6 @@ Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
 Install Colcon (the build tool for ROS2)
 [using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
 
-Install these additional packages:
-~~~
-sudo apt-get install ros-eloquent-image-transport ros-eloquent-image-transport-plugins ros-eloquent-camera-calibration-parsers
-~~~
-
 ### Install MRAA
 
 MRAA is a standard hardware interface for small boards.
@@ -57,7 +52,7 @@ sudo apt-get update
 sudo apt-get install libmraa2 libmraa-dev libmraa-java python3-mraa node-mraa mraa-tools
 ~~~
 
-### Install Orca
+### Install Orca on the ROV
 
 ~~~
 mkdir -p ~/ros2/orca_ws/src
@@ -75,6 +70,7 @@ touch orca2/orca_gazebo/COLCON_IGNORE
 touch orca2/orca_shared/COLCON_IGNORE
 cd ~/ros2/orca_ws
 source /opt/ros/eloquent/setup.bash
+rosdep install --from-paths . --ignore-src
 colcon build
 source install/local_setup.bash
 ~~~

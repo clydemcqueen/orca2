@@ -16,7 +16,7 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>Eigen3</depend>
+    <depend>eigen</depend>
     <depend>fiducial_vlam_msgs</depend>
     <depend>geometry_msgs</depend>
     <depend>image_geometry</depend>
