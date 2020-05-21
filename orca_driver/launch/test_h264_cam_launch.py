@@ -9,21 +9,24 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    camera_name = 'forward_camera'
     camera_frame = 'forward_camera_frame'
+    fps = 30
+    size = '1920x1080'
 
     orca_driver_path = get_package_share_directory('orca_driver')
     params_path = os.path.join(orca_driver_path, 'launch', 'ft3_params.yaml')
-    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_wet_640x480.ini')
+    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_' + size + '.ini')
     map_path = os.path.join(orca_driver_path, 'maps', 'ft3_map.yaml')
 
     return LaunchDescription([
         # Forward camera h264
         # Will publish on image_raw/h264
-        Node(package='h264_image_transport', node_executable='v4l_cam_node', output='screen',
-             node_name='v4l_cam_node', parameters=[{
+        Node(package='h264_image_transport', node_executable='h264_cam_node', output='screen',
+             node_name='h264_cam_node', node_namespace=camera_name, parameters=[{
                 'input_fn': '/dev/video2',
-                'fps': '30',
-                'size': '640x480',
+                'fps': fps,
+                'size': size,
                 'frame_id': 'camera_frame',
                 'camera_info_path': camera_info_path,
             }]),
@@ -39,7 +42,7 @@ def generate_launch_description():
 
         # Pick one transport and republish for vloc
         Node(package='image_transport', node_executable='republish', output='screen',
-             node_name='republish_node', arguments=[
+             node_name='republish_node', node_namespace=camera_name, arguments=[
                 'h264',  # Input
                 'raw'  # Output
             ], remappings=[
@@ -55,16 +58,20 @@ def generate_launch_description():
 
         # Localize against the map
         # Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-        #      node_name='vloc_node', parameters=[
+        #      node_name='vloc_node', node_namespace=camera_name, parameters=[
         #         params_path, {
         #             'camera_frame_id': camera_frame,
         #         }], remappings=[
         #         ('image_raw', 'repub_raw'),
         #     ]),
 
-        # Measure lag
-        Node(package='pipe_perf', node_executable='image_sub_node', output='screen',
-             node_name='image_sub_node', remappings=[
-                ('image_raw', 'repub_raw'),
-            ]),
+        # Measure lag -- subscribe to repub_raw
+        # Node(package='pipe_perf', node_executable='image_sub_node', output='screen',
+        #      node_name='image_sub_node', node_namespace=camera_name, remappings=[
+        #         ('image_raw', 'repub_raw'),
+        #     ]),
+
+        # Measure lag -- subscribe to image_raw/h264
+        Node(package='pipe_perf', node_executable='image_transport_sub_node', output='screen',
+             node_name='image_transport_sub_node', node_namespace=camera_name),
     ])

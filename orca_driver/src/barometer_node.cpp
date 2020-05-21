@@ -29,6 +29,7 @@ namespace orca_driver
       sensor_thread_ = std::thread(
         [this]()
         {
+          // TODO init() returns true even when the barometer isn't attached... need a better test
           if (!barometer_.init()) {
             RCLCPP_ERROR(get_logger(), "can't connect to barometer, correct bus? member of i2c?");
           } else {

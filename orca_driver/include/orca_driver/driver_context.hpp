@@ -14,8 +14,8 @@ namespace orca_driver
   CXT_MACRO_MEMBER(timeout_control_ms, int, 1000)                 /* Control msg timeout */ \
   \
   CXT_MACRO_MEMBER(num_thrusters, int, 6)                         /* Number of thrusters */ \
-  CXT_MACRO_MEMBER(lights_channel, int, 8)                        /* PWM lights channel */ \
-  CXT_MACRO_MEMBER(tilt_channel, int, 6)                          /* PWM tilt channel */ \
+  CXT_MACRO_MEMBER(lights_channel, int, 9)                        /* PWM lights channel */ \
+  CXT_MACRO_MEMBER(tilt_channel, int, 10)                         /* PWM tilt channel */ \
   CXT_MACRO_MEMBER(voltage_channel, int, 11)                      /* Analog voltage channel */ \
   CXT_MACRO_MEMBER(leak_channel, int, 12)                         /* Digital leak channel */ \
   CXT_MACRO_MEMBER(maestro_port, std::string, "/dev/ttyACM0")     /* Default Maestro port */ \

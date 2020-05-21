@@ -78,4 +78,7 @@ def generate_launch_description():
         #      node_name='subscriber_marked', node_namespace=camera_name, remappings=[
         #         ('image_raw', 'image_marked'),
         #     ]),
+        Node(package='pipe_perf', node_executable='image_sub_node', output='screen',
+             node_name='image_sub_node', node_namespace=camera_name)
+
     ])

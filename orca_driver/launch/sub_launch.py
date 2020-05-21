@@ -13,9 +13,11 @@ def generate_launch_description():
     # Should also match the camera name in the camera info file
     camera_name = 'forward_camera'
     camera_frame = 'forward_camera_frame'
+    fps = 30
+    size = '1920x1080'
 
     orca_driver_path = get_package_share_directory('orca_driver')
-    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_1920x1080.ini')
+    camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_' + size + '.ini')
 
 
     return LaunchDescription([
@@ -23,14 +25,19 @@ def generate_launch_description():
 
         Node(package='orca_driver', node_executable='driver_node', output='screen', node_name='driver_node',
              parameters=[{
-                 'thruster_4_reverse': True  # Thruster 4 ESC is programmed incorrectly TODO ?
+                 'thruster_0_channel': 0,
+                 'thruster_1_channel': 1,
+                 'thruster_2_channel': 4,
+                 'thruster_3_channel': 5,
+                 'thruster_4_channel': 6,
+                 'thruster_5_channel': 7,
              }]),
 
         Node(package='h264_image_transport', node_executable='v4l_cam_node', output='screen',
              node_name='v4l_cam_node', node_namespace=camera_name, parameters=[{
                 'input_fn': '/dev/video2',
-                'fps': '30',
-                'size': '1920x1080',
+                'fps': fps,
+                'size': size,
                 'frame_id': camera_frame,
                 'camera_info_path': camera_info_path,
             }]),
