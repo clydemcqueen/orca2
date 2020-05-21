@@ -21,6 +21,10 @@ namespace orca_driver
   CXT_MACRO_MEMBER(maestro_port, std::string, "/dev/ttyACM0")     /* Default Maestro port */ \
   CXT_MACRO_MEMBER(voltage_multiplier, double, 5.04)              /* Voltage multiplier */ \
   CXT_MACRO_MEMBER(voltage_min, double, 12.0)                     /* Minimum voltage to run  */ \
+  \
+  CXT_MACRO_MEMBER(read_battery, bool, true)                      /* Read voltage sensor  */ \
+  CXT_MACRO_MEMBER(read_leak, bool, true)                         /* Read leak sensor  */ \
+  CXT_MACRO_MEMBER(read_temp, bool, true)                         /* Read temp file  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

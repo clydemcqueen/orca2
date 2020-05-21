@@ -1,4 +1,5 @@
 #include "orca_driver/driver_node.hpp"
+#include <fstream>
 
 namespace orca_driver
 {
@@ -83,7 +84,7 @@ namespace orca_driver
   {
     maestro_.connect(cxt_.maestro_port_);
     if (!maestro_.ready()) {
-      RCLCPP_ERROR(get_logger(), "can't open port %s, connected? member of dialout?", cxt_.maestro_port_.c_str());
+      RCLCPP_ERROR(get_logger(), "could not open port %s, connected? member of dialout?", cxt_.maestro_port_.c_str());
       return false;
     }
     RCLCPP_INFO(get_logger(), "port %s open", cxt_.maestro_port_.c_str());
@@ -174,7 +175,7 @@ namespace orca_driver
       return;
     }
 
-    if (!read_battery() || !read_leak()) {
+    if (!read_battery() || !read_leak() || !read_temp()) {
       // Huge problem, we're done
       abort();
       return;
@@ -195,19 +196,21 @@ namespace orca_driver
   // Read battery sensor, return true if everything is OK
   bool DriverNode::read_battery()
   {
-    double value = 0.0;
-    if (!maestro_.ready() || !maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
-      RCLCPP_ERROR(get_logger(), "can't read the battery, correct bus? member of i2c?");
-      driver_msg_.voltage = 0;
-      driver_msg_.low_battery = true;
-      return false;
-    }
+    if (cxt_.read_battery_) {
+      double value = 0.0;
+      if (!maestro_.ready() || !maestro_.getAnalog(static_cast<uint8_t>(cxt_.voltage_channel_), value)) {
+        RCLCPP_ERROR(get_logger(), "could not read the battery, correct bus? member of i2c?");
+        driver_msg_.voltage = 0;
+        driver_msg_.low_battery = true;
+        return false;
+      }
 
-    driver_msg_.voltage = value * cxt_.voltage_multiplier_;
-    driver_msg_.low_battery = static_cast<uint8_t>(driver_msg_.voltage < cxt_.voltage_min_);
-    if (driver_msg_.low_battery) {
-      RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", driver_msg_.voltage, cxt_.voltage_min_);
-      return false;
+      driver_msg_.voltage = value * cxt_.voltage_multiplier_;
+      driver_msg_.low_battery = static_cast<uint8_t>(driver_msg_.voltage < cxt_.voltage_min_);
+      if (driver_msg_.low_battery) {
+        RCLCPP_ERROR(get_logger(), "battery voltage %g is below minimum %g", driver_msg_.voltage, cxt_.voltage_min_);
+        return false;
+      }
     }
 
     return true;
@@ -216,17 +219,42 @@ namespace orca_driver
   // Read leak sensor, return true if everything is OK
   bool DriverNode::read_leak()
   {
-    bool value = false;
-    if (!maestro_.ready() || !maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
-      RCLCPP_ERROR(get_logger(), "can't read the leak sensor");
-      driver_msg_.leak_detected = true;
-      return false;
+    if (cxt_.read_leak_) {
+      bool value = false;
+      if (!maestro_.ready() || !maestro_.getDigital(static_cast<uint8_t>(cxt_.leak_channel_), value)) {
+        RCLCPP_ERROR(get_logger(), "could not read the leak sensor");
+        driver_msg_.leak_detected = true;
+        return false;
+      }
+
+      driver_msg_.leak_detected = static_cast<uint8_t>(value);
+      if (driver_msg_.leak_detected) {
+        RCLCPP_ERROR(get_logger(), "leak detected");
+        return false;
+      }
     }
 
-    driver_msg_.leak_detected = static_cast<uint8_t>(value);
-    if (driver_msg_.leak_detected) {
-      RCLCPP_ERROR(get_logger(), "leak detected");
-      return false;
+    return true;
+  }
+
+  bool DriverNode::read_temp()
+  {
+    if (cxt_.read_temp_) {
+      // Raspberry Pi CPU is thermal_zone0
+      const static char *PROC_TEMP = "/sys/class/thermal/thermal_zone0/temp";
+      std::ifstream file(PROC_TEMP);
+      if (!file.is_open()) {
+        RCLCPP_ERROR(get_logger(), "%s is missing", PROC_TEMP);
+        return false;
+      }
+      std::string line;
+      std::getline(file, line);
+      try {
+        driver_msg_.cpu_temp = std::stoi(line, nullptr);
+      } catch (const std::exception &e) {
+        RCLCPP_ERROR(get_logger(), "stoi failed");
+        return false;
+      }
     }
 
     return true;

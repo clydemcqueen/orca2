@@ -17,12 +17,7 @@
 namespace orca_driver
 {
 
-#ifdef PROCESSOR_X86_64
-#define UP_LEDS
-#else
 #undef UP_LEDS
-#endif
-
 #ifdef UP_LEDS
   // LEDs on the UP board
   // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
@@ -89,6 +84,8 @@ namespace orca_driver
     bool read_battery();
 
     bool read_leak();
+
+    bool read_temp();
 
     bool connect_controller();
 

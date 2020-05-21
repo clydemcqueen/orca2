@@ -10,6 +10,9 @@ bool low_battery
 # Leak sensor
 bool leak_detected
 
+# CPU temp
+int32 cpu_temp
+
 # Overall status -- also drives the LED lights
 uint8 STATUS_NONE=0
 uint8 STATUS_OK=1

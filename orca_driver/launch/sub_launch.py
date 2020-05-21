@@ -33,8 +33,8 @@ def generate_launch_description():
                  'thruster_5_channel': 7,
              }]),
 
-        Node(package='h264_image_transport', node_executable='v4l_cam_node', output='screen',
-             node_name='v4l_cam_node', node_namespace=camera_name, parameters=[{
+        Node(package='h264_image_transport', node_executable='h264_cam_node', output='screen',
+             node_name='h264_cam_node', node_namespace=camera_name, parameters=[{
                 'input_fn': '/dev/video2',
                 'fps': fps,
                 'size': size,
