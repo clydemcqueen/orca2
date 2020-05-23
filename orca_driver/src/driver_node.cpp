@@ -37,14 +37,6 @@ namespace orca_driver
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     DRIVER_NODE_ALL_PARAMS
 
-    // Configure thrusters
-    thrusters_.emplace_back(cxt_.thruster_1_channel_, cxt_.thruster_1_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_2_channel_, cxt_.thruster_2_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_3_channel_, cxt_.thruster_3_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_4_channel_, cxt_.thruster_4_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_5_channel_, cxt_.thruster_5_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_6_channel_, cxt_.thruster_6_reverse_);
-
     // Publish driver status messages
     driver_pub_ = create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);
 
@@ -64,6 +56,21 @@ namespace orca_driver
 
   void DriverNode::validate_parameters()
   {
+    // Stop all thrusters to leave the Maestro in a good state
+    all_stop();
+
+    // Configure thrusters
+    thrusters_.clear();
+    thrusters_.emplace_back(cxt_.thruster_1_channel_, cxt_.thruster_1_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_2_channel_, cxt_.thruster_2_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_3_channel_, cxt_.thruster_3_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_4_channel_, cxt_.thruster_4_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_5_channel_, cxt_.thruster_5_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_6_channel_, cxt_.thruster_6_reverse_);
+
+    // Force all_stop again w/ new channels
+    all_stop();
+
     control_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_control_ms_)};
 
     spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_},
