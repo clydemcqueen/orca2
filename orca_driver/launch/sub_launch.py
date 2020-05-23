@@ -14,7 +14,7 @@ def generate_launch_description():
     camera_name = 'forward_camera'
     camera_frame = 'forward_camera_frame'
     fps = 30
-    size = '800x600'  # Run cooler until we figure out the Pi3 kernel hang
+    size = '1920x1080'
 
     orca_driver_path = get_package_share_directory('orca_driver')
     camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_' + size + '.ini')
@@ -34,7 +34,7 @@ def generate_launch_description():
 
         Node(package='h264_image_transport', node_executable='h264_cam_node', output='screen',
              node_name='h264_cam_node', node_namespace=camera_name, parameters=[{
-                'input_fn': '/dev/video2',
+                'input_fn': '/dev/video1',
                 'fps': fps,
                 'size': size,
                 'frame_id': camera_frame,
