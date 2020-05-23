@@ -61,12 +61,12 @@ namespace orca_driver
 
     // Configure thrusters
     thrusters_.clear();
+    thrusters_.emplace_back(cxt_.thruster_0_channel_, cxt_.thruster_0_reverse_);
     thrusters_.emplace_back(cxt_.thruster_1_channel_, cxt_.thruster_1_reverse_);
     thrusters_.emplace_back(cxt_.thruster_2_channel_, cxt_.thruster_2_reverse_);
     thrusters_.emplace_back(cxt_.thruster_3_channel_, cxt_.thruster_3_reverse_);
     thrusters_.emplace_back(cxt_.thruster_4_channel_, cxt_.thruster_4_reverse_);
     thrusters_.emplace_back(cxt_.thruster_5_channel_, cxt_.thruster_5_reverse_);
-    thrusters_.emplace_back(cxt_.thruster_6_channel_, cxt_.thruster_6_reverse_);
 
     // Force all_stop again w/ new channels
     all_stop();
