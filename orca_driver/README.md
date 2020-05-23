@@ -1,5 +1,9 @@
 # Hardware Interface
 
+# TODO
+* redo again for UP board
+* install chrony
+
 ## Hardware Build
 
 The current hardware build is called FT3 (Field Test #3).
@@ -41,6 +45,13 @@ Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
 
 Install Colcon (the build tool for ROS2)
 [using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+
+Install rosdep:
+~~~
+sudo apt install python-rosdep2
+sudo rosdep init
+rosdep update
+~~~
 
 ### Install MRAA
 

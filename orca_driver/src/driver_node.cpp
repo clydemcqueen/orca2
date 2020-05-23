@@ -37,15 +37,13 @@ namespace orca_driver
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     DRIVER_NODE_ALL_PARAMS
 
-    // Get thruster parameters
-    RCLCPP_INFO(get_logger(), "configuring %d thrusters:", cxt_.num_thrusters_);
-    for (int i = 0; i < cxt_.num_thrusters_; ++i) {
-      Thruster t{};
-      get_parameter_or("thruster_" + std::to_string(i + 1) + "_channel", t.channel_, i); // No checks for conflicts!
-      get_parameter_or("thruster_" + std::to_string(i + 1) + "_reverse", t.reverse_, false);
-      thrusters_.push_back(t);
-      RCLCPP_INFO(get_logger(), "thruster %d on channel %d %s", i + 1, t.channel_, t.reverse_ ? "(reversed)" : "");
-    }
+    // Configure thrusters
+    thrusters_.emplace_back(cxt_.thruster_1_channel_, cxt_.thruster_1_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_2_channel_, cxt_.thruster_2_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_3_channel_, cxt_.thruster_3_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_4_channel_, cxt_.thruster_4_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_5_channel_, cxt_.thruster_5_reverse_);
+    thrusters_.emplace_back(cxt_.thruster_6_channel_, cxt_.thruster_6_reverse_);
 
     // Publish driver status messages
     driver_pub_ = create_publisher<orca_msgs::msg::Driver>("driver_status", QUEUE_SIZE);

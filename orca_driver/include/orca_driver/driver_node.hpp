@@ -17,7 +17,7 @@
 namespace orca_driver
 {
 
-#undef UP_LEDS
+#define UP_LEDS
 #ifdef UP_LEDS
   // LEDs on the UP board
   // https://github.com/intel-iot-devkit/mraa/blob/master/examples/platform/up2-leds.cpp
@@ -40,6 +40,9 @@ namespace orca_driver
   {
     int channel_;
     bool reverse_;
+
+    Thruster(int channel, bool reverse) : channel_{channel}, reverse_{reverse}
+    {}
   };
 
   // DriverNode provides the interface between the Orca hardware and ROS.
