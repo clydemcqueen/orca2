@@ -29,6 +29,11 @@ namespace orca_driver
       // Each thruster gets 5s, so a cycle is 30s
       int cycle = msg.header.stamp.sec % 30;
       int thruster = cycle / 5;
+      static int prev_thruster = -1;
+      if (thruster != prev_thruster) {
+        RCLCPP_INFO(get_logger(), "test thruster %d, fwd, rev, stop", thruster);
+        prev_thruster = thruster;
+      }
       int pwm;
       switch (cycle % 5) {
         case 1:
