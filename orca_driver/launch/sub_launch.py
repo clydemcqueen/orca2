@@ -24,12 +24,6 @@ def generate_launch_description():
 
         Node(package='orca_driver', node_executable='driver_node', output='screen', node_name='driver_node',
              parameters=[{
-                 'thruster_1_channel': 0,
-                 'thruster_2_channel': 1,
-                 'thruster_3_channel': 4,
-                 'thruster_4_channel': 5,
-                 'thruster_5_channel': 6,
-                 'thruster_6_channel': 7,
              }]),
 
         Node(package='h264_image_transport', node_executable='h264_cam_node', output='screen',

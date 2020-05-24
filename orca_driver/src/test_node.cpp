@@ -31,7 +31,7 @@ namespace orca_driver
       int thruster = cycle / 5;
       static int prev_thruster = -1;
       if (thruster != prev_thruster) {
-        RCLCPP_INFO(get_logger(), "test thruster %d, fwd, rev, stop", thruster);
+        RCLCPP_INFO(get_logger(), "test thruster %d, fwd, rev, stop", thruster + 1);
         prev_thruster = thruster;
       }
       int pwm;

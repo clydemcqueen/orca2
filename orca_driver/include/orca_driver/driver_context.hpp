@@ -9,23 +9,25 @@
 namespace orca_driver
 {
 
+  // See BlueROV2 thruster diagram: https://bluerobotics.com/learn/bluerov2-assembly/
+
 #define DRIVER_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(timer_period_ms, int, 100)                     /* Timer period in ms  */ \
   CXT_MACRO_MEMBER(timeout_control_ms, int, 1000)                 /* Control msg timeout */ \
   \
-  CXT_MACRO_MEMBER(thruster_3_channel, int, 0)                    /* PWM thruster 0 channel */ \
-  CXT_MACRO_MEMBER(thruster_5_channel, int, 1)                    /* PWM thruster 1 channel */ \
-  CXT_MACRO_MEMBER(thruster_1_channel, int, 2)                    /* PWM thruster 2 channel */ \
-  CXT_MACRO_MEMBER(thruster_4_channel, int, 3)                    /* PWM thruster 3 channel */ \
-  CXT_MACRO_MEMBER(thruster_6_channel, int, 4)                    /* PWM thruster 4 channel */ \
-  CXT_MACRO_MEMBER(thruster_2_channel, int, 5)                    /* PWM thruster 5 channel */ \
+  CXT_MACRO_MEMBER(thruster_1_channel, int, 4)                    /* Front right */ \
+  CXT_MACRO_MEMBER(thruster_2_channel, int, 7)                    /* Front left */ \
+  CXT_MACRO_MEMBER(thruster_3_channel, int, 0)                    /* Rear right */ \
+  CXT_MACRO_MEMBER(thruster_4_channel, int, 5)                    /* Rear left */ \
+  CXT_MACRO_MEMBER(thruster_5_channel, int, 1)                    /* Vertical right */ \
+  CXT_MACRO_MEMBER(thruster_6_channel, int, 6)                    /* Vertical left */ \
   \
-  CXT_MACRO_MEMBER(thruster_3_reverse, bool, false)               /* PWM thruster 0 reverse */ \
-  CXT_MACRO_MEMBER(thruster_5_reverse, bool, false)               /* PWM thruster 1 reverse */ \
-  CXT_MACRO_MEMBER(thruster_1_reverse, bool, false)               /* PWM thruster 2 reverse */ \
-  CXT_MACRO_MEMBER(thruster_4_reverse, bool, false)               /* PWM thruster 3 reverse */ \
-  CXT_MACRO_MEMBER(thruster_6_reverse, bool, false)               /* PWM thruster 4 reverse */ \
-  CXT_MACRO_MEMBER(thruster_2_reverse, bool, false)               /* PWM thruster 5 reverse */ \
+  CXT_MACRO_MEMBER(thruster_1_reverse, bool, false) \
+  CXT_MACRO_MEMBER(thruster_2_reverse, bool, false) \
+  CXT_MACRO_MEMBER(thruster_3_reverse, bool, false) \
+  CXT_MACRO_MEMBER(thruster_4_reverse, bool, false) \
+  CXT_MACRO_MEMBER(thruster_5_reverse, bool, false) \
+  CXT_MACRO_MEMBER(thruster_6_reverse, bool, false) \
   \
   CXT_MACRO_MEMBER(lights_channel, int, 9)                        /* PWM lights channel */ \
   CXT_MACRO_MEMBER(tilt_channel, int, 10)                         /* PWM tilt channel */ \
