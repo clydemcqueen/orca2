@@ -157,6 +157,7 @@ install(
   scripts/nees.py
   scripts/plot_auv_segments.py
   scripts/plot_control.py
+  scripts/plot_corners.py
   scripts/plot_filter.py
   scripts/plot_odom.py
   DESTINATION lib/${PROJECT_NAME}
