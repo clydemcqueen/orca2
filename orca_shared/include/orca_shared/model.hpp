@@ -44,38 +44,17 @@ namespace orca
     static constexpr double ROV_AREA_TOP = ROV_DIM_F * ROV_DIM_Z;   // Area of top and bottom
     static constexpr double ROV_AREA_PORT = ROV_DIM_F * ROV_DIM_S;  // Area of left (port) and right (starboard) sides
 
-    static constexpr double MASS = 9.75;
-    static constexpr double VOLUME = 0.01;
-
-    // Assume a uniform distribution of mass in the vehicle box
-    static constexpr double MOMENT_OF_INERTIA_YAW = MASS / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
-
     // From BlueRobotics specs, in Newtons
     // Use bollard_force_* and max_torque_yaw instead
     static constexpr double T200_MAX_POS_FORCE = 50;
     static constexpr double T200_MAX_NEG_FORCE = 40;
 
     //=====================================================================================
-    // Dynamics
-    //=====================================================================================
-
-    // Force / torque => acceleration
-    static constexpr double force_to_accel(double force)
-    { return force / MASS; }
-
-    static constexpr double torque_to_accel_yaw(double torque_yaw)
-    { return torque_yaw / MOMENT_OF_INERTIA_YAW; }
-
-    // Acceleration => force / torque
-    static constexpr double accel_to_force(double accel)
-    { return MASS * accel; }
-
-    static constexpr double accel_to_torque_yaw(double accel_yaw)
-    { return MOMENT_OF_INERTIA_YAW * accel_yaw; }
-
-    //=====================================================================================
     // Parameters, updated by validate_parameters
     //=====================================================================================
+
+    double mass_ = 9.75;
+    double volume_ = 0.01;
 
     // Estimate bollard forces from the thruster specs, and measure them in the field
     // Update orca_gazebo/orca.urdf.xacro to match for a good simulation
@@ -105,6 +84,27 @@ namespace orca
 
     // Angular drag is a different thing altogether, provide a partial const
     double drag_partial_const_yaw_ = 0.004;
+
+    //=====================================================================================
+    // Dynamics
+    //=====================================================================================
+
+    // Assume a uniform distribution of mass in the vehicle box
+    double moment_of_inertia_yaw_ = mass_ / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
+
+    // Force / torque => acceleration
+    double force_to_accel(double force) const
+    { return force / mass_; }
+
+    double torque_to_accel_yaw(double torque_yaw) const
+    { return torque_yaw / moment_of_inertia_yaw_; }
+
+    // Acceleration => force / torque
+    double accel_to_force(double accel) const
+    { return mass_ * accel; }
+
+    double accel_to_torque_yaw(double accel_yaw) const
+    { return moment_of_inertia_yaw_ * accel_yaw; }
 
     //=====================================================================================
     // Force / torque <=> effort
@@ -162,15 +162,15 @@ namespace orca
 
     // Mass displaced by the volume, in kg
     double displaced_mass() const
-    { return VOLUME * fluid_density_; }
+    { return volume_ * fluid_density_; }
 
     // Weight in water, in Newtons (kg * m/s^2)
     double weight_in_water() const
-    { return GRAVITY * (MASS - displaced_mass()); }
+    { return GRAVITY * (mass_ - displaced_mass()); }
 
     // Z acceleration required to hover, in m/s^2
     double hover_accel_z() const
-    { return weight_in_water() / MASS; }
+    { return weight_in_water() / mass_; }
 
     //=====================================================================================
     // Drag in the body frame (x forward, y left, z up) = 0.5 * density * area * velocity^2 * coefficient
@@ -203,7 +203,7 @@ namespace orca
 
     // Velocity => drag force / torque
     // Motion works in all 4 quadrants, note the use of abs()
-    double drag_force(double velo, double drag_constant) const
+    static double drag_force(double velo, double drag_constant)
     { return velo * std::abs(velo) * -drag_constant; }
 
     double drag_force_f(double velo_f) const

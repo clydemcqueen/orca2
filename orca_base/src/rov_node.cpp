@@ -117,6 +117,8 @@ namespace orca_base
   void ROVNode::validate_parameters()
   {
     // Update model from new parameters
+    cxt_.model_.mass_ = cxt_.mass_;
+    cxt_.model_.volume_ = cxt_.volume_;
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
     cxt_.model_.bollard_force_z_up_ = cxt_.bollard_force_z_up_;
     cxt_.model_.bollard_force_z_down_ = cxt_.bollard_force_z_down_;
