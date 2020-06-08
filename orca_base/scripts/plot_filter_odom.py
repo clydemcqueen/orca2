@@ -3,6 +3,8 @@
 """
 Analyze and plot the output of a Kalman filter by subscribing to 2 Odometry messages: pre- and post-filter
 
+Not used in ft3
+
 Usage: ros2 run orca_base plot_filter.py /pre_filter:=/left_camera/odom /post_filter:=/filtered_odom
 """
 
@@ -19,7 +21,7 @@ from nav_msgs.msg import Odometry
 from orca_msgs.msg import Depth
 from rclpy.node import Node
 
-import nees
+import nees_odom
 from orca_util import seconds, q_to_rpy
 
 QUEUE_FOR = 10.0  # Seconds
@@ -153,7 +155,7 @@ class PlotFilterNode(Node):
     def calc_nees(self) -> float:
         """Calc mean NEES value"""
 
-        nees_values = nees.nees(self._post_msgs, self._gt_msgs)
+        nees_values = nees_odom.nees(self._post_msgs, self._gt_msgs)
         if nees_values:
             return float(np.mean(nees_values))
         else:

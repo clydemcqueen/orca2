@@ -154,12 +154,11 @@ install(
 install(
   PROGRAMS
   scripts/experiments.py
-  scripts/nees.py
+  scripts/nees_fp.py
   scripts/plot_auv_segments.py
   scripts/plot_control.py
   scripts/plot_corners.py
-  scripts/plot_filter.py
-  scripts/plot_odom.py
+  scripts/plot_filter_fp.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

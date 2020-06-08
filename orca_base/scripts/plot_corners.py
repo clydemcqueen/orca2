@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Analyze and plot fiducial_vlam_msgs/msg/Observations messages
+Given a single marker that's always visible, and a stationary camera,
+analyze and plot fiducial_vlam_msgs/msg/Observations messages.
 
 Usage:
 
@@ -81,14 +82,14 @@ class Plotter(object):
             print('WARNING large time gap {:.2f}s'.format(largest_gap))
 
         all_valuess = [
-        [msg.observations[0].x0 for msg in self._msgs],
-        [msg.observations[0].x1 for msg in self._msgs],
-        [msg.observations[0].x2 for msg in self._msgs],
-        [msg.observations[0].x3 for msg in self._msgs],
-        [msg.observations[0].y0 for msg in self._msgs],
-        [msg.observations[0].y1 for msg in self._msgs],
-        [msg.observations[0].y2 for msg in self._msgs],
-        [msg.observations[0].y3 for msg in self._msgs]]
+            [msg.observations[0].x0 for msg in self._msgs],
+            [msg.observations[0].x1 for msg in self._msgs],
+            [msg.observations[0].x2 for msg in self._msgs],
+            [msg.observations[0].x3 for msg in self._msgs],
+            [msg.observations[0].y0 for msg in self._msgs],
+            [msg.observations[0].y1 for msg in self._msgs],
+            [msg.observations[0].y2 for msg in self._msgs],
+            [msg.observations[0].y3 for msg in self._msgs]]
 
         # Plot all corner values
         for subplot, name, all_values in zip(subplots, names, all_valuess):
@@ -168,7 +169,7 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         node.get_logger().info('ctrl-C detected, shutting down')
-        # TODO notify consumer thread for a clean shutdown
+        # TODO notify consumer thread for a clean shutdown -- today you need to hit ctrl-c twice
     finally:
         node.destroy_node()
         rclpy.shutdown()

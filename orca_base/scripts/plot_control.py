@@ -29,11 +29,6 @@ Perhaps worth investigating:
 """
 
 import matplotlib
-
-# Set backend before importing matplotlib.pyplot
-matplotlib.use('pdf')
-
-import matplotlib.pyplot as plt
 from orca_msgs.msg import Control
 import rclpy
 import rclpy.time
@@ -41,16 +36,20 @@ from rclpy.node import Node
 import sys
 from typing import List
 
+# Set backend before importing matplotlib.pyplot
+matplotlib.use('pdf')
 
-def cost_function(pos_neg, off_on, on):
+import matplotlib.pyplot as plt
+
+
+def cost_function(pos_neg, off_on):
     """
     Cost function for a sequence of control messages, lower is better
     :param pos_neg: count of forward<->reverse transitions, cost=10
     :param off_on: count of off->on transitions, cost=5
-    :param on: count of on states, cost=0
     :return: cost
     """
-    return 10 * pos_neg + 5 * off_on  # + on
+    return 10 * pos_neg + 5 * off_on
 
 
 class PlotControlNode(Node):
@@ -104,7 +103,7 @@ class PlotControlNode(Node):
             pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
 
             # Measure fitness
-            pos_neg, off_on, on = 0, 0, 0
+            pos_neg, off_on = 0, 0
             for c, n in zip(pwm_values, pwm_values[1:]):
                 if c > 1500 > n:
                     pos_neg += 1
@@ -112,12 +111,10 @@ class PlotControlNode(Node):
                     pos_neg += 1
                 elif c == 1500 and n != 1500:
                     off_on += 1
-                if c != 1500:
-                    on += 1
-            cost = cost_function(pos_neg, off_on, on)
+            cost = cost_function(pos_neg, off_on)
             total_cost += cost
 
-            ax.set_title('T{}: pos_neg={}, off_on={}, on={}, cost={}'.format(i, pos_neg, off_on, on, cost))
+            ax.set_title('T{}: pos_neg={}, off_on={}, cost={}'.format(i, pos_neg, off_on, cost))
             ax.set_ylim(1400, 1600)
             ax.set_xticklabels([])
             ax.plot(pwm_values)

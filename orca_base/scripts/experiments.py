@@ -3,7 +3,9 @@
 """
 Run a series of experiments
 
-Usage: ros2 run orca_base experiments.py
+Usage:
+
+ros2 run orca_base experiments.py
 """
 
 from typing import List, Optional
@@ -16,14 +18,14 @@ from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from nav_msgs.msg import Odometry
 from orca_msgs.action import Mission
-from orca_msgs.msg import Control
-from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+from orca_msgs.msg import FiducialPoseStamped
+from rcl_interfaces.msg import Parameter, ParameterType
 from rcl_interfaces.srv import SetParameters
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
 from rclpy.node import Node
 
-import nees
+import nees_fp
 
 
 def q_to_rpy(q):
@@ -84,10 +86,12 @@ class RunNode(Node):
     def __init__(self):
         super().__init__('experiments')
 
-        # Optionally record odom and gt, and calc NEES
-        self._calc_nees = False
+        # Optionally record fp and gt, and calc NEES
+        self._calc_nees = True
+        if self._calc_nees:
+            print('recording fp and ground truth, will calc NEES')
 
-        # Optoinally support filter_node
+        # Optionally support filter_node
         self._filter_node_running = False
 
         # Set up experiments
@@ -121,18 +125,11 @@ class RunNode(Node):
             # ]),
         ]
 
-        # self._experiments = []
-        # for step in range(1, 20, 1):
-        #     self._experiments.append(Experiment(note='', mode=Control.AUV_MARKER_SEQUENCE, count=1, base_params=[
-        #                 Parameter(name='planner_z_target',
-        #                           value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=-(2. + step/10.)))
-        #             ], filter_params=[]))
-
-        # If we're in a mission record odometry and ground truth messages for later processing
-        self._odom_msgs: Optional[List[Odometry]] = None
+        # If we're in a mission record fiducial pose and ground truth messages for later processing
+        self._fp_msgs: Optional[List[FiducialPoseStamped]] = None
         self._gt_msgs: Optional[List[Odometry]] = None
-        self._odom_sub = self.create_subscription(Odometry, '/odom', self.odom_cb, 5)
-        self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_cb, 5)
+        self._fp_sub = self.create_subscription(FiducialPoseStamped, '/filtered_fp', self.fp_cb, 10)
+        self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_cb, 10)
 
         # Set parameter service clients
         self._set_param_auv_node_client = self.create_client(SetParameters, '/auv_node/set_parameters')
@@ -160,9 +157,9 @@ class RunNode(Node):
         # Step 1
         self.set_auv_node_params()
 
-    def odom_cb(self, msg: Odometry):
-        if self._odom_msgs is not None:
-            self._odom_msgs.append(msg)
+    def fp_cb(self, msg: FiducialPoseStamped):
+        if self._fp_msgs is not None:
+            self._fp_msgs.append(msg)
 
     def gt_cb(self, msg: Odometry):
         if self._gt_msgs is not None:
@@ -231,7 +228,7 @@ class RunNode(Node):
 
             # Start recording messages
             if self._calc_nees:
-                self._odom_msgs = []
+                self._fp_msgs = []
                 self._gt_msgs = []
 
             # Get notified when the mission is complete
@@ -255,11 +252,12 @@ class RunNode(Node):
                 'goal succeeded, result: {0} out of {1}'.format(result.targets_completed, result.targets_total))
 
             # Calc and report NEES
+            # TODO sub drifts too much during this calc, move calc to sep thread
             if self._calc_nees:
                 self.report_nees()
 
             # Stop recording messages
-            self._odom_msgs = None
+            self._fp_msgs = None
             self._gt_msgs = None
         else:
             self.get_logger().warn('goal failed with status: {0}'.format(status))
@@ -271,13 +269,13 @@ class RunNode(Node):
         self.start_next_experiment()
 
     def report_nees(self):
-        if self._odom_msgs is None or len(self._odom_msgs) < 5:
-            self.get_logger().error('too few odom messages')
+        if self._fp_msgs is None or len(self._fp_msgs) < 5:
+            self.get_logger().error('too few fp messages')
             return
 
-        self.get_logger().info('{} odom messages spanning {} seconds'.format(
-            len(self._odom_msgs),
-            seconds(self._odom_msgs[-1].header.stamp) - seconds(self._odom_msgs[0].header.stamp)))
+        self.get_logger().info('{} fp messages spanning {} seconds'.format(
+            len(self._fp_msgs),
+            seconds(self._fp_msgs[-1].header.stamp) - seconds(self._fp_msgs[0].header.stamp)))
 
         if self._gt_msgs is None or len(self._gt_msgs) < 5:
             self.get_logger().error('too few ground truth messages')
@@ -287,7 +285,7 @@ class RunNode(Node):
             len(self._gt_msgs),
             seconds(self._gt_msgs[-1].header.stamp) - seconds(self._gt_msgs[0].header.stamp)))
 
-        nees_values = nees.nees(self._odom_msgs, self._gt_msgs)
+        nees_values = nees_fp.nees(self._fp_msgs, self._gt_msgs)
 
         if nees_values:
             self._experiments[self._idx].results.append(np.mean(nees_values))

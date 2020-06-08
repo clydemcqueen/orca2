@@ -43,7 +43,7 @@ class State(object):
         return self._s
 
     def __str__(self):
-        return 's: ' + str(self._s) + '\nx: ' + str(self._x) + '\n' # + 'P:\n' + str(self._P) + '\n'
+        return 's: ' + str(self._s) + '\nx: ' + str(self._x) + '\n'  # + 'P:\n' + str(self._P) + '\n'
 
     @classmethod
     def from_odometry(cls, msg: Odometry):
@@ -126,8 +126,8 @@ def nees(e_msgs: List[Odometry], gt_msgs: List[Odometry]) -> List[float]:
     return results
 
 
-def main(args=None):
-    print('Test nees.py')
+def main():
+    print('Test nees_odom.py')
 
     a = State(0., np.ones(12) * 10.)
     b = State(1., np.ones(12) * 20.)
