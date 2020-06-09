@@ -47,7 +47,6 @@ namespace orca_base
     (void) control_sub_;
     (void) depth_sub_;
     (void) driver_sub_;
-    (void) fcam_info_sub_;
     (void) fp_sub_;
     (void) goal_sub_;
     (void) map_sub_;
