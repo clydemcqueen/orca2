@@ -159,39 +159,39 @@ namespace orca_base
   bool AUVNode::fp_ok(const rclcpp::Time &t)
   { return estimate_.header().valid() && t - estimate_.header().t() < fp_timeout_; }
 
-  bool AUVNode::ready_to_start_mission(const rclcpp::Time &t)
+  bool AUVNode::accept_goal(const rclcpp::Time &t)
   {
     if (mission_) {
-      RCLCPP_ERROR(get_logger(), "mission already running");
+      RCLCPP_ERROR(get_logger(), "goal rejected: mission already running");
       return false;
     }
 
     if (!map_.valid()) {
-      RCLCPP_ERROR(get_logger(), "no map");
+      RCLCPP_ERROR(get_logger(), "goal rejected: no map");
       return false;
     }
 
     if (!driver_ok(t)) {
-      RCLCPP_ERROR(get_logger(), "no driver status");
+      RCLCPP_ERROR(get_logger(), "goal rejected: no driver status");
       return false;
     }
 
     if ((cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(t)) {
-      RCLCPP_ERROR(get_logger(), "no depth messages");
+      RCLCPP_ERROR(get_logger(), "goal rejected: no depth messages");
       return false;
     }
 
     if (!fp_ok(t)) {
-      RCLCPP_ERROR(get_logger(), "no fiducial pose messages");
+      RCLCPP_ERROR(get_logger(), "goal rejected: no fiducial pose messages");
       return false;
     }
 
     if (!(estimate_.fp().good(cxt_.good_pose_dist_) || estimate_.fp().observations().good(cxt_.good_obs_dist_))) {
-      RCLCPP_ERROR(get_logger(), "no good pose, no good observation");
+      RCLCPP_ERROR(get_logger(), "goal rejected: no good pose, no good observation");
       return false;
     }
 
-    RCLCPP_INFO(get_logger(), "mission accepted");
+    RCLCPP_INFO(get_logger(), "goal accepted");
     return true;
   }
 
@@ -296,7 +296,7 @@ namespace orca_base
 
     using orca_msgs::msg::Control;
 
-    if (ready_to_start_mission(now())) {
+    if (accept_goal(now())) {
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     } else {
       return rclcpp_action::GoalResponse::REJECT;

@@ -38,6 +38,12 @@ def q_to_rpy(q):
     return rpy
 
 
+def get_quaternion(yaw: float) -> Quaternion:
+    m = xf.euler_matrix(0, 0, yaw)
+    q = xf.quaternion_from_matrix(m)
+    return Quaternion(x=q[1], y=q[2], z=q[3], w=q[0])  # Order is w, x, y, z
+
+
 # Set ylim to some reasonable values
 def set_ylim_with_min_range(ax, min_range=0.2):
     limits = ax.get_ylim()

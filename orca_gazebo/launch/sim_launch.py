@@ -175,7 +175,7 @@ def generate_launch_description():
     }
 
     # Run orca_filter or not
-    filter_poses = True
+    filter_poses = False
 
     if filter_poses:
         all_entities.append(
@@ -204,7 +204,7 @@ def generate_launch_description():
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
-                    ('filtered_fp', 'fp'),
+                    ('filtered_fp', '/' + forward_camera_name + '/fp'),
                 ]))
 
     return LaunchDescription(all_entities)

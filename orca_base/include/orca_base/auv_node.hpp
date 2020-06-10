@@ -60,7 +60,7 @@ namespace orca_base
 
     bool fp_ok(const rclcpp::Time &t);
 
-    bool ready_to_start_mission(const rclcpp::Time &t);
+    bool accept_goal(const rclcpp::Time &t);
 
     void timer_callback(bool first);
 

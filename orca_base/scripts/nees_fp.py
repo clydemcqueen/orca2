@@ -3,6 +3,7 @@
 """
 Compute Normalized Estimated Error Squared (NEES)
 See https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/08-Designing-Kalman-Filters.ipynb
+Only works in simulations, and only useful if we're running a filter
 """
 
 from typing import List, Optional
