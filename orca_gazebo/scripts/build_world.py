@@ -167,6 +167,7 @@ small_pool = [
 ]
 
 
+# Generate a ring of vertical markers
 def gen_ring_of_markers(num_markers, radius, z):
     marker = 0
     angle = 0
@@ -177,12 +178,11 @@ def gen_ring_of_markers(num_markers, radius, z):
         angle += inc
 
 
-# Field test #3: 12' diameter pool x 3' deep, markers on walls
-ft3 = list(gen_ring_of_markers(num_markers=12, radius=3.6/2, z=-0.5))
+# Small ring: 12' diameter pool x 3' deep, markers on walls
+small_ring = list(gen_ring_of_markers(num_markers=12, radius=3.6 / 2, z=-0.5))
 
 medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
 
-# Very large ring of vertical markers
 large_ring = list(gen_ring_of_markers(num_markers=4, radius=8, z=-0.5))
 
 # Even simpler pool test #2: 1 marker on the wall and 1 on the floor
@@ -191,15 +191,26 @@ small_simple = [
     [1, 1, 1, -3, 0, 0, 0],
 ]
 
+# Vertical field of 2x3=6 markers that will fit in the 12' pool
+small_field = [
+    [0, 2, 0.6, -0.3, 0, -math.pi / 2, 0],
+    [1, 2, 0, -0.3, 0, -math.pi / 2, 0],
+    [2, 2, -0.6, -0.3, 0, -math.pi / 2, 0],
+    [3, 2, 0.6, -0.7, 0, -math.pi / 2, 0],
+    [4, 2, 0, -0.7, 0, -math.pi / 2, 0],
+    [5, 2, -0.6, -0.7, 0, -math.pi / 2, 0],
+]
+
 worlds = [
     ['huge.world', 'huge_map.yaml', huge_pool],
     ['large.world', 'large_map.yaml', large_pool],
     ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],
-    ['ft3.world', 'ft3_map.yaml', ft3],
+    ['small_ring.world', 'small_ring_map.yaml', small_ring],
     ['medium_ring.world', 'medium_ring_map.yaml', medium_ring],
     ['large_ring.world', 'large_ring_map.yaml', large_ring],
     ['simple.world', 'simple_map.yaml', small_simple],
+    ['small_field.world', 'small_field_map.yaml', small_field],
 ]
 
 

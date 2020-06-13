@@ -3,9 +3,17 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
+from enum import Enum
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
+
+
+# There are three tested worlds:
+class World(Enum):
+    SMALL_FIELD = 0     # 12' diameter pool with a field of 6 markers arranged in a 2x3 vertical field
+    SMALL_RING = 1      # 12' diameter pool with 12 markers arranged along the walls
+    LARGE_RING = 2      # large_ring is a 20m diameter ring with 4 markers
 
 
 def generate_launch_description():
@@ -35,14 +43,24 @@ def generate_launch_description():
     # 1920x1280: 14.0
     good_obs_dist = 10.0
 
-    # There are two tested simulations:
-    # -- ft3 (field test #3) is a 12' diameter pool with 12 markers arranged along the walls
-    # -- large ring is a 20m diameter ring with 4 markers
-    ft3 = True
+    world = World.SMALL_FIELD
 
-    if ft3:
-        world_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3.world')
-        map_path = os.path.join(orca_gazebo_path, 'worlds', 'ft3_map.yaml')
+    if world == World.SMALL_FIELD:
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field_map.yaml')
+
+        # Do not allow MTM recovery
+        global_plan_allow_mtm = False
+
+        # If xy distance is > this, then build a long plan (rotate, run, rotate)
+        # Otherwise build a short plan (move in all DoF at once)
+        pose_plan_max_short_plan_xy = 0.5
+
+        # The pool is a bit cramped, so get closer to the markers
+        pose_plan_target_dist = 0.8
+    elif world == World.SMALL_RING:
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring_map.yaml')
 
         # Do not allow MTM recovery
         global_plan_allow_mtm = False
