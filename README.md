@@ -25,6 +25,12 @@ sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 pip3 install numpy transformations
 ~~~
 
+* Orca2 uses [fiducial_vlam_sam](https://github.com/ptrmu/fiducial_vlam_sam),
+which in turn uses [GTSAM](https://github.com/borglab/gtsam).
+You will need to install GTSAM.
+Alternatively you can swap [fiducial_vlam](https://github.com/ptrmu/fiducial_vlam) for fiducial_vlam_sam,
+but the parameters are different, so the launch files will need to be modified.
+
 * Build Orca2 (orca_driver is not required for the simulation):
 ~~~
 mkdir -p ~/ros2/orca_ws/src
@@ -32,7 +38,7 @@ cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
 touch orca2/orca_driver/COLCON_IGNORE
 git clone https://github.com/clydemcqueen/ukf.git
-git clone https://github.com/ptrmu/fiducial_vlam.git
+git clone https://github.com/ptrmu/fiducial_vlam_sam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 git clone https://github.com/clydemcqueen/sim_fiducial.git
 git clone https://github.com/clydemcqueen/astar.git

@@ -128,38 +128,47 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
              node_name='vmap_node', parameters=[{
                 # Publish marker /tf
-                'publish_tfs': 1,
+                'psm_publish_tfs': 1,
 
                 # Marker length for new maps
-                'marker_length': 0.1778,
+                'map_marker_length': 0.1778,
 
                 # Load a pre-built map from disk
-                'marker_map_load_full_filename': map_path,
+                'map_load_filename': map_path,
 
-                # Do not modify the map
-                'make_not_use_map': 0
+                # Don't save the map
+                'map_save_filename': '',
             }]),
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[{
-                'camera_frame_id': forward_camera_frame,
-                'publish_tfs': 0,
-                'publish_tfs_per_marker': 0,
+                # Localize, don't calibrate
+                'loc_calibrate_not_loocalize': 0,
+
+                # Use OpenCV, not GTSAM
+                'loc_camera_sam_not_cv': 0,
+
+                'psl_camera_frame_id': forward_camera_frame,
+                'psl_publish_tfs': 0,
+                'psl_publish_tfs_per_marker': 0,
+
+                # Default dict id is 0 (DICT_4x4_50), but sim_fiducial uses DICT_6X6_250
+                'loc_aruco_dictionary_id': 8,
 
                 # Gazebo publishes camera info best-effort
-                'sub_camera_info_best_effort_not_reliable': 1,
+                'psl_sub_camera_info_best_effort_not_reliable': 1,
 
                 # Publish the camera pose
-                'publish_camera_pose': 1,
+                'psl_publish_camera_pose': 1,
 
                 # Don't publish anything else
-                'publish_base_pose': 0,
-                'publish_camera_odom': 0,
-                'publish_base_odom': 0,
+                'psl_publish_base_pose': 0,
+                'psl_publish_camera_odom': 0,
+                'psl_publish_base_odom': 0,
 
                 # Keep the existing timestamps
-                'stamp_msgs_with_current_time': 0,
+                'psl_stamp_msgs_with_current_time': 0,
             }]),
 
         # FP node, generate fiducial poses from observations and poses

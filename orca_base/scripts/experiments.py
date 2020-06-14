@@ -421,7 +421,8 @@ rotate_experiment = Experiment.go_to_poses(
     [],
     [
         Pose(position=Point(z=-0.5), orientation=get_quaternion(1.5)),
-        Pose(position=Point(z=-0.5), orientation=get_quaternion(-1.5))
+        Pose(position=Point(z=-0.5), orientation=get_quaternion(-1.5)),
+        Pose(position=Point(z=-0.5), orientation=get_quaternion(0))
     ],
     False
 )

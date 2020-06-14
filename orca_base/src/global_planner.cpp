@@ -46,14 +46,24 @@ namespace orca_base
     local_planner_ = std::make_shared<MoveToMarkerPlanner>(logger_, cxt_, start, state_);
   }
 
+  // Create a new local planner
   bool GlobalPlanner::create_local_planner(const mw::FiducialPoseStamped &estimate)
   {
+    // If we have a good pose, create a planner
     if (estimate.fp().good(cxt_.good_pose_dist_)) {
-      RCLCPP_INFO(logger_, "create a pose planner");
+      RCLCPP_INFO(logger_, "create local planner from estimated pose");
       create_pose_planner(mw::PoseStamped{estimate.header(), estimate.fp().pose().pose()});
       return true;
     }
 
+    // If we do not expect and do not have a good estimated pose, start from the planned pose
+    if (!state_.plan().fp().good(cxt_.good_pose_dist_) && !estimate.fp().good(cxt_.good_pose_dist_)) {
+      RCLCPP_INFO(logger_, "create local planner from planned pose");
+      create_pose_planner(mw::PoseStamped{state_.plan().header(), state_.plan().fp().pose().pose()});
+      return true;
+    }
+
+    // Attempt recovery
     if (cxt_.global_plan_allow_mtm_) {
       auto polar = estimate.fp().observations().get_polar(state_.target_marker_id());
       if (polar.distance() < cxt_.good_obs_dist_) {
