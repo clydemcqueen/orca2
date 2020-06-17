@@ -1,5 +1,8 @@
 # Goal
 
+# This will be copied to /control.mission.mission_info, useful for experiments
+string mission_info
+
 # Targets are either markers or poses
 bool pose_targets false
 

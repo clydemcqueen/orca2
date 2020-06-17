@@ -59,6 +59,11 @@ namespace orca_filter
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     FILTER_NODE_ALL_PARAMS
 
+    // Check that all command line parameters are defined
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
+    CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), FILTER_NODE_ALL_PARAMS)
+
     // Parse URDF
     if (!parser_.parse()) {
       RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
@@ -93,7 +98,7 @@ namespace orca_filter
     }
 
     // Update model from new parameters
-    cxt_.model_.fluid_density_ = cxt_.param_fluid_density_;
+    cxt_.model_.fluid_density_ = cxt_.fluid_density_;
 
     // Update timeouts
     open_water_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_open_water_ms_)};

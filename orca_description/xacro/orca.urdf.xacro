@@ -9,8 +9,14 @@
             {x, y, THRUSTER_Z}: where forward/back/strafe/yaw thrust forces are applied
             {0, 0, MASS_Z}: where the linear and angular drag force is applied
             {0, 0, VOLUME_Z}: where the buoyancy force is applied
+
+        Default simulation is fresh water and slightly positive buoyancy:
+            TOTAL_VOLUME = 0.01
+            FLUID_DENSITY = 997
+            DISPLACED_MASS = TOTAL_VOLUME * FLUID_DENSITY = 9.97
+            TOTAL_MASS = 9.9
      -->
-    <xacro:property name="TOTAL_MASS" value="9.75"/>  <!-- 9.75 floats in freshwater, 10.0 for seawater -->
+    <xacro:property name="TOTAL_MASS" value="9.9"/>
     <xacro:property name="TOTAL_VOLUME" value="0.01"/>
     <xacro:property name="LENGTH" value="0.457"/>
     <xacro:property name="WIDTH" value="0.338"/>
@@ -35,7 +41,6 @@
 
     <!-- Physics properties -->
     <xacro:property name="FLUID_DENSITY" value="997"/>
-    <xacro:property name="DISPLACED_MASS" value="${TOTAL_VOLUME*FLUID_DENSITY}"/>
 
     <!-- General constants -->
     <xacro:property name="PI" value="3.1415926535897931"/>

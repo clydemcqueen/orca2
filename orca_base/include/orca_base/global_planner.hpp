@@ -48,7 +48,7 @@ namespace orca_base
   public:
 
     explicit GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, mw::Map map,
-                           const mw::Observer &observer, std::vector<mw::Target> targets, bool keep_station);
+                           const mw::Observer &observer, const std::string &mission_info, std::vector<mw::Target> targets, bool keep_station);
 
     const mw::MissionState &status() const
     { return state_; }
@@ -63,13 +63,13 @@ namespace orca_base
     // Factory: visit a list markers, if list is empty all markers will be visited
     static std::shared_ptr<GlobalPlanner>
     plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                 const mw::Observer &observer, const std::vector<int> &markers_ids, bool random, bool repeat,
+                 const mw::Observer &observer, const std::string &mission_info, const std::vector<int> &markers_ids, bool random, bool repeat,
                  bool keep_station);
 
     // Factory: visit a list of poses, list cannot be empty
     static std::shared_ptr<GlobalPlanner>
     plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-               const mw::Observer &observer, const std::vector<geometry_msgs::msg::Pose> &poses, bool random,
+               const mw::Observer &observer, const std::string &mission_info, const std::vector<geometry_msgs::msg::Pose> &poses, bool random,
                bool repeat, bool keep_station);
   };
 

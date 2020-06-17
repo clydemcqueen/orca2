@@ -53,7 +53,7 @@ namespace orca_base
         // Ascend/descend to target z
         if (plan.pose().position().distance_z(waypoint.position()) > cxt_.pose_plan_epsilon_xyz_) {
           add_vertical_segment(plan, waypoint.z());
-          add_keep_station_segment(plan, 1);
+          add_pause_segment(plan, cxt_.pose_plan_pause_duration_);
         } else {
           RCLCPP_INFO(logger_, "skip vertical");
         }
@@ -61,7 +61,7 @@ namespace orca_base
         if (plan.pose().position().distance_xy(waypoint.position()) > cxt_.pose_plan_epsilon_xyz_) {
           // Point in the direction of travel
           add_rotate_segment(plan, atan2(waypoint.y() - plan.pose().y(), waypoint.x() - plan.pose().x()));
-          add_keep_station_segment(plan, 1);
+          add_pause_segment(plan, cxt_.pose_plan_pause_duration_);
 
           // Travel
           add_line_segment(plan, waypoint.x(), waypoint.y());
@@ -75,7 +75,7 @@ namespace orca_base
     }
 
     // Pause
-    add_keep_station_segment(plan, 5);
+    add_pause_segment(plan, cxt_.pose_plan_pause_duration_);
 
 #ifdef LOCAL_PATH
     // Create a path message to this target for diagnostics
@@ -95,7 +95,7 @@ namespace orca_base
 
     if (keep_station_) {
       // Keep station at the last target
-      add_keep_station_segment(plan, 1e6);
+      add_pause_segment(plan, 1e6);
     }
 
     RCLCPP_INFO(logger_, "planned duration %g seconds", (plan.header().t() - start.header().t()).seconds());
@@ -109,9 +109,11 @@ namespace orca_base
     state.twist() = segments_[state.segment_idx()]->twist();
   }
 
-  void PosePlanner::add_keep_station_segment(mw::PoseStamped &plan, double seconds)
+  void PosePlanner::add_pause_segment(mw::PoseStamped &plan, double seconds)
   {
-    segments_.push_back(std::make_shared<Pause>(cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
+    if (seconds > 0) {
+      segments_.push_back(std::make_shared<Pause>(cxt_, plan, rclcpp::Duration::from_seconds(seconds)));
+    }
   }
 
   void PosePlanner::add_vertical_segment(mw::PoseStamped &plan, double z)
@@ -151,6 +153,7 @@ namespace orca_base
 
     state.set_plan(segments_[state.segment_idx()]->plan(), map_);
     state.twist() = segments_[state.segment_idx()]->twist();
+    state.phase() = segments_[state.segment_idx()]->phase();
 
     // Run PID controller and calculate efforts
     controller_->calc(d, state.plan().fp(), estimate.fp(), segments_[state.segment_idx()]->ff(), efforts);

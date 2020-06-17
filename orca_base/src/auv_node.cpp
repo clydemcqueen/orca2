@@ -68,6 +68,11 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     AUV_NODE_ALL_PARAMS
 
+    // Check that all command line parameters are defined
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
+    CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), AUV_NODE_ALL_PARAMS)
+
     // Publications
     control_pub_ = create_publisher<orca_msgs::msg::Control>("control", QUEUE_SIZE);
     esimated_path_pub_ = create_publisher<nav_msgs::msg::Path>("filtered_path", QUEUE_SIZE);
@@ -341,14 +346,14 @@ namespace orca_base
         RCLCPP_INFO(get_logger(), "keeping station at current pose");
         std::vector<geometry_msgs::msg::Pose> poses;
         poses.push_back(estimate_.fp().pose().pose().msg());
-        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), poses,
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info, poses,
                                             action->random, action->repeat, action->keep_station);
       } else {
-        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(),
+        planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info,
                                             action->poses, action->random, action->repeat, action->keep_station);
       }
     } else {
-      planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, estimate_.fp().observations().observer(),
+      planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info,
                                             action->marker_ids, action->random, action->repeat, action->keep_station);
     }
 

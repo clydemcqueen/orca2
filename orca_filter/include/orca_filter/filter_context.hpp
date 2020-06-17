@@ -13,7 +13,7 @@ namespace orca_filter
 {
 
 #define FILTER_NODE_ALL_PARAMS \
-  CXT_MACRO_MEMBER(param_fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(fluid_density, double, 997)                /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
   \
   CXT_MACRO_MEMBER(timeout_open_water_ms, int, 300)           /* Flip to a depth filter when we hit open water  */ \
   CXT_MACRO_MEMBER(timeout_outlier_ms, int, 300)              /* Reset the filter if poses are consistently rejected as outliers  */ \

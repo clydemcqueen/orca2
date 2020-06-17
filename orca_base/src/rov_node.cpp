@@ -73,6 +73,11 @@ namespace orca_base
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
     ROV_NODE_ALL_PARAMS
 
+    // Check that all command line parameters are defined
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
+    CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), ROV_NODE_ALL_PARAMS)
+
     // ROV PID controller
     pressure_hold_pid_ = std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
                                                            cxt_.rov_pressure_pid_kd_);
@@ -409,16 +414,19 @@ namespace orca_base
     auto goal_msg = MissionAction::Goal();
     switch (mission) {
       case Mission::keep_station:
+        goal_msg.mission_info = "ROV keep station";
         goal_msg.pose_targets = true;
         goal_msg.keep_station = true;
         RCLCPP_INFO(get_logger(), "keeping station at current pose");
         break;
       case Mission::go_to_pose:
+        goal_msg.mission_info = "ROV go to pose";
         goal_msg.pose_targets = true;
         goal_msg.poses.push_back(pose);
         RCLCPP_INFO(get_logger(), "go to pose");
         break;
       case Mission::random_markers:
+        goal_msg.mission_info = "ROV random markers";
         goal_msg.random = true;
         RCLCPP_INFO(get_logger(), "visit all markers in a random order");
         break;

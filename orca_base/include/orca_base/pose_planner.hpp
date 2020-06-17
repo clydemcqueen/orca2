@@ -30,7 +30,7 @@ namespace orca_base
 #endif
 
     // Add a trajectory segment and update plan
-    void add_keep_station_segment(mw::PoseStamped &plan, double seconds);
+    void add_pause_segment(mw::PoseStamped &plan, double seconds);
 
     void add_vertical_segment(mw::PoseStamped &plan, double z);
 

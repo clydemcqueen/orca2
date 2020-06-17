@@ -26,9 +26,10 @@ namespace mw
       twist_ = Twist{msg_.twist};
     }
 
-    MissionState(const Observer &observer, const int &_targets_total, const int &_target_marker_id) :
+    MissionState(const Observer &observer, const std::string &_mission_info, const int &_targets_total, const int &_target_marker_id) :
       plan_{observer}
     {
+      msg_.mission_info = _mission_info;
       msg_.targets_total = _targets_total;
       msg_.target_marker_id = _target_marker_id;
 
@@ -74,6 +75,11 @@ namespace mw
       return msg;
     }
 
+    const std::string &mission_info() const
+    {
+      return msg_.mission_info;
+    }
+
     int targets_total() const
     {
       return msg_.targets_total;
@@ -117,6 +123,16 @@ namespace mw
     uint8_t segment_type() const
     {
       return msg_.segment_type;
+    }
+
+    uint8_t phase() const
+    {
+      return msg_.phase;
+    }
+
+    uint8_t &phase()
+    {
+      return msg_.phase;
     }
 
     const FiducialPoseStamped &plan() const

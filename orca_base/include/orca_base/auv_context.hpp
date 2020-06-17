@@ -72,26 +72,22 @@ namespace orca_base
   CXT_MACRO_MEMBER(mtm_yaw_accel, double, 0.1)                /* Move to marker yaw acceleration  */ \
   CXT_MACRO_MEMBER(mtm_yaw_velo, double, 0.2)                 /* Move to marker yaw velocity  */ \
   \
-  CXT_MACRO_MEMBER(auv_epsilon_xy, double, 0.1)               /* Deadzone controller epsilon xy  */ \
-  CXT_MACRO_MEMBER(auv_epsilon_z, double, 0.1)                /* Deadzone controller epsilon z  */ \
-  CXT_MACRO_MEMBER(auv_epsilon_yaw, double, 0.2)              /* Deadzone controller epsilon yaw  */ \
-  CXT_MACRO_MEMBER(auv_jerk_xy, double, 0.1)                  /* Slow controller jerk xy  */ \
-  CXT_MACRO_MEMBER(auv_jerk_z, double, 0.1)                   /* Slow controller jerk z  */ \
-  CXT_MACRO_MEMBER(auv_jerk_yaw, double, 0.2)                 /* Slow controller jerk yaw  */ \
-  \
   CXT_MACRO_MEMBER(good_pose_dist, double, 1.8)               /* Good pose if marker < 1.8m away  */ \
   CXT_MACRO_MEMBER(good_obs_dist, double, 10)                 /* Good observation if marker < 10m away  */ \
   \
+  /* Global planner: */ \
   CXT_MACRO_MEMBER(global_plan_allow_mtm, bool, false)        /* Allow mtm recovery  */ \
   CXT_MACRO_MEMBER(global_plan_max_xy_err, double, 0.6)       /* Replan if xy distance > max  */ \
   CXT_MACRO_MEMBER(global_plan_max_obs_yaw_err, double, 0.2)  /* Start recovery if observation yaw error is > max  */ \
   CXT_MACRO_MEMBER(global_plan_target_z, double, -0.5)        /* Target z position  */ \
   \
+  /* Local (pose) planner: */ \
   CXT_MACRO_MEMBER(pose_plan_waypoints, bool, false)          /* Use A* to find waypoints between targets  */ \
   CXT_MACRO_MEMBER(pose_plan_epsilon_xyz, double, 0.05)       /* If xyz distance < epsilon, skip this segment  */ \
   CXT_MACRO_MEMBER(pose_plan_max_short_plan_xy, double, 2)    /* Build a long plan if xy distance > max  */ \
   CXT_MACRO_MEMBER(pose_plan_max_dead_reckon_dist, double, 9) /* Max allowable dead reckoning distance  */ \
   CXT_MACRO_MEMBER(pose_plan_target_dist, double, 1)          /* Target distance in front of marker  */ \
+  CXT_MACRO_MEMBER(pose_plan_pause_duration, double, 1)       /* Length of pause segments in local plan  */ \
   \
   CXT_MACRO_MEMBER(mtm_plan_target_dist, double, 1)           /* Target distance from marker */ \
 /* End of list */

@@ -4,6 +4,7 @@
 # Global plan status
 #--------------
 
+string mission_info             # Human-readable mission information
 int32 targets_total             # Number of targets
 int32 target_idx                # Current target
 int32 target_marker_id          # Marker id for this target, -1 if there is no marker
@@ -33,6 +34,13 @@ uint8 POSE_COMBO=5
 uint8 OBS_RTM=6
 uint8 OBS_MTM=7
 uint8 segment_type
+
+# Motion phase within a segment
+uint8 PHASE_NONE=0
+uint8 PHASE_TRAP_ACCEL=1        # Trapezoidal velocity: accelerate
+uint8 PHASE_TRAP_CONSTANT_V=2   # Trapezoidal velocity: constant velocity
+uint8 PHASE_TRAP_DECEL=3        # Trapezoidal velocity: decelerate
+uint8 phase
 
 #--------------
 # Planned pose and twist

@@ -153,7 +153,9 @@ install(
 # PROGRAMS sets execute bits, FILES clears them
 install(
   PROGRAMS
-  scripts/experiments.py
+  scripts/experiment_runner.py
+  scripts/drag_experiment.py
+  scripts/nees_experiment.py
   scripts/nees_fp.py
   scripts/plot_auv_segments.py
   scripts/plot_control.py

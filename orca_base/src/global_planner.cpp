@@ -11,13 +11,13 @@ namespace orca_base
 {
 
   GlobalPlanner::GlobalPlanner(const rclcpp::Logger &logger, const AUVContext &cxt, mw::Map map,
-                               const mw::Observer &observer, std::vector<mw::Target> targets, bool keep_station) :
+                               const mw::Observer &observer, const std::string &mission_info, std::vector<mw::Target> targets, bool keep_station) :
     logger_{logger},
     cxt_{cxt},
     map_{std::move(map)},
     targets_{std::move(targets)},
     keep_station_{keep_station},
-    state_{observer, (int)targets_.size(), (int)targets_[0].id()}
+    state_{observer, mission_info, (int)targets_.size(), (int)targets_[0].id()}
   {
     RCLCPP_INFO_STREAM(logger_, targets_.size() << " targets:");
     for (auto &i : targets_) {
@@ -164,7 +164,7 @@ namespace orca_base
 
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                              const mw::Observer &observer, const std::vector<int> &markers_ids, bool random,
+                              const mw::Observer &observer, const std::string &mission_info, const std::vector<int> &markers_ids, bool random,
                               bool repeat, bool keep_station)
   {
     // TODO repeat
@@ -201,12 +201,12 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, targets, keep_station);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, mission_info, targets, keep_station);
   }
 
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
-                            const mw::Observer &observer, const std::vector<geometry_msgs::msg::Pose> &poses,
+                            const mw::Observer &observer, const std::string &mission_info, const std::vector<geometry_msgs::msg::Pose> &poses,
                             bool random, bool repeat, bool keep_station)
   {
     // TODO repeat
@@ -230,7 +230,7 @@ namespace orca_base
       std::shuffle(targets.begin(), targets.end(), g);
     }
 
-    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, targets, keep_station);
+    return std::make_shared<GlobalPlanner>(logger, cxt, map, observer, mission_info, targets, keep_station);
   }
 
 } // namespace orca_base

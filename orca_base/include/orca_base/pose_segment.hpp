@@ -41,6 +41,8 @@ namespace orca_base
     mw::Twist twist_;           // Velocity in the world frame
     mw::Acceleration ff_;       // Acceleration in the world frame
 
+    uint8_t phase_;             // Motion phase: accel, constant_v, decel
+
   public:
     PoseSegmentBase(const AUVContext &cxt, uint8_t type, mw::PoseStamped start, mw::Pose goal);
 
@@ -55,6 +57,9 @@ namespace orca_base
 
     const mw::Acceleration &ff() const
     { return ff_; }
+
+    uint8_t phase() const
+    { return phase_; }
   };
 
   //=====================================================================================

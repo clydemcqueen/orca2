@@ -46,6 +46,7 @@ namespace orca_base
       }
     };
 
+    // Advance the global plan
     auto rc = planner_->advance(d, estimate, efforts, send_feedback);
     if (rc == AdvanceRC::FAILURE) {
       abort();

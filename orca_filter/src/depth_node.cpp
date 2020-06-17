@@ -91,6 +91,11 @@ namespace orca_filter
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
       DEPTH_NODE_ALL_PARAMS
 
+      // Check that all command line parameters are defined
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
+      CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), DEPTH_NODE_ALL_PARAMS)
+
       // Subscribe
       baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
         "barometer", QUEUE_SIZE, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void

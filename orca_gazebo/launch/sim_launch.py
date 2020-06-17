@@ -182,7 +182,10 @@ def generate_launch_description():
     ]
 
     auv_node_params = {
-        'param_fluid_density': 997.0,
+        # Match orca.urdf (slight positive buoyancy):
+        'fluid_density': 997.0,
+        'volume': 0.01,
+        'mass': 9.9,
 
         # Timer (mode 0) is stable w/ or w/o filter
         'loop_driver': 0,
@@ -209,7 +212,7 @@ def generate_launch_description():
             Node(package='orca_filter', node_executable='filter_node', output='screen',
                  node_name='filter_node', parameters=[{
                     'urdf_file': urdf_path,
-                    'param_fluid_density': 997.0,
+                    'fluid_density': 997.0,
                     'predict_accel': False,
                     'predict_accel_control': False,
                     'predict_accel_drag': False,
