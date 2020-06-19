@@ -29,6 +29,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Attenuate joystick inputs  */ \
   CXT_MACRO_MEMBER(yaw_gain, double, 0.2)                     /* Attenuate joystick inputs  */ \
   CXT_MACRO_MEMBER(vertical_gain, double, 0.5)                /* Attenuate joystick inputs  */ \
+  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05)        /* Limit thruster acceleration, measured in effort units  */ \
   \
   CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024)      /* ROV hold pressure pid Kp  */ \
   CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015)      /* ROV hold pressure pid Ki  */ \

@@ -2,15 +2,14 @@
 #define ORCA_BASE_AUV_NODE_HPP
 
 #include "image_geometry/pinhole_camera_model.h"
-
+#include "orca_base/auv_context.hpp"
+#include "orca_base/mission.hpp"
+#include "orca_base/thrusters.hpp"
 #include "orca_description/parser.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/driver.hpp"
 #include "orca_shared/monotonic.hpp"
-
-#include "orca_base/auv_context.hpp"
-#include "orca_base/mission.hpp"
 
 namespace orca_base
 {
@@ -51,6 +50,9 @@ namespace orca_base
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
+
+    // Thrusters
+    Thrusters thrusters_;
 
     void validate_parameters();
 

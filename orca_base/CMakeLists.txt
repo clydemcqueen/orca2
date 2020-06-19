@@ -153,7 +153,7 @@ install(
 # PROGRAMS sets execute bits, FILES clears them
 install(
   PROGRAMS
-  scripts/experiment_runner.py
+  scripts/mission_experiment.py
   scripts/drag_experiment.py
   scripts/nees_experiment.py
   scripts/nees_fp.py

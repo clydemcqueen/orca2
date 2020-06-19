@@ -9,7 +9,7 @@ namespace mw
 
   class Header
   {
-    rclcpp::Time t_;
+    rclcpp::Time t_{0L, RCL_ROS_TIME};
     std::string frame_id_;
 
   public:
@@ -21,11 +21,11 @@ namespace mw
       frame_id_{msg.frame_id}
     {}
 
-    Header(const rclcpp::Time &stamp, const std::string &frame_id)
-    {
-      t_ = stamp;
-      frame_id_ = frame_id;
-    }
+    Header(const rclcpp::Time &t, std::string frame_id) :
+      t_{t},
+      frame_id_{std::move(frame_id)}
+
+    {}
 
     std_msgs::msg::Header msg() const
     {

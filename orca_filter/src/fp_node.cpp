@@ -8,7 +8,6 @@
 #include "ros2_shared/context_macros.hpp"
 
 #include "orca_description/parser.hpp"
-#include "orca_msgs/msg/depth.hpp"
 #include "orca_shared/mw/fiducial_pose_stamped.hpp"
 #include "orca_shared/monotonic.hpp"
 
@@ -23,7 +22,6 @@ namespace orca_filter
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
-  CXT_MACRO_MEMBER(fuse_depth, bool, false)                   /* Fuse depth and fiducial messages  */ \
   CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   \
   CXT_MACRO_MEMBER(marker_length, double, 0.1778)             /* Marker length in meters  */ \
@@ -51,9 +49,6 @@ namespace orca_filter
     // Parsed URDF
     orca_description::Parser parser_;
 
-    // Most recent depth message
-    double base_link_z_{};
-
     // Message filter subscriptions
     message_filters::Subscriber<fiducial_vlam_msgs::msg::Observations> obs_sub_;
     message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> pose_sub_;
@@ -65,21 +60,9 @@ namespace orca_filter
     using FiducialSync = message_filters::Synchronizer<FiducialPolicy>;
     std::shared_ptr<FiducialSync> sync_;
 
-    // Subscriptions
-    rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;
-
     // Publications
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_pub_;
-
-    /**
-     * Save the latest depth reading
-     * @param msg Depth message
-     */
-    void depth_callback(orca_msgs::msg::Depth::SharedPtr msg)
-    {
-      base_link_z_ = msg->z;
-    }
 
     /**
      * Get a synchronized set of messages from vloc: pose and marker observations
@@ -149,11 +132,6 @@ namespace orca_filter
       geometry_msgs::msg::Pose cam_f_base;
       toMsg(parser_.t_base_fcam, cam_f_base); // TODO want parser.cam_f_base
 
-      // "Fuse" depth and fiducial messages
-      if (cxt_.fuse_depth_) {
-        base_f_map.pose.position.z = base_link_z_;
-      }
-
       // Resulting fiducial pose
       mw::FiducialPoseStamped fp{cxt_.marker_length_, cam_f_base, *obs_msg, base_f_map};
 
@@ -178,14 +156,6 @@ namespace orca_filter
     // Validate parameters
     void validate_parameters()
     {
-      if (cxt_.fuse_depth_) {
-        using namespace std::placeholders;
-        auto depth_cb = std::bind(&FPNode::depth_callback, this, _1);
-        depth_sub_ = create_subscription<orca_msgs::msg::Depth>("/depth", QUEUE_SIZE, depth_cb);
-      } else {
-        depth_sub_.reset();
-      }
-
       if (cxt_.publish_tf_) {
         tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QUEUE_SIZE);
       } else {

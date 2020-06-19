@@ -5,6 +5,7 @@
 #include "orca_base/joystick.hpp"
 #include "orca_base/rov_context.hpp"
 #include "orca_base/pid.hpp"
+#include "orca_base/thrusters.hpp"
 #include "orca_msgs/action/mission.hpp"
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/control.hpp"
@@ -75,6 +76,9 @@ namespace orca_base
 
     // Timer
     rclcpp::TimerBase::SharedPtr spin_timer_;
+
+    // Thrusters
+    Thrusters thrusters_;
 
     // Validate parameters
     void validate_parameters();

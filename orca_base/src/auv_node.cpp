@@ -2,30 +2,37 @@
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "orca_shared/pwm.hpp"
-#include "orca_base/thrusters.hpp"
 
-/*******************************************************************************************************
- * There are several cxt_ options in auv_node and filter_node that interact. 2 examples:
+/***************************************************************************************************
+ * AUVNode can run "dead reckoning" when there are no markers in sight. Caveats:
+ * -- depth information is required, either by overriding the z position with depth, or by fusing
+ *    depth information in the filter.
+ * -- the BlueROV2 sub won't hold a constant heading, so this only works for a few meters.
  *
- * Without a filter:
- *      Launch auv_node
- *      AUVContext:
- *          loop_driver = 0 (timer driven)
- *          fuse_depth = true
- *          publish_tf = true
+ * These cases are supported:
+ * -- case 1: filter_node is running and fusing depth
+ * -- case 2: filter_node is running and not fusing depth; auv_node overrides depth
+ * -- case 3: filter_node is not running, auv_node overrides depth
  *
- * With a filter (typical case):
- *      Launch auv_node and filter_node
- *      AUVContext:
- *          loop_driver = 2 (fiducial driven)
- *          fuse_depth = false
+ * Note that exactly one node should publish map=>base tf.
+ *
+ * Case 1 example:
+ *      fp_node:
  *          publish_tf = false
- *      FilterContext:
+ *      filter_node:
  *          filter_baro = true
  *          filter_fcam = true
  *          publish_tf = true
+ *      auv_node:
+ *          loop_driver = 2 (fiducial driven)
+ *          depth_override = false
  *
- * Other options are possible, e.g., filter_baro = false and fuse_depth = true
+ * Case 3 example:
+ *      fp_node:
+ *          publish_tf = true
+ *      auv_node:
+ *          loop_driver = 0 (timer driven)
+ *          depth_override = true
  */
 
 namespace orca_base
@@ -122,7 +129,7 @@ namespace orca_base
   void AUVNode::validate_parameters()
   {
     // Subscribe to depth messages
-    if (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) {
+    if (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.depth_override_) {
       depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
         "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
         { this->depth_cb_.call(msg); });
@@ -181,7 +188,7 @@ namespace orca_base
       return false;
     }
 
-    if ((cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(t)) {
+    if ((cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.depth_override_) && !depth_ok(t)) {
       RCLCPP_ERROR(get_logger(), "goal rejected: no depth messages");
       return false;
     }
@@ -216,13 +223,13 @@ namespace orca_base
     }
 
     // If we're expecting steady depth messages, but they stop, then abort the mission
-    if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.fuse_depth_) && !depth_ok(curr_time)) {
+    if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.depth_override_) && !depth_ok(curr_time)) {
       RCLCPP_ERROR(get_logger(), "lost depth messages, abort mission");
       abort_mission(curr_time);
     }
 
     // If we're expecting steady fiducial messages, but they stop, then abort the mission
-    if (mission_ && cxt_.loop_driver_ == FIDUCIAL_DRIVEN && !fp_ok(curr_time)) {
+    if (mission_ && !fp_ok(curr_time) && (cxt_.loop_driver_ == FIDUCIAL_DRIVEN || !cxt_.depth_override_)) {
       RCLCPP_ERROR(get_logger(), "lost fiducial pose messages, abort mission");
       abort_mission(curr_time);
     }
@@ -430,9 +437,8 @@ namespace orca_base
       RCLCPP_WARN(get_logger(), "high dt: %g > 0.2", d.seconds());
     }
 
-    // Fuse depth and fiducial messages
-    // Be sure to turn this off if there is upstream filter fusing this data
-    if (cxt_.fuse_depth_) {
+    // Depth overrides pose.position.z
+    if (cxt_.depth_override_) {
       auto msg = estimate_.msg();
       msg.fp.pose.pose.position.z = base_link_z_;
       estimate_ = mw::FiducialPoseStamped{msg};
@@ -490,7 +496,7 @@ namespace orca_base
     // Control
     control_msg.camera_tilt_pwm = orca::tilt_to_pwm(0);
     control_msg.brightness_pwm = orca::brightness_to_pwm(0);
-    efforts_to_control(efforts, cxt_.xy_limit_, control_msg);
+    thrusters_.efforts_to_control(efforts, cxt_.xy_limit_, cxt_.thruster_accel_limit_, control_msg);
 
     control_pub_->publish(control_msg);
   }

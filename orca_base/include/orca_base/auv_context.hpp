@@ -27,18 +27,18 @@ namespace orca_base
   CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.004)     /* Yaw drag, wild guess  */ \
   \
   CXT_MACRO_MEMBER(loop_driver, int, 0)                       /* What drives auv_advance? 0: timer, 1: depth msg, 2: fiducial msg  */ \
-  CXT_MACRO_MEMBER(fuse_depth, bool, true)                    /* Fuse depth and fiducial messages  */ \
+  CXT_MACRO_MEMBER(depth_override, bool, false)               /* Depth value overrides pose.position.z, do this in fp_node instead  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50)                  /* Timer period in ms  */ \
   CXT_MACRO_MEMBER(timeout_depth_ms, int, 300)                /* Depth message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_driver_ms, int, 1000)              /* Driver status message timeout in ms  */ \
   CXT_MACRO_MEMBER(timeout_fp_ms, int, 300)                   /* Fiducial pose message timeout in ms  */ \
   CXT_MACRO_MEMBER(keep_poses, int, 500)                      /* Max # of poses on filtered_path  */ \
   \
-  CXT_MACRO_MEMBER(publish_tf, bool, false)                   /* Publish t_map_base  */ \
   CXT_MACRO_MEMBER(map_frame, std::string, "map")             /* Map frame  */ \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
   CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Limit fwd/strafe motion, rest is yaw  */ \
+  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05)        /* Limit thruster acceleration, measured in effort units  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6)                 /* AUV x pid Kp  */ \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.2)                 /* AUV x pid Ki  */ \

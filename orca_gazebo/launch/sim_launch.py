@@ -11,9 +11,9 @@ from launch_ros.actions import Node
 
 # There are three tested worlds:
 class World(Enum):
-    SMALL_FIELD = 0     # 12' diameter pool with a field of 6 markers arranged in a 2x3 vertical field
-    SMALL_RING = 1      # 12' diameter pool with 12 markers arranged along the walls
-    LARGE_RING = 2      # large_ring is a 20m diameter ring with 4 markers
+    SMALL_FIELD = 0  # 12' diameter pool with a field of 6 markers arranged in a 2x3 vertical field
+    SMALL_RING = 1  # 12' diameter pool with 12 markers arranged along the walls
+    LARGE_RING = 2  # large_ring is a 20m diameter ring with 4 markers
 
 
 def generate_launch_description():
@@ -83,6 +83,14 @@ def generate_launch_description():
 
         # Move to within 1m of the marker -- a good default
         pose_plan_target_dist = 1.0
+
+    # Run filter_node or not
+    filter_poses = False
+
+    fp_node_params = {
+        # Publish map=>base tf if we're not running a filter
+        'publish_tf': not filter_poses,
+    }
 
     all_entities = [
         # Launch Gazebo, loading the world
@@ -171,15 +179,28 @@ def generate_launch_description():
                 'psl_stamp_msgs_with_current_time': 0,
             }]),
 
-        # FP node, generate fiducial poses from observations and poses
-        Node(package='orca_filter', node_executable='fp_node', output='screen',
-             node_name='fp_node', node_namespace=forward_camera_name, parameters=[{
-            }]),
-
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
              node_name='annotate_image_node', node_namespace=forward_camera_name),
+
+        # Combine poses and observations into fiducial poses
+        Node(package='orca_filter', node_executable='fp_node', output='screen',
+             node_name='fp_node', node_namespace=forward_camera_name, parameters=[fp_node_params]),
     ]
+
+    filter_node_params = {
+        'urdf_file': urdf_path,
+        'fluid_density': 997.0,
+        'predict_accel': False,
+        'predict_accel_control': False,
+        'predict_accel_drag': False,
+        'predict_accel_buoyancy': False,
+        'filter_baro': True,  # Fuse depth
+        'filter_fcam': True,
+        'publish_tf': True,  # Publish map=>base tf
+        'good_pose_dist': 2.0,
+        'good_obs_dist': 10.0,
+    }
 
     auv_node_params = {
         # Match orca.urdf (slight positive buoyancy):
@@ -190,8 +211,8 @@ def generate_launch_description():
         # Timer (mode 0) is stable w/ or w/o filter
         'loop_driver': 0,
 
-        # Either auv_node or filter_node should publish tf, but not both
-        'publish_tf': True,
+        # If we're not running a filter, then override depth in auv_node
+        'depth_override': not filter_poses,
 
         # Do not allow waypoints
         'pose_plan_waypoints': False,
@@ -204,25 +225,10 @@ def generate_launch_description():
         'mtm_plan_target_dist': 1.5,
     }
 
-    # Run orca_filter or not
-    filter_poses = False
-
     if filter_poses:
         all_entities.append(
             Node(package='orca_filter', node_executable='filter_node', output='screen',
-                 node_name='filter_node', parameters=[{
-                    'urdf_file': urdf_path,
-                    'fluid_density': 997.0,
-                    'predict_accel': False,
-                    'predict_accel_control': False,
-                    'predict_accel_drag': False,
-                    'predict_accel_buoyancy': False,
-                    'filter_baro': True,
-                    'filter_fcam': True,
-                    'publish_tf': False,
-                    'good_pose_dist': 2.0,
-                    'good_obs_dist': 10.0,
-                }], remappings=[
+                 node_name='filter_node', parameters=[filter_node_params], remappings=[
                     ('fcam_fp', '/' + forward_camera_name + '/fp'),
                 ]))
         all_entities.append(
