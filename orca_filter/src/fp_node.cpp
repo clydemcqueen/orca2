@@ -147,9 +147,9 @@ namespace orca_filter
       const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr &pose_msg)
     {
       if (obs_msg) {
-        RCLCPP_WARN(get_logger(), "drop: have an observation but no odometry");
+        RCLCPP_DEBUG(get_logger(), "drop: have an observation but no odometry");
       } else {
-        RCLCPP_WARN(get_logger(), "drop: have odometry but no observation");
+        RCLCPP_DEBUG(get_logger(), "drop: have odometry but no observation");
       }
     }
 

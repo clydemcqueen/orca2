@@ -14,6 +14,7 @@ class World(Enum):
     SMALL_FIELD = 0  # 12' diameter pool with a field of 6 markers arranged in a 2x3 vertical field
     SMALL_RING = 1  # 12' diameter pool with 12 markers arranged along the walls
     LARGE_RING = 2  # large_ring is a 20m diameter ring with 4 markers
+    TWO_WALL = 3  # Two markers on the wall
 
 
 def generate_launch_description():
@@ -43,7 +44,7 @@ def generate_launch_description():
     # 1920x1280: 14.0
     good_obs_dist = 10.0
 
-    world = World.SMALL_FIELD
+    world = World.SMALL_RING
 
     if world == World.SMALL_FIELD:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field.world')
@@ -61,17 +62,10 @@ def generate_launch_description():
     elif world == World.SMALL_RING:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring.world')
         map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring_map.yaml')
-
-        # Do not allow MTM recovery
         global_plan_allow_mtm = False
-
-        # If xy distance is > this, then build a long plan (rotate, run, rotate)
-        # Otherwise build a short plan (move in all DoF at once)
         pose_plan_max_short_plan_xy = 0.5
-
-        # The pool is a bit cramped, so get closer to the markers
         pose_plan_target_dist = 0.8
-    else:
+    elif world == World.LARGE_RING:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring.world')
         map_path = os.path.join(orca_gazebo_path, 'worlds', 'large_ring_map.yaml')
 
@@ -83,6 +77,12 @@ def generate_launch_description():
 
         # Move to within 1m of the marker -- a good default
         pose_plan_target_dist = 1.0
+    else:  # world == World.TWO_WALL
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'two_wall.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'two_wall_map.yaml')
+        global_plan_allow_mtm = False
+        pose_plan_max_short_plan_xy = 0.5
+        pose_plan_target_dist = 0.8
 
     # Run filter_node or not
     filter_poses = False
@@ -91,6 +91,69 @@ def generate_launch_description():
         # Publish map=>base tf if we're not running a filter
         'publish_tf': not filter_poses,
     }
+
+    # Optionally build a map
+    build_map = False
+
+    if build_map:
+        vmap_node_params = {
+            # Publish marker /tf
+            'psm_publish_tfs': 1,
+
+            # Marker length
+            'map_marker_length': 0.1778,
+
+            # Don't load a map
+            'map_load_filename': '',
+
+            # Save the map
+            'map_save_filename': 'test_map',
+        }
+        if world == World.SMALL_FIELD:
+            vmap_node_params.update({
+                # Init map from a marker pose
+                # Leave roll, pitch, yaw at defaults
+                'map_init_style': 1,
+                'map_init_id': 0,
+                'map_init_pose_x': 2.0,
+                'map_init_pose_y': -0.6,
+                'map_init_pose_z': -0.5,
+            })
+        elif world == World.SMALL_RING:
+            vmap_node_params.update({
+                'map_init_style': 1,
+                'map_init_id': 0,
+                'map_init_pose_x': 1.8,
+                'map_init_pose_y': 0.0,
+                'map_init_pose_z': -0.5,
+            })
+        elif world == World.LARGE_RING:
+            vmap_node_params.update({
+                'map_init_style': 1,
+                'map_init_id': 0,
+                'map_init_pose_x': 8.0,
+                'map_init_pose_y': 0.0,
+                'map_init_pose_z': -0.5,
+            })
+        else:  # world == World.TWO_WALL
+            vmap_node_params.update({
+                'map_init_style': 1,
+                'map_init_id': 0,
+                'map_init_pose_x': 1.5,
+                'map_init_pose_y': 0.0,
+                'map_init_pose_z': -0.5,
+            })
+    else:
+        vmap_node_params = {
+            # Publish marker /tf
+            'psm_publish_tfs': 1,
+
+            # Load a pre-built map from disk
+            'map_load_filename': map_path,
+
+            # Don't save the map
+            'map_save_filename': '',
+        }
 
     all_entities = [
         # Launch Gazebo, loading the world
@@ -132,21 +195,9 @@ def generate_launch_description():
                 'fluid_density': 997.0,
             }]),
 
-        # Load and publish a known map
+        # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
-             node_name='vmap_node', parameters=[{
-                # Publish marker /tf
-                'psm_publish_tfs': 1,
-
-                # Marker length for new maps
-                'map_marker_length': 0.1778,
-
-                # Load a pre-built map from disk
-                'map_load_filename': map_path,
-
-                # Don't save the map
-                'map_save_filename': '',
-            }]),
+             node_name='vmap_node', parameters=[vmap_node_params]),
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
@@ -154,8 +205,8 @@ def generate_launch_description():
                 # Localize, don't calibrate
                 'loc_calibrate_not_loocalize': 0,
 
-                # Use OpenCV, not GTSAM
-                'loc_camera_sam_not_cv': 0,
+                # 0: OpenCV, 1: GTSAM
+                'loc_camera_sam_not_cv': 1,
 
                 'psl_camera_frame_id': forward_camera_frame,
                 'psl_publish_tfs': 0,

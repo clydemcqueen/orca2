@@ -183,10 +183,21 @@ small_ring = list(gen_ring_of_markers(num_markers=12, radius=3.6 / 2, z=-0.5))
 
 medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
 
-large_ring = list(gen_ring_of_markers(num_markers=4, radius=8, z=-0.5))
+large_ring = list(gen_ring_of_markers(num_markers=16, radius=8, z=-0.5))
 
-# Even simpler pool test #2: 1 marker on the wall and 1 on the floor
-small_simple = [
+# 1 marker on the wall
+one_wall = [
+    [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
+]
+
+# 2 markers on the wall
+two_wall = [
+    [0, 2, -0.5, -0.5, 0, -math.pi / 2, 0],
+    [1, 2, 0.5, -0.5, 0, -math.pi / 2, 0],
+]
+
+# 1 marker on the wall and 1 on the floor
+two_wall_floor = [
     [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
     [1, 1, 1, -3, 0, 0, 0],
 ]
@@ -209,7 +220,9 @@ worlds = [
     ['small_ring.world', 'small_ring_map.yaml', small_ring],
     ['medium_ring.world', 'medium_ring_map.yaml', medium_ring],
     ['large_ring.world', 'large_ring_map.yaml', large_ring],
-    ['simple.world', 'simple_map.yaml', small_simple],
+    ['one_wall.world', 'one_wall_map.yaml', one_wall],
+    ['two_wall.world', 'two_wall_map.yaml', two_wall],
+    ['two_wall_floor.world', 'two_wall_floor_map.yaml', two_wall_floor],
     ['small_field.world', 'small_field_map.yaml', small_field],
 ]
 
