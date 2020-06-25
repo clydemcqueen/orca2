@@ -156,6 +156,7 @@ install(
   scripts/mission_experiment.py
   scripts/drag_experiment.py
   scripts/nees_experiment.py
+  scripts/pid_experiment.py
   scripts/nees_fp.py
   scripts/plot_auv_segments.py
   scripts/plot_control.py

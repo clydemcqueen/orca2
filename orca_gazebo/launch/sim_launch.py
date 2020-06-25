@@ -1,5 +1,5 @@
 """Launch a simulation with fiducial_vlam"""
-
+import math
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -126,6 +126,14 @@ def generate_launch_description():
                 'map_init_pose_x': 1.8,
                 'map_init_pose_y': 0.0,
                 'map_init_pose_z': -0.5,
+                # 'map_init_style': 2,
+                # 'map_init_id': 0,
+                # 'map_init_pose_x': 0.16,
+                # 'map_init_pose_y': 0.0,
+                # 'map_init_pose_z': -0.062,  # -0.125 (baro.hpp) + 0.063 (orca.urdf.xacro),
+                # 'map_init_pose_roll': -math.pi/2,
+                # 'map_init_pose_pitch': 0.0,
+                # 'map_init_pose_yaw': -math.pi/2,
             })
         elif world == World.LARGE_RING:
             vmap_node_params.update({

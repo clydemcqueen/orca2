@@ -38,7 +38,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link")      /* Base frame  */ \
   \
   CXT_MACRO_MEMBER(xy_limit, double, 0.5)                     /* Limit fwd/strafe motion, rest is yaw  */ \
-  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05)        /* Limit thruster acceleration, measured in effort units  */ \
+  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01)        /* Limit thruster acceleration, measured in effort units  */ \
   \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6)                 /* AUV x pid Kp  */ \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.2)                 /* AUV x pid Ki  */ \

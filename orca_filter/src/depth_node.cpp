@@ -15,6 +15,8 @@ namespace orca_filter
 
 #define DEPTH_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(fluid_density, double, 997)          /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(frame_id, std::string, "map")        /* Frame id  */ \
+  CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV * 10) \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
@@ -52,13 +54,13 @@ namespace orca_filter
     {
       orca_msgs::msg::Depth depth_msg;
       depth_msg.header.stamp = baro_msg->header.stamp;
-      depth_msg.header.frame_id = "map"; // TODO parameter
+      depth_msg.header.frame_id = cxt_.frame_id_;
 
       // Convert pressure at baro_link to depth at base_link
       depth_msg.z = barometer_.pressure_to_base_link_z(cxt_.model_, baro_msg->pressure);
 
-      // Boost measurement uncertainty TODO parameter
-      depth_msg.z_variance = orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV * 10;
+      // Measurement uncertainty
+      depth_msg.z_variance = cxt_.z_variance_;
 
       depth_pub_->publish(depth_msg);
     }

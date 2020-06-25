@@ -15,9 +15,6 @@ geometry_msgs/Pose[] poses
 # Randomize the list of targets (default is empty)
 bool random false
 
-# Repeat the mission forever
-bool repeat false
-
 # Keep station at the last target (not compatible with repeat)
 bool keep_station false
 

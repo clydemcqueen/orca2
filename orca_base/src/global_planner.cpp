@@ -165,11 +165,8 @@ namespace orca_base
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_markers(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
                               const mw::Observer &observer, const std::string &mission_info, const std::vector<int> &markers_ids, bool random,
-                              bool repeat, bool keep_station)
+                              bool keep_station)
   {
-    // TODO repeat
-    (void) repeat;
-
     std::vector<mw::Target> targets{};
 
     if (markers_ids.empty()) {
@@ -207,11 +204,8 @@ namespace orca_base
   std::shared_ptr<GlobalPlanner>
   GlobalPlanner::plan_poses(const rclcpp::Logger &logger, const AUVContext &cxt, const mw::Map &map,
                             const mw::Observer &observer, const std::string &mission_info, const std::vector<geometry_msgs::msg::Pose> &poses,
-                            bool random, bool repeat, bool keep_station)
+                            bool random, bool keep_station)
   {
-    // TODO repeat
-    (void) repeat;
-
     std::vector<mw::Target> targets{};
 
     if (poses.empty()) {

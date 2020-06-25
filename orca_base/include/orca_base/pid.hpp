@@ -30,7 +30,6 @@ namespace pid
 
   public:
 
-    // Standard constructor
     Controller(bool angle, double Kp, double Ki, double Kd)
     {
       angle_ = angle;
@@ -39,19 +38,6 @@ namespace pid
       Kd_ = Kd;
     }
 
-    // Ziegler–Nichols constructor
-    // https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
-    Controller(bool angle, double Ku, double Tu)
-    {
-      angle_ = angle;
-
-      // Classic
-      Kp_ = 0.6 * Ku;
-      Ki_ = 1.2 * Ku / Tu;
-      Kd_ = 3 * Ku * Tu / 40;
-    }
-
-    // Set target
     void set_target(double target)
     {
       if (angle_) {
@@ -61,8 +47,8 @@ namespace pid
       if (std::abs(target - target_) > 0.001) {
         // std::cout << "set target, from " << target_ << " to " << target << std::endl;
         target_ = target;
-        prev_error_ = 0;
-        integral_ = 0;
+        // prev_error_ = 0;
+        // integral_ = 0;
       }
     }
 
@@ -82,7 +68,7 @@ namespace pid
       return Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
     }
 
-    double target()
+    double target() const
     { return target_; }
   };
 

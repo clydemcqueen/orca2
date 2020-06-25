@@ -7,13 +7,13 @@
  *
  * Start the system (orca_driver, auv_node) while the sub is in the air
  * orca_driver publishes raw pressure (no adjustments) on /barometer
- * auv_node subscribes to /barometer, passes the first pressure reading to orca::Barometer
+ * depth_node subscribes to /barometer, passes the first pressure reading to orca::Barometer
  * orca::Barometer saves the 1st reading as atmospheric_pressure_
  *
  * What about simulation?
  *
  * For 2s BarometerPlugin sends ATMOSPHERIC_PRESSURE
- * auv_node passes the first reading to orca::Barometer, etc.
+ * depth_node passes the first reading to orca::Barometer, etc.
  * The model should be injected into the simulation at {0, 0, 0}
  * See notes in orca_gazebo::BarometerPlugin for more information
  *

@@ -37,7 +37,7 @@ namespace gazebo
   class OrcaBarometerPlugin : public SensorPlugin
   {
     // Simulate the barometer "in air" for a few seconds
-    // This gives auv_node time to calibrate the barometer
+    // This gives depth_node time to calibrate the barometer
     rclcpp::Time in_air_start_time_;
     const rclcpp::Duration TIME_IN_AIR{RCL_S_TO_NS(2)};
     bool in_air_{true};

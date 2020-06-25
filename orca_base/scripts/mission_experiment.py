@@ -34,7 +34,8 @@ class MissionExperiment(object):
     """
 
     def __init__(self, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
-                 pose_targets: bool, marker_ids: List[int], poses: List[Pose], random: bool, msg_processor):
+                 pose_targets: bool, marker_ids: List[int], poses: List[Pose], random: bool, keep_station: bool,
+                 msg_processor):
         # Mission info string
         self.mission_info = mission_info
 
@@ -56,6 +57,9 @@ class MissionExperiment(object):
 
         # Randomize the markers or poses
         self.random = random
+
+        # Keep station at the last target
+        self.keep_station = keep_station
 
         # Log several messages
         self.co_msgs: Optional[List[Control]] = None
@@ -92,6 +96,7 @@ class MissionExperiment(object):
         goal_msg.marker_ids = self.marker_ids
         goal_msg.poses = self.poses
         goal_msg.random = self.random
+        goal_msg.keep_station = self.keep_station
         return goal_msg
 
     # Can call this at any time, but the general idea is to call this once when the experiment is over
@@ -106,13 +111,14 @@ class MissionExperiment(object):
 
     @classmethod
     def go_to_markers(cls, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
-                      marker_ids: List[int], random: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], random, msg_processor)
+                      marker_ids: List[int], random: bool, keep_station: bool, msg_processor=None):
+        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], random, keep_station,
+                   msg_processor)
 
     @classmethod
     def go_to_poses(cls, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
-                    poses: List[Pose], random: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, True, [], poses, random, msg_processor)
+                    poses: List[Pose], random: bool, keep_station: bool, msg_processor=None):
+        return cls(mission_info, count, auv_params, filter_params, True, [], poses, random, keep_station, msg_processor)
 
 
 class MissionExperimentRunNode(Node):

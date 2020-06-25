@@ -61,6 +61,7 @@ namespace orca_base
     (void) mission_server_;
 
     // Get parameters, this will immediately call validate_parameters()
+    // TODO catch rclcpp::ParameterTypeException
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
     CXT_MACRO_INIT_PARAMETERS(AUV_NODE_ALL_PARAMS, validate_parameters)
@@ -340,8 +341,8 @@ namespace orca_base
   {
     auto action = goal_handle->get_goal();
 
-    RCLCPP_INFO(get_logger(), "start mission, pose_targets=%d, %d marker(s), %d pose(s), random=%d, repeat=%d, keep=%d",
-                action->pose_targets, action->marker_ids.size(), action->poses.size(), action->random, action->repeat,
+    RCLCPP_INFO(get_logger(), "start mission, pose_targets=%d, %d marker(s), %d pose(s), random=%d, keep=%d",
+                action->pose_targets, action->marker_ids.size(), action->poses.size(), action->random,
                 action->keep_station);
 
     // Create a global planner
@@ -354,14 +355,14 @@ namespace orca_base
         std::vector<geometry_msgs::msg::Pose> poses;
         poses.push_back(estimate_.fp().pose().pose().msg());
         planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info, poses,
-                                            action->random, action->repeat, action->keep_station);
+                                            action->random, action->keep_station);
       } else {
         planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info,
-                                            action->poses, action->random, action->repeat, action->keep_station);
+                                            action->poses, action->random, action->keep_station);
       }
     } else {
       planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_, estimate_.fp().observations().observer(), action->mission_info,
-                                            action->marker_ids, action->random, action->repeat, action->keep_station);
+                                            action->marker_ids, action->random, action->keep_station);
     }
 
     if (!planner) {

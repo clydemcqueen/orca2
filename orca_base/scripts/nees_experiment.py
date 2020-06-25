@@ -48,7 +48,8 @@ def calculate_nees(ex: MissionExperiment):
 
 
 # Run through all markers in random order, 10 times
-random_markers_experiment = MissionExperiment.go_to_markers('random markers', 10, [], [], [], True, calculate_nees)
+random_markers_experiment = MissionExperiment.go_to_markers('random markers', 10, [], [], [], True, False,
+                                                            calculate_nees)
 
 
 def main(args=None):

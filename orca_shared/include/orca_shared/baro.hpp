@@ -13,7 +13,7 @@ namespace orca
 
   public:
 
-    bool initialized()
+    bool initialized() const
     { return initialized_; }
 
     // Given a pressure, return base_link.z

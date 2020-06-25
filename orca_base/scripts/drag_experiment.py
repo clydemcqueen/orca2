@@ -201,6 +201,7 @@ ex_f_sequence = [
             Pose(position=Point(x=extent_xy, z=base_z)),
         ],
         False,
+        False,
         None
     ),
     # Experiment: PIDs off, no pause, back/forth, repeat motion several times
@@ -214,6 +215,7 @@ ex_f_sequence = [
             Pose(position=Point(x=extent_xy, z=base_z)),
         ],
         False,
+        False,
         process_messages
     ),
     # Return to base position: PIDs on, 5s pause
@@ -225,6 +227,7 @@ ex_f_sequence = [
         [
             Pose(position=Point(z=base_z)),
         ],
+        False,
         False,
         None
     ),
@@ -241,6 +244,7 @@ ex_s_sequence = [
             Pose(position=Point(y=extent_xy, z=base_z)),
         ],
         False,
+        False,
         None
     ),
     # Experiment: PIDs off, no pause, back/forth, repeat motion several times
@@ -254,6 +258,7 @@ ex_s_sequence = [
             Pose(position=Point(y=extent_xy, z=base_z)),
         ],
         False,
+        False,
         process_messages
     ),
     # Return to base position: PIDs on, 5s pause
@@ -265,6 +270,7 @@ ex_s_sequence = [
         [
             Pose(position=Point(z=base_z)),
         ],
+        False,
         False,
         None
     ),
@@ -281,6 +287,7 @@ ex_z_sequence = [
             Pose(position=Point(z=high_z)),
         ],
         False,
+        False,
         None
     ),
     # Experiment: PIDs off, no pause, back/forth, repeat motion several times
@@ -294,6 +301,7 @@ ex_z_sequence = [
             Pose(position=Point(z=high_z)),
         ],
         False,
+        False,
         process_messages
     ),
     # Return to base position: PIDs on, 5s pause
@@ -305,6 +313,7 @@ ex_z_sequence = [
         [
             Pose(position=Point(z=base_z)),
         ],
+        False,
         False,
         None
     ),
@@ -321,6 +330,7 @@ ex_yaw_sequence = [
             Pose(position=Point(z=base_z), orientation=get_quaternion(extent_yaw)),
         ],
         False,
+        False,
         None
     ),
     # Experiment: PIDs off, no pause, back/forth, repeat motion several times
@@ -334,6 +344,7 @@ ex_yaw_sequence = [
             Pose(position=Point(z=base_z), orientation=get_quaternion(extent_yaw)),
         ],
         False,
+        False,
         process_messages
     ),
     # Return to base position: PIDs on, 5s pause
@@ -345,6 +356,7 @@ ex_yaw_sequence = [
         [
             Pose(position=Point(z=base_z)),
         ],
+        False,
         False,
         None
     ),
