@@ -44,7 +44,7 @@ def generate_launch_description():
     # 1920x1280: 14.0
     good_obs_dist = 10.0
 
-    world = World.SMALL_RING
+    world = World.SMALL_FIELD
 
     if world == World.SMALL_FIELD:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field.world')

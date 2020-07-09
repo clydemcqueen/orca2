@@ -229,6 +229,8 @@ namespace gazebo
         force = base_link_->WorldPose().Rot().RotateVector(force);
 
         // Apply the force to base_link
+        // Likely bug? t.xyz should be relative to the center of mass, which is slightly below the origin of base_link
+        // If this is true, the force will be applied a bit too low on the frame
         base_link_->AddForceAtRelativePosition(force, t.xyz);
       }
     }

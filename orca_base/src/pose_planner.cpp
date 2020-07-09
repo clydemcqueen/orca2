@@ -21,20 +21,30 @@ namespace orca_base
     keep_station_{keep_station},
     controller_{std::make_shared<PoseController>(cxt_)}
   {
-    // Future: build a plan that will keep markers in view at all times
-    // For now, consider 2 cases:
-    // 1. short plan: use a single segment to move from start to target
-    // 2. long plan: find a series of waypoints (if possible), and always face the direction of motion
+    // Generate a plan to move from start to target. Use parameters to control the details.
 
     // Start pose
     mw::PoseStamped plan = start;
 
-    if (target.pose().position().distance_xy(start.pose().position()) < cxt_.pose_plan_max_short_plan_xy_) {
-      RCLCPP_INFO_STREAM(logger_, "short plan " << target);
+    if (plan.pose().position().distance_xy(target_.pose().position()) < cxt_.pose_plan_epsilon_xyz_ &&
+        plan.pose().position().distance_z(target_.pose().position()) < cxt_.pose_plan_epsilon_xyz_ &&
+        plan.pose().orientation().distance_yaw(target_.pose().orientation()) < cxt_.pose_plan_epsilon_yaw_) {
 
+      // Case 1: no motion plan, just use the PID controllers
+      // Set the epsilons high for PID tuning, but otherwise should be very small
+      RCLCPP_INFO_STREAM(logger_, "no plan " << target);
+      plan.pose() = target_.pose();
+
+    } else if (target.pose().position().distance_xy(start.pose().position()) < cxt_.pose_plan_max_short_plan_xy_) {
+
+      // Case 2: "small" amount of xy motion, use a single segment to move from start to target
+      RCLCPP_INFO_STREAM(logger_, "short plan " << target);
       add_pose_segment(plan, target.pose());
 
     } else {
+
+      // Case 3: long distance motion
+      // Find a series of waypoints (if possible), and always face the direction of motion
       RCLCPP_INFO_STREAM(logger_, "long plan " << target);
 
       // Generate a series of waypoints to minimize dead reckoning
@@ -60,7 +70,12 @@ namespace orca_base
 
         if (plan.pose().position().distance_xy(waypoint.position()) > cxt_.pose_plan_epsilon_xyz_) {
           // Point in the direction of travel
-          add_rotate_segment(plan, atan2(waypoint.y() - plan.pose().y(), waypoint.x() - plan.pose().x()));
+          auto direction_of_travel = atan2(waypoint.y() - plan.pose().y(), waypoint.x() - plan.pose().x());
+          if (plan.pose().orientation().distance_yaw(direction_of_travel) > cxt_.pose_plan_epsilon_yaw_) {
+            add_rotate_segment(plan, direction_of_travel);
+          } else {
+            RCLCPP_INFO(logger_, "skip rotate");
+          }
           add_pause_segment(plan, cxt_.pose_plan_pause_duration_);
 
           // Travel
@@ -70,8 +85,12 @@ namespace orca_base
         }
       }
 
-      // Always rotate to the target yaw
-      add_rotate_segment(plan, target_.pose().yaw());
+      // Rotate to the target yaw
+      if (plan.pose().orientation().distance_yaw(target_.pose().orientation()) > cxt_.pose_plan_epsilon_yaw_) {
+        add_rotate_segment(plan, target_.pose().yaw());
+      } else {
+        RCLCPP_INFO(logger_, "skip final rotate");
+      }
     }
 
     // Pause

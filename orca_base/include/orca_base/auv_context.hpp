@@ -84,6 +84,7 @@ namespace orca_base
   /* Local (pose) planner: */ \
   CXT_MACRO_MEMBER(pose_plan_waypoints, bool, false)          /* Use A* to find waypoints between targets  */ \
   CXT_MACRO_MEMBER(pose_plan_epsilon_xyz, double, 0.05)       /* If xyz distance < epsilon, skip this segment  */ \
+  CXT_MACRO_MEMBER(pose_plan_epsilon_yaw, double, 0.05)       /* If yaw distance < epsilon, skip this segment  */ \
   CXT_MACRO_MEMBER(pose_plan_max_short_plan_xy, double, 2)    /* Build a long plan if xy distance > max  */ \
   CXT_MACRO_MEMBER(pose_plan_max_dead_reckon_dist, double, 9) /* Max allowable dead reckoning distance  */ \
   CXT_MACRO_MEMBER(pose_plan_target_dist, double, 1)          /* Target distance in front of marker  */ \

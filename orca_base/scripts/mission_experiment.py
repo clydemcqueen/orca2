@@ -100,14 +100,17 @@ class MissionExperiment(object):
         return goal_msg
 
     # Can call this at any time, but the general idea is to call this once when the experiment is over
-    def process_messages(self):
+    # msg_processor should return True to stop experiments
+    def process_messages(self) -> bool:
         if self.msg_processor:
-            self.msg_processor(self)
+            result = self.msg_processor(self)
             self.co_msgs.clear()
             self.fp_msgs.clear()
             self.gt_msgs.clear()
+            return result
         else:
             print('no message processor')
+            return False  # Continue
 
     @classmethod
     def go_to_markers(cls, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
@@ -132,7 +135,7 @@ class MissionExperimentRunNode(Node):
     4. repeat (start_next_run_or_experiment_or_done)
     """
 
-    def __init__(self, experiments):
+    def __init__(self, experiments, repeat: bool = False):
         super().__init__('experiment_runner')
 
         assert len(experiments) > 0
@@ -159,9 +162,18 @@ class MissionExperimentRunNode(Node):
         # Active mission
         self._goal_handle = None
 
-        # Start 1st experiment
+        # Repeat sequence of experiments forever, or until msg_processor returns True
+        self._repeat = repeat
+
+        # Keep track of the current experiment
         self._idx = 0
         self._count = 0
+
+        # Start 1st experiment
+        self.start_first_experiment()
+
+    def start_first_experiment(self):
+        self._idx = 0
         self.start_experiment()
 
     def start_experiment(self):
@@ -188,6 +200,9 @@ class MissionExperimentRunNode(Node):
             self._count = 0
             if self._idx < len(self._experiments):
                 self.start_experiment()
+            elif self._repeat:
+                self.get_logger().info('REPEAT')
+                self.start_first_experiment()
             else:
                 self.get_logger().info('DONE!')
 
@@ -282,13 +297,14 @@ class MissionExperimentRunNode(Node):
                 'goal succeeded, completed {0} out of {1}'.format(result.targets_completed, result.targets_total))
 
             # Do any post-processing
-            self._experiments[self._idx].process_messages()
+            if self._experiments[self._idx].process_messages():
+                self.get_logger().info('messages processor returned True, STOPPING')
+            else:
+                # Clear goal_handle
+                self._goal_handle = None
 
-            # Clear goal_handle
-            self._goal_handle = None
-
-            # Step 4
-            self.start_next_run_or_experiment_or_done()
+                # Step 4
+                self.start_next_run_or_experiment_or_done()
         else:
             self.get_logger().warn('goal failed with status {0}, STOPPING'.format(status))
 
