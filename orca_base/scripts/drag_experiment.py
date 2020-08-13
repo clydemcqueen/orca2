@@ -1,5 +1,37 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
 Run experiments to calculate drag coefficients.
 
@@ -17,13 +49,14 @@ ros2 run orca_base drag_experiment.py --ros-args -r filtered_fp:=/forward_camera
 """
 
 from typing import Optional
-import rclpy
-import rclpy.logging
-from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
-from mission_experiment import MissionExperiment, MissionExperimentRunNode
+
 from geometry_msgs.msg import Point, Pose
+from mission_experiment import MissionExperiment, MissionExperimentRunNode
 from orca_msgs.msg import Control, MissionState
 from orca_util import get_quaternion, get_yaw, norm_angle, seconds
+from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+import rclpy
+import rclpy.logging
 
 # Run velocities
 auv_xy_velo = 0.4
@@ -49,12 +82,14 @@ straight_motion_auv_params = [
     Parameter(name='auv_z_velo',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=auv_z_velo)),
     Parameter(name='auv_yaw_velo',
-              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=auv_yaw_velo)),
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                   double_value=auv_yaw_velo)),
 ]
 
 # Turn off PID controllers
 no_pids_auv_params = [
-    Parameter(name=name, value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.))
+    Parameter(name=name,
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.))
     for name in ['auv_x_pid_kp', 'auv_x_pid_ki', 'auv_x_pid_kd',
                  'auv_y_pid_kp', 'auv_y_pid_ki', 'auv_y_pid_kd',
                  'auv_z_pid_kp', 'auv_z_pid_ki', 'auv_z_pid_kd',
@@ -64,16 +99,22 @@ no_pids_auv_params = [
 # Turn on PID controllers
 yes_pids_auv_params = [
                           Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.6))
-                          for name in ['auv_x_pid_kp', 'auv_y_pid_kp', 'auv_z_pid_kp', 'auv_yaw_pid_kp']
+                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                                         double_value=0.6))
+                          for name in
+                          ['auv_x_pid_kp', 'auv_y_pid_kp', 'auv_z_pid_kp', 'auv_yaw_pid_kp']
                       ] + [
                           Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.2))
-                          for name in ['auv_x_pid_ki', 'auv_y_pid_ki', 'auv_z_pid_ki', 'auv_yaw_pid_ki']
+                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                                         double_value=0.2))
+                          for name in
+                          ['auv_x_pid_ki', 'auv_y_pid_ki', 'auv_z_pid_ki', 'auv_yaw_pid_ki']
                       ] + [
                           Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.45))
-                          for name in ['auv_x_pid_kd', 'auv_y_pid_kd', 'auv_z_pid_kd', 'auv_yaw_pid_kd']
+                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                                         double_value=0.45))
+                          for name in
+                          ['auv_x_pid_kd', 'auv_y_pid_kd', 'auv_z_pid_kd', 'auv_yaw_pid_kd']
                       ]
 
 # Drag coefficients
@@ -86,15 +127,19 @@ drag_coef_yaw = fluid_density * drag_partial_const_yaw
 
 # Set drag coefficients
 drag_auv_params = [
-    Parameter(name='drag_coef_f', value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_f)),
-    Parameter(name='drag_coef_s', value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_s)),
-    Parameter(name='drag_coef_z', value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_z)),
+    Parameter(name='drag_coef_f',
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_f)),
+    Parameter(name='drag_coef_s',
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_s)),
+    Parameter(name='drag_coef_z',
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_z)),
     Parameter(name='drag_partial_const_yaw',
-              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_partial_const_yaw)),
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                   double_value=drag_partial_const_yaw)),
 ]
 
-# Pause for 5s between poses, good for stopping motion even if dynamics are poor, e.g., if drag or thrust
-# paramaters aren't very accurate. Must have PIDs on.
+# Pause for 5s between poses, good for stopping motion even if dynamics are poor,
+# e.g., if drag or thrust parameters aren't very accurate. Must have PIDs on.
 long_pause_auv_params = [
     Parameter(name='pose_plan_pause_duration',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=5.)),
@@ -159,11 +204,17 @@ def process_messages(ex: MissionExperiment):
 
                     # Run distance
                     if ex.mission_info == EXPERIMENT_F:
-                        actual_run_d = abs(msg.estimate.pose.pose.position.x - msg_start.estimate.pose.pose.position.x)
+                        actual_run_d = abs(
+                            msg.estimate.pose.pose.position.x -
+                            msg_start.estimate.pose.pose.position.x)
                     elif ex.mission_info == EXPERIMENT_S:
-                        actual_run_d = abs(msg.estimate.pose.pose.position.y - msg_start.estimate.pose.pose.position.y)
+                        actual_run_d = abs(
+                            msg.estimate.pose.pose.position.y -
+                            msg_start.estimate.pose.pose.position.y)
                     elif ex.mission_info == EXPERIMENT_Z:
-                        actual_run_d = abs(msg.estimate.pose.pose.position.z - msg_start.estimate.pose.pose.position.z)
+                        actual_run_d = abs(
+                            msg.estimate.pose.pose.position.z -
+                            msg_start.estimate.pose.pose.position.z)
                     else:
                         actual_run_d = abs(norm_angle(
                             get_yaw(msg.estimate.pose.pose.orientation) -
@@ -172,12 +223,14 @@ def process_messages(ex: MissionExperiment):
                     # Run velocity
                     actual_run_v = actual_run_d / run_dt
 
-                    # The plan depends on the thrust force parameters and the drag coefficient parameters.
-                    # If we assume that the thrust force parameters are accurate, we can use the difference
-                    # between planned & actual velocity to calculate new drag coefficients.
-                    actual_drag_coef = plan_drag_coef * plan_run_v * plan_run_v / actual_run_v / actual_run_v
+                    # The plan depends on the thrust force parameters and the drag coefficient
+                    # parameters. If we assume that the thrust force parameters are accurate, we
+                    # can use the difference between planned & actual velocity to calculate new
+                    # drag coefficients.
+                    actual_drag_coef = plan_drag_coef * pow(plan_run_v / actual_run_v, 2)
 
-                    print('dt {:.2f}, plan v {:.2f}, actual v {:.2f}, plan drag {:.2f}, actual drag {:.2f}'.format(
+                    print(('dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
+                          'plan drag {:.2f}, actual drag {:.2f}').format(
                         run_dt, plan_run_v, actual_run_v, plan_drag_coef, actual_drag_coef))
 
                     # Reset
@@ -366,7 +419,8 @@ ex_yaw_sequence = [
 def main(args=None):
     rclpy.init(args=args)
 
-    node = MissionExperimentRunNode(ex_f_sequence + ex_s_sequence + ex_z_sequence + ex_yaw_sequence)
+    node = MissionExperimentRunNode(
+        ex_f_sequence + ex_s_sequence + ex_z_sequence + ex_yaw_sequence)
 
     node.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 

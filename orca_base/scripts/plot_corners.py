@@ -1,8 +1,39 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Given a single marker that's always visible, and a stationary camera,
-analyze and plot fiducial_vlam_msgs/msg/Observations messages.
+Analyze and plot fiducial_vlam_msgs/msg/Observations messages.
 
 Usage:
 
@@ -15,18 +46,18 @@ import threading
 import time
 from typing import List
 
-import matplotlib
-import rclpy
-import rclpy.time
 from fiducial_vlam_msgs.msg import Observations
-from rclpy.node import Node
-
+import matplotlib
 from orca_util import seconds
+import rclpy
+from rclpy.node import Node
+import rclpy.time
 
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-import matplotlib.pyplot as plt
+# Turn off flake8 checking for this late import
+import matplotlib.pyplot as plt  # noqa: E402,I100
 
 MIN_RANGE = 0.2
 NUM_MESSAGES = 1000
@@ -106,7 +137,8 @@ class Plotter(object):
 
         # Write some stats as well
         means = [statistics.mean(all_values) for all_values in all_valuess]
-        stdevs = [statistics.stdev(all_values, mean) for all_values, mean in zip(all_valuess, means)]
+        stdevs = [statistics.stdev(all_values, mean) for all_values, mean in
+                  zip(all_valuess, means)]
         mean_stdev = statistics.mean(stdevs)
         print('means =', means)
         print('stdevs =', stdevs)
@@ -127,7 +159,8 @@ class PlotCornersNode(Node):
 
     def __init__(self):
         super().__init__('plot_control')
-        self._control_sub = self.create_subscription(Observations, '/fiducial_observations', self.obs_callback, 10)
+        self._control_sub = self.create_subscription(Observations, '/fiducial_observations',
+                                                     self.obs_callback, 10)
 
         self._plot = None
         self._prev_status = None

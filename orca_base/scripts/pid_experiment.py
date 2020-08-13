@@ -1,5 +1,37 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
 Run experiments to calculate PID coefficients.
 
@@ -10,12 +42,13 @@ ros2 run orca_base pid_experiment.py
 """
 
 from typing import Dict, List, Optional, Tuple
-import rclpy
-import rclpy.logging
+
 from geometry_msgs.msg import Point, Pose
 from mission_experiment import MissionExperiment, MissionExperimentRunNode
 from orca_util import get_quaternion, get_yaw, norm_angle, seconds
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+import rclpy
+import rclpy.logging
 
 
 # Get a parameter value
@@ -36,7 +69,8 @@ def set_param_double(params: List[Parameter], name: str, value: float):
 
 
 # Adjust Kp for the next experiment
-def adjust_kp(kp: float, target_value: float, target_time_to_correct: float, angle: bool, times: List[float], values: List[float]) -> Tuple[float, bool]:
+def adjust_kp(kp: float, target_value: float, target_time_to_correct: float, angle: bool,
+              times: List[float], values: List[float]) -> Tuple[float, bool]:
     kp_inc = 0.2
     start_time = times[0]
     print('target value', target_value)
@@ -59,7 +93,8 @@ def adjust_kp(kp: float, target_value: float, target_time_to_correct: float, ang
 
 
 # Adjust Kd for the next experiment
-def adjust_kd(kd: float, target_value: float, target_overshoot: float, times: List[float], values: List[float]) -> Tuple[float, bool]:
+def adjust_kd(kd: float, target_value: float, target_overshoot: float, times: List[float],
+              values: List[float]) -> Tuple[float, bool]:
     print('kd is good')
     return kd, True  # Stop
 
@@ -86,7 +121,8 @@ def process_messages(ex: MissionExperiment):
     yaw_values = [get_yaw(msg.estimate.pose.pose.orientation) for msg in ex.co_msgs]
 
     # co_msgs[0].mission.pose.fp.pose.pose is (0, 0, 0) (why?), select co_msgs[1]
-    x_kp, x_stop = adjust_kp(x_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.x, 4.0, False, times, x_values)
+    x_kp, x_stop = adjust_kp(x_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.x, 4.0, False,
+                             times, x_values)
 
     if x_stop:
         print('x_kp is good')
@@ -94,7 +130,8 @@ def process_messages(ex: MissionExperiment):
         print('bump x_kp to', x_kp)
         set_param_double(ex.auv_params, 'auv_x_pid_kp', x_kp)
 
-    y_kp, y_stop = adjust_kp(y_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.y, 4.0, False, times, y_values)
+    y_kp, y_stop = adjust_kp(y_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.y, 4.0, False,
+                             times, y_values)
 
     if y_stop:
         print('y_kp is good')
@@ -102,7 +139,8 @@ def process_messages(ex: MissionExperiment):
         print('bump y_kp to', y_kp)
         set_param_double(ex.auv_params, 'auv_y_pid_kp', y_kp)
 
-    z_kp, z_stop = adjust_kp(z_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.z, 4.0, False, times, z_values)
+    z_kp, z_stop = adjust_kp(z_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.z, 4.0, False,
+                             times, z_values)
 
     if z_stop:
         print('z_kp is good')
@@ -110,7 +148,9 @@ def process_messages(ex: MissionExperiment):
         print('bump z_kp to', z_kp)
         set_param_double(ex.auv_params, 'auv_z_pid_kp', z_kp)
 
-    yaw_kp, yaw_stop = adjust_kp(yaw_kp, get_yaw(ex.co_msgs[1].mission.pose.fp.pose.pose.orientation), 4.0, True, times, yaw_values)
+    yaw_kp, yaw_stop = adjust_kp(yaw_kp,
+                                 get_yaw(ex.co_msgs[1].mission.pose.fp.pose.pose.orientation), 4.0,
+                                 True, times, yaw_values)
 
     if yaw_stop:
         print('yaw_kp is good')
@@ -141,9 +181,12 @@ def pid_param_dict(dim: str, values):
     return {name: value for name, value in zip(names, values)}
 
 
-# Turn a param dict into a list of rclpy Parameter objects -- works for ParameterType.PARAMETER_DOUBLE
+# Turn a param dict into a list of rclpy Parameter objects.
+# Works for ParameterType.PARAMETER_DOUBLE.
 def dict_to_obj(d: Dict):
-    return [Parameter(name=item[0], value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=item[1]))
+    return [Parameter(name=item[0],
+                      value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
+                                           double_value=item[1]))
             for item in d.items()]
 
 

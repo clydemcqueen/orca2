@@ -1,4 +1,37 @@
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 from typing import List, Optional
+
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
@@ -29,12 +62,18 @@ def param_to_str(p: Parameter):
 
 
 class MissionExperiment(object):
-    """
-    Description of a mission experiment
-    """
+    """Description of a mission experiment."""
 
-    def __init__(self, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
-                 pose_targets: bool, marker_ids: List[int], poses: List[Pose], random: bool, keep_station: bool,
+    def __init__(self,
+                 mission_info: str,
+                 count: int,
+                 auv_params: List[Parameter],
+                 filter_params: List[Parameter],
+                 pose_targets: bool,
+                 marker_ids: List[int],
+                 poses: List[Pose],
+                 random: bool,
+                 keep_station: bool,
                  msg_processor):
         # Mission info string
         self.mission_info = mission_info
@@ -74,12 +113,15 @@ class MissionExperiment(object):
             self.gt_msgs = []
 
     def log_info(self, logger):
-        logger.info('experiment mission_info={}, count={}, pose_targets={}'.format(self.mission_info, self.count,
-                                                                                   self.pose_targets))
+        logger.info(
+            'experiment mission_info={}, count={}, pose_targets={}'.format(self.mission_info,
+                                                                           self.count,
+                                                                           self.pose_targets))
 
         if self.pose_targets:
             for p in self.poses:
-                logger.info('pose x={}, y={}, z={}'.format(p.position.x, p.position.y, p.position.z))
+                logger.info(
+                    'pose x={}, y={}, z={}'.format(p.position.x, p.position.y, p.position.z))
         else:
             logger.info('marker_ids={}'.format(self.marker_ids))
 
@@ -99,8 +141,8 @@ class MissionExperiment(object):
         goal_msg.keep_station = self.keep_station
         return goal_msg
 
-    # Can call this at any time, but the general idea is to call this once when the experiment is over
-    # msg_processor should return True to stop experiments
+    # Can call this at any time, but the general idea is to call this once when the experiment
+    # is over. msg_processor should return True to stop experiments
     def process_messages(self) -> bool:
         if self.msg_processor:
             result = self.msg_processor(self)
@@ -113,20 +155,24 @@ class MissionExperiment(object):
             return False  # Continue
 
     @classmethod
-    def go_to_markers(cls, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
+    def go_to_markers(cls, mission_info: str, count: int, auv_params: List[Parameter],
+                      filter_params: List[Parameter],
                       marker_ids: List[int], random: bool, keep_station: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], random, keep_station,
+        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], random,
+                   keep_station,
                    msg_processor)
 
     @classmethod
-    def go_to_poses(cls, mission_info: str, count: int, auv_params: List[Parameter], filter_params: List[Parameter],
+    def go_to_poses(cls, mission_info: str, count: int, auv_params: List[Parameter],
+                    filter_params: List[Parameter],
                     poses: List[Pose], random: bool, keep_station: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, True, [], poses, random, keep_station, msg_processor)
+        return cls(mission_info, count, auv_params, filter_params, True, [], poses, random,
+                   keep_station, msg_processor)
 
 
 class MissionExperimentRunNode(Node):
     """
-    Run a sequence of mission experiments
+    Run a sequence of mission experiments.
 
     The control flow is buried in the callbacks. Each experiment does 3 things:
     1. sets parameters on auv_node (set_auv_node_params)
@@ -143,12 +189,15 @@ class MissionExperimentRunNode(Node):
 
         # Subscribe to several messages for later processing
         self._co_sub = self.create_subscription(Control, '/control', self.co_cb, 10)
-        self._fp_sub = self.create_subscription(FiducialPoseStamped, '/filtered_fp', self.fp_cb, 10)
+        self._fp_sub = self.create_subscription(FiducialPoseStamped, '/filtered_fp',
+                                                self.fp_cb, 10)
         self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_cb, 10)
 
         # Set parameter service clients
-        self._set_param_auv_node_client = self.create_client(SetParameters, '/auv_node/set_parameters')
-        self._set_param_filter_node_client = self.create_client(SetParameters, '/filter_node/set_parameters')
+        self._set_param_auv_node_client = self.create_client(SetParameters,
+                                                             '/auv_node/set_parameters')
+        self._set_param_filter_node_client = self.create_client(SetParameters,
+                                                                '/filter_node/set_parameters')
 
         # Mission action client
         self._mission_action_client = ActionClient(self, Mission, '/mission')
@@ -177,21 +226,22 @@ class MissionExperimentRunNode(Node):
         self.start_experiment()
 
     def start_experiment(self):
-        """Start next experiment"""
+        """Start next experiment."""
         self.get_logger().info('starting experiment {}'.format(self._idx))
         self._experiments[self._idx].log_info(self.get_logger())
         self._count = 0
         self.start_run()
 
     def start_run(self):
-        """Start next run"""
-        self.get_logger().info('starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
+        """Start next run."""
+        self.get_logger().info(
+            'starting run {} of {}'.format(self._count + 1, self._experiments[self._idx].count))
 
         # Step 1
         self.set_auv_node_params()
 
     def start_next_run_or_experiment_or_done(self):
-        """Start next run, or next experiment, or we're done"""
+        """Start next run, or next experiment, or we're done."""
         self._count += 1
         if self._count < self._experiments[self._idx].count:
             self.start_run()
@@ -207,15 +257,18 @@ class MissionExperimentRunNode(Node):
                 self.get_logger().info('DONE!')
 
     def co_cb(self, msg: Control):
-        if 0 <= self._idx < len(self._experiments) and self._experiments[self._idx].co_msgs is not None:
+        if 0 <= self._idx < len(self._experiments) and self._experiments[
+                self._idx].co_msgs is not None:
             self._experiments[self._idx].co_msgs.append(msg)
 
     def fp_cb(self, msg: FiducialPoseStamped):
-        if 0 <= self._idx < len(self._experiments) and self._experiments[self._idx].fp_msgs is not None:
+        if 0 <= self._idx < len(self._experiments) and self._experiments[
+                self._idx].fp_msgs is not None:
             self._experiments[self._idx].fp_msgs.append(msg)
 
     def gt_cb(self, msg: Odometry):
-        if 0 <= self._idx < len(self._experiments) and self._experiments[self._idx].gt_msgs is not None:
+        if 0 <= self._idx < len(self._experiments) and self._experiments[
+                self._idx].gt_msgs is not None:
             self._experiments[self._idx].gt_msgs.append(msg)
 
     def set_auv_node_params(self):
@@ -247,8 +300,10 @@ class MissionExperimentRunNode(Node):
                 request.parameters.append(param)
 
             self.get_logger().debug('setting filter_node params...')
-            self._set_filter_node_params_future = self._set_param_filter_node_client.call_async(request)
-            self._set_filter_node_params_future.add_done_callback(self.set_filter_node_params_done_cb)
+            self._set_filter_node_params_future = self._set_param_filter_node_client.call_async(
+                request)
+            self._set_filter_node_params_future.add_done_callback(
+                self.set_filter_node_params_done_cb)
 
         else:
 
@@ -287,14 +342,16 @@ class MissionExperimentRunNode(Node):
 
     def feedback_cb(self, feedback):
         self.get_logger().debug(
-            'feedback: {0} out of {1}'.format(feedback.feedback.targets_completed, feedback.feedback.targets_total))
+            'feedback: {0} out of {1}'.format(feedback.feedback.targets_completed,
+                                              feedback.feedback.targets_total))
 
     def get_result_cb(self, future):
         status = future.result().status
         if status == GoalStatus.STATUS_SUCCEEDED:
             result = future.result().result
             self.get_logger().info(
-                'goal succeeded, completed {0} out of {1}'.format(result.targets_completed, result.targets_total))
+                'goal succeeded, completed {0} out of {1}'.format(result.targets_completed,
+                                                                  result.targets_total))
 
             # Do any post-processing
             if self._experiments[self._idx].process_messages():

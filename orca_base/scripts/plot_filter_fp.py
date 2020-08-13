@@ -1,13 +1,46 @@
 #!/usr/bin/env python3
 
-"""
-Analyze and plot the output of the filter by subscribing to 2 FiducialPoseStamped messages: pre- and post-filter
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
-TODO plotting time is 0.7s, so we're dropping messages, add threading
+"""
+Analyze and plot the output of the filter.
+
+TODO(clyde): plotting time is 0.7s, so we're dropping messages, add threading
 
 Usage:
 
-ros2 run orca_base plot_filter_fp.py --ros-args -r /pre_filter:=/forward_camera/fp -r /post_filter:=/filtered_fp
+ros2 run orca_base plot_filter_fp.py \
+--ros-args -r /pre_filter:=/forward_camera/fp -r /post_filter:=/filtered_fp
 """
 
 import math
@@ -16,19 +49,19 @@ import time
 from typing import List
 
 import matplotlib
-import numpy as np
-import rclpy
 from nav_msgs.msg import Odometry
-from orca_msgs.msg import Depth, FiducialPoseStamped
-from rclpy.node import Node
-
 import nees_fp
-from orca_util import seconds, q_to_rpy, set_ylim_with_min_range
+import numpy as np
+from orca_msgs.msg import Depth, FiducialPoseStamped
+from orca_util import q_to_rpy, seconds, set_ylim_with_min_range
+import rclpy
+from rclpy.node import Node
 
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-import matplotlib.pyplot as plt
+# Turn off flake8 checking for this late import
+import matplotlib.pyplot as plt  # noqa: E402,I100
 
 QUEUE_FOR = 2.0  # Seconds
 
@@ -50,8 +83,7 @@ def plot_subplot(subplot, name,
                  pre_xs, pre_values, pre_sds,
                  post_xs, post_values, post_sds,
                  gt_xs, gt_values):
-    """Plot data in a single subplot"""
-
+    """Plot data in a single subplot."""
     plot_filter_points = True  # Plot filter results as points vs. line
     plot_error = False  # Plot error bars or not
 
@@ -59,8 +91,8 @@ def plot_subplot(subplot, name,
         subplot.plot(gt_xs, gt_values, label='truth')
 
     if plot_filter_points and plot_error:
-        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0, elinewidth=1,
-                         label='filter')
+        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0,
+                         elinewidth=1, label='filter')
     else:
         if plot_error:
             subplot.plot(post_xs, post_values, label='filter')
@@ -72,14 +104,15 @@ def plot_subplot(subplot, name,
 
     if pre_xs and pre_values and pre_sds:
         if plot_error:
-            subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
+            subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8,
+                             elinewidth=1, label='pre')
         else:
             subplot.plot(pre_xs, pre_values, marker='x', ls='', label='pre')
 
     if depth_xs and depth_values and depth_sds:
         if plot_error:
-            subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1,
-                             label='depth')
+            subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8,
+                             elinewidth=1, label='depth')
         else:
             subplot.plot(depth_xs, depth_values, marker='o', ls='', label='depth')
 
@@ -94,7 +127,8 @@ def plot_subplot(subplot, name,
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
             subplot.set_title(
-                '{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+                '{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s,
+                                                                         post_u, post_s))
         else:
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
@@ -119,10 +153,13 @@ class PlotFilterNode(Node):
 
         if plot_baro:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 10)
-        self._fcam_sub = self.create_subscription(FiducialPoseStamped, '/pre_filter', self.pre_callback, 10)
-        self._post_sub = self.create_subscription(FiducialPoseStamped, '/post_filter', self.post_callback, 10)
+        self._fcam_sub = self.create_subscription(FiducialPoseStamped, '/pre_filter',
+                                                  self.pre_callback, 10)
+        self._post_sub = self.create_subscription(FiducialPoseStamped, '/post_filter',
+                                                  self.post_callback, 10)
         if plot_gt:
-            self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_callback, 10)
+            self._gt_sub = self.create_subscription(Odometry, '/ground_truth',
+                                                    self.gt_callback, 10)
 
     def depth_callback(self, msg: Depth):
         self._depth_msgs.append(msg)
@@ -168,8 +205,7 @@ class PlotFilterNode(Node):
             self._gt_msgs: List[Odometry] = []
 
     def calc_nees(self) -> float:
-        """Calc mean NEES value"""
-
+        """Calc mean NEES value."""
         nees_values = nees_fp.nees(self._post_msgs, self._gt_msgs)
         if nees_values:
             return float(np.mean(nees_values))
@@ -177,7 +213,7 @@ class PlotFilterNode(Node):
             return -1.
 
     def plot_msgs(self):
-        """Plot queued messages"""
+        """Plot queued messages."""
         print('plotting plot_filter.pdf')
         start_time = time.process_time()
 
@@ -192,7 +228,8 @@ class PlotFilterNode(Node):
         # Build lists of items to plot
         depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
         pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]  # Pre-filter pose messages
-        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]  # Pose-filter pose messages
+        post_xs = [seconds(msg.header.stamp) for msg in
+                   self._post_msgs]  # Pose-filter pose messages
         gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]  # Ground truth messages
 
         subplots = [axpx, axpy, axpz, axproll, axppitch, axpyaw]
@@ -240,9 +277,9 @@ class PlotFilterNode(Node):
                       [rpy[2] for rpy in gt_pose_rpys]]
 
         # Plot everything
-        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, gt_values in \
-            zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss, post_valuess, post_sdss,
-                gt_valuess):
+        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, \
+            gt_values in zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss,
+                             post_valuess, post_sdss, gt_valuess):
             plot_subplot(subplot, name,
                          depth_xs, depth_values, depth_sds,
                          pre_xs, pre_values, pre_sds,
@@ -259,7 +296,8 @@ class PlotFilterNode(Node):
             nees_str = 'ave NEES {:.3f}, FAILURE'.format(ave_nees)
 
         # Set figure title
-        fig.suptitle('UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
+        fig.suptitle(
+            'UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')
@@ -267,7 +305,8 @@ class PlotFilterNode(Node):
         # Close the figure to reclaim the memory
         plt.close(fig)
 
-        # Track time, if this is > 0.3s we're probably dropping messages and need to add a plotting thread
+        # If elapsed time > 0.3s we're may be dropping messages
+        # Add a plotting thread to fix
         stop_time = time.process_time()
         print('elapsed time {:.2f}s'.format(stop_time - start_time))
 

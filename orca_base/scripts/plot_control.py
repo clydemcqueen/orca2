@@ -1,7 +1,39 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Analyze and plot orca_msgs/msg/Control messages
+Analyze and plot orca_msgs/msg/Control messages.
 
 Usage:
 ros2 run orca_base plot_control.py
@@ -13,38 +45,42 @@ Method 1 (failed):
 -- turn interactive mode on using plt.ion()
 -- call plt.pause(0.01) to allow/force an update
 
-Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend. This brings the Qt5Agg window
-to the front and grabs focus, interrupting anything else you're doing. This is annoying.
+Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend.
+This brings the Qt5Agg window to the front and grabs focus, interrupting anything else you're
+doing. This is annoying.
 
 Method 2 (current):
 -- use the PDF backend to write plots to PDF files
 -- view the files using `evince fig.pdf`
 
-Evince watches the file and reloads whenever it changes. The downside is that the plot is a static image, so
-resizing the window doesn't do what you expect.
+Evince watches the file and reloads whenever it changes. The downside is that the plot is a static
+image, so resizing the window doesn't do what you expect.
 
 Perhaps worth investigating:
 -- custom mypause function that doesn't call activateWindow()
 -- matplotlib animations
 """
 
+import sys
+from typing import List
+
 import matplotlib
 from orca_msgs.msg import Control
 import rclpy
-import rclpy.time
 from rclpy.node import Node
-import sys
-from typing import List
+import rclpy.time
 
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-import matplotlib.pyplot as plt
+# Turn off flake8 checking for this late import
+import matplotlib.pyplot as plt  # noqa: E402,I100
 
 
 def cost_function(pos_neg, off_on):
     """
-    Cost function for a sequence of control messages, lower is better
+    Cost function for a sequence of control messages, lower is better.
+
     :param pos_neg: count of forward<->reverse transitions, cost=10
     :param off_on: count of off->on transitions, cost=5
     :return: cost
@@ -57,7 +93,8 @@ class PlotControlNode(Node):
     def __init__(self, num_messages):
         super().__init__('plot_control')
         self._control_msgs: List[Control] = []
-        self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
+        self._control_sub = self.create_subscription(Control, '/control',
+                                                     self.control_callback, 10)
         self._num_messages = num_messages
 
     def control_callback(self, msg: Control):
@@ -119,8 +156,8 @@ class PlotControlNode(Node):
             ax.set_xticklabels([])
             ax.plot(pwm_values)
 
-        # Plot odom lag
-        # These values depend on the node's estimate of "now" which isn't all that good during a simulation
+        # Plot odom lag. These values depend on the node's estimate of "now" which isn't all that
+        # good during a simulation.
         odom_lag_values = [msg.odom_lag for msg in self._control_msgs]
         axol.set_title('odom lag, ave={0:.3f}'.format(sum(odom_lag_values) / len(odom_lag_values)))
         axol.set_ylim(-0.1, 0.1)

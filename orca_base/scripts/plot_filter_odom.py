@@ -1,28 +1,61 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Analyze and plot the output of a Kalman filter by subscribing to 2 Odometry messages: pre- and post-filter
+Analyze and plot the output of a Kalman filter.
 
-Not used in ft3
+Subscribe to 2 Odometry messages: pre- and post-filter.
+Not used in ft3.
 
-Usage: ros2 run orca_base plot_filter.py /pre_filter:=/left_camera/odom /post_filter:=/filtered_odom
+Usage:
+ros2 run orca_base plot_filter.py /pre_filter:=/left_camera/odom /post_filter:=/filtered_odom
 """
 
 import math
 import statistics
 from typing import List
 
+from geometry_msgs.msg import PoseWithCovarianceStamped
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
-import rclpy
-from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
-from orca_msgs.msg import Depth
-from rclpy.node import Node
-
 import nees_odom
-from orca_util import seconds, q_to_rpy
+import numpy as np
+from orca_msgs.msg import Depth
+from orca_util import q_to_rpy, seconds
+import rclpy
+from rclpy.node import Node
 
 QUEUE_FOR = 10.0  # Seconds
 
@@ -36,8 +69,7 @@ def plot_subplot(subplot, name,
                  pre_xs, pre_values, pre_sds,
                  post_xs, post_values, post_sds,
                  gt_xs, gt_values):
-    """Plot data in a single subplot"""
-
+    """Plot data in a single subplot."""
     plot_filter_points = True  # Plot filter results as points vs. line
     plot_error = False  # Plot error bars or not
     ylim = 0.25  # Y limits
@@ -46,8 +78,8 @@ def plot_subplot(subplot, name,
         subplot.plot(gt_xs, gt_values, label='truth')
 
     if plot_filter_points and plot_error:
-        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0, elinewidth=1,
-                         label='filter')
+        subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0,
+                         elinewidth=1, label='filter')
     else:
         if plot_error:
             subplot.plot(post_xs, post_values, label='filter')
@@ -59,14 +91,15 @@ def plot_subplot(subplot, name,
 
     if pre_xs and pre_values and pre_sds:
         if plot_error:
-            subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8, elinewidth=1, label='pre')
+            subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8,
+                             elinewidth=1, label='pre')
         else:
             subplot.plot(pre_xs, pre_values, marker='x', ls='', label='pre')
 
     if depth_xs and depth_values and depth_sds:
         if plot_error:
-            subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8, elinewidth=1,
-                             label='depth')
+            subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8,
+                             elinewidth=1, label='depth')
         else:
             subplot.plot(depth_xs, depth_values, marker='o', ls='', label='depth')
 
@@ -83,7 +116,8 @@ def plot_subplot(subplot, name,
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
             subplot.set_title(
-                '{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s, post_u, post_s))
+                '{}, pre ({:.3f}, {:.3f}), post ({:.3f}, {:.3f})'.format(name, pre_u, pre_s,
+                                                                         post_u, post_s))
         else:
             post_u = statistics.mean(post_values)
             post_s = statistics.stdev(post_values, post_u)
@@ -108,9 +142,12 @@ class PlotFilterNode(Node):
 
         if plot_baro:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 5)
-        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_fcam_f_base', self.pre_callback, 5)
-        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_lcam_f_base', self.pre_callback, 5)
-        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_rcam_f_base', self.pre_callback, 5)
+        self._fcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_fcam_f_base',
+                                                  self.pre_callback, 5)
+        self._lcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_lcam_f_base',
+                                                  self.pre_callback, 5)
+        self._rcam_sub = self.create_subscription(PoseWithCovarianceStamped, '/raw_rcam_f_base',
+                                                  self.pre_callback, 5)
         self._post_sub = self.create_subscription(Odometry, '/odom', self.post_callback, 5)
         if plot_gt:
             self._gt_sub = self.create_subscription(Odometry, '/ground_truth', self.gt_callback, 5)
@@ -153,8 +190,7 @@ class PlotFilterNode(Node):
             self._gt_msgs: List[Odometry] = []
 
     def calc_nees(self) -> float:
-        """Calc mean NEES value"""
-
+        """Calc mean NEES value."""
         nees_values = nees_odom.nees(self._post_msgs, self._gt_msgs)
         if nees_values:
             return float(np.mean(nees_values))
@@ -162,8 +198,7 @@ class PlotFilterNode(Node):
             return -1.
 
     def plot_msgs(self):
-        """Plot queued messages"""
-
+        """Plot queued messages."""
         # Convert quaternions to Euler angles
         pre_pose_rpys = [q_to_rpy(pre.pose.pose.orientation) for pre in self._pre_msgs]
         post_pose_rpys = [q_to_rpy(post.pose.pose.orientation) for post in self._post_msgs]
@@ -176,11 +211,14 @@ class PlotFilterNode(Node):
         # Build lists of items to plot
         depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
         pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]  # Pre-filter pose messages
-        post_xs = [seconds(msg.header.stamp) for msg in self._post_msgs]  # Pose-filter pose messages
+        post_xs = [seconds(msg.header.stamp) for msg in
+                   self._post_msgs]  # Pose-filter pose messages
         gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]  # Ground truth messages
 
-        subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll, axtpitch, axtyaw]
-        names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'v roll', 'v pitch', 'v yaw']
+        subplots = [axpx, axpy, axpz, axtx, axty, axtz, axproll, axppitch, axpyaw, axtroll,
+                    axtpitch, axtyaw]
+        names = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw',
+                 'v roll', 'v pitch', 'v yaw']
 
         depth_valuess = [None, None, [msg.z for msg in self._depth_msgs],
                          None, None, None,
@@ -250,9 +288,9 @@ class PlotFilterNode(Node):
                       [msg.twist.twist.angular.z for msg in self._gt_msgs]]
 
         # Plot everything
-        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, gt_values in \
-                zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss, post_valuess, post_sdss,
-                    gt_valuess):
+        for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, \
+            gt_values in zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss,
+                             post_valuess, post_sdss, gt_valuess):
             plot_subplot(subplot, name,
                          depth_xs, depth_values, depth_sds,
                          pre_xs, pre_values, pre_sds,
@@ -270,7 +308,8 @@ class PlotFilterNode(Node):
             nees_str = 'ave NEES {:.3f}, FAILURE'.format(ave_nees)
 
         # Set figure title
-        fig.suptitle('UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
+        fig.suptitle(
+            'UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')
@@ -280,27 +319,26 @@ class PlotFilterNode(Node):
 
 
 def main(args=None):
-    """
-    Updating plots is tricky.
-
-    Method 1 (failed):
-    -- turn interactive mode on using plt.ion()
-    -- call plt.pause(0.01) to allow/force an update
-
-    Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend. This brings the Qt5Agg window
-    to the front and grabs focus, interrupting anything else you're doing. This is annoying.
-
-    Method 2 (current):
-    -- use the PDF backend to write plots to PDF files
-    -- view the files using `evince fig.pdf`
-
-    Evince watches the file and reloads whenever it changes. The downside is that the plot is a static image, so
-    resizing the window doesn't do what you expect.
-
-    Perhaps worth investigating:
-    -- custom mypause function that doesn't call activateWindow()
-    -- matplotlib animations
-    """
+    # Updating plots is tricky.
+    #
+    # Method 1 (failed):
+    # -- turn interactive mode on using plt.ion()
+    # -- call plt.pause(0.01) to allow/force an update
+    #
+    # Unfortunately, plt.pause() appears to call activateWindow() on the Qt5Agg backend. This
+    # brings the Qt5Agg window to the front and grabs focus, interrupting anything else you're
+    # doing. This is annoying.
+    #
+    # Method 2 (current):
+    # -- use the PDF backend to write plots to PDF files
+    # -- view the files using `evince fig.pdf`
+    #
+    # Evince watches the file and reloads whenever it changes. The downside is that the plot is a
+    # static image, so resizing the window doesn't do what you expect.
+    #
+    # Perhaps worth investigating:
+    # -- custom mypause function that doesn't call activateWindow()
+    # -- matplotlib animations
 
     print('backend was', plt.get_backend())
     matplotlib.use('pdf')
