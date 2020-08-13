@@ -90,7 +90,10 @@ namespace orca_base
   CXT_MACRO_MEMBER(pose_plan_target_dist, double, 1)          /* Target distance in front of marker  */ \
   CXT_MACRO_MEMBER(pose_plan_pause_duration, double, 1)       /* Length of pause segments in local plan  */ \
   \
+  /* Move to marker (mtm) planner: */ \
   CXT_MACRO_MEMBER(mtm_plan_target_dist, double, 1)           /* Target distance from marker */ \
+  /* Controller: */ \
+  CXT_MACRO_MEMBER(control_use_est_yaw, bool, false)          /* Use estimated yaw (vs planned yaw) when computing efforts */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

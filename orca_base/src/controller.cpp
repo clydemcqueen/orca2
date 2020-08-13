@@ -39,7 +39,10 @@ namespace orca_base
       u_bar.z() = z_controller_.calc(estimate.pose().pose().z(), dt) + ff.z();
     }
 
-    efforts = {cxt_.model_, plan.pose().pose().yaw(), u_bar};
+    // Calc efforts. Transformation from world frame to body frame requires a reasonable yaw.
+    // The planned yaw is typically the best choice, but for PID tuning there's no plan, so
+    // the planned yaw jumps to the final position: not reasonable.
+    efforts = {cxt_.model_, cxt_.control_use_est_yaw_ ? estimate.pose().pose().yaw() : plan.pose().pose().yaw(), u_bar};
   }
 
   ObservationController::ObservationController(const AUVContext &cxt) :

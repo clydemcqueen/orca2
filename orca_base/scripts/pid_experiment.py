@@ -176,7 +176,8 @@ base_auv_params = [
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=3.0)),
 ]
 
-# Turn on local planning
+# Normal motion, with local planning
+# Use the planned yaw to rotate body to world frame (this is the default)
 normal_motion_params = [
     Parameter(name='pose_plan_pause_duration',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=1.0)),
@@ -186,9 +187,12 @@ normal_motion_params = [
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.05)),
     Parameter(name='pose_plan_max_short_plan_xy',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=10.0)),
+    Parameter(name='control_use_est_yaw',
+              value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False)),
 ]
 
-# Turn off local planning: this will use PIDs for _all_ motion
+# PID-only motion, no local planning
+# Use the estimated yaw to rotate body to world frame -- markers must be in view at all times!
 pid_only_motion_params = [
     Parameter(name='pose_plan_pause_duration',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=10.0)),
@@ -198,6 +202,8 @@ pid_only_motion_params = [
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=10000.0)),
     Parameter(name='pose_plan_max_short_plan_xy',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=10.0)),
+    Parameter(name='control_use_est_yaw',
+              value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
 ]
 
 def_x_pids = default_pid_params('x')
