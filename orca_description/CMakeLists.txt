@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_description)
 
 # Default to C99
-if (NOT CMAKE_C_STANDARD)
+if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
-endif ()
+endif()
 
 # Default to C++14
-if (NOT CMAKE_CXX_STANDARD)
+if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif ()
+endif()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
@@ -62,6 +62,16 @@ ament_target_dependencies(
   tf2
   urdf
 )
+
+#=============
+# Test
+#=============
+
+# This will load & run linters listed in package.xml
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
 
 #=============
 # Install
