@@ -1,7 +1,40 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Build Gazebo world and fiducial_vlam map files from a list of markers and poses
+Build Gazebo world and fiducial_vlam map files from a list of markers and poses.
+
 Run by CMake -- see CMakeLists.txt
 
 Marker format: [marker_num, x, y, z, roll, pitch, yaw]
@@ -19,8 +52,9 @@ Also:
 """
 
 import math
-import transformations as xf
 import sys
+
+import transformations as xf
 
 # SDF and fiducial_vlam have different coordinate models
 t_world_map = xf.quaternion_matrix([math.sqrt(0.5), 0, 0, -math.sqrt(0.5)])
@@ -173,7 +207,8 @@ def gen_ring_of_markers(num_markers, radius, z):
     angle = 0
     inc = -2 * math.pi / num_markers
     while marker < num_markers:
-        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi / 2, 0]
+        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi / 2,
+               0]
         marker += 1
         angle += inc
 
@@ -225,7 +260,6 @@ worlds = [
     ['two_wall_floor.world', 'two_wall_floor_map.yaml', two_wall_floor],
     ['small_field.world', 'small_field_map.yaml', small_field],
 ]
-
 
 output_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
 

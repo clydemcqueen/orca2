@@ -1,9 +1,43 @@
-"""Launch a simulation with fiducial_vlam"""
-import math
+#!/usr/bin/env python3
+
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+"""Launch a simulation with fiducial_vlam."""
+
+from enum import Enum
 import os
 
 from ament_index_python.packages import get_package_share_directory
-from enum import Enum
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
@@ -18,8 +52,9 @@ class World(Enum):
 
 
 def generate_launch_description():
-    # Sim time can be problematic, e.g., image messages are published with timestamps in ~100ms increments
-    # I hacked up several sensor plugins in gazebo_ros_pkgs to publish everything in wall time
+    # Sim time can be problematic, e.g., image messages are published with timestamps in ~100ms
+    # increments. I hacked up several sensor plugins in gazebo_ros_pkgs to publish everything in
+    # wall time.
 
     # Must match camera name in URDF file
     forward_camera_name = 'forward_camera'
@@ -165,7 +200,6 @@ def generate_launch_description():
 
     all_entities = [
         # Launch Gazebo, loading the world
-        # Could use additional_env to add model path, but we need to add to the path, not replace it
         ExecuteProcess(cmd=[
             # 'gazebo',
             'gzserver',
@@ -180,28 +214,28 @@ def generate_launch_description():
              arguments=[urdf_path, '0', '0', surface, '0', '0', '0']),
 
         # Publish static joints
-        Node(package='robot_state_publisher', node_executable='robot_state_publisher', output='screen',
-             node_name='robot_state_publisher', arguments=[urdf_path], parameters=[{
-            }]),
+        Node(package='robot_state_publisher', node_executable='robot_state_publisher',
+             output='screen',
+             node_name='robot_state_publisher', arguments=[urdf_path]
+             ),
 
         # Joystick driver, generates joy messages
         Node(package='joy', node_executable='joy_node', output='screen',
              node_name='joy_node', parameters=[{
                 'dev': '/dev/input/js0'  # Update as required
-            }]),
+             }]),
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[{
-            }], remappings=[
+             node_name='rov_node', remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
-            ]),
+             ]),
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[{
                 'fluid_density': 997.0,
-            }]),
+             }]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
@@ -236,7 +270,7 @@ def generate_launch_description():
 
                 # Keep the existing timestamps
                 'psl_stamp_msgs_with_current_time': 0,
-            }]),
+             }]),
 
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
@@ -289,17 +323,17 @@ def generate_launch_description():
             Node(package='orca_filter', node_executable='filter_node', output='screen',
                  node_name='filter_node', parameters=[filter_node_params], remappings=[
                     ('fcam_fp', '/' + forward_camera_name + '/fp'),
-                ]))
+                 ]))
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', 'filtered_fp'),
-                ]))
+                 ]))
     else:
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', '/' + forward_camera_name + '/fp'),
-                ]))
+                 ]))
 
     return LaunchDescription(all_entities)
