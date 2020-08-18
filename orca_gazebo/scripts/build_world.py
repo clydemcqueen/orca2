@@ -213,8 +213,11 @@ def gen_ring_of_markers(num_markers, radius, z):
         angle += inc
 
 
-# Small ring: 12' diameter pool x 3' deep, markers on walls
+# Small ring: 12' diameter pool x 3' deep, 12 markers on walls
 small_ring = list(gen_ring_of_markers(num_markers=12, radius=3.6 / 2, z=-0.5))
+
+# Six ring: 12' diameter pool x 3' deep, just 6 markers on walls
+six_ring = list(gen_ring_of_markers(num_markers=6, radius=3.6 / 2, z=-0.5))
 
 medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
 
@@ -259,10 +262,11 @@ worlds = [
     ['two_wall.world', 'two_wall_map.yaml', two_wall],
     ['two_wall_floor.world', 'two_wall_floor_map.yaml', two_wall_floor],
     ['small_field.world', 'small_field_map.yaml', small_field],
+    ['six_ring.world', 'six_ring_map.yaml', six_ring],
 ]
 
-output_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
+result_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
 
 for world in worlds:
-    build_world(output_dir, world[0], world[2])
-    build_map(output_dir, world[1], world[2])
+    build_world(result_dir, world[0], world[2])
+    build_map(result_dir, world[1], world[2])

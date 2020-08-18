@@ -90,21 +90,21 @@ namespace orca_base
   CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01) \
   /* Limit thruster acceleration, measured in effort units  */ \
  \
-  CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.6) \
-  CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.2) \
-  CXT_MACRO_MEMBER(auv_x_pid_kd, double, 0.45) \
+  CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.5) \
+  CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_x_pid_kd, double, 0.0) \
  \
-  CXT_MACRO_MEMBER(auv_y_pid_kp, double, 0.6) \
-  CXT_MACRO_MEMBER(auv_y_pid_ki, double, 0.2) \
-  CXT_MACRO_MEMBER(auv_y_pid_kd, double, 0.45) \
+  CXT_MACRO_MEMBER(auv_y_pid_kp, double, 0.9) \
+  CXT_MACRO_MEMBER(auv_y_pid_ki, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_y_pid_kd, double, 0.0) \
  \
-  CXT_MACRO_MEMBER(auv_z_pid_kp, double, 0.6) \
-  CXT_MACRO_MEMBER(auv_z_pid_ki, double, 0.2) \
-  CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.45) \
+  CXT_MACRO_MEMBER(auv_z_pid_kp, double, 0.5) \
+  CXT_MACRO_MEMBER(auv_z_pid_ki, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.0) \
  \
-  CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 0.6) \
-  CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.2) \
-  CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.45) \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 2.5) \
+  CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.0) \
  \
   CXT_MACRO_MEMBER(mtm_fwd_pid_kp, double, 0.4) \
   CXT_MACRO_MEMBER(mtm_fwd_pid_ki, double, 0.0) \

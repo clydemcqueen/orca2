@@ -49,6 +49,7 @@ class World(Enum):
     SMALL_RING = 1  # 12' diameter pool with 12 markers arranged along the walls
     LARGE_RING = 2  # large_ring is a 20m diameter ring with 4 markers
     TWO_WALL = 3  # Two markers on the wall
+    SIX_RING = 4  # 12' diameter pool with 6 markers arranged along the walls
 
 
 def generate_launch_description():
@@ -97,6 +98,12 @@ def generate_launch_description():
     elif world == World.SMALL_RING:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring.world')
         map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_ring_map.yaml')
+        global_plan_allow_mtm = False
+        pose_plan_max_short_plan_xy = 0.5
+        pose_plan_target_dist = 0.8
+    elif world == World.SIX_RING:
+        world_path = os.path.join(orca_gazebo_path, 'worlds', 'six_ring.world')
+        map_path = os.path.join(orca_gazebo_path, 'worlds', 'six_ring_map.yaml')
         global_plan_allow_mtm = False
         pose_plan_max_short_plan_xy = 0.5
         pose_plan_target_dist = 0.8

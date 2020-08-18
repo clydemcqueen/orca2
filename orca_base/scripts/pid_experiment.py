@@ -33,11 +33,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Run experiments to calculate PID coefficients.
+Auto P tuner.
 
-WIP... working on an auto PID tuner
+Runs experiments to find good values for kp for x, y, z and yaw.
 
 Usage:
+ros2 launch orca_gazebo sim_launch.py  # use World.SMALL_FIELD
 ros2 run orca_base pid_experiment.py
 """
 
@@ -49,6 +50,12 @@ from orca_util import get_quaternion, get_yaw, norm_angle, seconds
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 import rclpy
 import rclpy.logging
+
+# kp is increased until P controller causes value to hit the target in < TIME_TO_CORRECT seconds.
+# To get more aggressive P controllers:
+# -- reduce TIME_TO_CORRECT
+# -- increase distance from ex_start to ex_jump
+TIME_TO_CORRECT = 4.0
 
 
 # Get a parameter value
@@ -92,13 +99,6 @@ def adjust_kp(kp: float, target_value: float, target_time_to_correct: float, ang
     return kp, False  # Continue
 
 
-# Adjust Kd for the next experiment
-def adjust_kd(kd: float, target_value: float, target_overshoot: float, times: List[float],
-              values: List[float]) -> Tuple[float, bool]:
-    print('kd is good')
-    return kd, True  # Stop
-
-
 # Process messages, return True to stop
 def process_messages(ex: MissionExperiment):
     if len(ex.co_msgs) < 2:
@@ -121,39 +121,39 @@ def process_messages(ex: MissionExperiment):
     yaw_values = [get_yaw(msg.estimate.pose.pose.orientation) for msg in ex.co_msgs]
 
     # co_msgs[0].mission.pose.fp.pose.pose is (0, 0, 0) (why?), select co_msgs[1]
-    x_kp, x_stop = adjust_kp(x_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.x, 4.0, False,
-                             times, x_values)
+    x_kp, x_stop = adjust_kp(x_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.x,
+                             TIME_TO_CORRECT, False, times, x_values)
 
     if x_stop:
-        print('x_kp is good')
+        print('x_kp is good at', x_kp)
     else:
         print('bump x_kp to', x_kp)
         set_param_double(ex.auv_params, 'auv_x_pid_kp', x_kp)
 
-    y_kp, y_stop = adjust_kp(y_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.y, 4.0, False,
-                             times, y_values)
+    y_kp, y_stop = adjust_kp(y_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.y,
+                             TIME_TO_CORRECT, False, times, y_values)
 
     if y_stop:
-        print('y_kp is good')
+        print('y_kp is good at', y_kp)
     else:
         print('bump y_kp to', y_kp)
         set_param_double(ex.auv_params, 'auv_y_pid_kp', y_kp)
 
-    z_kp, z_stop = adjust_kp(z_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.z, 4.0, False,
-                             times, z_values)
+    z_kp, z_stop = adjust_kp(z_kp, ex.co_msgs[1].mission.pose.fp.pose.pose.position.z,
+                             TIME_TO_CORRECT, False, times, z_values)
 
     if z_stop:
-        print('z_kp is good')
+        print('z_kp is good at', z_kp)
     else:
         print('bump z_kp to', z_kp)
         set_param_double(ex.auv_params, 'auv_z_pid_kp', z_kp)
 
     yaw_kp, yaw_stop = adjust_kp(yaw_kp,
-                                 get_yaw(ex.co_msgs[1].mission.pose.fp.pose.pose.orientation), 4.0,
-                                 True, times, yaw_values)
+                                 get_yaw(ex.co_msgs[1].mission.pose.fp.pose.pose.orientation),
+                                 TIME_TO_CORRECT, True, times, yaw_values)
 
     if yaw_stop:
-        print('yaw_kp is good')
+        print('yaw_kp is good at', yaw_kp)
     else:
         print('bump yaw_kp to', yaw_kp)
         set_param_double(ex.auv_params, 'auv_yaw_pid_kp', yaw_kp)
@@ -163,6 +163,7 @@ def process_messages(ex: MissionExperiment):
 
 # Classic Ziegler Nichols PID coefficients
 # See https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
+# These functions are not used in ft3
 def zn_classic_pid(Ku, Tu):
     return [0.6 * Ku, 1.2 * Ku / Tu, 0.075 * Ku * Tu]
 
@@ -205,6 +206,7 @@ def default_pid_params(dim: str):
 
 
 # Get zn_no_overshoot PID parameters
+# Not used in ft3
 def zn_no_overshoot_params(dim: str, Ku, Tu):
     return pid_param_obj(dim, zn_no_overshoot(Ku, Tu))
 
@@ -259,6 +261,12 @@ def_yaw_pids = default_pid_params('yaw')
 
 all_pid_params = def_x_pids + def_y_pids + def_z_pids + def_yaw_pids
 
+# An 'experiment' consists of a set of AUV params, filter params, and 1 or more targets.
+# We string experiments together to set different parameters:
+# -- ex_start moves to the start position using normal planning
+# -- ex_jump moves to the end position using just the P controller
+# This is repeated until the kp values stop changing.
+
 # Move to start position
 ex_start = MissionExperiment.go_to_poses(
     'move to start',
@@ -303,8 +311,7 @@ ex_simple_test = MissionExperiment.go_to_markers(
 def main(args=None):
     rclpy.init(args=args)
 
-    # TODO extend this to y, z, yaw
-    # TODO adjust kd
+    # Run experiments to find good kp values for x, y, z, yaw
     node = MissionExperimentRunNode([ex_start, ex_jump], repeat=True)
 
     node.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
