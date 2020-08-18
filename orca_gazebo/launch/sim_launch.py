@@ -80,6 +80,10 @@ def generate_launch_description():
     # 1920x1280: 14.0
     good_obs_dist = 10.0
 
+    # Run filter_node or not
+    filter_poses = False
+
+    # Select map
     world = World.SMALL_FIELD
 
     if world == World.SMALL_FIELD:
@@ -125,9 +129,6 @@ def generate_launch_description():
         global_plan_allow_mtm = False
         pose_plan_max_short_plan_xy = 0.5
         pose_plan_target_dist = 0.8
-
-    # Run filter_node or not
-    filter_poses = False
 
     fp_node_params = {
         # Publish map=>base tf if we're not running a filter
@@ -259,7 +260,6 @@ def generate_launch_description():
 
                 'psl_camera_frame_id': forward_camera_frame,
                 'psl_publish_tfs': 0,
-                'psl_publish_tfs_per_marker': 0,
 
                 # Default dict id is 0 (DICT_4x4_50), but sim_fiducial uses DICT_6X6_250
                 'loc_aruco_dictionary_id': 8,
@@ -298,8 +298,8 @@ def generate_launch_description():
         'filter_baro': True,  # Fuse depth
         'filter_fcam': True,
         'publish_tf': True,  # Publish map=>base tf
-        'good_pose_dist': 2.0,
-        'good_obs_dist': 10.0,
+        'good_pose_dist': good_pose_dist,
+        'good_obs_dist': good_obs_dist,
     }
 
     auv_node_params = {
@@ -316,6 +316,9 @@ def generate_launch_description():
 
         # Do not allow waypoints
         'pose_plan_waypoints': False,
+
+        # Leave room for the filter to flop between depth and fp
+        'timeout_fp_ms': 500,
 
         'good_pose_dist': good_pose_dist,
         'good_obs_dist': good_obs_dist,
