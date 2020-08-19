@@ -87,35 +87,14 @@ straight_motion_auv_params = [
 ]
 
 # Turn off PID controllers
-no_pids_auv_params = [
-    Parameter(name=name,
-              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=0.))
-    for name in ['auv_x_pid_kp', 'auv_x_pid_ki', 'auv_x_pid_kd',
-                 'auv_y_pid_kp', 'auv_y_pid_ki', 'auv_y_pid_kd',
-                 'auv_z_pid_kp', 'auv_z_pid_ki', 'auv_z_pid_kd',
-                 'auv_yaw_pid_kp', 'auv_yaw_pid_ki', 'auv_yaw_pid_kd']
-]
+no_pids_auv_params = [Parameter(name='auv_pid_enabled',
+                                value=ParameterValue(type=ParameterType.PARAMETER_BOOL,
+                                                     bool_value=False))]
 
 # Turn on PID controllers
-yes_pids_auv_params = [
-                          Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
-                                                         double_value=0.6))
-                          for name in
-                          ['auv_x_pid_kp', 'auv_y_pid_kp', 'auv_z_pid_kp', 'auv_yaw_pid_kp']
-                      ] + [
-                          Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
-                                                         double_value=0.2))
-                          for name in
-                          ['auv_x_pid_ki', 'auv_y_pid_ki', 'auv_z_pid_ki', 'auv_yaw_pid_ki']
-                      ] + [
-                          Parameter(name=name,
-                                    value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
-                                                         double_value=0.45))
-                          for name in
-                          ['auv_x_pid_kd', 'auv_y_pid_kd', 'auv_z_pid_kd', 'auv_yaw_pid_kd']
-                      ]
+yes_pids_auv_params = [Parameter(name='auv_pid_enabled',
+                                 value=ParameterValue(type=ParameterType.PARAMETER_BOOL,
+                                                      bool_value=True))]
 
 # Drag coefficients
 drag_coef_f = 0.90
@@ -229,8 +208,8 @@ def process_messages(ex: MissionExperiment):
                     # drag coefficients.
                     actual_drag_coef = plan_drag_coef * pow(plan_run_v / actual_run_v, 2)
 
-                    print(('dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
-                          'plan drag {:.2f}, actual drag {:.2f}').format(
+                    print(('decel phase dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
+                           'plan drag {:.2f}, actual drag {:.2f}').format(
                         run_dt, plan_run_v, actual_run_v, plan_drag_coef, actual_drag_coef))
 
                     # Reset

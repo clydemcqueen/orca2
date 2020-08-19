@@ -54,7 +54,7 @@ void PoseController::calc(
   auto u_bar = ff;
 
   // Trust x, y and yaw if the covar is low and we have a fairly close observation
-  if (estimate.good(cxt_.good_pose_dist_)) {
+  if (cxt_.auv_pid_enabled_ && estimate.good(cxt_.good_pose_dist_)) {
     x_controller_.set_target(plan.pose().pose().x());
     u_bar.x() = x_controller_.calc(estimate.pose().pose().x(), dt) + ff.x();
 
@@ -66,7 +66,7 @@ void PoseController::calc(
   }
 
   // Trust z if we're getting it from baro
-  if (estimate.pose().good1()) {
+  if (cxt_.auv_pid_enabled_ && estimate.pose().good1()) {
     z_controller_.set_target(plan.pose().pose().z());
     u_bar.z() = z_controller_.calc(estimate.pose().pose().z(), dt) + ff.z();
   }
@@ -104,7 +104,8 @@ void ObservationController::calc(
   // If we have a fairly close observation run the PID controllers
   // Running the PID controllers from too far away causes a lot of jerk
   // TODO(clyde): estimate bearing and distance uncertainty, use to attenuate PID controllers
-  if (estimate.id() != mw::NOT_A_MARKER && estimate.distance() < 5 /* TODO(clyde): param */) {
+  // TODO(clyde): 5m should be a parameter
+  if (cxt_.auv_pid_enabled_ && estimate.id() != mw::NOT_A_MARKER && estimate.distance() < 5) {
     bearing_controller_.set_target(plan.bearing());
     u_bar.yaw() = bearing_controller_.calc(estimate.bearing(), dt) + ff.yaw();
 

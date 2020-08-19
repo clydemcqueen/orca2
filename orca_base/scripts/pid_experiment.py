@@ -35,7 +35,7 @@
 """
 Auto P tuner.
 
-Runs experiments to find good values for kp for x, y, z and yaw.
+Runs experiments to find good x, y, z and yaw kp values.
 
 Usage:
 ros2 launch orca_gazebo sim_launch.py  # use World.SMALL_FIELD

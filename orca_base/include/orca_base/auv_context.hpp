@@ -90,6 +90,9 @@ namespace orca_base
   CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01) \
   /* Limit thruster acceleration, measured in effort units  */ \
  \
+  CXT_MACRO_MEMBER(auv_pid_enabled, bool, true) \
+  /* Turn pid controllers on/off  */   \
+ \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.5) \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(auv_x_pid_kd, double, 0.0) \
