@@ -135,8 +135,9 @@ def generate_launch_description():
         'publish_tf': not filter_poses,
     }
 
-    # Optionally build a map
-    build_map = False
+    # Optionally build and use a map
+    build_map = True
+    use_built_map = True
 
     if build_map:
         vmap_node_params = {
@@ -150,7 +151,7 @@ def generate_launch_description():
             'map_load_filename': '',
 
             # Save the map
-            'map_save_filename': 'test_map',
+            'map_save_filename': 'sam_map',
         }
         if world == World.SMALL_FIELD:
             vmap_node_params.update({
@@ -159,8 +160,8 @@ def generate_launch_description():
                 'map_init_style': 1,
                 'map_init_id': 0,
                 'map_init_pose_x': 2.0,
-                'map_init_pose_y': -0.6,
-                'map_init_pose_z': -0.5,
+                'map_init_pose_y': 0.6,
+                'map_init_pose_z': 0.3,
             })
         elif world == World.SMALL_RING:
             vmap_node_params.update({
@@ -177,6 +178,14 @@ def generate_launch_description():
                 # 'map_init_pose_roll': -math.pi/2,
                 # 'map_init_pose_pitch': 0.0,
                 # 'map_init_pose_yaw': -math.pi/2,
+            })
+        elif world == World.SIX_RING:
+            vmap_node_params.update({
+                'map_init_style': 1,
+                'map_init_id': 0,
+                'map_init_pose_x': 1.8,
+                'map_init_pose_y': 0.0,
+                'map_init_pose_z': -0.5,
             })
         elif world == World.LARGE_RING:
             vmap_node_params.update({
@@ -199,8 +208,8 @@ def generate_launch_description():
             # Publish marker /tf
             'psm_publish_tfs': 1,
 
-            # Load a pre-built map from disk
-            'map_load_filename': map_path,
+            # Load map
+            'map_load_filename': 'sam_map' if use_built_map else map_path,
 
             # Don't save the map
             'map_save_filename': '',
