@@ -12,8 +12,15 @@ Installation instructions:
 [using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
 Use the `ros-eloquent-desktop` option.
 
-* Install Colcon (the build tool for ROS2)
-[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+* Install ROS2 development tools
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Development-Setup/).
+Stop after installing the development tools (before "Get ROS 2 code").
+
+* Initialize rosdep:
+~~~
+sudo rosdep init
+rosdep update
+~~~
 
 * Install Gazebo v9:
 ~~~

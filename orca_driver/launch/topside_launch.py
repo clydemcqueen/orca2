@@ -108,7 +108,7 @@ def generate_launch_description():
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_node', node_namespace=camera_name, parameters=[
                 params_path, {
-                    'camera_frame_id': camera_frame,
+                    'psl_camera_frame_id': camera_frame,
                 }], remappings=[
                 ('image_raw', 'repub_raw'),
              ]),

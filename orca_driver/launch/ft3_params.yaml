@@ -1,13 +1,28 @@
 /forward_camera/vloc_node:
   ros__parameters:
-    publish_tfs: 0
-    publish_tfs_per_marker: 0
-    sub_camera_info_best_effort_not_reliable: 0
-    publish_camera_pose: 1
-    publish_base_pose: 0
-    publish_camera_odom: 0
-    publish_base_odom: 0
-    stamp_msgs_with_current_time: 0
+    # Localize, don't calibrate
+    loc_calibrate_not_localize: 0
+
+    # 0: OpenCV, 1: GTSAM
+    loc_camera_sam_not_cv: 1
+
+    # Use DICT_4x4_50
+    loc_aruco_dictionary_id: 0
+
+    # Do not publish tfs
+    psl_publish_tfs: 0
+
+    # Camera info is published reliable, not best-effort
+    psl_sub_camera_info_best_effort_not_reliable: 0
+
+    # Publish the camera pose, but nothing else
+    psl_publish_camera_pose: 1
+    psl_publish_base_pose: 0
+    psl_publish_camera_odom: 0
+    psl_publish_base_odom: 0
+
+    # Keep the existing timestamps
+    psl_stamp_msgs_with_current_time: 0
 
 /auv_node:
   ros__parameters:

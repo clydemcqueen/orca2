@@ -17,20 +17,19 @@ I made the following standard modifications to my 2017 BlueRobotics BlueROV2:
 
 I made the following custom modifications -- YMMV:
 
-* Replaced the Pixhawk with a Pololu Maestro 18
+* Replaced the Raspberry Pi with an [UP Board](https://up-board.org/up/specifications/)
+* Replaced the Pixhawk with a [Pololu Maestro 18](https://www.pololu.com/product/1354)
 * Built a voltage divider to provide a voltage signal from the battery (0-17V) to a Maestro analog input (0-5V)
 * There is no current sensor
 * There is no IMU
 
-## Raspberry Pi Software Installation
+## Software Installation
 
-The Raspberry Pi is now the primary controller.
 Below I've outlined rough instructions... you'll need to dive into the system-specific instructions for details.
 
 ### Install Ubuntu 18.04.4 LTS Server
 
-Install Ubuntu 18.04.4 LTS Server for ARM64
-[using these instructions](https://wiki.ubuntu.com/ARM/RaspberryPi).
+Install Ubuntu 18.04.4 LTS Server.
 
 ### Install ffmpeg
 
@@ -43,12 +42,12 @@ Install ROS2 Eloquent
 [using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
 Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
 
-Install Colcon (the build tool for ROS2)
-[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+Install ROS2 development tools
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Development-Setup/).
+Stop after installing the development tools (before "Get ROS 2 code").
 
-Install rosdep:
+Initialize rosdep:
 ~~~
-sudo apt install python-rosdep2
 sudo rosdep init
 rosdep update
 ~~~
@@ -70,7 +69,7 @@ mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
 git clone https://github.com/ptrmu/ros2_shared.git
-git clone https://github.com/ptrmu/fiducial_vlam.git
+git clone https://github.com/ptrmu/fiducial_vlam_sam.git
 touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
 git clone https://github.com/clydemcqueen/h264_image_transport.git
 git clone https://github.com/clydemcqueen/orca2.git

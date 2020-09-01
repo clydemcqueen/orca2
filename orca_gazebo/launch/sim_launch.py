@@ -43,7 +43,7 @@ from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 
-# There are three tested worlds:
+# There are several tested worlds:
 class World(Enum):
     SMALL_FIELD = 0  # 12' diameter pool with a field of 6 markers arranged in a 2x3 vertical field
     SMALL_RING = 1  # 12' diameter pool with 12 markers arranged along the walls
