@@ -52,10 +52,95 @@ def generate_launch_description():
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
 
     orca_driver_path = get_package_share_directory('orca_driver')
-    params_path = os.path.join(orca_driver_path, 'launch', 'ft3_params.yaml')
-    map_path = os.path.join(orca_driver_path, 'maps', 'ft3_map.yaml')
+    map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
 
-    return LaunchDescription([
+    # Run filter_node or not
+    filter_poses = False
+
+    # Optionally build and use a map
+    build_map = True
+    use_built_map = True
+
+    if build_map:
+        vmap_node_params = {
+            # Publish marker /tf
+            'psm_publish_tfs': 1,
+
+            # 6 aluminum markers: 0.165
+            'map_marker_length': 0.165,
+
+            # Don't load a map
+            'map_load_filename': '',
+
+            # Save the map
+            'map_save_filename': 'sam_map',
+
+            # Map initialization
+            'map_init_style': 1,
+            'map_init_id': 0,
+            'map_init_pose_x': 0.0,
+            'map_init_pose_y': 0.0,
+            'map_init_pose_z': -0.5,
+        }
+    else:
+        vmap_node_params = {
+            # Publish marker /tf
+            'psm_publish_tfs': 1,
+
+            # Load map
+            'map_load_filename': 'sam_map' if use_built_map else map_path,
+
+            # Don't save the map
+            'map_save_filename': '',
+        }
+
+    fp_node_params = {
+        # Publish map=>base tf if we're not running a filter
+        'publish_tf': not filter_poses,
+    }
+
+    filter_node_params = {
+        'fluid_density': 997.0,
+        'predict_accel': False,
+        'predict_accel_control': False,
+        'predict_accel_drag': False,
+        'predict_accel_buoyancy': False,
+        'filter_baro': True,
+        'filter_fcam': True,
+        'publish_tf': True,
+
+        # How far in front of a marker is a good pose?
+        'good_pose_dist': 2.0,
+    }
+
+    auv_node_params = {
+        'fluid_density': 997.0,
+
+        # Timer is stable w/ or w/o filter:
+        'loop_driver': 0,
+
+        # If we're not running a filter, then override depth in auv_node
+        'depth_override': not filter_poses,
+
+        # How far in front of a marker is a good pose?
+        'good_pose_dist': 2.0,
+
+        # Allow MTM recovery
+        'global_plan_allow_mtm': True,
+
+        # Do not allow waypoints
+        'pose_plan_waypoints': False,
+
+        # If xy distance is > this, then build a long plan (rotate, run, rotate)
+        # Otherwise build a short plan (move in all DoF at once)
+        'pose_plan_max_short_plan_xy': 0.5,
+
+        # How close to the markers should we get?
+        'pose_plan_target_dist': 0.8,
+        'mtm_plan_target_dist': 1.5,
+    }
+
+    all_entities = [
         # Publish static joints
         Node(package='robot_state_publisher', node_executable='robot_state_publisher',
              output='log',
@@ -95,43 +180,68 @@ def generate_launch_description():
                 'fluid_density': 997.0,
              }]),
 
-        # Load and publish a known map
+        # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
-             node_name='vmap_node', parameters=[{
-                'publish_tfs': 1,  # Publish marker /tf
-                'marker_length': 0.1778,  # Marker length for new maps
-                'marker_map_load_full_filename': map_path,  # Load a pre-built map from disk
-                'make_not_use_map': 0  # Don't modify the map
-             }]),
+             node_name='vmap_node', parameters=[vmap_node_params]),
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_node', node_namespace=camera_name, parameters=[
-                params_path, {
-                    'psl_camera_frame_id': camera_frame,
-                }], remappings=[
+             node_name='vloc_node', node_namespace=camera_name, parameters=[{
+                'psl_camera_frame_id': camera_frame,
+
+                # Localize, don't calibrate
+                'loc_calibrate_not_loocalize': 0,
+
+                # 0: OpenCV, 1: GTSAM
+                'loc_camera_sam_not_cv': 1,
+
+                # 0: DICT_4x4_50 (default)
+                # 8: DICT_6X6_250
+                'loc_aruco_dictionary_id': 0,
+
+                # Do not publish tfs
+                'psl_publish_tfs': 0,
+
+                # Camera info is published reliable, not best-effort
+                'psl_sub_camera_info_best_effort_not_reliable': 0,
+
+                # Publish the camera pose, but nothing else
+                'psl_publish_camera_pose': 1,
+                'psl_publish_base_pose': 0,
+                'psl_publish_camera_odom': 0,
+                'psl_publish_base_odom': 0,
+
+                # Keep the existing timestamps
+                'psl_stamp_msgs_with_current_time': 0,
+             }], remappings=[
                 ('image_raw', 'repub_raw'),
              ]),
 
         # FP node, generate fiducial poses from observations and poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',
-             node_name='fp_node', node_namespace=camera_name),
-
-        # Filter
-        Node(package='orca_filter', node_executable='filter_node', output='screen',
-             node_name='filter_node', parameters=[params_path, {
-                'urdf_file': urdf_path,
-             }], remappings=[
-                ('fcam_fp', '/' + camera_name + '/fp'),
-             ]),
-
-        # AUV controller
-        Node(package='orca_base', node_executable='auv_node', output='screen',
-             node_name='auv_node', parameters=[params_path], remappings=[
-                ('fcam_info', '/' + camera_name + '/camera_info'),
-             ]),
+             node_name='fp_node', node_namespace=camera_name, parameters=[fp_node_params]),
 
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
              node_name='annotate_image_node', node_namespace=camera_name),
-    ])
+    ]
+
+    if filter_poses:
+        all_entities.append(
+            Node(package='orca_filter', node_executable='filter_node', output='screen',
+                 node_name='filter_node', parameters=[filter_node_params], remappings=[
+                    ('fcam_fp', '/' + camera_name + '/fp'),
+                ]))
+        all_entities.append(
+            Node(package='orca_base', node_executable='auv_node', output='screen',
+                 node_name='auv_node', parameters=[auv_node_params], remappings=[
+                    ('filtered_fp', 'filtered_fp'),
+                ]))
+    else:
+        all_entities.append(
+            Node(package='orca_base', node_executable='auv_node', output='screen',
+                 node_name='auv_node', parameters=[auv_node_params], remappings=[
+                    ('filtered_fp', '/' + camera_name + '/fp'),
+                ]))
+
+    return LaunchDescription(all_entities)

@@ -48,7 +48,7 @@ def generate_launch_description():
     camera_name = 'forward_camera'
     camera_frame = 'forward_camera_frame'
     fps = 30
-    size = '1920x1080'
+    size = '800x600'
 
     orca_driver_path = get_package_share_directory('orca_driver')
     camera_info_path = os.path.join(orca_driver_path, 'cfg', 'brusb_dry_' + size + '.ini')

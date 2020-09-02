@@ -58,8 +58,8 @@ def generate_launch_description():
     # wall time.
 
     # Must match camera name in URDF file
-    forward_camera_name = 'forward_camera'
-    forward_camera_frame = 'forward_camera_frame'
+    camera_name = 'forward_camera'
+    camera_frame = 'forward_camera_frame'
 
     # The AUV must be injected at the surface to calibrate the barometer
     surface = '0'
@@ -129,11 +129,6 @@ def generate_launch_description():
         global_plan_allow_mtm = False
         pose_plan_max_short_plan_xy = 0.5
         pose_plan_target_dist = 0.8
-
-    fp_node_params = {
-        # Publish map=>base tf if we're not running a filter
-        'publish_tf': not filter_poses,
-    }
 
     # Optionally build and use a map
     build_map = True
@@ -215,6 +210,51 @@ def generate_launch_description():
             'map_save_filename': '',
         }
 
+    fp_node_params = {
+        # Publish map=>base tf if we're not running a filter
+        'publish_tf': not filter_poses,
+    }
+
+    filter_node_params = {
+        'urdf_file': urdf_path,
+        'fluid_density': 997.0,
+        'predict_accel': False,
+        'predict_accel_control': False,
+        'predict_accel_drag': False,
+        'predict_accel_buoyancy': False,
+        'filter_baro': True,  # Fuse depth
+        'filter_fcam': True,
+        'publish_tf': True,  # Publish map=>base tf
+        'good_pose_dist': good_pose_dist,
+        'good_obs_dist': good_obs_dist,
+    }
+
+    auv_node_params = {
+        # Match orca.urdf (slight positive buoyancy):
+        'fluid_density': 997.0,
+        'volume': 0.01,
+        'mass': 9.9,
+
+        # Timer (mode 0) is stable w/ or w/o filter
+        'loop_driver': 0,
+
+        # If we're not running a filter, then override depth in auv_node
+        'depth_override': not filter_poses,
+
+        # Do not allow waypoints
+        'pose_plan_waypoints': False,
+
+        # Leave room for the filter to flop between depth and fp
+        'timeout_fp_ms': 500,
+
+        'good_pose_dist': good_pose_dist,
+        'good_obs_dist': good_obs_dist,
+        'global_plan_allow_mtm': global_plan_allow_mtm,
+        'pose_plan_max_short_plan_xy': pose_plan_max_short_plan_xy,
+        'pose_plan_target_dist': pose_plan_target_dist,
+        'mtm_plan_target_dist': 1.5,
+    }
+
     all_entities = [
         # Launch Gazebo, loading the world
         ExecuteProcess(cmd=[
@@ -260,17 +300,18 @@ def generate_launch_description():
 
         # Localize against the map
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_forward', node_namespace=forward_camera_name, parameters=[{
+             node_name='vloc_forward', node_namespace=camera_name, parameters=[{
                 # Localize, don't calibrate
                 'loc_calibrate_not_loocalize': 0,
 
                 # 0: OpenCV, 1: GTSAM
                 'loc_camera_sam_not_cv': 1,
 
-                'psl_camera_frame_id': forward_camera_frame,
+                'psl_camera_frame_id': camera_frame,
                 'psl_publish_tfs': 0,
 
-                # Default dict id is 0 (DICT_4x4_50), but sim_fiducial uses DICT_6X6_250
+                # 0: DICT_4x4_50 (default)
+                # 8: DICT_6X6_250
                 'loc_aruco_dictionary_id': 8,
 
                 # Gazebo publishes camera info best-effort
@@ -290,58 +331,18 @@ def generate_launch_description():
 
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
-             node_name='annotate_image_node', node_namespace=forward_camera_name),
+             node_name='annotate_image_node', node_namespace=camera_name),
 
         # Combine poses and observations into fiducial poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',
-             node_name='fp_node', node_namespace=forward_camera_name, parameters=[fp_node_params]),
+             node_name='fp_node', node_namespace=camera_name, parameters=[fp_node_params]),
     ]
-
-    filter_node_params = {
-        'urdf_file': urdf_path,
-        'fluid_density': 997.0,
-        'predict_accel': False,
-        'predict_accel_control': False,
-        'predict_accel_drag': False,
-        'predict_accel_buoyancy': False,
-        'filter_baro': True,  # Fuse depth
-        'filter_fcam': True,
-        'publish_tf': True,  # Publish map=>base tf
-        'good_pose_dist': good_pose_dist,
-        'good_obs_dist': good_obs_dist,
-    }
-
-    auv_node_params = {
-        # Match orca.urdf (slight positive buoyancy):
-        'fluid_density': 997.0,
-        'volume': 0.01,
-        'mass': 9.9,
-
-        # Timer (mode 0) is stable w/ or w/o filter
-        'loop_driver': 0,
-
-        # If we're not running a filter, then override depth in auv_node
-        'depth_override': not filter_poses,
-
-        # Do not allow waypoints
-        'pose_plan_waypoints': False,
-
-        # Leave room for the filter to flop between depth and fp
-        'timeout_fp_ms': 500,
-
-        'good_pose_dist': good_pose_dist,
-        'good_obs_dist': good_obs_dist,
-        'global_plan_allow_mtm': global_plan_allow_mtm,
-        'pose_plan_max_short_plan_xy': pose_plan_max_short_plan_xy,
-        'pose_plan_target_dist': pose_plan_target_dist,
-        'mtm_plan_target_dist': 1.5,
-    }
 
     if filter_poses:
         all_entities.append(
             Node(package='orca_filter', node_executable='filter_node', output='screen',
                  node_name='filter_node', parameters=[filter_node_params], remappings=[
-                    ('fcam_fp', '/' + forward_camera_name + '/fp'),
+                    ('fcam_fp', '/' + camera_name + '/fp'),
                  ]))
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
@@ -352,7 +353,7 @@ def generate_launch_description():
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
-                    ('filtered_fp', '/' + forward_camera_name + '/fp'),
+                    ('filtered_fp', '/' + camera_name + '/fp'),
                  ]))
 
     return LaunchDescription(all_entities)
