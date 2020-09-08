@@ -212,12 +212,12 @@ public:
     if (valid(msg->header.stamp)) {
       control_msg_time_ = msg->header.stamp;
 
-      thrusters_[0].effort = orca::pwm_to_effort(msg->thruster_pwm_1);
-      thrusters_[1].effort = orca::pwm_to_effort(msg->thruster_pwm_2);
-      thrusters_[2].effort = orca::pwm_to_effort(msg->thruster_pwm_3);
-      thrusters_[3].effort = orca::pwm_to_effort(msg->thruster_pwm_4);
-      thrusters_[4].effort = orca::pwm_to_effort(msg->thruster_pwm_5);
-      thrusters_[5].effort = orca::pwm_to_effort(msg->thruster_pwm_6);
+      thrusters_[0].effort = orca::pwm_to_effort(msg->thruster_pwm.fr_1);
+      thrusters_[1].effort = orca::pwm_to_effort(msg->thruster_pwm.fl_2);
+      thrusters_[2].effort = orca::pwm_to_effort(msg->thruster_pwm.rr_3);
+      thrusters_[3].effort = orca::pwm_to_effort(msg->thruster_pwm.rl_4);
+      thrusters_[4].effort = orca::pwm_to_effort(msg->thruster_pwm.vr_5);
+      thrusters_[5].effort = orca::pwm_to_effort(msg->thruster_pwm.vl_6);
     }
 
     driver_msg_.status = msg->mode == orca_msgs::msg::Control::AUV ?

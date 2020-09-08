@@ -216,12 +216,12 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
       RCLCPP_ERROR(get_logger(), "failed to set brightness");
     }
 
-    set_thruster(thrusters_[0], msg->thruster_pwm_1);
-    set_thruster(thrusters_[1], msg->thruster_pwm_2);
-    set_thruster(thrusters_[2], msg->thruster_pwm_3);
-    set_thruster(thrusters_[3], msg->thruster_pwm_4);
-    set_thruster(thrusters_[4], msg->thruster_pwm_5);
-    set_thruster(thrusters_[5], msg->thruster_pwm_6);
+    set_thruster(thrusters_[0], msg->thruster_pwm.fr_1);
+    set_thruster(thrusters_[1], msg->thruster_pwm.fl_2);
+    set_thruster(thrusters_[2], msg->thruster_pwm.rr_3);
+    set_thruster(thrusters_[3], msg->thruster_pwm.rl_4);
+    set_thruster(thrusters_[4], msg->thruster_pwm.vr_5);
+    set_thruster(thrusters_[5], msg->thruster_pwm.vl_6);
   }
 }
 

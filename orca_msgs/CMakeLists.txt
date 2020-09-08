@@ -50,6 +50,7 @@ rosidl_generate_interfaces(
   msg/Observations.msg
   msg/Observer.msg
   msg/PolarObservation.msg
+  msg/Thrusters.msg
   DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )
 

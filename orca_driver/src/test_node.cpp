@@ -80,12 +80,12 @@ class TestNode : public rclcpp::Node
         break;
     }
 
-    msg.thruster_pwm_1 = (thruster == 0) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
-    msg.thruster_pwm_2 = (thruster == 1) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
-    msg.thruster_pwm_3 = (thruster == 2) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
-    msg.thruster_pwm_4 = (thruster == 3) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
-    msg.thruster_pwm_5 = (thruster == 4) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
-    msg.thruster_pwm_6 = (thruster == 5) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.fr_1 = (thruster == 0) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.fl_2 = (thruster == 1) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.rr_3 = (thruster == 2) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.rl_4 = (thruster == 3) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.vr_5 = (thruster == 4) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
+    msg.thruster_pwm.vl_6 = (thruster == 5) ? pwm : orca_msgs::msg::Control::THRUST_STOP;
 
     control_pub_->publish(msg);
   }

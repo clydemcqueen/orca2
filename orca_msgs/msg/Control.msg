@@ -57,9 +57,4 @@ uint16 brightness_pwm
 uint16 THRUST_FULL_REV=1100
 uint16 THRUST_STOP=1500
 uint16 THRUST_FULL_FWD=1900
-uint16 thruster_pwm_1
-uint16 thruster_pwm_2
-uint16 thruster_pwm_3
-uint16 thruster_pwm_4
-uint16 thruster_pwm_5
-uint16 thruster_pwm_6
+orca_msgs/Thrusters thruster_pwm
