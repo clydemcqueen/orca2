@@ -60,7 +60,7 @@ def generate_launch_description():
         Node(package='orca_driver', node_executable='driver_node', output='screen',
              node_name='driver_node',
              parameters=[{
-                 'thruster_1_reverse': True,  # 1 thruster on my BlueROV2 is reversed
+                 'thruster_4_reverse': True,  # Thruster 4 on my BlueROV2 is reversed
              }]),
 
         Node(package='h264_image_transport', node_executable='h264_cam_node', output='screen',
