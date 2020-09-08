@@ -100,6 +100,8 @@ void DriverNode::validate_parameters()
   all_stop();
 
   // Configure thrusters
+  // Off-by-1, thruster 1 is thrusters_[0], etc.
+  // https://bluerobotics.com/learn/bluerov2-assembly/
   thrusters_.clear();
   thrusters_.emplace_back(cxt_.thruster_1_channel_, cxt_.thruster_1_reverse_);
   thrusters_.emplace_back(cxt_.thruster_2_channel_, cxt_.thruster_2_reverse_);

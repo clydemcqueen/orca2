@@ -39,10 +39,14 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
-# Launch topside nodes
+# Launch topside nodes -- AUV and ROV
 
 
 def generate_launch_description():
+    mass = 11.3
+    volume = 0.01031
+    fluid_density = 997.0
+
     # Must match camera name in URDF file
     # Should also match the camera name in the camera info file
     camera_name = 'forward_camera'
@@ -58,7 +62,7 @@ def generate_launch_description():
     filter_poses = False
 
     # Optionally build and use a map
-    build_map = True
+    build_map = False
     use_built_map = True
 
     if build_map:
@@ -80,7 +84,11 @@ def generate_launch_description():
             'map_init_id': 0,
             'map_init_pose_x': 0.0,
             'map_init_pose_y': 0.0,
-            'map_init_pose_z': -0.5,
+            'map_init_pose_z': -0.4,
+            'map_init_pose_roll': 0.0,
+            'map_init_pose_pitch': 1.570796,
+            'map_init_pose_yaw': 1.570796,
+
         }
     else:
         vmap_node_params = {
@@ -100,7 +108,7 @@ def generate_launch_description():
     }
 
     filter_node_params = {
-        'fluid_density': 997.0,
+        'fluid_density': fluid_density,
         'predict_accel': False,
         'predict_accel_control': False,
         'predict_accel_drag': False,
@@ -114,13 +122,16 @@ def generate_launch_description():
     }
 
     auv_node_params = {
-        'fluid_density': 997.0,
+        'mass': mass,
+        'volume': volume,
+        'fluid_density': fluid_density,
 
         # Timer is stable w/ or w/o filter:
         'loop_driver': 0,
 
         # If we're not running a filter, then override depth in auv_node
-        'depth_override': not filter_poses,
+        # 'depth_override': not filter_poses,
+        'depth_override': False,
 
         # How far in front of a marker is a good pose?
         'good_pose_dist': 2.0,
@@ -170,14 +181,18 @@ def generate_launch_description():
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', remappings=[
+             node_name='rov_node', parameters=[{
+                'mass': mass,
+                'volume': volume,
+                'fluid_density': fluid_density,
+            }], remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
              ]),
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[{
-                'fluid_density': 997.0,
+                'fluid_density': fluid_density,
              }]),
 
         # Publish, and possibly build, a map

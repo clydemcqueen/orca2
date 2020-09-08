@@ -45,6 +45,9 @@ namespace orca_base
 {
 
 #define ROV_NODE_ALL_PARAMS \
+  CXT_MACRO_MEMBER(mode, int, 0) \
+  /* 0: ROV, 1: forward, 2: back, 3: left, 4: right, 5: ccw, 6: cw, 7: up, 8: down  */ \
+                            \
   CXT_MACRO_MEMBER(mass, double, 9.75) \
   CXT_MACRO_MEMBER(volume, double, 0.01) \
   CXT_MACRO_MEMBER(bollard_force_z_up, double, 100) \
@@ -56,7 +59,7 @@ namespace orca_base
  \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
  \
-  CXT_MACRO_MEMBER(inc_pressure, double, 2000) \
+  CXT_MACRO_MEMBER(inc_pressure, double, 500) \
   /* Pressure trim increment  */ \
   CXT_MACRO_MEMBER(inc_tilt, int, 5) \
   /* Tilt increment  */ \
@@ -76,9 +79,9 @@ namespace orca_base
  \
   CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024) \
   /* ROV hold pressure pid Kp  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00015) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.0) \
   /* ROV hold pressure pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000096) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.0) \
   /* ROV hold pressure pid Kd  */ \
  \
   CXT_MACRO_MEMBER(planner_target_z, double, -0.5) \

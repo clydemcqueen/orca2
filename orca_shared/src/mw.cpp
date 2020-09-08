@@ -310,6 +310,15 @@ std::ostream & operator<<(std::ostream & os, const AccelerationBody & v)
          v.yaw() << "}";
 }
 
+std::ostream & operator<<(std::ostream & os, Efforts const & e)
+{
+  return os << std::fixed << std::setprecision(3) << "{" <<
+            e.forward() << ", " <<
+            e.strafe() << ", " <<
+            e.vertical() << ", " <<
+            e.yaw() << "}";
+}
+
 std::ostream & operator<<(std::ostream & os, const FiducialPose & v)
 {
   return os << std::fixed << std::setprecision(3) << "{" <<

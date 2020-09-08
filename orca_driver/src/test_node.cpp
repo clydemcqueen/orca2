@@ -44,7 +44,7 @@ namespace orca_driver
 
 class TestNode : public rclcpp::Node
 {
-  const int THRUST_DIFF = 50;
+  const int THRUST_INC = 5;
 
   rclcpp::TimerBase::SharedPtr spin_timer_;
   rclcpp::Publisher<orca_msgs::msg::Control>::SharedPtr control_pub_;
@@ -58,9 +58,10 @@ class TestNode : public rclcpp::Node
     msg.camera_tilt_pwm = orca_msgs::msg::Control::TILT_0;
     msg.brightness_pwm = orca_msgs::msg::Control::LIGHTS_OFF;
 
-    // Rotate through all 6 thrusters, and send fwd and rev signals
-    // Each thruster gets 5s, so a cycle is 30s
-    int cycle = msg.header.stamp.sec % 30;
+    // Rotate through all 6 thrusters
+    // Start at 1500 + THRUST_INC, and add THRUST_INC 10 times
+    // Each thruster gets 50s, so a cycle is 300s
+    int cycle = msg.header.stamp.sec % 300;
     int thruster = cycle / 5;
     static int prev_thruster = -1;
     if (thruster != prev_thruster) {
@@ -68,16 +69,17 @@ class TestNode : public rclcpp::Node
       prev_thruster = thruster;
     }
     int pwm;
-    switch (cycle % 5) {
-      case 1:
-        pwm = orca_msgs::msg::Control::THRUST_STOP + THRUST_DIFF;
-        break;
-      case 3:
-        pwm = orca_msgs::msg::Control::THRUST_STOP - THRUST_DIFF;
-        break;
-      default:
-        pwm = orca_msgs::msg::Control::THRUST_STOP;
-        break;
+    int posn = cycle % 50;
+    if (posn < 10) {
+      pwm = orca_msgs::msg::Control::THRUST_STOP + THRUST_INC * posn;
+    } else if (posn >= 10 && posn < 20) {
+      pwm = orca_msgs::msg::Control::THRUST_STOP + THRUST_INC * (10 - posn);
+    } else if (posn >= 20 && posn < 30) {
+      pwm = orca_msgs::msg::Control::THRUST_STOP - THRUST_INC * posn;
+    } else if (posn >= 30 && posn < 40) {
+      pwm = orca_msgs::msg::Control::THRUST_STOP - THRUST_INC * (10 - posn);
+    } else {
+      pwm = orca_msgs::msg::Control::THRUST_STOP;
     }
 
     for (int i = 0; i < 6; ++i) {

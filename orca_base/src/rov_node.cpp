@@ -115,11 +115,6 @@ ROVNode::ROVNode()
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
   CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), ROV_NODE_ALL_PARAMS)
 
-  // ROV PID controller
-  pressure_hold_pid_ =
-    std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
-      cxt_.rov_pressure_pid_kd_);
-
   // Publications
   control_pub_ = create_publisher<orca_msgs::msg::Control>("control", QUEUE_SIZE);
 
@@ -174,9 +169,19 @@ void ROVNode::validate_parameters()
   joy_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_joy_ms_)};
   spin_period_ = std::chrono::milliseconds{cxt_.timer_period_ms_};
 
+  // Create ROV PID controller
+  pressure_hold_pid_ =
+    std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
+      cxt_.rov_pressure_pid_kd_);
+
   // [Re-]start loop
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(spin_period_, std::bind(&ROVNode::spin_once, this));
+
+  double hover_accel = cxt_.model_.hover_accel_z();
+  double hover_effort = cxt_.model_.accel_to_effort_z(hover_accel);
+  RCLCPP_INFO(get_logger(), "hover accel: %g, effort: %g, pwm: %d",
+    hover_accel, hover_effort, orca::effort_to_pwm(hover_effort));
 }
 
 bool ROVNode::holding_pressure() const {return is_hold_pressure_mode(mode_);}
@@ -368,20 +373,39 @@ void ROVNode::rov_advance(const rclcpp::Time & stamp)
   double dt = joy_cb_.dt();
 
   mw::Efforts efforts;
-  efforts.forward(
-    orca::dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
-  efforts.strafe(
-    orca::dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
-  efforts.yaw(
-    orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
+  if (cxt_.mode_ == 0) {
+    efforts.forward(
+      orca::dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+    efforts.strafe(
+      orca::dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+    efforts.yaw(
+      orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
-  if (holding_pressure()) {
-    efforts.vertical(
-      cxt_.model_.accel_to_effort_z(
-        -pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
-  } else {
-    efforts.vertical(orca::dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) *
-      cxt_.vertical_gain_);
+    if (holding_pressure()) {
+      efforts.vertical(
+        cxt_.model_.accel_to_effort_z(
+          -pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
+    } else {
+      efforts.vertical(orca::dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) *
+        cxt_.vertical_gain_);
+    }
+  } else if (cxt_.mode_ == 1) {
+    // Test mode: 10% forward, etc.
+    efforts.forward(0.1);
+  } else if (cxt_.mode_ == 2) {
+    efforts.forward(-0.1);
+  } else if (cxt_.mode_ == 3) {
+    efforts.strafe(0.1);
+  } else if (cxt_.mode_ == 4) {
+    efforts.strafe(-0.1);
+  } else if (cxt_.mode_ == 5) {
+    efforts.yaw(0.1);
+  } else if (cxt_.mode_ == 6) {
+    efforts.yaw(-0.1);
+  } else if (cxt_.mode_ == 7) {
+    efforts.vertical(0.1);
+  } else if (cxt_.mode_ == 8) {
+    efforts.vertical(-0.1);
   }
 
   publish_control(stamp, efforts);
@@ -405,18 +429,6 @@ void ROVNode::publish_control(const rclcpp::Time & msg_time, const mw::Efforts &
 
   control_pub_->publish(control_msg);
 }
-
-/**************************************************************************************************
- *  Mode changes work like this:
- *  1. stop_mission sends a "cancel all goals" message to auv_node
- *  2. change mode
- *  3. publish_control sends a "stop thrusters, here's the new mode" message to orca_driver
- *  4. other stuff that must be done
- *
- *  Starting a mission is async, so change mode twice:
- *  1. disarm right away, this will stop sending /control messages to avoid conflict with auv_node
- *  2. set to AUV when the mission is successfully started
- **************************************************************************************************/
 
 void ROVNode::disarm(const rclcpp::Time & msg_time)
 {

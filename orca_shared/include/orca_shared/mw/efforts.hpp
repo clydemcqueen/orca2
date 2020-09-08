@@ -112,6 +112,7 @@ public:
     msg_.vertical = orca::clamp(v, -1.0, 1.0);
   }
 
+  // TODO(clyde): rename 'rotate'
   void yaw(const double & v)
   {
     msg_.yaw = orca::clamp(v, -1.0, 1.0);

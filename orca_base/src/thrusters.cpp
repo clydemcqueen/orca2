@@ -93,6 +93,8 @@ int Thruster::efforts_to_pwm(
 
 Thrusters::Thrusters()
 {
+  // Off-by-1, thruster 1 is thrusters_[0], etc.
+  // https://bluerobotics.com/learn/bluerov2-assembly/
   thrusters_.emplace_back("t200_link_front_right", false, 1.0, 1.0, 1.0, 0.0);
   thrusters_.emplace_back("t200_link_front_left", false, 1.0, -1.0, -1.0, 0.0);
   thrusters_.emplace_back("t200_link_rear_right", true, 1.0, -1.0, 1.0, 0.0);
