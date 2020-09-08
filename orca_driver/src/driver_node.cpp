@@ -185,6 +185,18 @@ void DriverNode::set_status(uint8_t status)
   }
 }
 
+void DriverNode::set_thruster(const Thruster & thruster, uint16_t pwm)
+{
+  // Compensate for ESC programming errors
+  if (thruster.reverse_) {
+    pwm = static_cast<uint16_t>(3000 - pwm);
+  }
+
+  if (!maestro_.setPWM(static_cast<uint8_t>(thruster.channel_), pwm)) {
+    RCLCPP_ERROR(get_logger(), "failed to set thruster");
+  }
+}
+
 void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
 {
   if (!valid(control_msg_time_)) {
@@ -204,18 +216,12 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
       RCLCPP_ERROR(get_logger(), "failed to set brightness");
     }
 
-    for (size_t i = 0; i < thrusters_.size(); ++i) {
-      uint16_t pwm = msg->thruster_pwm[i];
-
-      // Compensate for ESC programming errors
-      if (thrusters_[i].reverse_) {
-        pwm = static_cast<uint16_t>(3000 - pwm);
-      }
-
-      if (!maestro_.setPWM(static_cast<uint8_t>(thrusters_[i].channel_), pwm)) {
-        RCLCPP_ERROR(get_logger(), "failed to set thruster %d", i);
-      }
-    }
+    set_thruster(thrusters_[0], msg->thruster_pwm_1);
+    set_thruster(thrusters_[1], msg->thruster_pwm_2);
+    set_thruster(thrusters_[2], msg->thruster_pwm_3);
+    set_thruster(thrusters_[3], msg->thruster_pwm_4);
+    set_thruster(thrusters_[4], msg->thruster_pwm_5);
+    set_thruster(thrusters_[5], msg->thruster_pwm_6);
   }
 }
 

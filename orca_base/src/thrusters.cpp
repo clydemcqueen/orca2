@@ -115,10 +115,12 @@ void Thrusters::efforts_to_control(
   // Keep track of saturation for diagnostics
   bool saturated = false;
 
-  for (auto & i : thrusters_) {
-    control_msg.thruster_pwm.push_back(
-      i.efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated));
-  }
+  control_msg.thruster_pwm_1 = thrusters_[0].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm_2 = thrusters_[1].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm_3 = thrusters_[2].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm_4 = thrusters_[3].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm_5 = thrusters_[4].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm_6 = thrusters_[5].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
 
   control_msg.thruster_saturated = saturated;
 }

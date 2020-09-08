@@ -112,6 +112,8 @@ class DriverNode : public rclcpp::Node
 
   void set_status(uint8_t status);
 
+  void set_thruster(const Thruster & thruster, uint16_t pwm);
+
   void control_callback(orca_msgs::msg::Control::SharedPtr msg);
 
   void timer_callback();

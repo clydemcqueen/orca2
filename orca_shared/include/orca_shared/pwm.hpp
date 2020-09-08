@@ -87,13 +87,15 @@ constexpr int pwm_to_brightness(const uint16_t pwm)
 //---------------------------------
 
 // Domain
+// TODO add deadzone
 constexpr double THRUST_FULL_REV = -1.0;
 constexpr double THRUST_STOP = 0.0;
 constexpr double THRUST_FULL_FWD = 1.0;
 
 // Range with deadzone
-constexpr uint16_t
-  THRUST_DZ_PWM = 0;  // ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
+// ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
+// Update after ft3 experiments: R3 does have a deadzone, set to 35
+constexpr uint16_t THRUST_DZ_PWM = 35;
 constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
 
 uint16_t effort_to_pwm(const double effort);
