@@ -61,7 +61,8 @@ struct Model
   // Sensor constants
   //=====================================================================================
 
-  static constexpr double DEPTH_STDDEV = 0.01;
+  static constexpr double BARO_STDDEV = 201.7;      // Measured during ft3
+  static constexpr double DEPTH_STDDEV = 0.02064;   // Measured during ft3
 
   //=====================================================================================
   // Vehicle constants, in the body frame (x forward, y left, z up)

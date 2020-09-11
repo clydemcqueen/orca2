@@ -50,7 +50,7 @@ namespace orca_filter
 #define DEPTH_NODE_ALL_PARAMS \
   CXT_MACRO_MEMBER(fluid_density, double, 997) /* kg/m^3, 997 freshwater, 1029 seawater  */ \
   CXT_MACRO_MEMBER(frame_id, std::string, "map") \
-  CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV * 10) \
+  CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV) \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

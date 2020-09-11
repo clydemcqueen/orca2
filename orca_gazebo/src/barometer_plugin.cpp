@@ -91,8 +91,8 @@ class OrcaBarometerPlugin : public SensorPlugin
   orca::Model orca_model_;
 
   // Normal distribution
-//    std::default_random_engine generator_;
-//    std::normal_distribution<double> distribution_{0, orca::Model::DEPTH_STDDEV};
+  std::default_random_engine generator_;
+  std::normal_distribution<double> distribution_{0, orca::Model::BARO_STDDEV};
 
 public:
   // Called once when the plugin is loaded.
@@ -188,15 +188,15 @@ public:
        * calls to Altitude() will be too low by 5cm. Compensate.
        */
 
-      // TODO(clyde): re-enable noise
-      double baro_link_z = altimeter_->Altitude() - /* + distribution_(generator_) */
-        baro_link_to_base_link_z;
+      double baro_link_z = altimeter_->Altitude() - baro_link_to_base_link_z;
 
       if (!in_air_ && baro_link_z < 0.0) {
-        // Pascals
+        // Convert z to barometer reading
         baro_msg.pressure = orca_model_.z_to_pressure(ATMOSPHERIC_PRESSURE, baro_link_z);
 
-        // Celsius
+        // Add some noise
+        baro_msg.pressure += distribution_(generator_);
+
         baro_msg.temperature = 10;
       } else {
         baro_msg.pressure = ATMOSPHERIC_PRESSURE;
