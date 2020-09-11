@@ -96,6 +96,7 @@ class ROVNode : public rclcpp::Node
   sensor_msgs::msg::Joy joy_msg_;               // Most recent message
 
   // ROV operation
+  double target_pressure_{};
   std::shared_ptr<pid::Controller> pressure_hold_pid_;
 
   // Outputs

@@ -43,8 +43,9 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    mass = 11.3
-    volume = 0.01031
+    # Each ballast weight weighs 0.19kg
+    mass = 11.1
+    volume = 0.01148
     fluid_density = 997.0
 
     # Must match camera name in URDF file
@@ -82,12 +83,12 @@ def generate_launch_description():
             # Map initialization
             'map_init_style': 1,
             'map_init_id': 0,
-            'map_init_pose_x': 0.0,
+            'map_init_pose_x': 2.0,
             'map_init_pose_y': 0.0,
             'map_init_pose_z': -0.4,
             'map_init_pose_roll': 0.0,
             'map_init_pose_pitch': 1.570796,
-            'map_init_pose_yaw': 1.570796,
+            'map_init_pose_yaw': 1.570796 * 2,
 
         }
     else:
@@ -130,11 +131,16 @@ def generate_launch_description():
         'loop_driver': 0,
 
         # If we're not running a filter, then override depth in auv_node
+        # FT3: rely exclusively on vloc poses TODO
         # 'depth_override': not filter_poses,
         'depth_override': False,
 
+        # FT3: turn pids off while tuning dead reckoning
+        'auv_pid_enabled': True,
+
         # How far in front of a marker is a good pose?
-        'good_pose_dist': 2.0,
+        # FT3: set to 3m, this assumes we're always looking at 2 markers TODO
+        'good_pose_dist': 3.0,
 
         # Allow MTM recovery
         'global_plan_allow_mtm': True,
@@ -144,7 +150,9 @@ def generate_launch_description():
 
         # If xy distance is > this, then build a long plan (rotate, run, rotate)
         # Otherwise build a short plan (move in all DoF at once)
-        'pose_plan_max_short_plan_xy': 0.5,
+        # FT3: never replan
+        # 'pose_plan_max_short_plan_xy': 0.5,
+        'pose_plan_max_short_plan_xy': 99.0,
 
         # How close to the markers should we get?
         'pose_plan_target_dist': 0.8,
@@ -185,6 +193,7 @@ def generate_launch_description():
                 'mass': mass,
                 'volume': volume,
                 'fluid_density': fluid_density,
+                'planner_target_z': -0.2,
             }], remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
              ]),

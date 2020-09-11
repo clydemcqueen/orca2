@@ -20,6 +20,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(gazebo REQUIRED)  # Note uppercase variables in /usr/lib/x86_64-linux-gnu/cmake/gazebo/gazebo-config.cmake
+# 11-Sep-20: gazebo-config.cmake generates a developer warning. Add -Wno-dev to CLion CMake options to ignore it.
 find_package(gazebo_dev REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)

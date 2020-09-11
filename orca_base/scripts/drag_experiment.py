@@ -216,10 +216,11 @@ def process_messages(ex: MissionExperiment):
                     msg_start = None
 
 
-base_z = -0.5  # x, y and yaw tests are run at this depth
-extent_xy = 0.8  # x and y tests run from extent_xy to -extent_xy
-high_z = -0.3  # Highest z point
-low_z = -0.9  # Lowest z point
+# Tweak these for ft3, other tests
+base_z = -0.2  # x, y and yaw tests are run at this depth
+extent_xy = 0.6  # x and y tests run from extent_xy to -extent_xy
+high_z = -0.0  # Highest z point
+low_z = -0.3  # Lowest z point
 extent_yaw = 0.6  # yaw tests run from extent_yaw to -extent_yaw
 
 ex_f_sequence = [

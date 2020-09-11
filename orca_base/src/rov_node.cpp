@@ -174,6 +174,11 @@ void ROVNode::validate_parameters()
     std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
       cxt_.rov_pressure_pid_kd_);
 
+  // Set target!
+  if (holding_pressure()) {
+    pressure_hold_pid_->set_target(target_pressure_);
+  }
+
   // [Re-]start loop
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(spin_period_, std::bind(&ROVNode::spin_once, this));
@@ -256,7 +261,7 @@ void ROVNode::goal_callback(geometry_msgs::msg::PoseStamped::SharedPtr msg)
     msg->pose.position.z = cxt_.planner_target_z_;
     start_mission(msg->header.stamp, Mission::go_to_pose, msg->pose);
   } else {
-    RCLCPP_ERROR(get_logger(), "cannot start mission");
+    RCLCPP_ERROR(get_logger(), "cannot start mission from rviz2, armed?");
   }
 }
 
@@ -294,10 +299,9 @@ void ROVNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool firs
 
     // Z trim
     if (holding_pressure() && trim_down(msg, joy_msg_, joy_axis_z_trim_)) {
-      pressure_hold_pid_->set_target(msg->axes[joy_axis_z_trim_] > 0 ?
-        pressure_hold_pid_->target() - cxt_.inc_pressure_ :
-        pressure_hold_pid_->target() + cxt_.inc_pressure_);
-      RCLCPP_INFO(get_logger(), "hold pressure at %g", pressure_hold_pid_->target());
+      target_pressure_ += (msg->axes[joy_axis_z_trim_] > 0) ? -cxt_.inc_pressure_ : cxt_.inc_pressure_;
+      pressure_hold_pid_->set_target(target_pressure_);
+      RCLCPP_INFO(get_logger(), "hold pressure at %g", target_pressure_);
     }
 
     // Camera tilt
@@ -382,9 +386,13 @@ void ROVNode::rov_advance(const rclcpp::Time & stamp)
       orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_pressure()) {
-      efforts.vertical(
-        cxt_.model_.accel_to_effort_z(
-          -pressure_hold_pid_->calc(pressure_, dt) + cxt_.model_.hover_accel_z()));
+      auto accel_z = cxt_.model_.hover_accel_z();
+      // RCLCPP_INFO(get_logger(), "vert accel %g", accel_z);
+      if (cxt_.rov_pid_enabled_) {
+        accel_z -= pressure_hold_pid_->calc(pressure_, dt);
+      }
+      // RCLCPP_INFO(get_logger(), "vert accel %g", accel_z);
+      efforts.vertical(cxt_.model_.accel_to_effort_z(accel_z));
     } else {
       efforts.vertical(orca::dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) *
         cxt_.vertical_gain_);
@@ -456,7 +464,8 @@ void ROVNode::start_rov(const rclcpp::Time & msg_time)
 void ROVNode::start_hold_pressure(const rclcpp::Time & msg_time)
 {
   stop_mission();
-  pressure_hold_pid_->set_target(pressure_);
+  target_pressure_ = pressure_;
+  pressure_hold_pid_->set_target(target_pressure_);
   mode_ = orca_msgs::msg::Control::ROV_HOLD_PRESSURE;
 
   // joy_callback will call publish_control, so we don't have to

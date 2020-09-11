@@ -43,8 +43,9 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    mass = 11.3
-    volume = 0.01031
+    # Each ballast weight weighs 0.19kg
+    mass = 11.1
+    volume = 0.01148
     fluid_density = 997.0
 
     orca_description_path = get_package_share_directory('orca_description')
@@ -68,6 +69,7 @@ def generate_launch_description():
                 'mass': mass,
                 'volume': volume,
                 'fluid_density': fluid_density,
+                'planner_target_z': -0.2,
             }]),
     ]
 

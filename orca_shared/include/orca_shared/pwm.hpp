@@ -94,7 +94,7 @@ constexpr double THRUST_FULL_FWD = 1.0;
 
 // Range with deadzone
 // ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
-// Update after ft3 experiments: R3 does have a deadzone, set to 35
+// Update after ft3 experiments: R3 does have a deadzone!
 constexpr uint16_t THRUST_DZ_PWM = 35;
 constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
 

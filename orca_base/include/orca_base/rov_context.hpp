@@ -77,6 +77,9 @@ namespace orca_base
   CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05) \
   /* Limit thruster acceleration, measured in effort units  */ \
  \
+  CXT_MACRO_MEMBER(rov_pid_enabled, bool, true) \
+  /* Turn pid controller on/off TODO remove the rov_ prefix  */   \
+ \
   CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024) \
   /* ROV hold pressure pid Kp  */ \
   CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.0) \

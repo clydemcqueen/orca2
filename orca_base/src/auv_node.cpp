@@ -199,6 +199,11 @@ void AUVNode::validate_parameters()
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
       {this->timer_cb_.call();});
+
+  double hover_accel = cxt_.model_.hover_accel_z();
+  double hover_effort = cxt_.model_.accel_to_effort_z(hover_accel);
+  RCLCPP_INFO(get_logger(), "hover accel: %g, effort: %g, pwm: %d",
+    hover_accel, hover_effort, orca::effort_to_pwm(hover_effort));
 }
 
 bool AUVNode::depth_ok(const rclcpp::Time & t)

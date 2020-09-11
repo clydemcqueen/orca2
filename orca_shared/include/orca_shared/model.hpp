@@ -79,10 +79,16 @@ struct Model
   static constexpr double
     ROV_AREA_PORT = ROV_DIM_F * ROV_DIM_S;  // Area of left (port) and right (starboard) sides
 
+  // FT3 notes:
+  //    The force <=> effort calc is linear, but the thrust curve is not.
+  //    The AUV generally uses the lower segment of the curve where the error is greatest.
+  //    Adjust the max values to give a better linear approximation.
+  // TODO fix the simulation to match!
+  static constexpr double LINEAR_APPROX = 0.25;
+
   // From BlueRobotics specs, in Newtons
-  // Use bollard_force_* and max_torque_yaw instead
-  static constexpr double T200_MAX_POS_FORCE = 50;
-  static constexpr double T200_MAX_NEG_FORCE = 40;
+  static constexpr double T200_MAX_POS_FORCE = 50 * LINEAR_APPROX;
+  static constexpr double T200_MAX_NEG_FORCE = 40 * LINEAR_APPROX;
 
   //=====================================================================================
   // Parameters, updated by validate_parameters
