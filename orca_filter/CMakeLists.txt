@@ -80,6 +80,24 @@ ament_target_dependencies(
 )
 
 #=============
+# Barometer filter node
+#=============
+
+add_executable(
+  baro_filter_node
+  src/baro_filter_node.cpp
+)
+
+ament_target_dependencies(
+  baro_filter_node
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+  ukf
+)
+
+#=============
 # Filter node
 #=============
 
@@ -124,6 +142,6 @@ endif()
 #=============
 
 # Install C++ targets
-install(TARGETS depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS baro_filter_node depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

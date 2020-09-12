@@ -65,6 +65,7 @@ namespace gazebo
 
 constexpr double FRESHWATER_DENSITY = 997;            // Default water density
 constexpr double ATMOSPHERIC_PRESSURE = 101300;       // Default air pressure at the surface
+constexpr double BARO_VARIANCE = orca::Model::BARO_STDDEV * orca::Model::BARO_STDDEV;
 constexpr int QUEUE_SIZE = 10;
 
 class OrcaBarometerPlugin : public SensorPlugin
@@ -193,15 +194,17 @@ public:
       if (!in_air_ && baro_link_z < 0.0) {
         // Convert z to barometer reading
         baro_msg.pressure = orca_model_.z_to_pressure(ATMOSPHERIC_PRESSURE, baro_link_z);
-
-        // Add some noise
-        baro_msg.pressure += distribution_(generator_);
-
         baro_msg.temperature = 10;
       } else {
         baro_msg.pressure = ATMOSPHERIC_PRESSURE;
         baro_msg.temperature = 20;
       }
+
+      // Add some noise
+      baro_msg.pressure += distribution_(generator_);
+
+      // Note variance
+      baro_msg.pressure_variance = BARO_VARIANCE;
 
       baro_pub_->publish(baro_msg);
     }

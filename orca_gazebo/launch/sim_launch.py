@@ -282,10 +282,14 @@ def generate_launch_description():
                 'dev': '/dev/input/js0'  # Update as required
              }]),
 
+        # Barometer filter
+        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
+
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
              node_name='rov_node', remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
+                ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
              ]),
 
         # Depth node, turns /barometer messages into /depth messages

@@ -40,6 +40,7 @@ namespace orca_driver
 {
 
 constexpr int QUEUE_SIZE = 10;
+constexpr double BARO_VARIANCE = 201.7 * 201.7;      // Measured during ft3
 
 class BarometerNode : public rclcpp::Node
 {
@@ -74,6 +75,7 @@ public:
             barometer_.read();    // Takes 40ms+
             barometer_msg.header.stamp = now();
             barometer_msg.pressure = barometer_.pressure() * 100;    // Pascals
+            barometer_msg.pressure_variance = BARO_VARIANCE;         // Pascals
             barometer_msg.temperature = barometer_.temperature();    // Celsius
             barometer_pub_->publish(barometer_msg);
           }

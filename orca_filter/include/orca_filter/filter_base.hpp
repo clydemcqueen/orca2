@@ -165,6 +165,7 @@ struct State
 
 //=============================================================================
 // Filter base
+// TODO(clyde): rename PoseFilterBase
 //=============================================================================
 
 class FilterBase
@@ -324,6 +325,7 @@ public:
 
 //=============================================================================
 // Filter only z (depth)
+// TODO(clyde): rename PoseFilterZ
 //=============================================================================
 
 class DepthFilter : public FilterBase
@@ -351,6 +353,7 @@ public:
 
 //=============================================================================
 // Filter 4 DoF, assume roll and pitch are always 0
+// TODO(clyde): rename PoseFilterFourDoF
 //=============================================================================
 
 class FourFilter : public FilterBase
@@ -378,6 +381,7 @@ public:
 
 //=============================================================================
 // Filter all 6 DoF
+// TODO(clyde): rename PoseFilterSixDoF
 //=============================================================================
 
 class PoseFilter : public FilterBase
