@@ -50,10 +50,6 @@ namespace orca_base
                             \
   CXT_MACRO_MEMBER(mass, double, 9.75) \
   CXT_MACRO_MEMBER(volume, double, 0.01) \
-  CXT_MACRO_MEMBER(bollard_force_z_up, double, 100) \
-  /* Newtons, bollard force z, moving up  */ \
-  CXT_MACRO_MEMBER(bollard_force_z_down, double, 80) \
-  /* Newtons, bollard force z, moving down  */ \
   CXT_MACRO_MEMBER(fluid_density, double, 997) \
   /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
  \

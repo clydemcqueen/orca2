@@ -35,6 +35,8 @@
 
 #include <cmath>
 
+#include "rclcpp/logger.hpp"
+
 namespace orca
 {
 
@@ -80,16 +82,20 @@ struct Model
   static constexpr double
     ROV_AREA_PORT = ROV_DIM_F * ROV_DIM_S;  // Area of left (port) and right (starboard) sides
 
-  // FT3 notes:
-  //    The force <=> effort calc is linear, but the thrust curve is not.
-  //    The AUV generally uses the lower segment of the curve where the error is greatest.
-  //    Adjust the max values to give a better linear approximation.
-  // TODO fix the simulation to match!
-  static constexpr double LINEAR_APPROX = 0.25;
-
   // From BlueRobotics specs, in Newtons
-  static constexpr double T200_MAX_POS_FORCE = 50 * LINEAR_APPROX;
-  static constexpr double T200_MAX_NEG_FORCE = 40 * LINEAR_APPROX;
+  static constexpr double T200_MAX_POS_FORCE = 50;
+  static constexpr double T200_MAX_NEG_FORCE = 40;
+
+  // bollard_force_xy_ could also be called bollard_force_fs_
+  static constexpr double BOLLARD_FORCE_XY = 0.76 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
+
+  // Up and down forces are different
+  static constexpr double BOLLARD_FORCE_Z_UP = 2 * T200_MAX_POS_FORCE;
+  static constexpr double BOLLARD_FORCE_Z_DOWN = 2 * T200_MAX_NEG_FORCE;
+
+  // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse),
+  // each mounted ~tangent to a circle with radius = 18cm
+  static constexpr double MAX_TORQUE_YAW = 0.18 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
   //=====================================================================================
   // Parameters, updated by validate_parameters
@@ -98,19 +104,13 @@ struct Model
   double mass_ = 9.75;
   double volume_ = 0.01;
 
+  // The force <=> effort calc is linear, but the thrust curve is not
+  // The AUV generally uses the lower segment of the curve where the error is greatest
+  // Adjust the max values to give a better linear approximation
+  double thrust_scale_ = 0.7;
+
   // Estimate bollard forces from the thruster specs, and measure them in the field
   // Update orca_gazebo/orca.urdf.xacro to match for a good simulation
-
-  // bollard_force_xy_ could also be called bollard_force_fs_
-  double bollard_force_xy_ = 0.76 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
-
-  // Up and down forces are different
-  double bollard_force_z_up_ = 2 * T200_MAX_POS_FORCE;
-  double bollard_force_z_down_ = 2 * T200_MAX_NEG_FORCE;
-
-  // Estimate maximum yaw torque by looking at 4 thrusters (2 forward, 2 reverse),
-  // each mounted ~tangent to a circle with radius = 18cm
-  double max_torque_yaw_ = 0.18 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
   // Fluid density, 997 for freshwater or 1029 for seawater
   double fluid_density_ = 997;
@@ -152,23 +152,43 @@ struct Model
   // Force / torque <=> effort
   //=====================================================================================
 
-  double force_to_effort_xy(double force_xy) const {return force_xy / bollard_force_xy_;}
+  double bollard_force_xy() const {return BOLLARD_FORCE_XY * thrust_scale_;}
+
+  double bollard_force_z_up() const {return BOLLARD_FORCE_Z_UP * thrust_scale_;}
+
+  double bollard_force_z_down() const {return BOLLARD_FORCE_Z_DOWN * thrust_scale_;}
+
+  double max_torque_yaw() const {return MAX_TORQUE_YAW * thrust_scale_;}
+
+  double force_to_effort_xy(double force_xy) const
+  {
+    return force_xy / bollard_force_xy();
+  }
 
   double force_to_effort_z(double force_z) const
   {
-    return force_z / (force_z > 0 ? bollard_force_z_up_ : bollard_force_z_down_);
+    return force_z / (force_z > 0 ? bollard_force_z_up() : bollard_force_z_down());
   }
 
-  double torque_to_effort_yaw(double torque_yaw) const {return torque_yaw / max_torque_yaw_;}
+  double torque_to_effort_yaw(double torque_yaw) const
+  {
+    return torque_yaw / max_torque_yaw();
+  }
 
-  double effort_to_force_xy(double effort_xy) const {return effort_xy * bollard_force_xy_;}
+  double effort_to_force_xy(double effort_xy) const
+  {
+    return effort_xy * bollard_force_xy();
+  }
 
   double effort_to_force_z(double effort_z) const
   {
-    return effort_z * (effort_z > 0 ? bollard_force_z_up_ : bollard_force_z_down_);
+    return effort_z * (effort_z > 0 ? bollard_force_z_up() : bollard_force_z_down());
   }
 
-  double effort_to_torque_yaw(double effort_yaw) const {return effort_yaw * max_torque_yaw_;}
+  double effort_to_torque_yaw(double effort_yaw) const
+  {
+    return effort_yaw * max_torque_yaw();
+  }
 
   //=====================================================================================
   // Acceleration <=> effort
@@ -301,7 +321,11 @@ struct Model
   //=====================================================================================
 
   void
-  drag_const_world(double yaw, double motion_world, double & drag_const_x, double & drag_const_y);
+  drag_const_world(double yaw, double motion_world, double & drag_const_x,
+    double & drag_const_y) const;
+
+  // Log some info... handy for debugging
+  void log_info(const rclcpp::Logger & logger) const;
 };
 
 }  // namespace orca

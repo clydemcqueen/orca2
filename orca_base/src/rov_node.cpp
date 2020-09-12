@@ -160,8 +160,6 @@ void ROVNode::validate_parameters()
   cxt_.model_.mass_ = cxt_.mass_;
   cxt_.model_.volume_ = cxt_.volume_;
   cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-  cxt_.model_.bollard_force_z_up_ = cxt_.bollard_force_z_up_;
-  cxt_.model_.bollard_force_z_down_ = cxt_.bollard_force_z_down_;
 
   // Update timeouts
   baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
@@ -183,10 +181,7 @@ void ROVNode::validate_parameters()
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(spin_period_, std::bind(&ROVNode::spin_once, this));
 
-  double hover_accel = cxt_.model_.hover_accel_z();
-  double hover_effort = cxt_.model_.accel_to_effort_z(hover_accel);
-  RCLCPP_INFO(get_logger(), "hover accel: %g, effort: %g, pwm: %d",
-    hover_accel, hover_effort, orca::effort_to_pwm(hover_effort));
+  cxt_.model_.log_info(get_logger());
 }
 
 bool ROVNode::holding_pressure() const {return is_hold_pressure_mode(mode_);}

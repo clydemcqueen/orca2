@@ -31,14 +31,16 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "orca_shared/model.hpp"
+#include "orca_shared/pwm.hpp"
 #include "orca_shared/util.hpp"
+#include "rclcpp/logging.hpp"
 
 namespace orca
 {
 
 void Model::drag_const_world(
   double yaw, double motion_world, double & drag_const_x,
-  double & drag_const_y)
+  double & drag_const_y) const
 {
   // Direction of motion in the body frame
   auto motion_body = norm_angle(motion_world - yaw);
@@ -60,6 +62,26 @@ void Model::drag_const_world(
   // Coef must be positive, note abs()
   drag_const_x = abs(cos(motion_world)) * drag_const_motion;
   drag_const_y = abs(sin(motion_world)) * drag_const_motion;
+}
+
+void Model::log_info(const rclcpp::Logger & logger) const
+{
+  // Describe hover force, effort and pwm
+  auto hover_accel = hover_accel_z();
+  auto hover_force = accel_to_force(hover_accel);
+  auto hover_effort = force_to_effort_z(hover_force);
+  auto hover_pwm = orca::effort_to_pwm(hover_effort);
+  RCLCPP_INFO(logger, "hover accel: %g, force: %g, effort: %g, pwm: %d",
+    hover_accel, hover_force, hover_effort, hover_pwm);
+
+  // Describe force, effort and pwm for a representative foward velocity
+  double fwd_velo = 0.4;
+  auto fwd_accel = -drag_accel_f(fwd_velo);
+  auto fwd_force = accel_to_force(fwd_accel);
+  auto fwd_effort = force_to_effort_xy(fwd_force);
+  auto fwd_pwm = orca::effort_to_pwm(fwd_effort);
+  RCLCPP_INFO(logger, "fwd velo: %g, accel: %g, force: %g, effort: %g, pwm: %d",
+    fwd_velo, fwd_accel, fwd_force, fwd_effort, fwd_pwm);
 }
 
 }  // namespace orca

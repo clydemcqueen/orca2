@@ -180,10 +180,7 @@ void AUVNode::validate_parameters()
   cxt_.model_.mass_ = cxt_.mass_;
   cxt_.model_.volume_ = cxt_.volume_;
   cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-  cxt_.model_.bollard_force_xy_ = cxt_.bollard_force_xy_;
-  cxt_.model_.bollard_force_z_up_ = cxt_.bollard_force_z_up_;
-  cxt_.model_.bollard_force_z_down_ = cxt_.bollard_force_z_down_;
-  cxt_.model_.max_torque_yaw_ = cxt_.max_torque_yaw_;
+  cxt_.model_.thrust_scale_ = cxt_.thrust_scale_;
   cxt_.model_.drag_coef_f_ = cxt_.drag_coef_f_;
   cxt_.model_.drag_coef_s_ = cxt_.drag_coef_s_;
   cxt_.model_.drag_coef_z_ = cxt_.drag_coef_z_;
@@ -200,10 +197,7 @@ void AUVNode::validate_parameters()
   spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
       {this->timer_cb_.call();});
 
-  double hover_accel = cxt_.model_.hover_accel_z();
-  double hover_effort = cxt_.model_.accel_to_effort_z(hover_accel);
-  RCLCPP_INFO(get_logger(), "hover accel: %g, effort: %g, pwm: %d",
-    hover_accel, hover_effort, orca::effort_to_pwm(hover_effort));
+  cxt_.model_.log_info(get_logger());
 }
 
 bool AUVNode::depth_ok(const rclcpp::Time & t)
