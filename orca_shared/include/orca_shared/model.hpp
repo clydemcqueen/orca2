@@ -238,6 +238,11 @@ struct Model
     return fluid_density_ * GRAVITY * -z + atmospheric_pressure;
   }
 
+  double atmospheric_pressure(double pressure, double z) const
+  {
+    return pressure - fluid_density_ * GRAVITY * -z;
+  }
+
   // Mass displaced by the volume, in kg
   double displaced_mass() const {return volume_ * fluid_density_;}
 

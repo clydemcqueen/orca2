@@ -202,7 +202,9 @@ def generate_launch_description():
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[{
                 'fluid_density': fluid_density,
-             }]),
+            }], remappings=[
+                ('fp', '/' + camera_name + '/fp'),
+            ]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

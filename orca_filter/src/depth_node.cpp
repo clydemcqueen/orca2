@@ -35,8 +35,10 @@
 
 #include "orca_msgs/msg/barometer.hpp"
 #include "orca_msgs/msg/depth.hpp"
+#include "orca_msgs/msg/fiducial_pose_stamped.hpp"
 #include "orca_shared/baro.hpp"
 #include "orca_shared/monotonic.hpp"
+#include "orca_shared/mw/fiducial_pose_stamped.hpp"
 #include "rclcpp/node.hpp"
 #include "ros2_shared/context_macros.hpp"
 
@@ -51,6 +53,8 @@ namespace orca_filter
   CXT_MACRO_MEMBER(fluid_density, double, 997) /* kg/m^3, 997 freshwater, 1029 seawater  */ \
   CXT_MACRO_MEMBER(frame_id, std::string, "map") \
   CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV) \
+  CXT_MACRO_MEMBER(good_pose_dist, double, 1.8) /* Good pose if marker < 1.8m away  */ \
+  CXT_MACRO_MEMBER(cmd, std::string, "") /* Command "reset" will reset the barometer  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
@@ -75,17 +79,30 @@ class DepthNode : public rclcpp::Node
 {
   DepthContext cxt_;                  // Parameter(s)
   orca::Barometer barometer_{};       // Barometer state
+  double pressure_;                   // Most recent pressure, used for initialization
 
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
+  rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_sub_;
   rclcpp::Publisher<orca_msgs::msg::Depth>::SharedPtr depth_pub_;
 
   // Callback wrapper, guarantees timestamp monotonicity
   monotonic::Monotonic<DepthNode *, const orca_msgs::msg::Barometer::SharedPtr>
   baro_cb_{this, &DepthNode::baro_callback};
 
-  // Barometer callback
+  monotonic::Monotonic<DepthNode *, const orca_msgs::msg::FiducialPoseStamped ::SharedPtr>
+  fp_cb_{this, &DepthNode::fp_callback};
+
   void baro_callback(orca_msgs::msg::Barometer::SharedPtr baro_msg, bool first)
   {
+    (void) first;
+
+    pressure_ = baro_msg->pressure;
+
+    if (!barometer_.initialized()) {
+      // Barometer is not initialized so we can't compute depth
+      return;
+    }
+
     orca_msgs::msg::Depth depth_msg;
     depth_msg.header.stamp = baro_msg->header.stamp;
     depth_msg.header.frame_id = cxt_.frame_id_;
@@ -99,11 +116,33 @@ class DepthNode : public rclcpp::Node
     depth_pub_->publish(depth_msg);
   }
 
+  void fp_callback(orca_msgs::msg::FiducialPoseStamped::SharedPtr fp_msg, bool first)
+  {
+    (void) first;
+
+    if (!barometer_.initialized() && baro_cb_.receiving()) {
+      // Is this a good pose (is the marker close enough)?
+      mw::FiducialPoseStamped fp{*fp_msg};
+      if (fp.fp().good(cxt_.good_pose_dist_)) {
+        // Initialize the barometer with a known pressure and depth
+        auto base_link_z = fp_msg->fp.pose.pose.position.z;
+        barometer_.initialize(cxt_.model_, pressure_, base_link_z);
+        RCLCPP_INFO(get_logger(), "barometer initialized, pressure %g, depth %g, atmospheric pressure %g",
+          pressure_, base_link_z, barometer_.atmospheric_pressure());
+      }
+    }
+  }
+
   // Validate parameters
   void validate_parameters()
   {
     // Update model
     cxt_.model_.fluid_density_ = cxt_.fluid_density_;
+
+    // _Any_ parameter change will reset the barometer
+    barometer_.reset();
+
+    cxt_.model_.log_info(get_logger());
   }
 
 public:
@@ -111,6 +150,7 @@ public:
   : Node{"depth_node"}
   {
     (void) baro_sub_;
+    (void) fp_sub_;
 
     // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
@@ -137,10 +177,15 @@ public:
       "barometer", QUEUE_SIZE, [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
       {this->baro_cb_.call(msg);});
 
+    fp_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
+      "fp", QUEUE_SIZE, [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
+      {this->fp_cb_.call(msg);});
+
     // Advertise
     depth_pub_ = create_publisher<orca_msgs::msg::Depth>("depth", QUEUE_SIZE);
 
-    RCLCPP_INFO(get_logger(), "depth_node ready");
+    RCLCPP_INFO(get_logger(), "The barometer will be calibrated from the first good fiducial pose");
+    RCLCPP_INFO(get_logger(), "Set cmd parameter to 'reset' to recalibrate");
   }
 
   ~DepthNode() override = default;

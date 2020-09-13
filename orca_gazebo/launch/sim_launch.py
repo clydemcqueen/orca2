@@ -289,14 +289,16 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='rov_node', output='screen',
              node_name='rov_node', remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
-                ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
+                # ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
              ]),
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[{
                 'fluid_density': 997.0,
-             }]),
+             }], remappings=[
+                ('fp', '/' + camera_name + '/fp'),
+             ]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

@@ -72,8 +72,9 @@ class OrcaBarometerPlugin : public SensorPlugin
 {
   // Simulate the barometer "in air" for a few seconds
   // This gives depth_node time to calibrate the barometer
+  // Update 13-Sep-20: depth_node now uses marker poses to calibrate, so this isn't required
   rclcpp::Time in_air_start_time_;
-  const rclcpp::Duration TIME_IN_AIR{RCL_S_TO_NS(2)};
+  const rclcpp::Duration TIME_IN_AIR{RCL_S_TO_NS(0)};
   bool in_air_{true};
 
   // Our parent sensor is an altimeter

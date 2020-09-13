@@ -41,14 +41,20 @@ namespace orca
 class Barometer
 {
   double atmospheric_pressure_{0};
-  bool initialized_{false};
 
 public:
-  bool initialized() const {return initialized_;}
+  double atmospheric_pressure() const {return atmospheric_pressure_;}
 
-  // Given a pressure, return base_link.z
-  // The first reading must be air pressure at the surface
-  double pressure_to_base_link_z(const Model & model, double pressure);
+  bool initialized() const {return atmospheric_pressure_ > 0;}
+
+  // Barometer must be initialized from a pressure and known depth
+  void initialize(const Model & model, double pressure, double base_link_z);
+
+  // Reset the barometer
+  void reset() {atmospheric_pressure_ = 0;}
+
+  // Given a pressure, return base_link.z, return 0 if not initialized
+  double pressure_to_base_link_z(const Model & model, double pressure) const;
 };
 
 }  // namespace orca

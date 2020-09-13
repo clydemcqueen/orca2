@@ -163,6 +163,7 @@ namespace orca_base
   /* Move to marker (mtm) planner: */ \
   CXT_MACRO_MEMBER(mtm_plan_target_dist, double, 1) \
   /* Target distance from marker */ \
+ \
   /* Controller: */ \
   CXT_MACRO_MEMBER(control_use_est_yaw, bool, false) \
   /* Use estimated yaw (vs planned yaw) when computing efforts */ \

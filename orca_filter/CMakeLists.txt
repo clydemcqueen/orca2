@@ -50,6 +50,7 @@ add_executable(
 
 ament_target_dependencies(
   depth_node
+  image_geometry
   orca_msgs
   orca_shared
   rclcpp
