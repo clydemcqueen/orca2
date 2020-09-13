@@ -61,10 +61,13 @@ namespace orca_driver
   CXT_MACRO_MEMBER(thruster_5_reverse, bool, false) \
   CXT_MACRO_MEMBER(thruster_6_reverse, bool, false) \
  \
+  CXT_MACRO_MEMBER(pwm_range, int, 200)                           /* Clamp pwm: 1500 +/- range */ \
+ \
   CXT_MACRO_MEMBER(lights_channel, int, 9)                        /* PWM lights channel */ \
   CXT_MACRO_MEMBER(tilt_channel, int, 10)                         /* PWM tilt channel */ \
   CXT_MACRO_MEMBER(voltage_channel, int, 11)                      /* Analog voltage channel */ \
   CXT_MACRO_MEMBER(leak_channel, int, 12)                         /* Digital leak channel */ \
+ \
   CXT_MACRO_MEMBER(maestro_port, std::string, "/dev/ttyACM0")     /* Default Maestro port */ \
   CXT_MACRO_MEMBER(voltage_multiplier, double, 5.52)              /* Voltage multiplier */ \
   CXT_MACRO_MEMBER(voltage_min, double, 12.0)                     /* Minimum voltage to run  */ \

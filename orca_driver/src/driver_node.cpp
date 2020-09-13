@@ -192,6 +192,13 @@ void DriverNode::set_thruster(const Thruster & thruster, uint16_t pwm)
     pwm = static_cast<uint16_t>(3000 - pwm);
   }
 
+  // Limit range for safety
+  if (pwm > orca_msgs::msg::Control::THRUST_STOP + cxt_.pwm_range_) {
+    pwm = orca_msgs::msg::Control::THRUST_STOP + cxt_.pwm_range_;
+  } else if (pwm < orca_msgs::msg::Control::THRUST_STOP - cxt_.pwm_range_) {
+    pwm = orca_msgs::msg::Control::THRUST_STOP - cxt_.pwm_range_;
+  }
+
   if (!maestro_.setPWM(static_cast<uint8_t>(thruster.channel_), pwm)) {
     RCLCPP_ERROR(get_logger(), "failed to set thruster");
   }
@@ -236,6 +243,10 @@ void DriverNode::timer_callback()
     abort();
     return;
   }
+
+  // The logic around time doesn't work when timestamps are 0, which happens when publishing
+  // from the ros2 CLI (e.g., `ros2 topic pub /control orca_msg/Control "{}"`).
+  // The fix is to require non-zero timestamps, but that eliminates all use of the ros2 CLI.
 
   if (valid(control_msg_time_) && now() - control_msg_time_ > control_timeout_) {
     // We were receiving control messages, but they stopped.
