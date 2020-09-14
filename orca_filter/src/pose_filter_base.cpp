@@ -30,7 +30,7 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "orca_filter/filter_base.hpp"
+#include "orca_filter/pose_filter_base.hpp"
 
 #include <queue>
 #include <string>
@@ -72,7 +72,7 @@ void flatten_6x6_covar(const Eigen::MatrixXd & m, std::array<double, 36> & covar
 
 constexpr int QUEUE_SIZE = 10;
 
-FilterBase::FilterBase(
+PoseFilterBase::PoseFilterBase(
   Type type,
   const rclcpp::Logger & logger,
   const FilterContext & cxt,
@@ -93,12 +93,12 @@ FilterBase::FilterBase(
   reset();
 }
 
-void FilterBase::reset()
+void PoseFilterBase::reset()
 {
   reset(Eigen::VectorXd::Zero(state_dim_));
 }
 
-void FilterBase::reset(const Eigen::VectorXd & x)
+void PoseFilterBase::reset(const Eigen::VectorXd & x)
 {
   // Clear all pending measurements
   measurement_q_ = std::priority_queue<Measurement, std::vector<Measurement>, Measurement>();
@@ -115,7 +115,7 @@ void FilterBase::reset(const Eigen::VectorXd & x)
   filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_));
 }
 
-void FilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration & u_bar)
+void PoseFilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration & u_bar)
 {
   // Filter time starts at 0, test for this
   if (!orca::valid_stamp(filter_time_)) {
@@ -150,7 +150,7 @@ void FilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration & u_
 }
 
 // TODO(clyde): take control input, will need to get estimated yaw to turn control into u_bar
-bool FilterBase::process_measurements(const rclcpp::Time & stamp)
+bool PoseFilterBase::process_measurements(const rclcpp::Time & stamp)
 {
   // Trim state_history_
   while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
@@ -234,7 +234,7 @@ bool FilterBase::process_measurements(const rclcpp::Time & stamp)
 }
 
 // Rewind to a previous state, return true if successful, false if there was no change
-bool FilterBase::rewind(const rclcpp::Time & stamp)
+bool PoseFilterBase::rewind(const rclcpp::Time & stamp)
 {
   if (state_history_.empty() || stamp < state_history_.front().stamp_) {
     RCLCPP_WARN(logger_, "can't rewind to %s, dropping message", orca::to_str(stamp).c_str());
@@ -265,7 +265,7 @@ bool FilterBase::rewind(const rclcpp::Time & stamp)
   return true;
 }
 
-void FilterBase::publish_odom(const Measurement & measurement)
+void PoseFilterBase::publish_odom(const Measurement & measurement)
 {
   // If we rewind the filter the timestamp will repeat
   // Downstream consumers might get confused if (curr - prev) == 0
@@ -307,7 +307,7 @@ void FilterBase::publish_odom(const Measurement & measurement)
   }
 }
 
-std::string FilterBase::name()
+std::string PoseFilterBase::name()
 {
   if (type_ == Type::depth) {
     return "depth";

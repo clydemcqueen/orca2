@@ -42,20 +42,20 @@
 /***************************************************************************************************
  * FilterNode runs one of three filters:
  *
- * PoseFilter filters all 6 DoF
- * FourFilter filters x, y, z and yaw, and sets roll and pitch to 0
- * DepthFilter filters z, all other DoF are set to 0
+ * PoseFilter6D filters all 6 DoF
+ * PoseFilter4D filters x, y, z and yaw, and sets roll and pitch to 0
+ * PoseFilter1D filters z, all other DoF are set to 0
  *
  * FilterNode can be in one of two states:
  *
  * !good_pose_:      There are no marker observations, or the markers are too far away to be useful
- *                   Use a DepthFilter at the barometer rate -- 20Hz
+ *                   Use a PoseFilter1D at the barometer rate -- 20Hz
  *                   Output pose is (0, 0, filtered z, 0, 0, 0)
  *                   Output observations are copied from the last FiducialPoseStamped message
  *                   received, or no observations if the last FiducialPoseStamped message is stale
  *
  * good_pose:        Markers are close enough to generate a good pose
- *                   Use a PoseFilter or a FourFilter at the camera rate -- 30Hz
+ *                   Use a PoseFilter6D or a PoseFilter4D at the camera rate -- 30Hz
  *                   FiducialPose observations are passed through unfiltered
  *                   Depth messages are fused, but don't result in published odometry
  */
@@ -161,13 +161,13 @@ void FilterNode::create_filter()
 
   // Create a filter if required
   if (good_pose_) {
-    if (cxt_.four_dof_ && (!filter_ || filter_->type() != FilterBase::Type::four)) {
-      filter_ = std::make_shared<FourFilter>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
-    } else if (!filter_ || filter_->type() != FilterBase::Type::pose) {
-      filter_ = std::make_shared<PoseFilter>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+    if (cxt_.four_dof_ && (!filter_ || filter_->type() != PoseFilterBase::Type::four)) {
+      filter_ = std::make_shared<PoseFilter4D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+    } else if (!filter_ || filter_->type() != PoseFilterBase::Type::pose) {
+      filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
     }
-  } else if (!filter_ || filter_->type() != FilterBase::Type::depth) {
-    filter_ = std::make_shared<DepthFilter>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+  } else if (!filter_ || filter_->type() != PoseFilterBase::Type::depth) {
+    filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
   }
 }
 

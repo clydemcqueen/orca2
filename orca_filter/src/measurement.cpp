@@ -33,7 +33,7 @@
 #include <string>
 #include <utility>
 
-#include "orca_filter/filter_base.hpp"
+#include "orca_filter/pose_filter_base.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 namespace orca_filter

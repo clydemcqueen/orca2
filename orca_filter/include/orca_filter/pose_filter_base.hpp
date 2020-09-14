@@ -30,8 +30,8 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ORCA_FILTER__FILTER_BASE_HPP_
-#define ORCA_FILTER__FILTER_BASE_HPP_
+#ifndef ORCA_FILTER__POSE_FILTER_BASE_HPP_
+#define ORCA_FILTER__POSE_FILTER_BASE_HPP_
 
 #include <deque>
 #include <queue>
@@ -65,7 +65,7 @@ constexpr double MAX_PREDICTED_VELO_XYZ = 100;
 constexpr double MAX_PREDICTED_VELO_RPY = 100;
 
 //==================================================================
-// Unscented residual and mean functions for PoseFilter 6dof state (x) and 6dof pose measurement (z)
+// Unscented residual and mean functions for PoseFilter6D 6dof state (x) and 6dof pose measurement (z)
 //
 // Because of the layout of the state and pose measurement matrices and the way that Eigen works
 // these functions can serve double-duty.
@@ -76,7 +76,7 @@ constexpr double MAX_PREDICTED_VELO_RPY = 100;
 // The mean function needs to compute the mean of angles, which doesn't have a precise meaning.
 // See https://en.wikipedia.org/wiki/Mean_of_circular_quantities for the method used here.
 //
-// There are similar residual and mean functions for FourFilter 4dof state (x) and 4dof pose
+// There are similar residual and mean functions for PoseFilter4D 4dof state (x) and 4dof pose
 // measurement (z)
 //==================================================================
 
@@ -165,10 +165,9 @@ struct State
 
 //=============================================================================
 // Filter base
-// TODO(clyde): rename PoseFilterBase
 //=============================================================================
 
-class FilterBase
+class PoseFilterBase
 {
 public:
   enum class Type
@@ -260,7 +259,7 @@ protected:
     const mw::Observations & observations) const = 0;
 
 public:
-  explicit FilterBase(
+  explicit PoseFilterBase(
     Type type,
     const rclcpp::Logger & logger,
     const FilterContext & cxt,
@@ -325,10 +324,9 @@ public:
 
 //=============================================================================
 // Filter only z (depth)
-// TODO(clyde): rename PoseFilterZ
 //=============================================================================
 
-class DepthFilter : public FilterBase
+class PoseFilter1D : public PoseFilterBase
 {
   void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
 
@@ -341,7 +339,7 @@ class DepthFilter : public FilterBase
     const mw::Observations & observations) const override;
 
 public:
-  explicit DepthFilter(
+  explicit PoseFilter1D(
     const rclcpp::Logger & logger,
     const FilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
@@ -353,10 +351,9 @@ public:
 
 //=============================================================================
 // Filter 4 DoF, assume roll and pitch are always 0
-// TODO(clyde): rename PoseFilterFourDoF
 //=============================================================================
 
-class FourFilter : public FilterBase
+class PoseFilter4D : public PoseFilterBase
 {
   void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
 
@@ -369,7 +366,7 @@ class FourFilter : public FilterBase
     const mw::Observations & observations) const override;
 
 public:
-  explicit FourFilter(
+  explicit PoseFilter4D(
     const rclcpp::Logger & logger,
     const FilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
@@ -381,15 +378,14 @@ public:
 
 //=============================================================================
 // Filter all 6 DoF
-// TODO(clyde): rename PoseFilterSixDoF
 //=============================================================================
 
-class PoseFilter : public FilterBase
+class PoseFilter6D : public PoseFilterBase
 {
   void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
 
 public:
-  explicit PoseFilter(
+  explicit PoseFilter6D(
     const rclcpp::Logger & logger,
     const FilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
@@ -409,4 +405,4 @@ public:
 
 }  // namespace orca_filter
 
-#endif  // ORCA_FILTER__FILTER_BASE_HPP_
+#endif  // ORCA_FILTER__POSE_FILTER_BASE_HPP_

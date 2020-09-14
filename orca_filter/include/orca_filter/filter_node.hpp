@@ -38,7 +38,7 @@
 
 #include "orca_description/parser.hpp"
 #include "orca_filter/filter_context.hpp"
-#include "orca_filter/filter_base.hpp"
+#include "orca_filter/pose_filter_base.hpp"
 #include "orca_msgs/msg/control.hpp"
 #include "orca_msgs/msg/depth.hpp"
 #include "orca_msgs/msg/fiducial_pose_stamped.hpp"
@@ -63,7 +63,7 @@ class FilterNode : public rclcpp::Node
 
   // Filter state
   bool good_pose_{false};
-  std::shared_ptr<FilterBase> filter_;
+  std::shared_ptr<PoseFilterBase> filter_;
   rclcpp::Time last_fp_stamp_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_fp_inlier_stamp_{0, 0, RCL_ROS_TIME};
   mw::Observations observations_{};

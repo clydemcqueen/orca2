@@ -30,7 +30,7 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "orca_filter/filter_base.hpp"
+#include "orca_filter/pose_filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
 #include "geometry_msgs/msg/twist.hpp"
@@ -42,7 +42,7 @@ namespace orca_filter
 {
 
 //==================================================================
-// FourFilter -- 4dof filter with 12 dimensions
+// PoseFilter4D -- 4dof filter with 12 dimensions
 //==================================================================
 
 constexpr int FOUR_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
@@ -74,7 +74,7 @@ Eigen::VectorXd pose_to_fx(const geometry_msgs::msg::Pose & pose)
   return x;
 }
 
-// Extract pose from PoseFilter state
+// Extract pose from PoseFilter4D state
 void pose_from_fx(const Eigen::VectorXd & x, geometry_msgs::msg::Pose & out)
 {
   out.position.x = fx_x;
@@ -90,7 +90,7 @@ void pose_from_fx(const Eigen::VectorXd & x, geometry_msgs::msg::Pose & out)
   out.orientation = tf2::toMsg(q);
 }
 
-// Extract twist from PoseFilter state
+// Extract twist from PoseFilter4D state
 void twist_from_fx(const Eigen::VectorXd & x, geometry_msgs::msg::Twist & out)
 {
   out.linear.x = fx_vx;
@@ -102,7 +102,7 @@ void twist_from_fx(const Eigen::VectorXd & x, geometry_msgs::msg::Twist & out)
   out.angular.z = fx_vyaw;
 }
 
-// Extract pose or twist covariance from PoseFilter covariance
+// Extract pose or twist covariance from PoseFilter4D covariance
 void flatten_4x4_covar(const Eigen::MatrixXd & P, std::array<double, 36> & pose_covar, bool pose)
 {
   // Start with identity
@@ -155,12 +155,12 @@ Eigen::VectorXd four_state_mean(const Eigen::MatrixXd & sigma_points, const Eige
   return mean;
 }
 
-FourFilter::FourFilter(
+PoseFilter4D::PoseFilter4D(
   const rclcpp::Logger & logger,
   const FilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: FilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
+: PoseFilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
 {
   filter_.set_Q(Eigen::MatrixXd::Identity(FOUR_STATE_DIM, FOUR_STATE_DIM) * 0.01);
 
@@ -232,12 +232,12 @@ FourFilter::FourFilter(
   filter_.set_mean_x_fn(four_state_mean);
 }
 
-void FourFilter::reset(const geometry_msgs::msg::Pose & pose)
+void PoseFilter4D::reset(const geometry_msgs::msg::Pose & pose)
 {
-  FilterBase::reset(pose_to_fx(pose));
+  PoseFilterBase::reset(pose_to_fx(pose));
 }
 
-void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
+void PoseFilter4D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
 {
   pose_from_fx(filter_.x(), filtered_odom.pose.pose);
   // twist_from_fx(filter_.x(), filtered_odom.twist.twist);
@@ -245,7 +245,7 @@ void FourFilter::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
   // flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
 }
 
-Measurement FourFilter::to_measurement(
+Measurement PoseFilter4D::to_measurement(
   const orca_msgs::msg::Depth & depth,
   const mw::Observations & observations) const
 {
@@ -258,7 +258,7 @@ Measurement FourFilter::to_measurement(
   return m;
 }
 
-Measurement FourFilter::to_measurement(
+Measurement PoseFilter4D::to_measurement(
   const geometry_msgs::msg::PoseWithCovarianceStamped & pose,
   const mw::Observations & observations) const
 {

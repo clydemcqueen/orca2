@@ -30,7 +30,7 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "orca_filter/filter_base.hpp"
+#include "orca_filter/pose_filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
 #include "geometry_msgs/msg/twist.hpp"
@@ -42,7 +42,7 @@ namespace orca_filter
 {
 
 //==================================================================
-// PoseFilter -- 6dof filter with 18 dimensions
+// PoseFilter6D -- 6dof filter with 18 dimensions
 //==================================================================
 
 constexpr int POSE_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
@@ -84,7 +84,7 @@ Eigen::VectorXd pose_to_px(const geometry_msgs::msg::Pose & pose)
   return x;
 }
 
-// Extract pose from PoseFilter state
+// Extract pose from PoseFilter6D state
 void pose_from_px(const Eigen::VectorXd & x, geometry_msgs::msg::Pose & out)
 {
   out.position.x = px_x;
@@ -100,7 +100,7 @@ void pose_from_px(const Eigen::VectorXd & x, geometry_msgs::msg::Pose & out)
   out.orientation = tf2::toMsg(q);
 }
 
-// Extract twist from PoseFilter state
+// Extract twist from PoseFilter6D state
 void twist_from_px(const Eigen::VectorXd & x, geometry_msgs::msg::Twist & out)
 {
   out.linear.x = px_vx;
@@ -112,7 +112,7 @@ void twist_from_px(const Eigen::VectorXd & x, geometry_msgs::msg::Twist & out)
   out.angular.z = px_vyaw;
 }
 
-// Extract pose covariance from PoseFilter covariance
+// Extract pose covariance from PoseFilter6D covariance
 void pose_covar_from_pP(const Eigen::MatrixXd & P, std::array<double, 36> & pose_covar)
 {
   for (int i = 0; i < 6; i++) {
@@ -122,7 +122,7 @@ void pose_covar_from_pP(const Eigen::MatrixXd & P, std::array<double, 36> & pose
   }
 }
 
-// Extract twist covariance from PoseFilter covariance
+// Extract twist covariance from PoseFilter6D covariance
 void twist_covar_from_pP(const Eigen::MatrixXd & P, std::array<double, 36> & twist_covar)
 {
   for (int i = 0; i < 6; i++) {
@@ -179,12 +179,12 @@ Eigen::VectorXd six_state_mean(const Eigen::MatrixXd & sigma_points, const Eigen
   return mean;
 }
 
-PoseFilter::PoseFilter(
+PoseFilter6D::PoseFilter6D(
   const rclcpp::Logger & logger,
   const FilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: FilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
+: PoseFilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
 {
   filter_.set_Q(Eigen::MatrixXd::Identity(POSE_STATE_DIM, POSE_STATE_DIM) * 0.01);
 
@@ -270,12 +270,12 @@ PoseFilter::PoseFilter(
   filter_.set_mean_x_fn(six_state_mean);
 }
 
-void PoseFilter::reset(const geometry_msgs::msg::Pose & pose)
+void PoseFilter6D::reset(const geometry_msgs::msg::Pose & pose)
 {
-  FilterBase::reset(pose_to_px(pose));
+  PoseFilterBase::reset(pose_to_px(pose));
 }
 
-void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
+void PoseFilter6D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
 {
   pose_from_px(filter_.x(), filtered_odom.pose.pose);
   // twist_from_px(filter_.x(), filtered_odom.twist.twist);
@@ -283,7 +283,7 @@ void PoseFilter::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
   // flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
 }
 
-Measurement PoseFilter::to_measurement(
+Measurement PoseFilter6D::to_measurement(
   const orca_msgs::msg::Depth & depth,
   const mw::Observations & observations) const
 {
@@ -296,7 +296,7 @@ Measurement PoseFilter::to_measurement(
   return m;
 }
 
-Measurement PoseFilter::to_measurement(
+Measurement PoseFilter6D::to_measurement(
   const geometry_msgs::msg::PoseWithCovarianceStamped & pose,
   const mw::Observations & observations) const
 {
