@@ -124,7 +124,7 @@ PoseSegmentBase::PoseSegmentBase(
   goal_{goal}
 {
   // Default ff includes acceleration to counteract buoyancy
-  ff_ = mw::Acceleration{0, 0, cxt.model_.hover_accel_z(), 0};
+  ff_ = mw::Acceleration{0, 0, cxt_.hover_accel_z(), 0};
 }
 
 //=====================================================================================
@@ -220,20 +220,20 @@ bool Trap2::advance(const rclcpp::Duration & d)
   // Drag must be computed in the body frame
   double twist_forward, twist_strafe;
   orca::rotate_frame(twist_.x(), twist_.y(), plan_.pose().yaw(), twist_forward, twist_strafe);
-  auto drag_forward = cxt_.model_.drag_accel_f(twist_forward);
-  auto drag_strafe = cxt_.model_.drag_accel_s(twist_strafe);
+  auto drag_forward = cxt_.drag_accel_f(twist_forward);
+  auto drag_strafe = cxt_.drag_accel_s(twist_strafe);
   mw::Acceleration drag;
   orca::rotate_frame(drag_forward, drag_strafe, -plan_.pose().yaw(), drag.x(), drag.y());
 
   // Continue with z and yaw drag
-  drag.z() = cxt_.model_.drag_accel(twist_.z(), cxt_.model_.drag_const_z());
-  drag.yaw() = cxt_.model_.drag_accel_yaw(twist_.yaw());
+  drag.z() = cxt_.drag_accel(twist_.z(), cxt_.drag_const_z());
+  drag.yaw() = cxt_.drag_accel_yaw(twist_.yaw());
 
   // Feedforward (acceleration due to thrust) is total acceleration minus drag
   ff_ = accel - drag;
 
   // Add hover to feedforward
-  ff_.z() += cxt_.model_.hover_accel_z();
+  ff_.z() += cxt_.hover_accel_z();
 
   return true;
 }

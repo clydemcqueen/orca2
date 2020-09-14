@@ -176,17 +176,6 @@ void AUVNode::validate_parameters()
     depth_sub_.reset();
   }
 
-  // Update model from new parameters
-  cxt_.model_.mass_ = cxt_.mass_;
-  cxt_.model_.volume_ = cxt_.volume_;
-  cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-  cxt_.model_.thrust_scale_ = cxt_.thrust_scale_;
-  cxt_.model_.drag_coef_f_ = cxt_.drag_coef_f_;
-  cxt_.model_.drag_coef_s_ = cxt_.drag_coef_s_;
-  cxt_.model_.drag_coef_z_ = cxt_.drag_coef_z_;
-  cxt_.model_.drag_coef_tether_ = cxt_.drag_coef_tether_;
-  cxt_.model_.drag_partial_const_yaw_ = cxt_.drag_partial_const_yaw_;
-
   // Update timeouts
   depth_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_depth_ms_)};
   driver_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_driver_ms_)};
@@ -197,7 +186,7 @@ void AUVNode::validate_parameters()
   spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
       {this->timer_cb_.call();});
 
-  cxt_.model_.log_info(get_logger());
+  cxt_.log_info(get_logger());
 }
 
 bool AUVNode::depth_ok(const rclcpp::Time & t)

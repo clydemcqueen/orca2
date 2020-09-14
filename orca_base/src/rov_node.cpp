@@ -156,11 +156,6 @@ ROVNode::~ROVNode()
 
 void ROVNode::validate_parameters()
 {
-  // Update model from new parameters
-  cxt_.model_.mass_ = cxt_.mass_;
-  cxt_.model_.volume_ = cxt_.volume_;
-  cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-
   // Update timeouts
   baro_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_baro_ms_)};
   driver_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_driver_ms_)};
@@ -181,7 +176,7 @@ void ROVNode::validate_parameters()
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(spin_period_, std::bind(&ROVNode::spin_once, this));
 
-  cxt_.model_.log_info(get_logger());
+  cxt_.log_info(get_logger());
 }
 
 bool ROVNode::holding_pressure() const {return is_hold_pressure_mode(mode_);}
@@ -381,13 +376,13 @@ void ROVNode::rov_advance(const rclcpp::Time & stamp)
       orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
     if (holding_pressure()) {
-      auto accel_z = cxt_.model_.hover_accel_z();
+      auto accel_z = cxt_.hover_accel_z();
       // RCLCPP_INFO(get_logger(), "vert accel %g", accel_z);
       if (cxt_.rov_pid_enabled_) {
         accel_z -= pressure_hold_pid_->calc(pressure_, dt);
       }
       // RCLCPP_INFO(get_logger(), "vert accel %g", accel_z);
-      efforts.vertical(cxt_.model_.accel_to_effort_z(accel_z));
+      efforts.vertical(cxt_.accel_to_effort_z(accel_z));
     } else {
       efforts.vertical(orca::dead_band(joy_msg_.axes[joy_axis_vertical_], cxt_.input_dead_band_) *
         cxt_.vertical_gain_);

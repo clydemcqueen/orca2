@@ -37,30 +37,12 @@
 #include <string>
 #include <vector>
 
-#include "ros2_shared/context_macros.hpp"
 #include "orca_shared/model.hpp"
 
 namespace orca_base
 {
 
-#define AUV_NODE_ALL_PARAMS \
-  CXT_MACRO_MEMBER(mass, double, 9.75) \
-  CXT_MACRO_MEMBER(volume, double, 0.01) \
-  CXT_MACRO_MEMBER(thrust_scale, double, 0.7) \
-  /* Scale max thruster forces to give a better linear approximation  */ \
-  CXT_MACRO_MEMBER(fluid_density, double, 997) \
-  /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
-  CXT_MACRO_MEMBER(drag_coef_f, double, 0.8) \
-  /* Forward drag, 1.0 is a box  */ \
-  CXT_MACRO_MEMBER(drag_coef_s, double, 0.95) \
-  /* Strafe drag  */ \
-  CXT_MACRO_MEMBER(drag_coef_z, double, 0.95) \
-  /* Vertical drag  */ \
-  CXT_MACRO_MEMBER(drag_coef_tether, double, 1.1) \
-  /* Tether drag, 1.2 for unfaired tether  */ \
-  CXT_MACRO_MEMBER(drag_partial_const_yaw, double, 0.004) \
-  /* Yaw drag, wild guess  */ \
- \
+#define AUV_NODE_PARAMS \
   CXT_MACRO_MEMBER(loop_driver, int, 0) \
   /* What drives auv_advance? 0: timer, 1: depth msg, 2: fiducial msg  */ \
   CXT_MACRO_MEMBER(depth_override, bool, false) \
@@ -172,13 +154,15 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct AUVContext
+struct AUVContext : orca::Model
 {
-  AUV_NODE_ALL_PARAMS
-
-  // Orca model
-  orca::Model model_{};
+  AUV_NODE_PARAMS
 };
+
+#define AUV_NODE_ALL_PARAMS \
+  MODEL_PARAMS \
+  AUV_NODE_PARAMS \
+/* End of list */
 
 }  // namespace orca_base
 

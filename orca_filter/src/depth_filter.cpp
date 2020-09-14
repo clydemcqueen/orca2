@@ -121,14 +121,14 @@ DepthFilter::DepthFilter(
           // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass) and
           //  AddRelativeTorque(drag_torque)
           // Simple approximation:
-          dx_az += cxt.model_.drag_accel_z(dx_vz);
+          dx_az += cxt.drag_accel_z(dx_vz);
         }
 
         if (cxt.predict_accel_buoyancy_) {
           // Add acceleration due to gravity and buoyancy
           // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
           // Simple approximation:
-          dx_az -= cxt.model_.hover_accel_z();
+          dx_az -= cxt.hover_accel_z();
         }
       }
 

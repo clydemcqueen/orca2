@@ -215,9 +215,15 @@ def generate_launch_description():
         'publish_tf': not filter_poses,
     }
 
+    model_params = {
+        # Match orca.urdf (slight positive buoyancy):
+        'mdl_mass': 9.9,
+        'mdl_volume': 0.01,
+        'mdl_fluid_density': 997.0,
+    }
+
     filter_node_params = {
         'urdf_file': urdf_path,
-        'fluid_density': 997.0,
         'predict_accel': False,
         'predict_accel_control': False,
         'predict_accel_drag': False,
@@ -228,13 +234,9 @@ def generate_launch_description():
         'good_pose_dist': good_pose_dist,
         'good_obs_dist': good_obs_dist,
     }
+    filter_node_params.update(model_params)
 
     auv_node_params = {
-        # Match orca.urdf (slight positive buoyancy):
-        'fluid_density': 997.0,
-        'volume': 0.01,
-        'mass': 9.9,
-
         # Timer (mode 0) is stable w/ or w/o filter
         'loop_driver': 0,
 
@@ -254,6 +256,7 @@ def generate_launch_description():
         'pose_plan_target_dist': pose_plan_target_dist,
         'mtm_plan_target_dist': 1.5,
     }
+    auv_node_params.update(model_params)
 
     all_entities = [
         # Launch Gazebo, loading the world
@@ -294,9 +297,7 @@ def generate_launch_description():
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
-             node_name='depth_node', parameters=[{
-                'fluid_density': 997.0,
-             }], remappings=[
+             node_name='depth_node', parameters=[model_params], remappings=[
                 ('fp', '/' + camera_name + '/fp'),
              ]),
 

@@ -55,7 +55,7 @@ ObservationSegmentBase::ObservationSegmentBase(
   goal_{goal}
 {
   // Default ff includes acceleration to counteract buoyancy
-  ff_ = mw::AccelerationBody{0, 0, cxt.model_.hover_accel_z(), 0};
+  ff_ = mw::AccelerationBody{0, 0, cxt_.hover_accel_z(), 0};
 }
 
 /* Future work... ObservationSegmentBase should look like this (see Trap2):
@@ -142,7 +142,7 @@ bool RotateToMarker::advance(const rclcpp::Duration & d)
   }
 
   // Acceleration due to drag
-  drag_.yaw() = cxt_.model_.drag_accel_yaw(twist_.yaw());
+  drag_.yaw() = cxt_.drag_accel_yaw(twist_.yaw());
 
   // Acceleration due to thrust
   ff_.yaw() = accel_.yaw() - drag_.yaw();
@@ -217,7 +217,7 @@ bool MoveToMarker::advance(const rclcpp::Duration & d)
   }
 
   // Acceleration due to drag
-  drag_.forward() = cxt_.model_.drag_accel_f(twist_.forward());
+  drag_.forward() = cxt_.drag_accel_f(twist_.forward());
 
   // Acceleration due to thrust
   ff_.forward() = accel_.forward() - drag_.forward();

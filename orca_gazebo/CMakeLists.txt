@@ -29,6 +29,7 @@ find_package(orca_msgs REQUIRED)
 find_package(orca_shared REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(sim_fiducial REQUIRED)
 
@@ -69,6 +70,7 @@ ament_target_dependencies(
   orca_msgs
   orca_shared
   rclcpp
+  ros2_shared
 )
 ament_export_libraries(OrcaBarometerPlugin)
 
@@ -88,6 +90,7 @@ ament_target_dependencies(
   gazebo_ros
   orca_shared
   rclcpp
+  ros2_shared
 )
 ament_export_libraries(OrcaDragPlugin)
 

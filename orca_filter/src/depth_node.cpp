@@ -40,7 +40,6 @@
 #include "orca_shared/monotonic.hpp"
 #include "orca_shared/mw/fiducial_pose_stamped.hpp"
 #include "rclcpp/node.hpp"
-#include "ros2_shared/context_macros.hpp"
 
 namespace orca_filter
 {
@@ -49,8 +48,7 @@ namespace orca_filter
 // Parameter(s)
 //=============================================================================
 
-#define DEPTH_NODE_ALL_PARAMS \
-  CXT_MACRO_MEMBER(fluid_density, double, 997) /* kg/m^3, 997 freshwater, 1029 seawater  */ \
+#define DEPTH_NODE_PARAMS \
   CXT_MACRO_MEMBER(frame_id, std::string, "map") \
   CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV) \
   CXT_MACRO_MEMBER(good_pose_dist, double, 1.8) /* Good pose if marker < 1.8m away  */ \
@@ -60,13 +58,15 @@ namespace orca_filter
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct DepthContext
+struct DepthContext : orca::Model
 {
-  DEPTH_NODE_ALL_PARAMS
-
-  // Orca model
-  orca::Model model_{};
+  DEPTH_NODE_PARAMS
 };
+
+#define DEPTH_NODE_ALL_PARAMS \
+  MODEL_PARAMS \
+  DEPTH_NODE_PARAMS \
+/* End of list */
 
 //=============================================================================
 // DepthNode subscribes to /barometer (air + water pressure at baro_link)
@@ -108,7 +108,7 @@ class DepthNode : public rclcpp::Node
     depth_msg.header.frame_id = cxt_.frame_id_;
 
     // Convert pressure at baro_link to depth at base_link
-    depth_msg.z = barometer_.pressure_to_base_link_z(cxt_.model_, baro_msg->pressure);
+    depth_msg.z = barometer_.pressure_to_base_link_z(cxt_, baro_msg->pressure);
 
     // Measurement uncertainty
     depth_msg.z_variance = cxt_.z_variance_;
@@ -126,7 +126,7 @@ class DepthNode : public rclcpp::Node
       if (fp.fp().good(cxt_.good_pose_dist_)) {
         // Initialize the barometer with a known pressure and depth
         auto base_link_z = fp_msg->fp.pose.pose.position.z;
-        barometer_.initialize(cxt_.model_, pressure_, base_link_z);
+        barometer_.initialize(cxt_, pressure_, base_link_z);
         RCLCPP_INFO(get_logger(), "barometer initialized, pressure %g, depth %g, atmospheric pressure %g",
           pressure_, base_link_z, barometer_.atmospheric_pressure());
       }
@@ -136,13 +136,10 @@ class DepthNode : public rclcpp::Node
   // Validate parameters
   void validate_parameters()
   {
-    // Update model
-    cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-
     // _Any_ parameter change will reset the barometer
     barometer_.reset();
 
-    cxt_.model_.log_info(get_logger());
+    cxt_.log_info(get_logger());
   }
 
 public:

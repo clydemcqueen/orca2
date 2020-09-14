@@ -37,14 +37,12 @@
 #include <string>
 #include <vector>
 
-#include "ros2_shared/context_macros.hpp"
-
 #include "orca_shared/model.hpp"
 
 namespace orca_filter
 {
 
-#define FILTER_NODE_ALL_PARAMS \
+#define FILTER_NODE_PARAMS \
   CXT_MACRO_MEMBER(fluid_density, double, 997) \
   /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
  \
@@ -102,13 +100,15 @@ namespace orca_filter
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct FilterContext
+struct FilterContext : orca::Model
 {
-  FILTER_NODE_ALL_PARAMS
-
-  // Orca model
-  orca::Model model_{};
+  FILTER_NODE_PARAMS
 };
+
+#define FILTER_NODE_ALL_PARAMS \
+  MODEL_PARAMS \
+  FILTER_NODE_PARAMS \
+/* End of list */
 
 }  // namespace orca_filter
 

@@ -135,9 +135,6 @@ void FilterNode::validate_parameters()
     tf_pub_.reset();
   }
 
-  // Update model from new parameters
-  cxt_.model_.fluid_density_ = cxt_.fluid_density_;
-
   // Update timeouts
   open_water_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_open_water_ms_)};
   outlier_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_outlier_ms_)};

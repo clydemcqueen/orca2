@@ -214,12 +214,12 @@ PoseFilter::PoseFilter(
           // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass)
           //  and AddRelativeTorque(drag_torque)
           // Simple approximation:
-          px_ax += cxt.model_.drag_accel_f(px_vx);    // TODO(clyde): f or x?
-          px_ay += cxt.model_.drag_accel_s(px_vy);    // TODO(clyde): s or y?
-          px_az += cxt.model_.drag_accel_z(px_vz);
-          px_aroll += cxt.model_.drag_accel_yaw(px_vroll);
-          px_apitch += cxt.model_.drag_accel_yaw(px_vpitch);
-          px_ayaw += cxt.model_.drag_accel_yaw(px_vyaw);
+          px_ax += cxt.drag_accel_f(px_vx);    // TODO(clyde): f or x?
+          px_ay += cxt.drag_accel_s(px_vy);    // TODO(clyde): s or y?
+          px_az += cxt.drag_accel_z(px_vz);
+          px_aroll += cxt.drag_accel_yaw(px_vroll);
+          px_apitch += cxt.drag_accel_yaw(px_vpitch);
+          px_ayaw += cxt.drag_accel_yaw(px_vyaw);
         }
 
         if (cxt.predict_accel_buoyancy_) {
@@ -228,7 +228,7 @@ PoseFilter::PoseFilter(
           // Simple approximation:
           px_roll = 0;
           px_pitch = 0;
-          px_az -= cxt.model_.hover_accel_z();
+          px_az -= cxt.hover_accel_z();
         }
       }
 

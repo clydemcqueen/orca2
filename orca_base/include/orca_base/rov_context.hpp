@@ -37,22 +37,14 @@
 #include <string>
 #include <vector>
 
-#include "ros2_shared/context_macros.hpp"
-
 #include "orca_shared/model.hpp"
 
 namespace orca_base
 {
 
-#define ROV_NODE_ALL_PARAMS \
+#define ROV_NODE_PARAMS \
   CXT_MACRO_MEMBER(mode, int, 0) \
   /* 0: ROV, 1: forward, 2: back, 3: left, 4: right, 5: ccw, 6: cw, 7: up, 8: down  */ \
-                            \
-  CXT_MACRO_MEMBER(mass, double, 9.75) \
-  CXT_MACRO_MEMBER(volume, double, 0.01) \
-  CXT_MACRO_MEMBER(fluid_density, double, 997) \
-  /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
- \
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
  \
   CXT_MACRO_MEMBER(inc_pressure, double, 500) \
@@ -99,13 +91,15 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct ROVContext
+struct ROVContext : orca::Model
 {
-  ROV_NODE_ALL_PARAMS
-
-  // Orca model
-  orca::Model model_{};
+  ROV_NODE_PARAMS
 };
+
+#define ROV_NODE_ALL_PARAMS \
+  MODEL_PARAMS \
+  ROV_NODE_PARAMS \
+/* End of list */
 
 }  // namespace orca_base
 

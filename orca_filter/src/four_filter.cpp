@@ -188,17 +188,17 @@ FourFilter::FourFilter(
           // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass)
           //  and AddRelativeTorque(drag_torque)
           // Simple approximation:
-          fx_ax += cxt.model_.drag_accel_f(fx_vx);    // TODO(clyde): f or x?
-          fx_ay += cxt.model_.drag_accel_s(fx_vy);    // TODO(clyde): s or y?
-          fx_az += cxt.model_.drag_accel_z(fx_vz);
-          fx_ayaw += cxt.model_.drag_accel_yaw(fx_vyaw);
+          fx_ax += cxt.drag_accel_f(fx_vx);    // TODO(clyde): f or x?
+          fx_ay += cxt.drag_accel_s(fx_vy);    // TODO(clyde): s or y?
+          fx_az += cxt.drag_accel_z(fx_vz);
+          fx_ayaw += cxt.drag_accel_yaw(fx_vyaw);
         }
 
         if (cxt.predict_accel_buoyancy_) {
           // Add acceleration due to gravity and buoyancy
           // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
           // Simple approximation:
-          fx_az -= cxt.model_.hover_accel_z();
+          fx_az -= cxt.hover_accel_z();
         }
       }
 

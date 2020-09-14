@@ -27,6 +27,7 @@
   <depend>image_geometry</depend>
   <depend>orca_msgs</depend>
   <depend>rclcpp</depend>
+  <depend>ros2_shared</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
 

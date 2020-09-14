@@ -29,6 +29,7 @@
   <depend>orca_msgs</depend>
   <depend>orca_shared</depend>
   <depend>rclcpp</depend>
+  <depend>ros2_shared</depend>
   <depend>rclpy</depend>
   <depend>sim_fiducial</depend>
 

@@ -44,9 +44,12 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Each ballast weight weighs 0.19kg
-    mass = 11.1
-    volume = 0.01148
-    fluid_density = 997.0
+
+    model_params = {
+        'mdl_mass': 11.1,
+        'mdl_volume': 0.01148,
+        'mdl_fluid_density': 997.0,
+    }
 
     orca_description_path = get_package_share_directory('orca_description')
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
@@ -65,10 +68,7 @@ def generate_launch_description():
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[{
-                'mass': mass,
-                'volume': volume,
-                'fluid_density': fluid_density,
+             node_name='rov_node', parameters=[model_params, {
                 'planner_target_z': -0.2,
             }]),
     ]

@@ -36,6 +36,7 @@
 #include <cmath>
 
 #include "rclcpp/logger.hpp"
+#include "ros2_shared/context_macros.hpp"
 
 namespace orca
 {
@@ -49,6 +50,28 @@ namespace orca
 // _f forward
 // _s strafe
 // _fs for a value in the forward-strafe plane, e.g., a distance to a point
+
+#define MODEL_PARAMS \
+  CXT_MACRO_MEMBER(mdl_mass, double, 9.75) \
+  CXT_MACRO_MEMBER(mdl_volume, double, 0.01) \
+  CXT_MACRO_MEMBER(mdl_fluid_density, double, 997) \
+  /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
+  CXT_MACRO_MEMBER(mdl_thrust_scale, double, 0.7) \
+  /* Scale max thruster forces to give a better linear approximation  */ \
+  CXT_MACRO_MEMBER(mdl_drag_coef_f, double, 0.8) \
+  /* Forward drag, 1.0 is a box  */ \
+  CXT_MACRO_MEMBER(mdl_drag_coef_s, double, 0.95) \
+  /* Strafe drag  */ \
+  CXT_MACRO_MEMBER(mdl_drag_coef_z, double, 0.95) \
+  /* Vertical drag  */ \
+  CXT_MACRO_MEMBER(mdl_drag_coef_tether, double, 1.1) \
+  /* Tether drag, 1.2 for unfaired tether  */ \
+  CXT_MACRO_MEMBER(mdl_drag_partial_const_yaw, double, 0.004) \
+  /* Yaw drag, wild guess  */ \
+/* End of list */
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
 struct Model
 {
@@ -98,45 +121,20 @@ struct Model
   static constexpr double MAX_TORQUE_YAW = 0.18 * 2 * (T200_MAX_POS_FORCE + T200_MAX_NEG_FORCE);
 
   //=====================================================================================
-  // Parameters, updated by validate_parameters
+  // Parameters
   //=====================================================================================
 
-  double mass_ = 9.75;
-  double volume_ = 0.01;
-
-  // The force <=> effort calc is linear, but the thrust curve is not
-  // The AUV generally uses the lower segment of the curve where the error is greatest
-  // Adjust the max values to give a better linear approximation
-  double thrust_scale_ = 0.7;
-
-  // Estimate bollard forces from the thruster specs, and measure them in the field
-  // Update orca_gazebo/orca.urdf.xacro to match for a good simulation
-
-  // Fluid density, 997 for freshwater or 1029 for seawater
-  double fluid_density_ = 997;
-
-  // Drag coefficients, in the body frame: f forward, s strafe (+left), z up
-  // From the literature: drag coefficient for a box is 1.0
-  double drag_coef_f_ = 0.8;
-  double drag_coef_s_ = 0.95;
-  double drag_coef_z_ = 0.95;
-
-  // Drag coefficient for the tether
-  // From the literature: drag coefficient for an unfaired tether is 1.2
-  double drag_coef_tether_ = 1.1;
-
-  // Angular drag is a different thing altogether, provide a partial const
-  double drag_partial_const_yaw_ = 0.004;
+  MODEL_PARAMS
 
   //=====================================================================================
   // Dynamics
   //=====================================================================================
 
   // Assume a uniform distribution of mass in the vehicle box
-  double moment_of_inertia_yaw_ = mass_ / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
+  double moment_of_inertia_yaw_ = mdl_mass_ / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
 
   // Force / torque => acceleration
-  double force_to_accel(double force) const {return force / mass_;}
+  double force_to_accel(double force) const {return force / mdl_mass_;}
 
   double torque_to_accel_yaw(double torque_yaw) const
   {
@@ -144,7 +142,7 @@ struct Model
   }
 
   // Acceleration => force / torque
-  double accel_to_force(double accel) const {return mass_ * accel;}
+  double accel_to_force(double accel) const {return mdl_mass_ * accel;}
 
   double accel_to_torque_yaw(double accel_yaw) const {return moment_of_inertia_yaw_ * accel_yaw;}
 
@@ -152,13 +150,13 @@ struct Model
   // Force / torque <=> effort
   //=====================================================================================
 
-  double bollard_force_xy() const {return BOLLARD_FORCE_XY * thrust_scale_;}
+  double bollard_force_xy() const {return BOLLARD_FORCE_XY * mdl_thrust_scale_;}
 
-  double bollard_force_z_up() const {return BOLLARD_FORCE_Z_UP * thrust_scale_;}
+  double bollard_force_z_up() const {return BOLLARD_FORCE_Z_UP * mdl_thrust_scale_;}
 
-  double bollard_force_z_down() const {return BOLLARD_FORCE_Z_DOWN * thrust_scale_;}
+  double bollard_force_z_down() const {return BOLLARD_FORCE_Z_DOWN * mdl_thrust_scale_;}
 
-  double max_torque_yaw() const {return MAX_TORQUE_YAW * thrust_scale_;}
+  double max_torque_yaw() const {return MAX_TORQUE_YAW * mdl_thrust_scale_;}
 
   double force_to_effort_xy(double force_xy) const
   {
@@ -230,27 +228,27 @@ struct Model
 
   double pressure_to_z(double atmospheric_pressure, double pressure) const
   {
-    return -(pressure - atmospheric_pressure) / (fluid_density_ * GRAVITY);
+    return -(pressure - atmospheric_pressure) / (mdl_fluid_density_ * GRAVITY);
   }
 
   double z_to_pressure(double atmospheric_pressure, double z) const
   {
-    return fluid_density_ * GRAVITY * -z + atmospheric_pressure;
+    return mdl_fluid_density_ * GRAVITY * -z + atmospheric_pressure;
   }
 
   double atmospheric_pressure(double pressure, double z) const
   {
-    return pressure - fluid_density_ * GRAVITY * -z;
+    return pressure - mdl_fluid_density_ * GRAVITY * -z;
   }
 
   // Mass displaced by the volume, in kg
-  double displaced_mass() const {return volume_ * fluid_density_;}
+  double displaced_mass() const {return mdl_volume_ * mdl_fluid_density_;}
 
   // Weight in water, in Newtons (kg * m/s^2)
-  double weight_in_water() const {return GRAVITY * (mass_ - displaced_mass());}
+  double weight_in_water() const {return GRAVITY * (mdl_mass_ - displaced_mass());}
 
   // Z acceleration required to hover, in m/s^2
-  double hover_accel_z() const {return weight_in_water() / mass_;}
+  double hover_accel_z() const {return weight_in_water() / mdl_mass_;}
 
   //=====================================================================================
   // Drag in the body frame (x forward, y left, z up)
@@ -263,17 +261,17 @@ struct Model
   //    drag constant = 0.5 * density * width * coefficient
   //=====================================================================================
 
-  double drag_const_f() const {return 0.5 * fluid_density_ * ROV_AREA_BOW * drag_coef_f_;}
+  double drag_const_f() const {return 0.5 * mdl_fluid_density_ * ROV_AREA_BOW * mdl_drag_coef_f_;}
 
-  double drag_const_s() const {return 0.5 * fluid_density_ * ROV_AREA_PORT * drag_coef_s_;}
+  double drag_const_s() const {return 0.5 * mdl_fluid_density_ * ROV_AREA_PORT * mdl_drag_coef_s_;}
 
-  double drag_const_z() const {return 0.5 * fluid_density_ * ROV_AREA_TOP * drag_coef_z_;}
+  double drag_const_z() const {return 0.5 * mdl_fluid_density_ * ROV_AREA_TOP * mdl_drag_coef_z_;}
 
-  double drag_const_yaw() const {return fluid_density_ * drag_partial_const_yaw_;}
+  double drag_const_yaw() const {return mdl_fluid_density_ * mdl_drag_partial_const_yaw_;}
 
   double tether_drag_const() const
   {
-    return 0.5 * fluid_density_ * TETHER_DIAM * drag_coef_tether_;
+    return 0.5 * mdl_fluid_density_ * TETHER_DIAM * mdl_drag_coef_tether_;
   }
 
   //=====================================================================================

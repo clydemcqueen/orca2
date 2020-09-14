@@ -124,7 +124,7 @@ public:
     RCLCPP_INFO(node_->get_logger(), "fluid density: %g", fluid_density);
 
     // Initialize model from parameters
-    orca_model_.fluid_density_ = fluid_density;
+    orca_model_.mdl_fluid_density_ = fluid_density;
 
     // Get the parent sensor
     altimeter_ = std::dynamic_pointer_cast<sensors::AltimeterSensor>(sensor);

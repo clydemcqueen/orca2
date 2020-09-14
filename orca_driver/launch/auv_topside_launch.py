@@ -44,9 +44,12 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Each ballast weight weighs 0.19kg
-    mass = 11.1
-    volume = 0.01148
-    fluid_density = 997.0
+
+    model_params = {
+        'mdl_mass': 11.1,
+        'mdl_volume': 0.01148,
+        'mdl_fluid_density': 997.0,
+    }
 
     # Must match camera name in URDF file
     # Should also match the camera name in the camera info file
@@ -109,7 +112,6 @@ def generate_launch_description():
     }
 
     filter_node_params = {
-        'fluid_density': fluid_density,
         'predict_accel': False,
         'predict_accel_control': False,
         'predict_accel_drag': False,
@@ -121,12 +123,9 @@ def generate_launch_description():
         # How far in front of a marker is a good pose?
         'good_pose_dist': 2.0,
     }
+    filter_node_params.update(model_params)
 
     auv_node_params = {
-        'mass': mass,
-        'volume': volume,
-        'fluid_density': fluid_density,
-
         # Timer is stable w/ or w/o filter:
         'loop_driver': 0,
 
@@ -158,6 +157,7 @@ def generate_launch_description():
         'pose_plan_target_dist': 0.8,
         'mtm_plan_target_dist': 1.5,
     }
+    auv_node_params.update(model_params)
 
     all_entities = [
         # Publish static joints
@@ -189,10 +189,7 @@ def generate_launch_description():
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[{
-                'mass': mass,
-                'volume': volume,
-                'fluid_density': fluid_density,
+             node_name='rov_node', parameters=[model_params, {
                 'planner_target_z': -0.2,
             }], remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
@@ -200,9 +197,7 @@ def generate_launch_description():
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
-             node_name='depth_node', parameters=[{
-                'fluid_density': fluid_density,
-            }], remappings=[
+             node_name='depth_node', parameters=[model_params], remappings=[
                 ('fp', '/' + camera_name + '/fp'),
             ]),
 

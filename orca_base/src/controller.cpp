@@ -76,7 +76,7 @@ void PoseController::calc(
   // Calc efforts. Transformation from world frame to body frame requires a reasonable yaw.
   // The planned yaw is typically the best choice, but for PID tuning there's no plan, so
   // the planned yaw jumps to the final position: not reasonable.
-  efforts = {cxt_.model_,
+  efforts = {cxt_,
     cxt_.control_use_est_yaw_ ? estimate.pose().pose().yaw() : plan.pose().pose().yaw(), u_bar};
 
   // std::cout << "effort: " << efforts << std::endl;
@@ -122,10 +122,10 @@ void ObservationController::calc(
   u_bar.vertical() = vertical_controller_.calc(estimate_z, dt) + ff.vertical();
 
   // Compute efforts
-  efforts.forward(cxt_.model_.accel_to_effort_xy(u_bar.forward()));
+  efforts.forward(cxt_.accel_to_effort_xy(u_bar.forward()));
   efforts.strafe(0);
-  efforts.vertical(cxt_.model_.accel_to_effort_z(u_bar.vertical()));
-  efforts.yaw(-cxt_.model_.accel_to_effort_yaw(u_bar.yaw()));
+  efforts.vertical(cxt_.accel_to_effort_z(u_bar.vertical()));
+  efforts.yaw(-cxt_.accel_to_effort_yaw(u_bar.yaw()));
 }
 
 }  // namespace orca_base

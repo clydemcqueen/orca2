@@ -110,6 +110,7 @@ ament_target_dependencies(
   orca_msgs
   orca_shared
   rclcpp
+  ros2_shared
   sensor_msgs
 )
 

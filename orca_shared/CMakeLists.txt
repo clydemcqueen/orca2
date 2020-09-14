@@ -30,6 +30,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
 find_package(orca_msgs REQUIRED)
 find_package(rclcpp)
+find_package(ros2_shared)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
@@ -61,6 +62,7 @@ ament_target_dependencies(
   image_geometry
   orca_msgs
   rclcpp
+  ros2_shared
   tf2
   tf2_ros
 )
@@ -83,6 +85,7 @@ ament_target_dependencies(
   image_geometry
   orca_msgs
   rclcpp
+  ros2_shared
 )
 
 #=============
@@ -111,6 +114,7 @@ ament_target_dependencies(
   image_geometry
   orca_msgs
   rclcpp
+  ros2_shared
   sensor_msgs
 )
 
