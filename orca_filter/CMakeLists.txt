@@ -103,8 +103,8 @@ ament_target_dependencies(
 #=============
 
 add_executable(
-  filter_node
-  src/filter_node.cpp
+  pose_filter_node
+  src/pose_filter_node.cpp
   src/measurement.cpp
   src/pose_filter_base.cpp
   src/pose_filter_1d.cpp
@@ -113,7 +113,7 @@ add_executable(
 )
 
 ament_target_dependencies(
-  filter_node
+  pose_filter_node
   fiducial_vlam_msgs
   geometry_msgs
   image_geometry
@@ -143,6 +143,6 @@ endif()
 #=============
 
 # Install C++ targets
-install(TARGETS baro_filter_node depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS baro_filter_node depth_node fp_node pose_filter_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

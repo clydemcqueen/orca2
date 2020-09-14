@@ -30,6 +30,8 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <utility>
+
 #include "orca_filter/pose_filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
@@ -44,9 +46,9 @@ namespace orca_filter
 // PoseFilter1D
 //==================================================================
 
-constexpr int DEPTH_STATE_DIM = 3;      // [z, vz, az]T
+constexpr int POSE_1D_STATE_DIM = 3;      // [z, vz, az]T
 
-// Depth state macros
+// State macros
 #define dx_z x(0)
 #define dx_vz x(1)
 #define dx_az x(2)
@@ -54,7 +56,7 @@ constexpr int DEPTH_STATE_DIM = 3;      // [z, vz, az]T
 // Init x from pose
 Eigen::VectorXd pose_to_dx(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(DEPTH_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_1D_STATE_DIM);
 
   dx_z = pose.position.z;
 
@@ -96,12 +98,12 @@ void flatten_1x1_covar(const Eigen::MatrixXd & P, std::array<double, 36> & pose_
 
 PoseFilter1D::PoseFilter1D(
   const rclcpp::Logger & logger,
-  const FilterContext & cxt,
+  const PoseFilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::depth, logger, cxt, filtered_odom_pub, tf_pub, DEPTH_STATE_DIM}
+: PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_1D_STATE_DIM}
 {
-  filter_.set_Q(Eigen::MatrixXd::Identity(DEPTH_STATE_DIM, DEPTH_STATE_DIM) * 0.01);
+  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_1D_STATE_DIM, POSE_1D_STATE_DIM) * cxt.ukf_process_noise_);
 
   // State transition function
   filter_.set_f_fn(
@@ -146,9 +148,9 @@ PoseFilter1D::PoseFilter1D(
     });
 }
 
-void PoseFilter1D::reset(const geometry_msgs::msg::Pose & pose)
+void PoseFilter1D::init(const geometry_msgs::msg::Pose & pose)
 {
-  PoseFilterBase::reset(pose_to_dx(pose));
+  PoseFilterBase::init(pose_to_dx(pose));
 }
 
 void PoseFilter1D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)

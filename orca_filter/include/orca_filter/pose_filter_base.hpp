@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-#include "orca_filter/filter_context.hpp"
+#include "orca_filter/pose_filter_context.hpp"
 #include "orca_msgs/msg/depth.hpp"
 #include "orca_shared/mw/acceleration.hpp"
 #include "orca_shared/mw/fiducial_pose_stamped.hpp"
@@ -108,7 +108,7 @@ struct Measurement
     depth, four, six
   };
 
-  Type type_;
+  Type type_{Type::depth};
   rclcpp::Time stamp_;
   mw::Observations observations_;
 
@@ -164,7 +164,7 @@ struct State
 };
 
 //=============================================================================
-// Filter base
+// PoseFilterBase
 //=============================================================================
 
 class PoseFilterBase
@@ -172,7 +172,7 @@ class PoseFilterBase
 public:
   enum class Type
   {
-    depth, four, pose
+    pose_1d, pose_4d, pose_6d
   };
 
 private:
@@ -209,7 +209,7 @@ private:
    * @param stamp Timestamp of most recent message, used to trim state and measurement history
    * @return True if at least one measurement was an inlier and the filter is good
    */
-  bool process_measurements(const rclcpp::Time & stamp);
+  bool process_measurements(const rclcpp::Time & stamp, const mw::Acceleration & u_bar);
 
   /**
    * Rewind the filter to a previous state
@@ -224,12 +224,12 @@ private:
 
 protected:
   rclcpp::Logger logger_;
-  const FilterContext & cxt_;
+  const PoseFilterContext & cxt_;
 
   ukf::UnscentedKalmanFilter filter_;
 
-  // Reset the filter with an Eigen vector
-  void reset(const Eigen::VectorXd & x);
+  // Re-initialize the filter with an Eigen vector
+  void init(const Eigen::VectorXd & x);
 
   /**
    * Generate an odometry message from the current filter state
@@ -262,18 +262,18 @@ public:
   explicit PoseFilterBase(
     Type type,
     const rclcpp::Logger & logger,
-    const FilterContext & cxt,
+    const PoseFilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
     int state_dim);
 
   /**
-   * Reset the filter with the default pose (0, 0, 0) and high uncertainty
+   * Initialize the filter with the default pose (0, 0, 0) and high uncertainty
    */
-  void reset();
+  void init();
 
   /**
-   * Reset the filter with an initial pose and high uncertainty
+   * Initialize the filter with an initial pose and high uncertainty
    *
    * Problem: if the first pose is an outlier the filter may settle on a bad solution and reject
    * all other poses. In theory this can be prevented by setting the uncertainty correctly. In
@@ -286,7 +286,7 @@ public:
    *
    * @param pose The initial pose
    */
-  virtual void reset(const geometry_msgs::msg::Pose & pose) = 0;
+  virtual void init(const geometry_msgs::msg::Pose & pose) = 0;
 
   // Is the filter valid?
   bool filter_valid() {return filter_.valid();}
@@ -301,7 +301,8 @@ public:
    * @return True if there was at least one inlier and the filter is good
    */
   template<typename T>
-  bool process_message(const T & msg, const mw::Observations & observations)
+  bool process_message(const T & msg, const mw::Observations & observations,
+    const mw::Acceleration & u_bar)
   {
     rclcpp::Time stamp{msg.header.stamp};
 
@@ -314,7 +315,7 @@ public:
     measurement_q_.push(to_measurement(msg, observations));
 
     // Process one or more measurements
-    return process_measurements(stamp);
+    return process_measurements(stamp, u_bar);
   }
 
   Type type() {return type_;}
@@ -341,12 +342,12 @@ class PoseFilter1D : public PoseFilterBase
 public:
   explicit PoseFilter1D(
     const rclcpp::Logger & logger,
-    const FilterContext & cxt,
+    const PoseFilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
   // Reset the filter with a pose
-  void reset(const geometry_msgs::msg::Pose & pose) override;
+  void init(const geometry_msgs::msg::Pose & pose) override;
 };
 
 //=============================================================================
@@ -368,12 +369,12 @@ class PoseFilter4D : public PoseFilterBase
 public:
   explicit PoseFilter4D(
     const rclcpp::Logger & logger,
-    const FilterContext & cxt,
+    const PoseFilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
   // Reset the filter with a pose
-  void reset(const geometry_msgs::msg::Pose & pose) override;
+  void init(const geometry_msgs::msg::Pose & pose) override;
 };
 
 //=============================================================================
@@ -387,12 +388,12 @@ class PoseFilter6D : public PoseFilterBase
 public:
   explicit PoseFilter6D(
     const rclcpp::Logger & logger,
-    const FilterContext & cxt,
+    const PoseFilterContext & cxt,
     rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
   // Reset the filter with a pose
-  void reset(const geometry_msgs::msg::Pose & pose) override;
+  void init(const geometry_msgs::msg::Pose & pose) override;
 
   Measurement to_measurement(
     const orca_msgs::msg::Depth & depth,

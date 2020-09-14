@@ -73,15 +73,15 @@ def generate_launch_description():
     # How far away from a single marker is a good pose?
     # 800x600: 2.0
     # 1920x1280: 4.0
-    good_pose_dist = 2.0
+    good_pose_dist = 1.8
 
     # How far away from a single marker is a good observation (just bearing & distance)?
     # 800x600: 10.0
     # 1920x1280: 14.0
     good_obs_dist = 10.0
 
-    # Run filter_node or not
-    filter_poses = False
+    # Run pose_filter_node or not
+    filter_poses = True
 
     # Select map
     world = World.SMALL_FIELD
@@ -222,8 +222,7 @@ def generate_launch_description():
         'mdl_fluid_density': 997.0,
     }
 
-    filter_node_params = {
-        'urdf_file': urdf_path,
+    pose_filter_node_params = {
         'predict_accel': False,
         'predict_accel_control': False,
         'predict_accel_drag': False,
@@ -234,7 +233,7 @@ def generate_launch_description():
         'good_pose_dist': good_pose_dist,
         'good_obs_dist': good_obs_dist,
     }
-    filter_node_params.update(model_params)
+    pose_filter_node_params.update(model_params)
 
     auv_node_params = {
         # Timer (mode 0) is stable w/ or w/o filter
@@ -347,8 +346,8 @@ def generate_launch_description():
 
     if filter_poses:
         all_entities.append(
-            Node(package='orca_filter', node_executable='filter_node', output='screen',
-                 node_name='filter_node', parameters=[filter_node_params], remappings=[
+            Node(package='orca_filter', node_executable='pose_filter_node', output='screen',
+                 node_name='pose_filter_node', parameters=[pose_filter_node_params], remappings=[
                     ('fcam_fp', '/' + camera_name + '/fp'),
                  ]))
         all_entities.append(

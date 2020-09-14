@@ -30,8 +30,8 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ORCA_FILTER__FILTER_CONTEXT_HPP_
-#define ORCA_FILTER__FILTER_CONTEXT_HPP_
+#ifndef ORCA_FILTER__POSE_FILTER_CONTEXT_HPP_
+#define ORCA_FILTER__POSE_FILTER_CONTEXT_HPP_
 
 #include <cmath>
 #include <string>
@@ -42,7 +42,7 @@
 namespace orca_filter
 {
 
-#define FILTER_NODE_PARAMS \
+#define POSE_FILTER_NODE_PARAMS \
   CXT_MACRO_MEMBER(fluid_density, double, 997) \
   /* kg/m^3, 997 for freshwater, 1029 for seawater  */ \
  \
@@ -75,8 +75,6 @@ namespace orca_filter
   /* Good pose if marker < 1.8m away  */ \
   CXT_MACRO_MEMBER(good_obs_dist, double, 10) \
   /* Good observation if marker < 10m away  */ \
-  CXT_MACRO_MEMBER(outlier_distance, double, 4.0) \
-  /* Reject measurements > n std devs from estimate  */ \
  \
   CXT_MACRO_MEMBER(four_dof, bool, false) \
   /* Experiment: run 4dof filter instead of 6dof filter  */ \
@@ -95,21 +93,25 @@ namespace orca_filter
   /* UKF beta -- see UKF  */ \
   CXT_MACRO_MEMBER(ukf_kappa, int, 0) \
   /* UKF kappa -- see UKF  */ \
+  CXT_MACRO_MEMBER(ukf_process_noise, double, 0.01) \
+  /* UKF process noise, all dimensions TODO probably need to split dof  */ \
+  CXT_MACRO_MEMBER(ukf_outlier_distance, double, 4.0) \
+  /* Reject measurements > n std devs from estimate  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct FilterContext : orca::Model
+struct PoseFilterContext : orca::Model
 {
-  FILTER_NODE_PARAMS
+  POSE_FILTER_NODE_PARAMS
 };
 
-#define FILTER_NODE_ALL_PARAMS \
+#define POSE_FILTER_NODE_ALL_PARAMS \
   MODEL_PARAMS \
-  FILTER_NODE_PARAMS \
+  POSE_FILTER_NODE_PARAMS \
 /* End of list */
 
 }  // namespace orca_filter
 
-#endif  // ORCA_FILTER__FILTER_CONTEXT_HPP_
+#endif  // ORCA_FILTER__POSE_FILTER_CONTEXT_HPP_

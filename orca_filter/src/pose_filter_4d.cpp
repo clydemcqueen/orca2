@@ -30,6 +30,8 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <utility>
+
 #include "orca_filter/pose_filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
@@ -45,9 +47,9 @@ namespace orca_filter
 // PoseFilter4D -- 4dof filter with 12 dimensions
 //==================================================================
 
-constexpr int FOUR_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
+constexpr int POSE_4D_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
 
-// Four state macros
+// State macros
 #define fx_x x(0)
 #define fx_y x(1)
 #define fx_z x(2)
@@ -64,7 +66,7 @@ constexpr int FOUR_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, ...]
 // Init x from pose
 Eigen::VectorXd pose_to_fx(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(FOUR_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_4D_STATE_DIM);
 
   fx_x = pose.position.x;
   fx_y = pose.position.y;
@@ -157,12 +159,12 @@ Eigen::VectorXd four_state_mean(const Eigen::MatrixXd & sigma_points, const Eige
 
 PoseFilter4D::PoseFilter4D(
   const rclcpp::Logger & logger,
-  const FilterContext & cxt,
+  const PoseFilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::four, logger, cxt, filtered_odom_pub, tf_pub, FOUR_STATE_DIM}
+: PoseFilterBase{Type::pose_4d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_4D_STATE_DIM}
 {
-  filter_.set_Q(Eigen::MatrixXd::Identity(FOUR_STATE_DIM, FOUR_STATE_DIM) * 0.01);
+  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_4D_STATE_DIM, POSE_4D_STATE_DIM) * cxt.ukf_process_noise_);
 
   // State transition function
   filter_.set_f_fn(
@@ -232,9 +234,9 @@ PoseFilter4D::PoseFilter4D(
   filter_.set_mean_x_fn(four_state_mean);
 }
 
-void PoseFilter4D::reset(const geometry_msgs::msg::Pose & pose)
+void PoseFilter4D::init(const geometry_msgs::msg::Pose & pose)
 {
-  PoseFilterBase::reset(pose_to_fx(pose));
+  PoseFilterBase::init(pose_to_fx(pose));
 }
 
 void PoseFilter4D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)

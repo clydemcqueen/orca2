@@ -62,7 +62,7 @@ def generate_launch_description():
     orca_driver_path = get_package_share_directory('orca_driver')
     map_path = os.path.join(orca_driver_path, 'maps', 'simple_map.yaml')
 
-    # Run filter_node or not
+    # Run pose_filter_node or not
     filter_poses = False
 
     # Optionally build and use a map
@@ -111,7 +111,7 @@ def generate_launch_description():
         'publish_tf': not filter_poses,
     }
 
-    filter_node_params = {
+    pose_filter_node_params = {
         'predict_accel': False,
         'predict_accel_control': False,
         'predict_accel_drag': False,
@@ -123,7 +123,7 @@ def generate_launch_description():
         # How far in front of a marker is a good pose?
         'good_pose_dist': 2.0,
     }
-    filter_node_params.update(model_params)
+    pose_filter_node_params.update(model_params)
 
     auv_node_params = {
         # Timer is stable w/ or w/o filter:
@@ -249,8 +249,8 @@ def generate_launch_description():
 
     if filter_poses:
         all_entities.append(
-            Node(package='orca_filter', node_executable='filter_node', output='screen',
-                 node_name='filter_node', parameters=[filter_node_params], remappings=[
+            Node(package='orca_filter', node_executable='pose_filter_node', output='screen',
+                 node_name='pose_filter_node', parameters=[pose_filter_node_params], remappings=[
                     ('fcam_fp', '/' + camera_name + '/fp'),
                 ]))
         all_entities.append(

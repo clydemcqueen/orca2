@@ -75,7 +75,7 @@ constexpr int QUEUE_SIZE = 10;
 PoseFilterBase::PoseFilterBase(
   Type type,
   const rclcpp::Logger & logger,
-  const FilterContext & cxt,
+  const PoseFilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
   int state_dim)
@@ -90,15 +90,15 @@ PoseFilterBase::PoseFilterBase(
   filter_{state_dim, cxt_.ukf_alpha_, cxt_.ukf_beta_, cxt_.ukf_kappa_},
   odom_time_{0, 0, RCL_ROS_TIME}
 {
-  reset();
+  init();
 }
 
-void PoseFilterBase::reset()
+void PoseFilterBase::init()
 {
-  reset(Eigen::VectorXd::Zero(state_dim_));
+  init(Eigen::VectorXd::Zero(state_dim_));
 }
 
-void PoseFilterBase::reset(const Eigen::VectorXd & x)
+void PoseFilterBase::init(const Eigen::VectorXd & x)
 {
   // Clear all pending measurements
   measurement_q_ = std::priority_queue<Measurement, std::vector<Measurement>, Measurement>();
@@ -113,6 +113,14 @@ void PoseFilterBase::reset(const Eigen::VectorXd & x)
   // Start with a default state and a large covariance matrix
   filter_.set_x(x);
   filter_.set_P(Eigen::MatrixXd::Identity(state_dim_, state_dim_));
+
+  if (cxt_.ukf_outlier_distance_ > 0.0) {
+    // Set outlier distance
+    filter_.set_outlier_distance(cxt_.ukf_outlier_distance_);
+  } else {
+    // Turn outlier detection off
+    filter_.set_outlier_distance(std::numeric_limits<double>::max());
+  }
 }
 
 void PoseFilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration & u_bar)
@@ -149,8 +157,8 @@ void PoseFilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration 
   filter_time_ = stamp;
 }
 
-// TODO(clyde): take control input, will need to get estimated yaw to turn control into u_bar
-bool PoseFilterBase::process_measurements(const rclcpp::Time & stamp)
+bool
+PoseFilterBase::process_measurements(const rclcpp::Time & stamp, const mw::Acceleration & u_bar)
 {
   // Trim state_history_
   while (!state_history_.empty() && state_history_.front().stamp_ < stamp - HISTORY_LENGTH) {
@@ -168,9 +176,6 @@ bool PoseFilterBase::process_measurements(const rclcpp::Time & stamp)
     measurement_history_.pop_front();
   }
 
-  // Set outlier distance, by doing this each time we can change this on-the-fly
-  filter_.set_outlier_distance(cxt_.outlier_distance_);
-
   // Keep track of inliers and outliers
   int inliers = 0;
   int outliers = 0;
@@ -183,7 +188,7 @@ bool PoseFilterBase::process_measurements(const rclcpp::Time & stamp)
     Measurement m = measurement_q_.top();
     measurement_q_.pop();
 
-    predict(m.stamp_, {});
+    predict(m.stamp_, u_bar);
 
     filter_.set_h_fn(m.h_fn_);
     filter_.set_r_z_fn(m.r_z_fn_);
@@ -210,7 +215,7 @@ bool PoseFilterBase::process_measurements(const rclcpp::Time & stamp)
        * The solution is to avoid publishing odometry for depth messages when we're in a pose
        * filter. This behavior can be overridden using the cxt_.always_publish_odom_ flag.
        */
-      if (type_ == Type::depth || m.type_ != Measurement::Type::depth ||
+      if (type_ == Type::pose_1d || m.type_ != Measurement::Type::depth ||
         cxt_.always_publish_odom_)
       {
         publish_odom(m);
@@ -309,12 +314,12 @@ void PoseFilterBase::publish_odom(const Measurement & measurement)
 
 std::string PoseFilterBase::name()
 {
-  if (type_ == Type::depth) {
-    return "depth";
-  } else if (type_ == Type::four) {
-    return "four";
+  if (type_ == Type::pose_1d) {
+    return "pose_1d";
+  } else if (type_ == Type::pose_4d) {
+    return "pose_4d";
   } else {
-    return "pose";
+    return "pose_6d";
   }
 }
 

@@ -30,25 +30,26 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "orca_filter/filter_node.hpp"
+#include "orca_filter/pose_filter_node.hpp"
 
 #include <memory>
 #include <string>
 
 #include "orca_filter/perf.hpp"
+#include "orca_shared/mw/efforts.hpp"
 #include "orca_shared/util.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 /***************************************************************************************************
- * FilterNode runs one of three filters:
+ * PoseFilterNode runs one of three filters:
  *
  * PoseFilter6D filters all 6 DoF
  * PoseFilter4D filters x, y, z and yaw, and sets roll and pitch to 0
  * PoseFilter1D filters z, all other DoF are set to 0
  *
- * FilterNode can be in one of two states:
+ * PoseFilterNode can be in one of two states:
  *
- * !good_pose_:      There are no marker observations, or the markers are too far away to be useful
+ * !good_pose:      There are no marker observations, or the markers are too far away to be useful
  *                   Use a PoseFilter1D at the barometer rate -- 20Hz
  *                   Output pose is (0, 0, filtered z, 0, 0, 0)
  *                   Output observations are copied from the last FiducialPoseStamped message
@@ -69,7 +70,7 @@ namespace orca_filter
 
 constexpr int QUEUE_SIZE = 10;
 
-FilterNode::FilterNode()
+PoseFilterNode::PoseFilterNode()
 : Node{"filter_node"}
 {
   // Suppress IDE warnings
@@ -84,22 +85,22 @@ FilterNode::FilterNode()
   // Get parameters, this will immediately call validate_parameters()
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
-  CXT_MACRO_INIT_PARAMETERS(FILTER_NODE_ALL_PARAMS, validate_parameters)
+  CXT_MACRO_INIT_PARAMETERS(POSE_FILTER_NODE_ALL_PARAMS, validate_parameters)
 
   // Register parameters
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
-  CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), FILTER_NODE_ALL_PARAMS, validate_parameters)
+  CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), POSE_FILTER_NODE_ALL_PARAMS, validate_parameters)
 
   // Log parameters
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
-  FILTER_NODE_ALL_PARAMS
+  POSE_FILTER_NODE_ALL_PARAMS
 
   // Check that all command line parameters are defined
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
-  CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), FILTER_NODE_ALL_PARAMS)
+  CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), POSE_FILTER_NODE_ALL_PARAMS)
 
   // Parse URDF
   if (!parser_.parse()) {
@@ -109,7 +110,7 @@ FilterNode::FilterNode()
   RCLCPP_INFO(get_logger(), "filter_node ready");
 }
 
-void FilterNode::validate_parameters()
+void PoseFilterNode::validate_parameters()
 {
   // Set up additional publications and subscriptions
   if (cxt_.filter_baro_) {
@@ -129,6 +130,15 @@ void FilterNode::validate_parameters()
     fcam_sub_.reset();
   }
 
+  if (cxt_.predict_accel_ && cxt_.predict_accel_control_) {
+    control_sub_ = create_subscription<orca_msgs::msg::Control>(
+      "control", QUEUE_SIZE,
+      [this](const orca_msgs::msg::Control::SharedPtr msg) -> void
+        {this->control_cb_.call(msg);});
+  } else {
+    control_sub_.reset();
+  }
+
   if (cxt_.publish_tf_) {
     tf_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QUEUE_SIZE);
   } else {
@@ -139,40 +149,37 @@ void FilterNode::validate_parameters()
   open_water_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_open_water_ms_)};
   outlier_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_outlier_ms_)};
 
+  // Nuke any existing filter
+  filter_.reset();
+
+  // Create a filter
   create_filter();
 }
 
-void FilterNode::create_filter()
+// Create the appropriate filter, return true if we have a good pose
+bool PoseFilterNode::create_filter()
 {
-  bool good_pose = observations_.closest_distance() < cxt_.good_pose_dist_;
+  auto good_pose = observations_.closest_distance() < cxt_.good_pose_dist_;
 
-  if (filter_ && good_pose_ == good_pose) {
-    // Nothing to do
-    return;
-  }
+  auto expected_type = good_pose ?
+    (cxt_.four_dof_ ? PoseFilterBase::Type::pose_4d : PoseFilterBase::Type::pose_6d) :
+    PoseFilterBase::Type::pose_1d;
 
-  good_pose_ = good_pose;
-
-  if (good_pose_) {
-    RCLCPP_INFO(get_logger(), "good pose");
-  } else {
-    RCLCPP_INFO(get_logger(), "no markers, or markers are too far away for a good pose");
-  }
-
-  // Create a filter if required
-  if (good_pose_) {
-    if (cxt_.four_dof_ && (!filter_ || filter_->type() != PoseFilterBase::Type::four)) {
+  if (!filter_ || filter_->type() != expected_type) {
+    if (expected_type == PoseFilterBase::Type::pose_1d) {
+      filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+    } else if (expected_type == PoseFilterBase::Type::pose_4d) {
       filter_ = std::make_shared<PoseFilter4D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
-    } else if (!filter_ || filter_->type() != PoseFilterBase::Type::pose) {
+    } else {
       filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
     }
-  } else if (!filter_ || filter_->type() != PoseFilterBase::Type::depth) {
-    filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
   }
+
+  return good_pose;
 }
 
 // New depth reading
-void FilterNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool first)
+void PoseFilterNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool first)
 {
   START_PERF()
 
@@ -180,29 +187,25 @@ void FilterNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, bool
     if (!observations_.empty()) {
       rclcpp::Time stamp{msg->header.stamp};
       if (orca::valid_stamp(last_fp_stamp_) && stamp - last_fp_stamp_ > open_water_timeout_) {
-        // Timeout... clear observations and create a depth filter
+        // Timeout... clear observations and create a 1d filter
         observations_.clear();
         create_filter();
       }
     }
 
-    filter_->process_message(*msg, observations_);
+    filter_->process_message(*msg, observations_, u_bar_);
   }
 
   STOP_PERF("depth_callback")
 }
 
-void FilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg, bool first)
+void PoseFilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg, bool first)
 {
-  // TODO(clyde): must add force parameters to orca_filter to handle u_bar input
-#if 0
-  Efforts e;
-  e.from_msg(msg->efforts);
-  e.to_acceleration(estimated_yaw_, u_bar_);
-#endif
+  mw::Efforts efforts{msg->efforts};
+  u_bar_ = efforts.acceleration(cxt_, estimated_yaw_);
 }
 
-void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
+void PoseFilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
 {
   START_PERF()
 
@@ -213,7 +216,7 @@ void FilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::Shared
   STOP_PERF("fcam_callback")
 }
 
-void FilterNode::process_pose(
+void PoseFilterNode::process_pose(
   const orca_msgs::msg::FiducialPoseStamped::SharedPtr & msg,
   const tf2::Transform & t_sensor_base, const std::string & frame_id)
 {
@@ -222,26 +225,24 @@ void FilterNode::process_pose(
   // Save observations
   observations_ = mw::Observations{msg->fp.observations};
 
-  // Make sure we have the right filter & state
-  create_filter();
-
-  if (!good_pose_) {
+  // Make sure we have the appropriate filter, return if we don't have a good pose
+  if (!create_filter()) {
     return;
   }
 
-  // If we're receiving poses but not publishing odometry then reset the filter
+  // If we're receiving poses but not publishing odometry then re-initialize the filter
   if (orca::valid_stamp(last_fp_inlier_stamp_) &&
     last_fp_stamp_ - last_fp_inlier_stamp_ > outlier_timeout_)
   {
-    RCLCPP_DEBUG(get_logger(), "reset filter");
-    filter_->reset(msg->fp.pose.pose);
+    RCLCPP_DEBUG(get_logger(), "init filter");
+    filter_->init(msg->fp.pose.pose);
     last_fp_inlier_stamp_ = last_fp_stamp_;
   }
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose_stamped;
   pose_stamped.header = msg->header;
   pose_stamped.pose = msg->fp.pose;
-  if (filter_->process_message(pose_stamped, observations_)) {
+  if (filter_->process_message(pose_stamped, observations_, u_bar_)) {
     last_fp_inlier_stamp_ = last_fp_stamp_;
   }
 }
@@ -272,7 +273,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
 
   // Init node
-  auto node = std::make_shared<orca_filter::FilterNode>();
+  auto node = std::make_shared<orca_filter::PoseFilterNode>();
 
   // Set logger level
   auto result =

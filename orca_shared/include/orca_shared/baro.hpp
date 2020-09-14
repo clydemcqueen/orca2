@@ -51,7 +51,7 @@ public:
   void initialize(const Model & model, double pressure, double base_link_z);
 
   // Reset the barometer
-  void reset() {atmospheric_pressure_ = 0;}
+  void clear() {atmospheric_pressure_ = 0;}
 
   // Given a pressure, return base_link.z, return 0 if not initialized
   double pressure_to_base_link_z(const Model & model, double pressure) const;

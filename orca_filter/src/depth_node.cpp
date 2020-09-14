@@ -52,7 +52,7 @@ namespace orca_filter
   CXT_MACRO_MEMBER(frame_id, std::string, "map") \
   CXT_MACRO_MEMBER(z_variance, double, orca::Model::DEPTH_STDDEV * orca::Model::DEPTH_STDDEV) \
   CXT_MACRO_MEMBER(good_pose_dist, double, 1.8) /* Good pose if marker < 1.8m away  */ \
-  CXT_MACRO_MEMBER(cmd, std::string, "") /* Command "reset" will reset the barometer  */ \
+  CXT_MACRO_MEMBER(cmd, std::string, " ") /* Command "reset" will reset the barometer  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
@@ -79,7 +79,7 @@ class DepthNode : public rclcpp::Node
 {
   DepthContext cxt_;                  // Parameter(s)
   orca::Barometer barometer_{};       // Barometer state
-  double pressure_;                   // Most recent pressure, used for initialization
+  double pressure_{};                 // Most recent pressure, used for initialization
 
   rclcpp::Subscription<orca_msgs::msg::Barometer>::SharedPtr baro_sub_;
   rclcpp::Subscription<orca_msgs::msg::FiducialPoseStamped>::SharedPtr fp_sub_;
@@ -136,8 +136,8 @@ class DepthNode : public rclcpp::Node
   // Validate parameters
   void validate_parameters()
   {
-    // _Any_ parameter change will reset the barometer
-    barometer_.reset();
+    // _Any_ parameter change will clear (re-initialize) the barometer
+    barometer_.clear();
 
     cxt_.log_info(get_logger());
   }

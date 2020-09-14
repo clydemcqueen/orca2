@@ -30,6 +30,8 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <utility>
+
 #include "orca_filter/pose_filter_base.hpp"
 
 #include "eigen3/Eigen/Dense"
@@ -45,9 +47,9 @@ namespace orca_filter
 // PoseFilter6D -- 6dof filter with 18 dimensions
 //==================================================================
 
-constexpr int POSE_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
+constexpr int POSE_6D_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
 
-// Pose state macros
+// State macros
 #define px_x x(0)
 #define px_y x(1)
 #define px_z x(2)
@@ -70,7 +72,7 @@ constexpr int POSE_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, ...]
 // Init x from pose
 Eigen::VectorXd pose_to_px(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_6D_STATE_DIM);
 
   px_x = pose.position.x;
   px_y = pose.position.y;
@@ -181,12 +183,12 @@ Eigen::VectorXd six_state_mean(const Eigen::MatrixXd & sigma_points, const Eigen
 
 PoseFilter6D::PoseFilter6D(
   const rclcpp::Logger & logger,
-  const FilterContext & cxt,
+  const PoseFilterContext & cxt,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose, logger, cxt, filtered_odom_pub, tf_pub, POSE_STATE_DIM}
+: PoseFilterBase{Type::pose_6d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_6D_STATE_DIM}
 {
-  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_STATE_DIM, POSE_STATE_DIM) * 0.01);
+  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_6D_STATE_DIM, POSE_6D_STATE_DIM) * cxt.ukf_process_noise_);
 
   // State transition function
   filter_.set_f_fn(
@@ -270,9 +272,9 @@ PoseFilter6D::PoseFilter6D(
   filter_.set_mean_x_fn(six_state_mean);
 }
 
-void PoseFilter6D::reset(const geometry_msgs::msg::Pose & pose)
+void PoseFilter6D::init(const geometry_msgs::msg::Pose & pose)
 {
-  PoseFilterBase::reset(pose_to_px(pose));
+  PoseFilterBase::init(pose_to_px(pose));
 }
 
 void PoseFilter6D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
