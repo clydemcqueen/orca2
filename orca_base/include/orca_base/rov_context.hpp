@@ -80,7 +80,7 @@ namespace orca_base
   /* ROV hold pressure pid Kp  */ \
   CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.0) \
   /* ROV hold pressure pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.0001) \
   /* ROV hold pressure pid Kd  */ \
  \
   CXT_MACRO_MEMBER(planner_target_z, double, -0.5) \

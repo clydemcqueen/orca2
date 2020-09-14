@@ -289,7 +289,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='rov_node', output='screen',
              node_name='rov_node', remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
-                # ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
+                ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
              ]),
 
         # Depth node, turns /barometer messages into /depth messages
