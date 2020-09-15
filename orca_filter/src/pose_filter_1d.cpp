@@ -103,54 +103,55 @@ PoseFilter1D::PoseFilter1D(
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
 : PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_1D_STATE_DIM}
 {
-  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_1D_STATE_DIM, POSE_1D_STATE_DIM) * cxt.ukf_process_noise_);
-
-  // State transition function
-  filter_.set_f_fn(
-    [&cxt](const double dt, const Eigen::VectorXd & u, Eigen::Ref<Eigen::VectorXd> x)
-    {
-      if (cxt.predict_accel_) {
-        // Assume 0 acceleration
-        dx_az = 0;
-
-        if (cxt.predict_accel_control_) {
-          // Add acceleration due to control
-          dx_az += u(2, 0);
-        }
-
-        if (cxt.predict_accel_drag_) {
-          // Add acceleration due to drag
-          // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass) and
-          //  AddRelativeTorque(drag_torque)
-          // Simple approximation:
-          dx_az += cxt.drag_accel_z(dx_vz);
-        }
-
-        if (cxt.predict_accel_buoyancy_) {
-          // Add acceleration due to gravity and buoyancy
-          // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
-          // Simple approximation:
-          dx_az -= cxt.hover_accel_z();
-        }
-      }
-
-      // Clamp acceleration
-      dx_az = orca::clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
-
-      // Velocity, vx += ax * dt
-      dx_vz += dx_az * dt;
-
-      // Clamp velocity
-      dx_vz = orca::clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
-
-      // Position, x += vx * dt
-      dx_z += dx_vz * dt;
-    });
 }
 
 void PoseFilter1D::init(const geometry_msgs::msg::Pose & pose)
 {
   PoseFilterBase::init(pose_to_dx(pose));
+
+  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_1D_STATE_DIM, POSE_1D_STATE_DIM) * cxt_.ukf_process_noise_);
+
+  // State transition function
+  filter_.set_f_fn(
+    [this](const double dt, const Eigen::VectorXd & u, Eigen::Ref<Eigen::VectorXd> x)
+      {
+        if (cxt_.predict_accel_) {
+          // Assume 0 acceleration
+          dx_az = 0;
+
+          if (cxt_.predict_accel_control_) {
+            // Add acceleration due to control
+            dx_az += u(2, 0);
+          }
+
+          if (cxt_.predict_accel_drag_) {
+            // Add acceleration due to drag
+            // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass) and
+            //  AddRelativeTorque(drag_torque)
+            // Simple approximation:
+            dx_az += cxt_.drag_accel_z(dx_vz);
+          }
+
+          if (cxt_.predict_accel_buoyancy_) {
+            // Add acceleration due to gravity and buoyancy
+            // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
+            // Simple approximation:
+            dx_az -= cxt_.hover_accel_z();
+          }
+        }
+
+        // Clamp acceleration
+        dx_az = orca::clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
+
+        // Velocity, vx += ax * dt
+        dx_vz += dx_az * dt;
+
+        // Clamp velocity
+        dx_vz = orca::clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
+
+        // Position, x += vx * dt
+        dx_z += dx_vz * dt;
+      });
 }
 
 void PoseFilter1D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)

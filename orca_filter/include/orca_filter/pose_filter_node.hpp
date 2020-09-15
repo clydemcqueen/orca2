@@ -83,7 +83,7 @@ class PoseFilterNode : public rclcpp::Node
   void validate_parameters();
 
   // Create the appropriate filter, return true if we have a good pose
-  bool create_filter();
+  bool create_filter(const geometry_msgs::msg::Pose & pose);
 
   // Callbacks
   void depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first);

@@ -223,15 +223,21 @@ def generate_launch_description():
     }
 
     pose_filter_node_params = {
-        'predict_accel': False,
-        'predict_accel_control': False,
-        'predict_accel_drag': False,
-        'predict_accel_buoyancy': False,
+        'predict_accel': True,
+        'predict_accel_control': True,
+        'predict_accel_drag': True,
+        'predict_accel_buoyancy': True,
         'filter_baro': True,  # Fuse depth
         'filter_fcam': True,
         'publish_tf': True,  # Publish map=>base tf
         'good_pose_dist': good_pose_dist,
         'good_obs_dist': good_obs_dist,
+
+        # Process noise, similar to /depth noise
+        'ukf_process_noise': 0.0004,
+
+        # Turn outlier detection off
+        'ukf_outlier_distance': -1.0,
     }
     pose_filter_node_params.update(model_params)
 

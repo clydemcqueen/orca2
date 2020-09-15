@@ -178,7 +178,8 @@ public:
 private:
   const rclcpp::Duration HISTORY_LENGTH{RCL_S_TO_NS(1)};
 
-  Type type_;                                 // Depth filter vs four filter vs pose filter
+  bool initialized_;
+  Type type_;                                 // 1d vs 4d vs 6d
   int state_dim_;                             // Number of dimensions, 1 for depth filter, etc.
   rclcpp::Time filter_time_;                  // Current time of filter
   rclcpp::Time odom_time_;                    // Timestamp of last publish odom message
@@ -225,7 +226,6 @@ private:
 protected:
   rclcpp::Logger logger_;
   const PoseFilterContext & cxt_;
-
   ukf::UnscentedKalmanFilter filter_;
 
   // Re-initialize the filter with an Eigen vector
@@ -268,11 +268,6 @@ public:
     int state_dim);
 
   /**
-   * Initialize the filter with the default pose (0, 0, 0) and high uncertainty
-   */
-  void init();
-
-  /**
    * Initialize the filter with an initial pose and high uncertainty
    *
    * Problem: if the first pose is an outlier the filter may settle on a bad solution and reject
@@ -304,6 +299,8 @@ public:
   bool process_message(const T & msg, const mw::Observations & observations,
     const mw::Acceleration & u_bar)
   {
+    assert(initialized_);
+
     rclcpp::Time stamp{msg.header.stamp};
 
     if (stamp < filter_time_ && !rewind(stamp)) {

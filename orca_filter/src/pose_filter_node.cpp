@@ -153,11 +153,12 @@ void PoseFilterNode::validate_parameters()
   filter_.reset();
 
   // Create a filter
-  create_filter();
+  // TODO(clyde) would be nice if we passed in a pose
+  create_filter(geometry_msgs::msg::Pose{});
 }
 
 // Create the appropriate filter, return true if we have a good pose
-bool PoseFilterNode::create_filter()
+bool PoseFilterNode::create_filter(const geometry_msgs::msg::Pose & pose)
 {
   auto good_pose = observations_.closest_distance() < cxt_.good_pose_dist_;
 
@@ -173,6 +174,9 @@ bool PoseFilterNode::create_filter()
     } else {
       filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
     }
+
+    // Always init!
+    filter_->init(pose);
   }
 
   return good_pose;
@@ -189,7 +193,9 @@ void PoseFilterNode::depth_callback(const orca_msgs::msg::Depth::SharedPtr msg, 
       if (orca::valid_stamp(last_fp_stamp_) && stamp - last_fp_stamp_ > open_water_timeout_) {
         // Timeout... clear observations and create a 1d filter
         observations_.clear();
-        create_filter();
+        geometry_msgs::msg::Pose pose;
+        pose.position.z = msg->z;
+        create_filter(pose);
       }
     }
 
@@ -226,7 +232,7 @@ void PoseFilterNode::process_pose(
   observations_ = mw::Observations{msg->fp.observations};
 
   // Make sure we have the appropriate filter, return if we don't have a good pose
-  if (!create_filter()) {
+  if (!create_filter(msg->fp.pose.pose)) {
     return;
   }
 

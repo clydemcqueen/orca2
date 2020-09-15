@@ -80,7 +80,7 @@ PoseFilterBase::PoseFilterBase(
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
   int state_dim)
 :
-
+  initialized_{false},
   type_{type},
   logger_{logger},
   cxt_{cxt},
@@ -90,12 +90,6 @@ PoseFilterBase::PoseFilterBase(
   filter_{state_dim, cxt_.ukf_alpha_, cxt_.ukf_beta_, cxt_.ukf_kappa_},
   odom_time_{0, 0, RCL_ROS_TIME}
 {
-  init();
-}
-
-void PoseFilterBase::init()
-{
-  init(Eigen::VectorXd::Zero(state_dim_));
 }
 
 void PoseFilterBase::init(const Eigen::VectorXd & x)
@@ -121,6 +115,8 @@ void PoseFilterBase::init(const Eigen::VectorXd & x)
     // Turn outlier detection off
     filter_.set_outlier_distance(std::numeric_limits<double>::max());
   }
+
+  initialized_ = true;
 }
 
 void PoseFilterBase::predict(const rclcpp::Time & stamp, const mw::Acceleration & u_bar)
