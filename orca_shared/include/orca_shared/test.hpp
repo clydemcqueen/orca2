@@ -40,14 +40,16 @@ sensor_msgs::msg::CameraInfo make_camera_info();
 
 geometry_msgs::msg::Pose make_cam_f_base();
 
-bool test_mw_pose_segment();
-
-bool test_mw_roundtrip();
-
-bool test_mw_observer();
+bool test_mw_move();
 
 bool test_mw_header();
 
-bool test_mw_move();
+bool test_mw_observer();
+
+bool test_mw_pose_segment();
+
+bool test_mw_pose_body();
+
+bool test_mw_roundtrip();
 
 #endif  // ORCA_SHARED__TEST_HPP_

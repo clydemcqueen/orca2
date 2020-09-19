@@ -46,7 +46,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(loop_driver, int, 0) \
   /* What drives auv_advance? 0: timer, 1: depth msg, 2: fiducial msg  */ \
   CXT_MACRO_MEMBER(depth_override, bool, false) \
-  /* Depth value overrides pose.position.z, do this in fp_node instead  */ \
+  /* Depth value overrides pose.position.z  */ \
   CXT_MACRO_MEMBER(timer_period_ms, int, 50) \
   /* Timer period in ms  */ \
   CXT_MACRO_MEMBER(timeout_depth_ms, int, 300) \
@@ -62,7 +62,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
  \
   CXT_MACRO_MEMBER(xy_limit, double, 0.5) \
-  /* Limit fwd/strafe motion, rest is yaw  */ \
+  /* Limit fwd/strafe motion, leave room for yaw  */ \
   CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01) \
   /* Limit thruster acceleration, measured in effort units  */ \
  \

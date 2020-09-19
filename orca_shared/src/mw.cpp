@@ -289,6 +289,20 @@ void Observer::convert(const PolarObservation & polar_observation, Observation &
 }
 
 //=====================================================================================
+// Pose
+//=====================================================================================
+
+Pose Pose::operator+(const PoseBody & that) const
+{
+  // Rotate into the global frame
+  double x_r, y_r;
+  orca::rotate_frame(that.forward(), that.strafe(), -orientation_.yaw(), x_r, y_r);
+
+  return Pose{Point{position_.x() + x_r, position_.y() + y_r, position_.z() + that.vertical()},
+    Quaternion{orientation_.roll(), orientation_.pitch(), orientation_.yaw() + that.yaw()}};
+}
+
+//=====================================================================================
 // operator<<
 //=====================================================================================
 
@@ -416,6 +430,15 @@ std::ostream & operator<<(std::ostream & os, const Pose & v)
   return os << std::fixed << std::setprecision(3) << "{" <<
          v.position() << ", " <<
          v.orientation() << "}";
+}
+
+std::ostream & operator<<(std::ostream & os, const PoseBody & v)
+{
+  return os << std::fixed << std::setprecision(3) << "{" <<
+            v.forward() << ", " <<
+            v.strafe() << ", " <<
+            v.vertical() << ", " <<
+            v.yaw() << "}";
 }
 
 std::ostream & operator<<(std::ostream & os, const PoseStamped & v)

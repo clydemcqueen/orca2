@@ -38,6 +38,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "orca_shared/mw/acceleration.hpp"
 #include "orca_shared/mw/point.hpp"
+#include "orca_shared/mw/pose_body.hpp"
 #include "orca_shared/mw/quaternion.hpp"
 #include "orca_shared/mw/twist.hpp"
 
@@ -169,6 +170,8 @@ public:
   {
     return Pose{position_ + that.position_, orientation_ + that.orientation_};
   }
+
+  Pose operator+(const PoseBody & that) const;
 
   Pose operator-(const Pose & that) const
   {

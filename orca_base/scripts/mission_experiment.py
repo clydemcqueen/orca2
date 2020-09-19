@@ -36,7 +36,7 @@ from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 from orca_msgs.action import Mission
-from orca_msgs.msg import Control, FiducialPoseStamped
+from orca_msgs.msg import Control, FiducialPoseStamped, PoseBody
 from rcl_interfaces.msg import Parameter, ParameterType
 from rcl_interfaces.srv import SetParameters
 from rclpy.action import ActionClient
@@ -69,9 +69,10 @@ class MissionExperiment(object):
                  count: int,
                  auv_params: List[Parameter],
                  filter_params: List[Parameter],
-                 pose_targets: bool,
+                 target_type: int,
                  marker_ids: List[int],
                  poses: List[Pose],
+                 motions: List[PoseBody],
                  random: bool,
                  keep_station: bool,
                  msg_processor):
@@ -86,13 +87,16 @@ class MissionExperiment(object):
         self.filter_params = filter_params
 
         # Marker mission or pose mission?
-        self.pose_targets = pose_targets
+        self.target_type = target_type
 
-        # If !pose_targets, then a list of marker ids
+        # If target_type is markers, then a list of marker ids
         self.marker_ids = marker_ids
 
-        # If pose_targets, then a list of poses
+        # If target_type is poses, then a list of poses
         self.poses = poses
+
+        # If target_type is motions, then a list of motions
+        self.motions = motions
 
         # Randomize the markers or poses
         self.random = random
@@ -114,16 +118,18 @@ class MissionExperiment(object):
 
     def log_info(self, logger):
         logger.info(
-            'experiment mission_info={}, count={}, pose_targets={}'.format(self.mission_info,
+            'experiment mission_info={}, count={}, target_type={}'.format(self.mission_info,
                                                                            self.count,
-                                                                           self.pose_targets))
+                                                                           self.target_type))
 
-        if self.pose_targets:
+        if self.target_type == Mission.Goal.TARGET_POSE:
             for p in self.poses:
                 logger.info(
                     'pose x={}, y={}, z={}'.format(p.position.x, p.position.y, p.position.z))
-        else:
+        elif self.target_type == Mission.Goal.TARGET_MARKER:
             logger.info('marker_ids={}'.format(self.marker_ids))
+        else:
+            logger.error('NOT IMPLEMENTED YET')
 
         for p in self.auv_params:
             logger.info('auv_node.{}'.format(param_to_str(p)))
@@ -134,9 +140,10 @@ class MissionExperiment(object):
     def get_goal_msg(self):
         goal_msg = Mission.Goal()
         goal_msg.mission_info = self.mission_info
-        goal_msg.pose_targets = self.pose_targets
+        goal_msg.target_type = self.target_type
         goal_msg.marker_ids = self.marker_ids
         goal_msg.poses = self.poses
+        goal_msg.motions = self.motions
         goal_msg.random = self.random
         goal_msg.keep_station = self.keep_station
         return goal_msg
@@ -158,15 +165,14 @@ class MissionExperiment(object):
     def go_to_markers(cls, mission_info: str, count: int, auv_params: List[Parameter],
                       filter_params: List[Parameter],
                       marker_ids: List[int], random: bool, keep_station: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], random,
-                   keep_station,
-                   msg_processor)
+        return cls(mission_info, count, auv_params, filter_params, False, marker_ids, [], [],
+                   random, keep_station, msg_processor)
 
     @classmethod
     def go_to_poses(cls, mission_info: str, count: int, auv_params: List[Parameter],
                     filter_params: List[Parameter],
                     poses: List[Pose], random: bool, keep_station: bool, msg_processor=None):
-        return cls(mission_info, count, auv_params, filter_params, True, [], poses, random,
+        return cls(mission_info, count, auv_params, filter_params, True, [], poses, [], random,
                    keep_station, msg_processor)
 
 

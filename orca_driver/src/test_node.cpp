@@ -104,10 +104,6 @@ public:
     using namespace std::chrono_literals;
     spin_timer_ = create_wall_timer(100ms, std::bind(&TestNode::spin_once, this));
   }
-
-  ~TestNode() override
-  {
-  }
 };
 
 }  // namespace orca_driver

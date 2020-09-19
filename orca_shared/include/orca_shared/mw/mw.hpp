@@ -50,6 +50,7 @@
 #include "orca_shared/mw/polar_observation.hpp"
 #include "orca_shared/mw/polar_observation_stamped.hpp"
 #include "orca_shared/mw/pose.hpp"
+#include "orca_shared/mw/pose_body.hpp"
 #include "orca_shared/mw/pose_stamped.hpp"
 #include "orca_shared/mw/pose_with_covariance.hpp"
 #include "orca_shared/mw/pose_with_covariance_stamped.hpp"
