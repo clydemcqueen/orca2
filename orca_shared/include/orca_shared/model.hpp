@@ -148,6 +148,7 @@ struct Model
 
   //=====================================================================================
   // Force / torque <=> effort
+  // Effort is force / max_force, and ranges from -1.0 to 1.0
   //=====================================================================================
 
   double bollard_force_xy() const {return BOLLARD_FORCE_XY * mdl_thrust_scale_;}

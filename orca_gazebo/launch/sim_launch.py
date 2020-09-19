@@ -84,7 +84,7 @@ def generate_launch_description():
     filter_poses = True
 
     # Select map
-    world = World.SMALL_FIELD
+    world = World.SMALL_RING
 
     if world == World.SMALL_FIELD:
         world_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field.world')
@@ -131,8 +131,8 @@ def generate_launch_description():
         pose_plan_target_dist = 0.8
 
     # Optionally build and use a map
-    build_map = True
-    use_built_map = True
+    build_map = False
+    use_built_map = False
 
     if build_map:
         vmap_node_params = {

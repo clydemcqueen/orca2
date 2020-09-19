@@ -95,10 +95,19 @@ Thrusters::Thrusters()
 {
   // Off-by-1, thruster 1 is thrusters_[0], etc.
   // https://bluerobotics.com/learn/bluerov2-assembly/
+#undef JUST_TWO
+#ifdef JUST_TWO
+// Experiment: use 2 thrusters instead of 4
+  thrusters_.emplace_back("t200_link_front_right", false, 2.0, 2.0, 2.0, 0.0);
+  thrusters_.emplace_back("t200_link_front_left", false, 2.0, 0.0, 0.0, 0.0);
+  thrusters_.emplace_back("t200_link_rear_right", true, 0.0, -2.0, 0.0, 0.0);
+  thrusters_.emplace_back("t200_link_rear_left", true, 0.0, 0.0, -2.0, 0.0);
+#else
   thrusters_.emplace_back("t200_link_front_right", false, 1.0, 1.0, 1.0, 0.0);
   thrusters_.emplace_back("t200_link_front_left", false, 1.0, -1.0, -1.0, 0.0);
   thrusters_.emplace_back("t200_link_rear_right", true, 1.0, -1.0, 1.0, 0.0);
   thrusters_.emplace_back("t200_link_rear_left", true, 1.0, 1.0, -1.0, 0.0);
+#endif
   thrusters_.emplace_back("t200_link_vertical_right", false, 0.0, 0.0, 0.0, 1.0);
   thrusters_.emplace_back("t200_link_vertical_left", true, 0.0, 0.0, 0.0, -1.0);
 

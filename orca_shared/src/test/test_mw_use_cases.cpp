@@ -137,3 +137,28 @@ bool test_mw_pose_segment()
   std::cout << "success" << std::endl;
   return true;
 }
+
+bool test_mw_pose_body()
+{
+  std::cout << "=== TEST POSE SEGMENT ===" << std::endl;
+
+  mw::Pose start{mw::Point{0, 0, 0}, mw::Quaternion{0, 0, 0.1}};
+  mw::PoseBody delta{1, 0, 0, 0};
+  mw::Pose result = start + delta;
+  std::cout << result << std::endl;
+
+  mw::Pose expected{mw::Point{0.995, 0.1, 0}, mw::Quaternion{0, 0, 0.1}};
+  if (!close_enough(result.x(), expected.x()) ||
+    !close_enough(result.y(), expected.y()) ||
+    !close_enough(result.z(), expected.z()) ||
+    !close_enough(result.roll(), expected.roll()) ||
+    !close_enough(result.pitch(), expected.pitch()) ||
+    !close_enough(result.yaw(), expected.yaw()))
+  {
+    std::cout << "failure" << std::endl;
+    return false;
+  }
+
+  std::cout << "success" << std::endl;
+  return true;
+}

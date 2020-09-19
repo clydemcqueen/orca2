@@ -56,12 +56,14 @@ namespace orca_base
  \
   CXT_MACRO_MEMBER(input_dead_band, float, 0.05f) \
   /* Ignore small joystick inputs  */ \
+  CXT_MACRO_MEMBER(xy_gain, double, 0.25) \
+  /* Attenuate forward and strafe joystick input  */ \
+  CXT_MACRO_MEMBER(yaw_gain, double, 0.15) \
+  /* Attenuate yaw joystick input  */ \
+  CXT_MACRO_MEMBER(vertical_gain, double, 0.25) \
+  /* Attenuate vertical joystick input  */ \
   CXT_MACRO_MEMBER(xy_limit, double, 0.5) \
-  /* Attenuate joystick inputs  */ \
-  CXT_MACRO_MEMBER(yaw_gain, double, 0.2) \
-  /* Attenuate joystick inputs  */ \
-  CXT_MACRO_MEMBER(vertical_gain, double, 0.5) \
-  /* Attenuate joystick inputs  */ \
+  /* Limit fwd/strafe motion, leave room for yaw  */ \
   CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05) \
   /* Limit thruster acceleration, measured in effort units  */ \
  \

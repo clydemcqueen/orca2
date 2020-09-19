@@ -71,7 +71,7 @@ namespace orca_filter
 constexpr int QUEUE_SIZE = 10;
 
 PoseFilterNode::PoseFilterNode()
-: Node{"filter_node"}
+: Node{"pose_filter_node"}
 {
   // Suppress IDE warnings
   (void) depth_sub_;
@@ -107,7 +107,7 @@ PoseFilterNode::PoseFilterNode()
     RCLCPP_ERROR(get_logger(), "can't parse URDF %s", orca_description::filename);
   }
 
-  RCLCPP_INFO(get_logger(), "filter_node ready");
+  RCLCPP_INFO(get_logger(), "pose_filter_node ready");
 }
 
 void PoseFilterNode::validate_parameters()

@@ -369,9 +369,9 @@ void ROVNode::rov_advance(const rclcpp::Time & stamp)
   mw::Efforts efforts;
   if (cxt_.mode_ == 0) {
     efforts.forward(
-      orca::dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+      orca::dead_band(joy_msg_.axes[joy_axis_forward_], cxt_.input_dead_band_) * cxt_.xy_gain_);
     efforts.strafe(
-      orca::dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_limit_);
+      orca::dead_band(joy_msg_.axes[joy_axis_strafe_], cxt_.input_dead_band_) * cxt_.xy_gain_);
     efforts.yaw(
       orca::dead_band(joy_msg_.axes[joy_axis_yaw_], cxt_.input_dead_band_) * cxt_.yaw_gain_);
 
@@ -481,13 +481,13 @@ void ROVNode::start_mission(
   switch (mission) {
     case Mission::keep_station:
       goal_msg.mission_info = "ROV keep station";
-      goal_msg.pose_targets = true;
+      goal_msg.target_type = MissionAction::Goal::TARGET_POSE;
       goal_msg.keep_station = true;
       RCLCPP_INFO(get_logger(), "keeping station at current pose");
       break;
     case Mission::go_to_pose:
       goal_msg.mission_info = "ROV go to pose";
-      goal_msg.pose_targets = true;
+      goal_msg.target_type = MissionAction::Goal::TARGET_POSE;
       goal_msg.poses.push_back(pose);
       RCLCPP_INFO(get_logger(), "go to pose");
       break;

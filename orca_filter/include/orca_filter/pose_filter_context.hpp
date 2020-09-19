@@ -68,7 +68,7 @@ namespace orca_filter
  \
   CXT_MACRO_MEMBER(filter_baro, bool, true) \
   /* Filter barometer messages  */ \
-  CXT_MACRO_MEMBER(filter_fcam, bool, false) \
+  CXT_MACRO_MEMBER(filter_fcam, bool, true) \
   /* Filter forward camera messages  */ \
  \
   CXT_MACRO_MEMBER(good_pose_dist, double, 1.8) \

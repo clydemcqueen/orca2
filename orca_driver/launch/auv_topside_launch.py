@@ -47,8 +47,9 @@ def generate_launch_description():
 
     model_params = {
         'mdl_mass': 11.1,
-        'mdl_volume': 0.01148,
+        'mdl_volume': 0.0111335,
         'mdl_fluid_density': 997.0,
+        'mdl_thrust_scale': 0.2,
     }
 
     # Must match camera name in URDF file
@@ -88,7 +89,7 @@ def generate_launch_description():
             'map_init_id': 0,
             'map_init_pose_x': 2.0,
             'map_init_pose_y': 0.0,
-            'map_init_pose_z': -0.4,
+            'map_init_pose_z': -0.16,
             'map_init_pose_roll': 0.0,
             'map_init_pose_pitch': 1.570796,
             'map_init_pose_yaw': 1.570796 * 2,
@@ -141,13 +142,18 @@ def generate_launch_description():
         'depth_override': False,
 
         # FT3: turn pids off while tuning dead reckoning
-        'auv_pid_enabled': True,
+        'auv_pid_enabled': False,
+
+        # Slow down while tuning
+        'auv_xy_accel': 0.05,
+        'auv_xy_velo': 0.2,
 
         # How far in front of a marker is a good pose?
         # FT3: set to 3m, this assumes we're always looking at 2 markers TODO
         'good_pose_dist': 3.0,
 
-        # Allow MTM recovery
+        # Global planner
+        'global_plan_target_z': -0.1,
         'global_plan_allow_mtm': True,
 
         # Do not allow waypoints
@@ -193,17 +199,22 @@ def generate_launch_description():
                 'dev': '/dev/input/js0'  # Update as required
              }]),
 
+        # Barometer filter
+        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
+
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
              node_name='rov_node', parameters=[model_params, {
                 'planner_target_z': -0.2,
             }], remappings=[
+                ('barometer', 'filtered_barometer'),
                 ('control', 'rov_control'),  # Send control messages to auv_node
              ]),
 
         # Depth node, turns /barometer messages into /depth messages
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[model_params], remappings=[
+                ('barometer', 'filtered_barometer'),
                 ('fp', '/' + camera_name + '/fp'),
             ]),
 
