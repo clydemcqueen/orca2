@@ -423,7 +423,7 @@ void ROVNode::publish_control(const rclcpp::Time & msg_time, const mw::Efforts &
   // Control
   control_msg.camera_tilt_pwm = orca::tilt_to_pwm(tilt_);
   control_msg.brightness_pwm = orca::brightness_to_pwm(brightness_);
-  thrusters_.efforts_to_control(efforts, cxt_.xy_limit_, cxt_.thruster_accel_limit_, control_msg);
+  thrusters_.efforts_to_control(cxt_, efforts, control_msg);
 
   control_pub_->publish(control_msg);
 }

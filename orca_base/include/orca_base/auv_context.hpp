@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include "orca_shared/model.hpp"
+#include "orca_base/base_context.hpp"
 
 namespace orca_base
 {
@@ -59,12 +59,6 @@ namespace orca_base
   /* Max # of poses on filtered_path  */ \
  \
   CXT_MACRO_MEMBER(map_frame, std::string, "map") \
-  CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
- \
-  CXT_MACRO_MEMBER(xy_limit, double, 0.5) \
-  /* Limit fwd/strafe motion, leave room for yaw  */ \
-  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01) \
-  /* Limit thruster acceleration, measured in effort units  */ \
  \
   CXT_MACRO_MEMBER(auv_pid_enabled, bool, true) \
   /* Turn pid controllers on/off  */   \
@@ -154,13 +148,13 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct AUVContext : orca::Model
+struct AUVContext : BaseContext
 {
   AUV_NODE_PARAMS
 };
 
 #define AUV_NODE_ALL_PARAMS \
-  MODEL_PARAMS \
+  BASE_ALL_PARAMS \
   AUV_NODE_PARAMS \
 /* End of list */
 

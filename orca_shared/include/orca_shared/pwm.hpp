@@ -92,21 +92,9 @@ constexpr double THRUST_FULL_REV = -1.0;
 constexpr double THRUST_STOP = 0.0;
 constexpr double THRUST_FULL_FWD = 1.0;
 
-// Range with deadzone
-// ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
-// Update after ft3 experiments: R3 does have a deadzone!
-constexpr uint16_t THRUST_DZ_PWM = 35;
-constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
+uint16_t effort_to_pwm(uint16_t thrust_dz_pwm, double effort);
 
-uint16_t effort_to_pwm(const double effort);
-
-constexpr double pwm_to_effort(const uint16_t pwm)
-{
-  return static_cast<double>(
-    pwm - orca_msgs::msg::Control::THRUST_STOP +
-    (pwm > orca_msgs::msg::Control::THRUST_STOP ? -THRUST_DZ_PWM :
-    (pwm < orca_msgs::msg::Control::THRUST_STOP ? THRUST_DZ_PWM : 0))) / THRUST_RANGE_PWM;
-}
+double pwm_to_effort(uint16_t thrust_dz_pwm, uint16_t pwm);
 
 }  // namespace orca
 

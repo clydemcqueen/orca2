@@ -36,18 +36,16 @@
 namespace orca_base
 {
 
-int Thruster::efforts_to_pwm(
-  const mw::Efforts & efforts, double xy_limit,
-  double thruster_accel_limit, bool & saturated)
+int Thruster::efforts_to_pwm(const BaseContext & cxt, const mw::Efforts & efforts, bool & saturated)
 {
   double combined_effort = efforts.forward() * forward + efforts.strafe() * strafe;
 
   // Clamp forward + strafe to xy_limit
-  if (combined_effort > xy_limit) {
-    combined_effort = xy_limit;
+  if (combined_effort > cxt.xy_limit_) {
+    combined_effort = cxt.xy_limit_;
     saturated = true;
-  } else if (combined_effort < -xy_limit) {
-    combined_effort = -xy_limit;
+  } else if (combined_effort < -cxt.xy_limit_) {
+    combined_effort = -cxt.xy_limit_;
     saturated = true;
   }
 
@@ -80,15 +78,15 @@ int Thruster::efforts_to_pwm(
   // -- limit change to +/- max_change
   // -- don't reverse thruster, i.e., stop at 0.0
   effort = orca::clamp(effort,
-      prev_effort - thruster_accel_limit,
-      prev_effort + thruster_accel_limit);
+      prev_effort - cxt.thruster_accel_limit_,
+      prev_effort + cxt.thruster_accel_limit_);
   if (effort < 0 && prev_effort > 0 || effort > 0 && prev_effort < 0) {
     effort = 0;
   }
 
   prev_effort = effort;
 
-  return orca::effort_to_pwm(effort);
+  return orca::effort_to_pwm(cxt.mdl_thrust_dz_pwm_, effort);
 }
 
 Thrusters::Thrusters()
@@ -117,19 +115,18 @@ Thrusters::Thrusters()
   }
 }
 
-void Thrusters::efforts_to_control(
-  const mw::Efforts & efforts, double xy_limit,
-  double thruster_accel_limit, orca_msgs::msg::Control & control_msg)
+void Thrusters::efforts_to_control(const BaseContext & cxt, const mw::Efforts & efforts,
+  orca_msgs::msg::Control & control_msg)
 {
   // Keep track of saturation for diagnostics
   bool saturated = false;
 
-  control_msg.thruster_pwm.fr_1 = thrusters_[0].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
-  control_msg.thruster_pwm.fl_2 = thrusters_[1].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
-  control_msg.thruster_pwm.rr_3 = thrusters_[2].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
-  control_msg.thruster_pwm.rl_4 = thrusters_[3].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
-  control_msg.thruster_pwm.vr_5 = thrusters_[4].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
-  control_msg.thruster_pwm.vl_6 = thrusters_[5].efforts_to_pwm(efforts, xy_limit, thruster_accel_limit, saturated);
+  control_msg.thruster_pwm.fr_1 = thrusters_[0].efforts_to_pwm(cxt, efforts, saturated);
+  control_msg.thruster_pwm.fl_2 = thrusters_[1].efforts_to_pwm(cxt, efforts, saturated);
+  control_msg.thruster_pwm.rr_3 = thrusters_[2].efforts_to_pwm(cxt, efforts, saturated);
+  control_msg.thruster_pwm.rl_4 = thrusters_[3].efforts_to_pwm(cxt, efforts, saturated);
+  control_msg.thruster_pwm.vr_5 = thrusters_[4].efforts_to_pwm(cxt, efforts, saturated);
+  control_msg.thruster_pwm.vl_6 = thrusters_[5].efforts_to_pwm(cxt, efforts, saturated);
 
   control_msg.thruster_saturated = saturated;
 }

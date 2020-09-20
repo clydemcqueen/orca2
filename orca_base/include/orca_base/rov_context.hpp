@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include "orca_shared/model.hpp"
+#include "orca_base/base_context.hpp"
 
 namespace orca_base
 {
@@ -45,7 +45,6 @@ namespace orca_base
 #define ROV_NODE_PARAMS \
   CXT_MACRO_MEMBER(mode, int, 0) \
   /* 0: ROV, 1: forward, 2: back, 3: left, 4: right, 5: ccw, 6: cw, 7: up, 8: down  */ \
-  CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
  \
   CXT_MACRO_MEMBER(inc_pressure, double, 500) \
   /* Pressure trim increment  */ \
@@ -62,10 +61,6 @@ namespace orca_base
   /* Attenuate yaw joystick input  */ \
   CXT_MACRO_MEMBER(vertical_gain, double, 0.25) \
   /* Attenuate vertical joystick input  */ \
-  CXT_MACRO_MEMBER(xy_limit, double, 0.5) \
-  /* Limit fwd/strafe motion, leave room for yaw  */ \
-  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.05) \
-  /* Limit thruster acceleration, measured in effort units  */ \
  \
   CXT_MACRO_MEMBER(rov_pid_enabled, bool, true) \
   /* Turn pid controller on/off TODO remove the rov_ prefix  */   \
@@ -93,13 +88,13 @@ namespace orca_base
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
 
-struct ROVContext : orca::Model
+struct ROVContext : BaseContext
 {
   ROV_NODE_PARAMS
 };
 
 #define ROV_NODE_ALL_PARAMS \
-  MODEL_PARAMS \
+  BASE_ALL_PARAMS \
   ROV_NODE_PARAMS \
 /* End of list */
 

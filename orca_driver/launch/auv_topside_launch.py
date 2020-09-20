@@ -149,7 +149,7 @@ def generate_launch_description():
         'auv_xy_velo': 0.2,
 
         # How far in front of a marker is a good pose?
-        # FT3: set to 3m, this assumes we're always looking at 2 markers TODO
+        # FT3: set to 3m, this assumes we're always looking at 2+ markers TODO
         'good_pose_dist': 3.0,
 
         # Global planner
@@ -231,7 +231,8 @@ def generate_launch_description():
                 'loc_calibrate_not_loocalize': 0,
 
                 # 0: OpenCV, 1: GTSAM
-                'loc_camera_sam_not_cv': 1,
+                # Crashing bug in GTSAM, use OpenCV for now
+                'loc_camera_sam_not_cv': 0,
 
                 # 0: DICT_4x4_50 (default)
                 # 8: DICT_6X6_250

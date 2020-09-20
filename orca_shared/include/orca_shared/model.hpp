@@ -68,6 +68,8 @@ namespace orca
   /* Tether drag, 1.2 for unfaired tether  */ \
   CXT_MACRO_MEMBER(mdl_drag_partial_const_yaw, double, 0.004) \
   /* Yaw drag, wild guess  */ \
+  CXT_MACRO_MEMBER(mdl_thrust_dz_pwm, uint16_t, 35) \
+  /* Thruster deadzone  */                 \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER

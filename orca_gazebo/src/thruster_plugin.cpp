@@ -47,6 +47,7 @@
  *      <plugin name="OrcaThrusterPlugin" filename="libOrcaThrusterPlugin.so">
  *        <link_name>base_link</link_name>
  *        <ros_topic>/control</ros_topic>
+ *        <thrust_dz_pwm>35</thrust_dz_pwm>
  *        <thruster>
  *          <pos_force>50</pos_force>
  *          <neg_force>40</neg_force>
@@ -113,6 +114,9 @@ class OrcaThrusterPlugin : public ModelPlugin
   rclcpp::Publisher<orca_msgs::msg::Driver>::SharedPtr driver_pub_;
   orca_msgs::msg::Driver driver_msg_;
 
+  // Thrust dead zone
+  uint16_t thrust_dz_pwm_{};
+
   // Model for each thruster
   struct Thruster
   {
@@ -127,7 +131,7 @@ class OrcaThrusterPlugin : public ModelPlugin
   };
 
   // Our array of thrusters
-  std::vector<Thruster> thrusters_ = {};
+  std::vector<Thruster> thrusters_{};
 
 public:
   // Called once when the plugin is loaded.
@@ -167,6 +171,13 @@ public:
     driver_msg_.low_battery = false;
     driver_msg_.leak_detected = false;
     driver_msg_.status = orca_msgs::msg::Driver::STATUS_OK;
+
+    // Look for the thrust deadzone
+    thrust_dz_pwm_ = 35;
+    if (sdf->HasElement("thrust_dz_pwm")) {
+      thrust_dz_pwm_ = sdf->GetElement("thrust_dz_pwm")->Get<int>();
+    }
+    RCLCPP_INFO(node_->get_logger(), "Thruster deadzone %d -- MUST MATCH model!", thrust_dz_pwm_);
 
     // Listen to the update event. This event is broadcast every simulation iteration.
     update_connection_ =
@@ -212,12 +223,12 @@ public:
     if (valid(msg->header.stamp)) {
       control_msg_time_ = msg->header.stamp;
 
-      thrusters_[0].effort = orca::pwm_to_effort(msg->thruster_pwm.fr_1);
-      thrusters_[1].effort = orca::pwm_to_effort(msg->thruster_pwm.fl_2);
-      thrusters_[2].effort = orca::pwm_to_effort(msg->thruster_pwm.rr_3);
-      thrusters_[3].effort = orca::pwm_to_effort(msg->thruster_pwm.rl_4);
-      thrusters_[4].effort = orca::pwm_to_effort(msg->thruster_pwm.vr_5);
-      thrusters_[5].effort = orca::pwm_to_effort(msg->thruster_pwm.vl_6);
+      thrusters_[0].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.fr_1);
+      thrusters_[1].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.fl_2);
+      thrusters_[2].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.rr_3);
+      thrusters_[3].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.rl_4);
+      thrusters_[4].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.vr_5);
+      thrusters_[5].effort = orca::pwm_to_effort(thrust_dz_pwm_, msg->thruster_pwm.vl_6);
     }
 
     driver_msg_.status = msg->mode == orca_msgs::msg::Control::AUV ?

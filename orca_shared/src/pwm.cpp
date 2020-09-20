@@ -35,14 +35,35 @@
 namespace orca
 {
 
-uint16_t effort_to_pwm(const double effort)
+// Range with deadzone
+// ESC R2 has a deadzone of 25 microseconds, R3 has no deadzone
+// Update after ft3 experiments: R3 does have a deadzone!
+// Move this to a parameter to make experimentation easier
+// constexpr uint16_t THRUST_DZ_PWM = 35;
+// constexpr uint16_t THRUST_RANGE_PWM = 400 - THRUST_DZ_PWM;
+
+uint16_t effort_to_pwm(const uint16_t thrust_dz_pwm, const double effort)
 {
+  uint16_t thrust_range_pwm = 400 - thrust_dz_pwm;
+
   return orca::clamp(
     static_cast<uint16_t>(orca_msgs::msg::Control::THRUST_STOP +
-    (effort > THRUST_STOP ? THRUST_DZ_PWM : (effort < THRUST_STOP ? -THRUST_DZ_PWM : 0)) +
-    std::round(effort * THRUST_RANGE_PWM)),
+      (effort > THRUST_STOP ? thrust_dz_pwm : (effort < THRUST_STOP
+        ? -thrust_dz_pwm : 0)) +
+      std::round(effort * thrust_range_pwm)),
     orca_msgs::msg::Control::THRUST_FULL_REV,
     orca_msgs::msg::Control::THRUST_FULL_FWD);
+}
+
+double pwm_to_effort(const uint16_t thrust_dz_pwm, const uint16_t pwm)
+{
+  uint16_t thrust_range_pwm = 400 - thrust_dz_pwm;
+
+  return static_cast<double>(
+    pwm - orca_msgs::msg::Control::THRUST_STOP +
+      (pwm > orca_msgs::msg::Control::THRUST_STOP ? -thrust_dz_pwm :
+        (pwm < orca_msgs::msg::Control::THRUST_STOP ? thrust_dz_pwm : 0))) /
+    thrust_range_pwm;
 }
 
 }  // namespace orca

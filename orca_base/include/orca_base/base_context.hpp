@@ -30,63 +30,40 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ORCA_BASE__THRUSTERS_HPP_
-#define ORCA_BASE__THRUSTERS_HPP_
+#ifndef ORCA_BASE__BASE_CONTEXT_HPP_
+#define ORCA_BASE__BASE_CONTEXT_HPP_
 
+#include <cmath>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include "orca_base/base_context.hpp"
-#include "orca_msgs/msg/control.hpp"
-#include "orca_shared/mw/efforts.hpp"
+#include "orca_shared/model.hpp"
 
 namespace orca_base
 {
 
-struct Thruster
+#define BASE_PARAMS \
+  CXT_MACRO_MEMBER(base_frame, std::string, "base_link") \
+  /* Base link frame id  */ \
+  CXT_MACRO_MEMBER(xy_limit, double, 0.5) \
+  /* Limit fwd/strafe motion, leave room for yaw  */ \
+  CXT_MACRO_MEMBER(thruster_accel_limit, double, 0.01) \
+  /* Limit thruster acceleration, measured in effort units  */ \
+/* End of list */
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
+
+struct BaseContext : orca::Model
 {
-  std::string frame_id;   // URDF link frame id
-  bool ccw;               // True if counterclockwise
-  double forward;
-  double strafe;
-  double yaw;
-  double vertical;
-  double prev_effort;     // Most recent effort
-
-  Thruster(
-    std::string _frame_id, bool _ccw,
-    double _forward, double _strafe, double _yaw, double _vertical)
-  : frame_id{std::move(_frame_id)},
-    ccw{_ccw},
-    forward{_forward},
-    strafe{_strafe},
-    yaw{_yaw},
-    vertical{_vertical},
-    prev_effort{} {}
-
-  int efforts_to_pwm(const BaseContext & cxt, const mw::Efforts & efforts, bool & saturated);
+  BASE_PARAMS
 };
 
-class Thrusters
-{
-  std::vector<Thruster> thrusters_;
-  std::vector<int> prev_pwm_;
-
-public:
-  Thrusters();
-
-  /**
-   * Combine efforts (forward, strafe, vertical, yaw) to the 6 thruster PWM signals, and write to a control message
-   *
-   * @param efforts Efforts
-   * @param xy_limit Limit forward + strafe efforts to this value
-   * @param control_msg Write to this control message
-   */
-  void efforts_to_control(const BaseContext & cxt, const mw::Efforts & efforts,
-    orca_msgs::msg::Control & control_msg);
-};
+#define BASE_ALL_PARAMS \
+  MODEL_PARAMS \
+  BASE_PARAMS \
+/* End of list */
 
 }  // namespace orca_base
 
-#endif  // ORCA_BASE__THRUSTERS_HPP_
+#endif  // ORCA_BASE__BASE_CONTEXT_HPP_
