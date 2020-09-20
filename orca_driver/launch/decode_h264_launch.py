@@ -39,43 +39,29 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
-# Launch topside nodes -- ROV only
+# Decode and republish h264
 
 
 def generate_launch_description():
-    # Each ballast weight weighs 0.19kg
-
-    model_params = {
-        'mdl_mass': 11.1,
-        'mdl_volume': 0.0111335,
-        'mdl_fluid_density': 997.0,
-        'mdl_thrust_scale': 0.2,
-    }
-
-    orca_description_path = get_package_share_directory('orca_description')
-    urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
+    # Must match camera name in URDF file
+    # Should also match the camera name in the camera info file
+    camera_name = 'forward_camera'
 
     all_entities = [
-        # Publish static joints
-        Node(package='robot_state_publisher', node_executable='robot_state_publisher',
-             output='log',
-             arguments=[urdf_path]),
-
-        # Joystick driver, generates joy messages
-        Node(package='joy', node_executable='joy_node', output='screen',
-             node_name='joy_node', parameters=[{
-                'dev': '/dev/input/js0'  # Update as required
-             }]),
-
-        # Barometer filter
-        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
-
-        # ROV controller, uses joystick to control the sub
-        Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[model_params, {
-                'planner_target_z': -0.2,
-            }], remappings=[
-                ('barometer', 'filtered_barometer'),
+        # Decode h264 stream
+        Node(package='image_transport', node_executable='republish', output='screen',
+             node_name='republish_node', node_namespace=camera_name, arguments=[
+                'h264',  # Input
+                'raw'  # Output
+            ], remappings=[
+                ('in', 'image_raw'),
+                ('in/compressed', 'image_raw/compressed'),
+                ('in/theora', 'image_raw/theora'),
+                ('in/h264', 'image_raw/h264'),
+                ('out', 'repub_raw'),
+                ('out/compressed', 'repub_raw/compressed'),
+                ('out/theora', 'repub_raw/theora'),
+                ('out/theora', 'repub_raw/h264'),
             ]),
     ]
 
