@@ -417,6 +417,7 @@ void ROVNode::publish_control(const rclcpp::Time & msg_time, const mw::Efforts &
 
   // Diagnostics
   control_msg.mode = mode_;
+  control_msg.target_pressure = target_pressure_;
   control_msg.efforts = efforts.to_msg();
   control_msg.odom_lag = (now() - msg_time).seconds();
 

@@ -222,6 +222,13 @@ def generate_launch_description():
         'mdl_fluid_density': 997.0,
     }
 
+    rov_node_params = {
+        'rov_pressure_pid_kp': 0.00006,
+        'rov_pressure_pid_ki': 0.00002,
+        'rov_pressure_pid_kd': 0.000045,
+    }
+    rov_node_params.update(model_params)
+
     pose_filter_node_params = {
         'predict_accel': True,
         'predict_accel_control': True,
@@ -295,7 +302,7 @@ def generate_launch_description():
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', remappings=[
+             node_name='rov_node', parameters=[rov_node_params], remappings=[
                 ('control', 'rov_control'),  # Send control messages to auv_node
                 ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
              ]),

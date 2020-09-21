@@ -161,33 +161,6 @@ def process_messages(ex: MissionExperiment):
     return x_stop and y_stop and z_stop and yaw_stop
 
 
-# Ziegler Nichols PID coefficients
-# See https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
-#
-# If we have a decent Kp and know Tu (oscillation period), we can find a corresponding Kd:
-#       Classic:        Kd = 0.125 * Kp * Tu
-#       Pessen:         Kd = 0.15 * Kp * Tu
-#       No overshoot:   Kd = 0.333 * Kp * Tu
-#
-# And a Ki:
-#       Classic:        Kd = 2.0 * Kp / Tu
-#       Pessen:         Kd = 2.5 * Kp / Tu
-#       No overshoot:   Kd = 2.0 * Kp / Tu
-#
-# These functions are not used in ft3
-
-def zn_classic_pid(Ku, Tu):
-    return [0.6 * Ku, 1.2 * Ku / Tu, 0.075 * Ku * Tu]
-
-
-def zn_pessen(Ku, Tu):
-    return [0.7 * Ku, 1.75 * Ku / Tu, 0.105 * Ku * Tu]
-
-
-def zn_no_overshoot(Ku, Tu):
-    return [0.2 * Ku, 0.4 * Ku / Tu, 0.0667 * Ku * Tu]
-
-
 # Generate a param dict for PID coefficients
 def pid_param_dict(dim: str, values):
     names = ['auv_' + dim + '_pid_kp', 'auv_' + dim + '_pid_ki', 'auv_' + dim + '_pid_kd']

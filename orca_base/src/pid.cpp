@@ -30,33 +30,69 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ORCA_BASE__PID_HPP_
-#define ORCA_BASE__PID_HPP_
+#include <cmath>
+#include <iostream>
+
+#include "orca_base/pid.hpp"
 
 namespace pid
 {
 
-class Controller
+Controller::Controller(bool angle, double Kp, double Ki, double Kd)
 {
-  bool angle_;  // True if we're controlling an angle [-pi, pi]
-  double target_ = 0;
-  double prev_error_ = 0;
-  double integral_ = 0;
-  double Kp_;
-  double Ki_;
-  double Kd_;
+  angle_ = angle;
+  Kp_ = Kp;
+  Ki_ = Ki;
+  Kd_ = Kd;
+}
 
-public:
-  Controller(bool angle, double Kp, double Ki, double Kd);
+void Controller::set_target(double target)
+{
+  if (angle_) {
+    while (target < -M_PI) {
+      target += 2 * M_PI;
+    }
+    while (target > M_PI) {
+      target -= 2 * M_PI;
+    }
+  }
 
-  void set_target(double target);
+  if (std::abs(target - target_) > 0.001) {
+    // std::cout << "old target: " << target_ << ", new target: " << target << std::endl;
+    // std::cout << "prev_error: " << prev_error_ << ", integral: " << integral_ << std::endl;
 
-  // Run one calculation
-  double calc(double state, double dt);
+    target_ = target;
+    prev_error_ = 0;
+    integral_ = 0;
+  }
+}
 
-  double target() const {return target_;}
-};
+// Run one calculation
+double Controller::calc(double state, double dt)
+{
+  double error = target_ - state;
+
+  if (angle_) {
+    while (error < -M_PI) {
+      error += 2 * M_PI;
+
+      // Derivative and integral are poorly defined at the discontinuity
+      prev_error_ = 0;
+      integral_ = 0;
+    }
+    while (error > M_PI) {
+      error -= 2 * M_PI;
+
+      prev_error_ = 0;
+      integral_ = 0;
+    }
+  }
+
+  integral_ = integral_ + (error * dt);
+  double derivative = (error - prev_error_) / dt;
+  prev_error_ = error;
+
+  return Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
+}
 
 }  // namespace pid
-
-#endif  // ORCA_BASE__PID_HPP_

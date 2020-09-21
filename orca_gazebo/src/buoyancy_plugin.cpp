@@ -58,6 +58,10 @@
  *    Volume and center of volume for the link must be provided (it's not calculated)
  *    Assume vehicle density is uniform (affects behavior near the surface)
  *    Ignoring vehicle rotation (affects behavior near the surface)
+ *
+ * Neutral buoyancy:
+ *    mass == fluid_density_ * volume_
+ *    volume_ = mass / fluid_density_
  */
 
 namespace gazebo

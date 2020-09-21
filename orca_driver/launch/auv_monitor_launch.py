@@ -39,7 +39,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
-# Decode and republish h264
+# Nodes for remote control and monitoring
 
 
 def generate_launch_description():
@@ -48,6 +48,12 @@ def generate_launch_description():
     camera_name = 'forward_camera'
 
     all_entities = [
+        # Joystick driver, generates joy messages
+        Node(package='joy', node_executable='joy_node', output='screen',
+             node_name='joy_node', parameters=[{
+                'dev': '/dev/input/js0'  # Update as required
+            }]),
+
         # Decode h264 stream
         Node(package='image_transport', node_executable='republish', output='screen',
              node_name='republish_node', node_namespace=camera_name, arguments=[

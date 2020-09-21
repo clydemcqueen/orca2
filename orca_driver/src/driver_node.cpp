@@ -211,6 +211,7 @@ void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
   }
 
   control_msg_time_ = msg->header.stamp;
+  control_msg_lag_ = now() - control_msg_time_;
 
   if (maestro_.ready()) {
     set_status(msg->mode == msg->AUV ? orca_msgs::msg::Driver::STATUS_OK_MISSION :
@@ -257,6 +258,7 @@ void DriverNode::timer_callback()
   }
 
   driver_msg_.header.stamp = now();
+  driver_msg_.control_msg_lag = control_msg_lag_.seconds();
   driver_pub_->publish(driver_msg_);
 }
 

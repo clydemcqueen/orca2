@@ -107,6 +107,16 @@ def generate_launch_description():
             'map_save_filename': '',
         }
 
+    rov_node_params = {
+        # Tuned in simulation... crossing fingers
+        'rov_pressure_pid_kp': 0.00006,
+        'rov_pressure_pid_ki': 0.00002,
+        'rov_pressure_pid_kd': 0.000045,
+
+        'planner_target_z': -0.2,
+    }
+    rov_node_params.update(model_params)
+
     fp_node_params = {
         # Publish map=>base tf if we're not running a filter
         'publish_tf': not filter_poses,
@@ -204,9 +214,7 @@ def generate_launch_description():
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[model_params, {
-                'planner_target_z': -0.2,
-            }], remappings=[
+             node_name='rov_node', parameters=[rov_node_params], remappings=[
                 ('barometer', 'filtered_barometer'),
                 ('control', 'rov_control'),  # Send control messages to auv_node
              ]),

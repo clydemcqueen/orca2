@@ -134,14 +134,21 @@ class PlotControlNode(Node):
             ax.plot(values)
 
         # Plot thruster PWM values
-        pwm_axes = [axt0, axt1, axt2, axt3, axt4, axt5]
-        total_cost = 0
-        for i, ax in zip(range(6), pwm_axes):
-            pwm_values = [msg.thruster_pwm[i] for msg in self._control_msgs]
+        fr_1 = [msg.thruster_pwm.fr_1 for msg in self._control_msgs]
+        fl_2 = [msg.thruster_pwm.fl_2 for msg in self._control_msgs]
+        rr_3 = [msg.thruster_pwm.rr_3 for msg in self._control_msgs]
+        rl_4 = [msg.thruster_pwm.rl_4 for msg in self._control_msgs]
+        vr_5 = [msg.thruster_pwm.vr_5 for msg in self._control_msgs]
+        vl_6 = [msg.thruster_pwm.vl_6 for msg in self._control_msgs]
 
+        pwm_axes = [axt0, axt1, axt2, axt3, axt4, axt5]
+        pwm_valuess = [fr_1, fl_2, rr_3, rl_4, vr_5, vl_6]
+        pwm_names = ['fr_1', 'fl_2', 'rr_3', 'rl_4', 'vr_5', 'vl_6']
+        total_cost = 0
+        for ax, values, name in zip(pwm_axes, pwm_valuess, pwm_names):
             # Measure fitness
             pos_neg, off_on = 0, 0
-            for c, n in zip(pwm_values, pwm_values[1:]):
+            for c, n in zip(values, values[1:]):
                 if c > 1500 > n:
                     pos_neg += 1
                 elif c < 1500 < n:
@@ -151,10 +158,10 @@ class PlotControlNode(Node):
             cost = cost_function(pos_neg, off_on)
             total_cost += cost
 
-            ax.set_title('T{}: pos_neg={}, off_on={}, cost={}'.format(i, pos_neg, off_on, cost))
+            ax.set_title('{}: pos_neg={}, off_on={}, cost={}'.format(name, pos_neg, off_on, cost))
             ax.set_ylim(1400, 1600)
             ax.set_xticklabels([])
-            ax.plot(pwm_values)
+            ax.plot(values)
 
         # Plot odom lag. These values depend on the node's estimate of "now" which isn't all that
         # good during a simulation.

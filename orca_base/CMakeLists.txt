@@ -51,6 +51,7 @@ add_executable(
   src/mission.cpp
   src/move_to_marker_planner.cpp
   src/observation_segment.cpp
+  src/pid.cpp
   src/pose_planner.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
@@ -79,6 +80,7 @@ ament_target_dependencies(
 
 add_executable(
   rov_node
+  src/pid.cpp
   src/rov_node.cpp
   src/thrusters.cpp
 )
@@ -166,9 +168,11 @@ install(
   scripts/pid_experiment.py
   scripts/nees_fp.py
   scripts/plot_auv_segments.py
+  scripts/plot_baro.py
   scripts/plot_control.py
   scripts/plot_corners.py
   scripts/plot_filter_fp.py
+  scripts/set_pid.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

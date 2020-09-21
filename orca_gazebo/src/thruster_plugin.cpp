@@ -234,6 +234,8 @@ public:
     driver_msg_.status = msg->mode == orca_msgs::msg::Control::AUV ?
       orca_msgs::msg::Driver::STATUS_OK_MISSION :
       orca_msgs::msg::Driver::STATUS_OK;
+
+    driver_msg_.control_msg_lag = (node_->now() - control_msg_time_).seconds();
   }
 
   // Stop thrusters

@@ -95,6 +95,7 @@ class DriverNode : public rclcpp::Node
   // Control message state
   rclcpp::Subscription<orca_msgs::msg::Control>::SharedPtr control_sub_;
   rclcpp::Time control_msg_time_;
+  rclcpp::Duration control_msg_lag_{0};
 
   // Timer
   rclcpp::TimerBase::SharedPtr spin_timer_;

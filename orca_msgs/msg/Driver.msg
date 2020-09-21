@@ -19,3 +19,6 @@ uint8 STATUS_OK=1
 uint8 STATUS_OK_MISSION=2
 uint8 STATUS_ABORT=3
 uint8 status
+
+# Control message lag
+float64 control_msg_lag
