@@ -44,6 +44,22 @@ bool valid(const rclcpp::Time & t)
   return t.nanoseconds() > 0;
 }
 
+bool pwm_valid(uint16_t pwm)
+{
+  return pwm <= orca_msgs::msg::Control::THRUST_FULL_FWD &&
+    pwm >= orca_msgs::msg::Control::THRUST_FULL_REV;
+}
+
+bool control_msg_ok(const orca_msgs::msg::Control & msg)
+{
+  return pwm_valid(msg.thruster_pwm.fr_1) &&
+    pwm_valid(msg.thruster_pwm.fl_2) &&
+    pwm_valid(msg.thruster_pwm.rr_3) &&
+    pwm_valid(msg.thruster_pwm.rl_4) &&
+    pwm_valid(msg.thruster_pwm.vr_5) &&
+    pwm_valid(msg.thruster_pwm.vl_6);
+}
+
 //=============================================================================
 // DriverNode
 //=============================================================================
@@ -206,12 +222,18 @@ void DriverNode::set_thruster(const Thruster & thruster, uint16_t pwm)
 
 void DriverNode::control_callback(const orca_msgs::msg::Control::SharedPtr msg)
 {
+  // Guard against stupid mistakes
+  if (!control_msg_ok(*msg)) {
+    RCLCPP_ERROR(get_logger(), "bad control message!");
+    return;
+  }
+
   if (!valid(control_msg_time_)) {
     RCLCPP_INFO(get_logger(), "receiving control messages");
   }
 
-  control_msg_time_ = msg->header.stamp;
-  control_msg_lag_ = now() - control_msg_time_;
+  control_msg_time_ = now();
+  control_msg_lag_ = valid(msg->header.stamp) ? (now() - msg->header.stamp).seconds() : 0;
 
   if (maestro_.ready()) {
     set_status(msg->mode == msg->AUV ? orca_msgs::msg::Driver::STATUS_OK_MISSION :
@@ -245,10 +267,6 @@ void DriverNode::timer_callback()
     return;
   }
 
-  // The logic around time doesn't work when timestamps are 0, which happens when publishing
-  // from the ros2 CLI (e.g., `ros2 topic pub /control orca_msg/Control "{}"`).
-  // The fix is to require non-zero timestamps, but that eliminates all use of the ros2 CLI.
-
   if (valid(control_msg_time_) && now() - control_msg_time_ > control_timeout_) {
     // We were receiving control messages, but they stopped.
     // This is normal, but it might also indicate that a node died.
@@ -258,7 +276,7 @@ void DriverNode::timer_callback()
   }
 
   driver_msg_.header.stamp = now();
-  driver_msg_.control_msg_lag = control_msg_lag_.seconds();
+  driver_msg_.control_msg_lag = control_msg_lag_;
   driver_pub_->publish(driver_msg_);
 }
 
