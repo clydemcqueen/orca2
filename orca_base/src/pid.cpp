@@ -92,7 +92,10 @@ double Controller::calc(double state, double dt)
   double derivative = (error - prev_error_) / dt;
   prev_error_ = error;
 
-  return Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
+  double result = Kp_ * error + Ki_ * integral_ + Kd_ * derivative;
+  // std::cout << "p_error: " << error << ", i_error: " << integral_ << ", d_error: " << derivative
+  //           << ", result: " << result << std::endl;
+  return result;
 }
 
 }  // namespace pid

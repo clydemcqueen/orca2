@@ -33,13 +33,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Generate /control commands to generate a thrust curve.
+Generate /control commands to move around a bit.
 
 Usage:
--- set up a jig to measure force
--- ros2 run orca_driver thrust_curve_node.py
--- set cmd parameter to 'start' to start, 'inc' to increment, 'stop' to stop
--- measure thrust force at each stage
+-- ros2 run orca_driver dance_node.py
+-- set dance parameter to 'wag', etc.
 """
 
 from typing import Optional
@@ -51,93 +49,72 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rcl_interfaces.msg import SetParametersResult
 
-CMD = 'cmd'
-CMD_START = 'start'
-CMD_INC = 'inc'
-CMD_DEC = 'dec'
+CMD = 'dance'
+CMD_WAG = 'wag'
 CMD_STOP = 'stop'
 
-# Ramp up / down to target pwm to avoid jerks
 TIMER_PERIOD = 0.1
-RAMP_INC = 1
 
 
-class ThrustCurveNode(Node):
+class DanceNode(Node):
 
-    def __init__(self, start_pwm, inc_pwm):
-        super().__init__('thrust_curve_node')
-
-        if start_pwm <= 1500:
-            self.get_logger().warn('start_pwm must be > 1500, starting at 1530')
-            start_pwm = 1530
-
-        if inc_pwm < 1 or inc_pwm > 100:
-            self.get_logger().warn('inc_pwm must be 1-100, increment by 10')
-            inc_pwm = 10
-
-        self._start_pwm = start_pwm
-        self._inc_pwm = inc_pwm
-
-        self._curr_pwm = 1500
-        self._target_pwm = 1500
+    def __init__(self):
+        super().__init__('dance_node')
 
         self._control_pub = self.create_publisher(Control, '/control', 10)
         self._timer = self.create_timer(TIMER_PERIOD, self.timer_callback)
+        self._cmd = 'stop'
+        self._count = 0
 
         self.declare_parameter(CMD, '')
         self.set_parameters_callback(self.validate_parameters)
 
-        self.get_logger().info('Usage: set cmd parameter')
-        self.get_logger().info('   cmd start - Start')
-        self.get_logger().info('   cmd inc - Increment')
-        self.get_logger().info('   cmd dec - Decrement')
+        self.get_logger().info('Usage: set dance parameter')
+        self.get_logger().info('   cmd wag - roll back / forth')
         self.get_logger().info('   cmd stop - Stop')
 
     def validate_parameters(self, params) -> SetParametersResult:
         for param in params:
             if param.name == CMD and param.type_ == Parameter.Type.STRING:
-                if param.value == CMD_START:
-                    self._target_pwm = self._start_pwm
-                    self.get_logger().info('start, ramp to {}'.format(self._target_pwm))
-                    return SetParametersResult(successful=True)
-                elif param.value == CMD_INC:
-                    self._target_pwm = self._target_pwm + self._inc_pwm
-                    self.get_logger().info('increment, ramp to {}'.format(self._target_pwm))
-                    return SetParametersResult(successful=True)
-                elif param.value == CMD_DEC:
-                    self._target_pwm = self._target_pwm - self._inc_pwm
-                    self.get_logger().info('decrement, ramp to {}'.format(self._target_pwm))
+                if param.value == CMD_WAG:
+                    self._cmd = CMD_WAG
+                    self.get_logger().info('wag')
                     return SetParametersResult(successful=True)
                 elif param.value == CMD_STOP:
-                    self._target_pwm = 1500
-                    self.get_logger().info('stop, ramp to {}'.format(self._target_pwm))
+                    self._cmd = CMD_STOP
+                    self.get_logger().info('stop')
                     return SetParametersResult(successful=True)
 
+        self._cmd = CMD_STOP
         return SetParametersResult(successful=False)
 
     def timer_callback(self):
-        # Ramp to target pwm
-        if self._curr_pwm < self._target_pwm:
-            self._curr_pwm = self._curr_pwm + RAMP_INC
-        elif self._curr_pwm > self._target_pwm:
-            self._curr_pwm = self._curr_pwm - RAMP_INC
-
-        # Send message
         msg = Control()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.thruster_pwm.fr_1 = self._curr_pwm
-        msg.thruster_pwm.fl_2 = self._curr_pwm
-        msg.thruster_pwm.rr_3 = self._curr_pwm
-        msg.thruster_pwm.rl_4 = self._curr_pwm
+        msg.thruster_pwm.fr_1 = 1500
+        msg.thruster_pwm.fl_2 = 1500
+        msg.thruster_pwm.rr_3 = 1500
+        msg.thruster_pwm.rl_4 = 1500
         msg.thruster_pwm.vr_5 = 1500
         msg.thruster_pwm.vl_6 = 1500
-        self._control_pub.publish(msg)
+
+        if self._cmd == CMD_STOP:
+            self._control_pub.publish(msg)
+
+        elif self._cmd == CMD_WAG:
+            if msg.header.stamp.sec % 2 == 0:
+                msg.thruster_pwm.vr_5 = 1540
+                msg.thruster_pwm.vl_6 = 1540
+            else:
+                msg.thruster_pwm.vr_5 = 1460
+                msg.thruster_pwm.vl_6 = 1460
+            self._control_pub.publish(msg)
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main():
+    rclpy.init()
 
-    node = ThrustCurveNode(start_pwm=1600, inc_pwm=5)
+    node = DanceNode()
 
     try:
         rclpy.spin(node)

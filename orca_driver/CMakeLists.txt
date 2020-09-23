@@ -120,8 +120,10 @@ install(
 # Install scripts
 install(
   PROGRAMS  # PROGRAMS sets execute bits, FILES clears them
+  scripts/dance_node.py
   scripts/start_driver.sh
   scripts/start_fcam.sh
+  scripts/thrust_curve_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

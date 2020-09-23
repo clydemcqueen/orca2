@@ -220,6 +220,7 @@ def generate_launch_description():
         'mdl_mass': 9.9,
         'mdl_volume': 0.01,
         'mdl_fluid_density': 997.0,
+        'mdl_thrust_scale': 1.0,  # Simulated thrust curve is perfectly linear
     }
 
     rov_node_params = {

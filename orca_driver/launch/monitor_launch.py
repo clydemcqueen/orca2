@@ -56,7 +56,7 @@ def generate_launch_description():
 
         # Decode h264 stream
         Node(package='image_transport', node_executable='republish', output='screen',
-             node_name='republish_node', node_namespace=camera_name, arguments=[
+             node_name='monitor_node', node_namespace=camera_name, arguments=[
                 'h264',  # Input
                 'raw'  # Output
             ], remappings=[
@@ -64,10 +64,10 @@ def generate_launch_description():
                 ('in/compressed', 'image_raw/compressed'),
                 ('in/theora', 'image_raw/theora'),
                 ('in/h264', 'image_raw/h264'),
-                ('out', 'repub_raw'),
-                ('out/compressed', 'repub_raw/compressed'),
-                ('out/theora', 'repub_raw/theora'),
-                ('out/theora', 'repub_raw/h264'),
+                ('out', 'monitor_raw'),
+                ('out/compressed', 'monitor_raw/compressed'),
+                ('out/theora', 'monitor_raw/theora'),
+                ('out/theora', 'monitor_raw/h264'),
             ]),
     ]
 

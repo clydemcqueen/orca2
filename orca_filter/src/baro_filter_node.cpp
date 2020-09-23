@@ -34,6 +34,7 @@
 #include <string>
 
 #include "orca_msgs/msg/barometer.hpp"
+#include "orca_shared/model.hpp"
 #include "orca_shared/monotonic.hpp"
 #include "rclcpp/node.hpp"
 #include "ukf/ukf.hpp"
@@ -46,10 +47,14 @@ namespace orca_filter
 // There's no control input.
 //=============================================================================
 
-constexpr int STATE_DIM = 3;                // [p, vp, ap]T
-constexpr int MEASUREMENT_DIM = 1;          // [p]
-constexpr int CONTROL_DIM = 0;              // No control input
-constexpr double PROCESS_NOISE = 20000.0;   // Measurement var is ~40k, process var should be close
+constexpr int NUM_VAR = 1;                    // 1 variable (p)
+constexpr int NUM_DER = 3;                    // 3 derivatives (0th, 1st, 2nd)
+constexpr int STATE_DIM = NUM_VAR * NUM_DER;  // [p, vp, ap]T
+constexpr int MEASUREMENT_DIM = NUM_VAR;      // [p]
+constexpr int CONTROL_DIM = 0;                // No control input
+
+constexpr double VARIANCE = orca::Model::BARO_STDDEV * orca::Model::BARO_STDDEV;
+constexpr double DT = 1/orca::Model::BARO_FREQ;
 
 constexpr int QUEUE_SIZE = 10;
 
@@ -136,7 +141,12 @@ public:
       });
 
     // Process noise
-    filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * PROCESS_NOISE);
+    // filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * VARIANCE);
+    Eigen::VectorXd variances(NUM_VAR);
+    variances << VARIANCE;
+    filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, DT, variances));
+
+    RCLCPP_INFO(get_logger(), "baro_filter_node ready");
   }
 
   ~BaroFilterNode() override = default;

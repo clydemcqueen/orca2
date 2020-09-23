@@ -42,6 +42,9 @@
     <!-- Physics properties -->
     <xacro:property name="FLUID_DENSITY" value="997"/>
 
+    <!-- Sensor properties, should match orca_shared/model.hpp -->
+    <xacro:property name="BARO_FREQ" value="23.0"/>
+
     <!-- General constants -->
     <xacro:property name="PI" value="3.1415926535897931"/>
 
@@ -387,7 +390,7 @@
     -->
     <gazebo reference="baro_link">
         <sensor name="barometer_sensor" type="altimeter">
-            <update_rate>24</update_rate> <!-- Match measured barometer_node rate -->
+            <update_rate>${BARO_FREQ}</update_rate>
             <plugin name="OrcaBarometerPlugin" filename="libOrcaBarometerPlugin.so">
                 <fluid_density>${FLUID_DENSITY}</fluid_density>
             </plugin>

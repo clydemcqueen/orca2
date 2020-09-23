@@ -43,7 +43,7 @@ Usage:
 
 import statistics
 
-from orca_msgs.msg import Depth
+from orca_msgs.msg import Barometer
 import rclpy
 from rclpy.node import Node
 import rclpy.time
@@ -57,11 +57,12 @@ class CalcVarNode(Node):
 
     def __init__(self):
         super().__init__('calculate_variance')
-        self._control_sub = self.create_subscription(Depth, '/depth', self.callback, 10)
+        self._control_sub = self.create_subscription(Barometer, '/filtered_barometer', self.callback, 10)
         self._measurements = []
+        self.get_logger().info('calculate_variance ready')
 
-    def callback(self, msg: Depth):
-        self._measurements.append(msg._z)
+    def callback(self, msg: Barometer):
+        self._measurements.append(msg.pressure)
 
         if 0 < NUM_MEASUREMENTS <= len(self._measurements):
             mean = statistics.mean(self._measurements)
