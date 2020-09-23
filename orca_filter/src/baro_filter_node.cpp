@@ -43,6 +43,22 @@ namespace orca_filter
 {
 
 //=============================================================================
+// Parameter(s)
+//=============================================================================
+
+#define BARO_FILTER_NODE_PARAMS \
+  CXT_MACRO_MEMBER(ukf_Q, bool, false) /* Use ukf::Q()  */ \
+/* End of list */
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
+
+struct BaroFilterContext
+{
+  BARO_FILTER_NODE_PARAMS
+};
+
+//=============================================================================
 // A simple barometer filter, for use during ROV mode.
 // There's no control input.
 //=============================================================================
@@ -60,6 +76,8 @@ constexpr int QUEUE_SIZE = 10;
 
 class BaroFilterNode : public rclcpp::Node
 {
+  BaroFilterContext cxt_;
+
   // Kalman filter
   ukf::UnscentedKalmanFilter filter_{STATE_DIM, 0.001, 2.0, 0};
 
@@ -89,7 +107,7 @@ class BaroFilterNode : public rclcpp::Node
       auto x = filter_.x();
       x(0) = msg->pressure;
       filter_.set_x(x);
-      RCLCPP_INFO(get_logger(), "baro_filter_node ready");
+      RCLCPP_INFO(get_logger(), "first message");
     } else {
       // Run the filter
       filter_.predict(baro_cb_.dt(), u_);
@@ -104,11 +122,46 @@ class BaroFilterNode : public rclcpp::Node
     filtered_baro_pub_->publish(filtered_baro_msg);
   }
 
+  // Validate parameters
+  void validate_parameters()
+  {
+    // Process noise
+    if (cxt_.ukf_Q_) {
+      RCLCPP_INFO(get_logger(), "Using ukf::Q_discrete_white_noise_Xv");
+      Eigen::VectorXd variances(NUM_VAR);
+      variances << VARIANCE;
+      filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, DT, variances));
+    } else {
+      RCLCPP_INFO(get_logger(), "Using Identity * variance");
+      filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * VARIANCE);
+    }
+  }
+
 public:
   BaroFilterNode()
     : Node{"baro_filter_node"}
   {
     (void) baro_sub_;
+
+    // Get parameters, this will immediately call validate_parameters()
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER((*this), cxt_, n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(BARO_FILTER_NODE_PARAMS, validate_parameters)
+
+    // Register parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(cxt_, n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED((*this), BARO_FILTER_NODE_PARAMS, validate_parameters)
+
+    // Log parameters
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, get_logger(), cxt_, n, t, d)
+    BARO_FILTER_NODE_PARAMS
+
+    // Check that all command line parameters are defined
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_CHECK_CMDLINE_PARAMETER(n, t, d)
+    CXT_MACRO_CHECK_CMDLINE_PARAMETERS((*this), BARO_FILTER_NODE_PARAMS)
 
     baro_sub_ = create_subscription<orca_msgs::msg::Barometer>(
       "barometer",
@@ -139,12 +192,6 @@ public:
       {
         z(0) = x(0);
       });
-
-    // Process noise
-    // filter_.set_Q(Eigen::MatrixXd::Identity(STATE_DIM, STATE_DIM) * VARIANCE);
-    Eigen::VectorXd variances(NUM_VAR);
-    variances << VARIANCE;
-    filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, DT, variances));
 
     RCLCPP_INFO(get_logger(), "baro_filter_node ready");
   }
