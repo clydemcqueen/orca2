@@ -108,10 +108,10 @@ def generate_launch_description():
         }
 
     rov_node_params = {
-        # Tuned in simulation... crossing fingers
-        'rov_pressure_pid_kp': 0.00006,
-        'rov_pressure_pid_ki': 0.00002,
-        'rov_pressure_pid_kd': 0.000045,
+        # ros2 run orca_base set_pid.py /rov_node rov_pressure_pid_ 0.0001 6 no_overshoot
+        'rov_pressure_pid_kp': 0.00002,
+        'rov_pressure_pid_ki': 0.0000066667,
+        'rov_pressure_pid_kd': 0.00004002,
 
         'planner_target_z': -0.2,
     }
@@ -210,7 +210,10 @@ def generate_launch_description():
              }]),
 
         # Barometer filter
-        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
+        Node(package='orca_filter', node_executable='baro_filter_node', output='screen',
+             parameters=[{
+                'ukf_Q': True,
+             }]),
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',

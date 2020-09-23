@@ -38,8 +38,8 @@ Set pid coefficients.
 The coefficients must be parameters of the form prefix_kp, prefix_ki and prefix_kd.
 
 Usage:
-ros2 run orca_base set_pid.py node prefix Ku Tu
-ros2 run orca_base set_pid.py /rov_node rov_pressure_pid_ 0.001 3
+ros2 run orca_base set_pid.py node prefix Ku Tu method
+ros2 run orca_base set_pid.py /rov_node rov_pressure_pid_ 0.001 3 classic
 """
 
 import subprocess
@@ -49,7 +49,7 @@ import sys
 # Ziegler Nichols PID coefficients
 # See https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
 
-def zn_classic_pid(Ku, Tu):
+def zn_classic(Ku, Tu):
     return [0.6 * Ku, 1.2 * Ku / Tu, 0.075 * Ku * Tu]
 
 
@@ -85,15 +85,29 @@ def zn_no_overshoot_from_kp(Kp, Tu):
 
 def main(args):
     print(args)
-    if len(args) != 5:
-        print('Usage: python3 set_pid.py node prefix Ku Tu')
+    if len(args) < 5 or len(args) > 6:
+        print('Usage: python3 set_pid.py node prefix Ku Tu method')
+        print('Methods: classic (default), pessen, no_overshoot')
         return
 
     node = args[1]
     prefix = args[2]
     Ku = float(args[3])
     Tu = float(args[4])
-    Kp, Ki, Kd = zn_classic_pid(Ku, Tu)
+
+    method = 'classic'
+    if len(args) > 5:
+        method = args[5]
+
+    if method == 'pessen':
+        print('pessen')
+        Kp, Ki, Kd = zn_pessen(Ku, Tu)
+    elif method == 'no_overshoot':
+        print('no overshoot')
+        Kp, Ki, Kd = zn_no_overshoot(Ku, Tu)
+    else:
+        print('classic')
+        Kp, Ki, Kd = zn_classic(Ku, Tu)
 
     Kp_str = format(Kp, '.10f')
     Ki_str = format(Ki, '.10f')

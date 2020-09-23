@@ -52,6 +52,16 @@ def generate_launch_description():
         'mdl_thrust_scale': 0.2,
     }
 
+    rov_node_params = {
+        # ros2 run orca_base set_pid.py /rov_node rov_pressure_pid_ 0.0001 6 no_overshoot
+        'rov_pressure_pid_kp': 0.00002,
+        'rov_pressure_pid_ki': 0.0000066667,
+        'rov_pressure_pid_kd': 0.00004002,
+
+        'planner_target_z': -0.2,
+    }
+    rov_node_params.update(model_params)
+
     orca_description_path = get_package_share_directory('orca_description')
     urdf_path = os.path.join(orca_description_path, 'urdf', 'orca.urdf')
 
@@ -68,13 +78,14 @@ def generate_launch_description():
              }]),
 
         # Barometer filter
-        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
+        Node(package='orca_filter', node_executable='baro_filter_node', output='screen',
+             parameters=[{
+                'ukf_Q': True,
+             }]),
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
-             node_name='rov_node', parameters=[model_params, {
-                'planner_target_z': -0.2,
-            }], remappings=[
+             node_name='rov_node', parameters=[rov_node_params], remappings=[
                 ('barometer', 'filtered_barometer'),
             ]),
     ]
