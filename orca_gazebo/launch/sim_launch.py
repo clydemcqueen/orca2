@@ -224,9 +224,11 @@ def generate_launch_description():
     }
 
     rov_node_params = {
+        # Tuned in simulation
         'rov_pressure_pid_kp': 0.00006,
         'rov_pressure_pid_ki': 0.00002,
         'rov_pressure_pid_kd': 0.000045,
+        'rov_pressure_pid_i_max': 0.1
     }
     rov_node_params.update(model_params)
 

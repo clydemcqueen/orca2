@@ -38,10 +38,14 @@ namespace orca_base
 
 PoseController::PoseController(const AUVContext & cxt)
 : cxt_{cxt},
-  x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_},
-  y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_},
-  z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_},
-  yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_} {}
+  x_controller_{false, cxt.auv_x_pid_kp_, cxt.auv_x_pid_ki_, cxt.auv_x_pid_kd_,
+    cxt.auv_x_pid_i_max_},
+  y_controller_{false, cxt.auv_y_pid_kp_, cxt.auv_y_pid_ki_, cxt.auv_y_pid_kd_,
+    cxt.auv_yaw_pid_i_max_},
+  z_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_, cxt.auv_z_pid_kd_,
+    cxt.auv_z_pid_i_max_},
+  yaw_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_, cxt.auv_yaw_pid_kd_,
+    cxt.auv_yaw_pid_i_max_} {}
 
 void PoseController::calc(
   const rclcpp::Duration & d, const mw::FiducialPose & plan,
@@ -84,11 +88,12 @@ void PoseController::calc(
 
 ObservationController::ObservationController(const AUVContext & cxt)
 : cxt_{cxt},
-  forward_controller_{false, cxt.mtm_fwd_pid_kp_, cxt.mtm_fwd_pid_ki_, cxt.mtm_fwd_pid_kd_},
+  forward_controller_{false, cxt.mtm_fwd_pid_kp_, cxt.mtm_fwd_pid_ki_,
+    cxt.mtm_fwd_pid_kd_, cxt.mtm_fwd_pid_i_max_},
   vertical_controller_{false, cxt.auv_z_pid_kp_, cxt.auv_z_pid_ki_,
-    cxt.auv_z_pid_kd_},  // Re-use auv_z
+    cxt.auv_z_pid_kd_, cxt.auv_z_pid_i_max_},  // Re-use auv_z
   bearing_controller_{true, cxt.auv_yaw_pid_kp_, cxt.auv_yaw_pid_ki_,
-    cxt.auv_yaw_pid_kd_}  // Re-use auv_yaw
+    cxt.auv_yaw_pid_kd_, cxt.auv_yaw_pid_i_max_}  // Re-use auv_yaw
 {}
 
 // Observations are in the camera_link frame, not the base_link frame

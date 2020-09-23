@@ -65,12 +65,14 @@ namespace orca_base
   CXT_MACRO_MEMBER(rov_pid_enabled, bool, true) \
   /* Turn pid controller on/off TODO remove the rov_ prefix  */   \
  \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00024) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00006) \
   /* ROV hold pressure pid Kp  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.0) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_ki, double, 0.00002) \
   /* ROV hold pressure pid Ki  */ \
-  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.0001) \
+  CXT_MACRO_MEMBER(rov_pressure_pid_kd, double, 0.000045) \
   /* ROV hold pressure pid Kd  */ \
+  CXT_MACRO_MEMBER(rov_pressure_pid_i_max, double, 0.1) \
+  /* Windup prevention: max acceleration from i term (m/s^2)  */ \
  \
   CXT_MACRO_MEMBER(planner_target_z, double, -0.5) \
   /* AUV path target z position  */ \

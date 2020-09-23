@@ -34,16 +34,18 @@
 #include <iostream>
 
 #include "orca_base/pid.hpp"
+#include "orca_shared/util.hpp"
 
 namespace pid
 {
 
-Controller::Controller(bool angle, double Kp, double Ki, double Kd)
+Controller::Controller(bool angle, double Kp, double Ki, double Kd, double i_max)
 {
   angle_ = angle;
   Kp_ = Kp;
   Ki_ = Ki;
   Kd_ = Kd;
+  i_max_ = std::abs(i_max);
 }
 
 void Controller::set_target(double target)
@@ -89,6 +91,12 @@ double Controller::calc(double state, double dt)
   }
 
   integral_ = integral_ + (error * dt);
+
+  if (i_max_ > 0 && Ki_ != 0) {
+    // Limit the maximum i term (Ki * integral) by clamping the integral
+    integral_ = orca::clamp(integral_, i_max_ / Ki_);
+  }
+
   double derivative = (error - prev_error_) / dt;
   prev_error_ = error;
 

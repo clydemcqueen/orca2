@@ -50,18 +50,23 @@ import rclpy.time
 
 # How many messages (measurements) to sample?
 # Run `ros2 bag info my_bag` to count messages in a ROS2 bag
-NUM_MEASUREMENTS = 1500
+NUM_MEASUREMENTS = 2200
+TOPIC = '/filtered_barometer'
 
 
 class CalcVarNode(Node):
 
     def __init__(self):
         super().__init__('calculate_variance')
-        self._control_sub = self.create_subscription(Barometer, '/filtered_barometer', self.callback, 10)
+        self._control_sub = self.create_subscription(Barometer, TOPIC, self.callback, 10)
         self._measurements = []
-        self.get_logger().info('calculate_variance ready')
+        self.get_logger().info(
+            'calc_var listening for {} messages on {}'.format(NUM_MEASUREMENTS, TOPIC))
 
     def callback(self, msg: Barometer):
+        if len(self._measurements) == 0:
+            self.get_logger().info('first message')
+
         self._measurements.append(msg.pressure)
 
         if 0 < NUM_MEASUREMENTS <= len(self._measurements):

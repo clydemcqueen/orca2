@@ -45,9 +45,10 @@ class Controller
   double Kp_;
   double Ki_;
   double Kd_;
+  double i_max_;  // Windup prevention: max accel contribution of the (Ki * integral) term
 
 public:
-  Controller(bool angle, double Kp, double Ki, double Kd);
+  Controller(bool angle, double Kp, double Ki, double Kd, double i_max);
 
   void set_target(double target);
 

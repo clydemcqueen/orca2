@@ -66,22 +66,29 @@ namespace orca_base
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.5) \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(auv_x_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_x_pid_i_max, double, 0.1) \
+  /* Windup prevention: max acceleration from i term (m/s^2)  */ \
  \
   CXT_MACRO_MEMBER(auv_y_pid_kp, double, 0.9) \
   CXT_MACRO_MEMBER(auv_y_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(auv_y_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_y_pid_i_max, double, 0.1) \
  \
   CXT_MACRO_MEMBER(auv_z_pid_kp, double, 0.5) \
   CXT_MACRO_MEMBER(auv_z_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(auv_z_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_z_pid_i_max, double, 0.1) \
  \
   CXT_MACRO_MEMBER(auv_yaw_pid_kp, double, 2.5) \
   CXT_MACRO_MEMBER(auv_yaw_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(auv_yaw_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(auv_yaw_pid_i_max, double, 0.1) \
+  /* Windup prevention: max acceleration from i term (r/s^2)  */ \
  \
   CXT_MACRO_MEMBER(mtm_fwd_pid_kp, double, 0.4) \
   CXT_MACRO_MEMBER(mtm_fwd_pid_ki, double, 0.0) \
   CXT_MACRO_MEMBER(mtm_fwd_pid_kd, double, 0.0) \
+  CXT_MACRO_MEMBER(mtm_fwd_pid_i_max, double, 0.1) \
  \
   CXT_MACRO_MEMBER(auv_xy_accel, double, 0.2) \
   /* AUV acceleration in the xy plane  */ \

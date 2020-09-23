@@ -165,7 +165,7 @@ void ROVNode::validate_parameters()
   // Create ROV PID controller
   pressure_hold_pid_ =
     std::make_shared<pid::Controller>(false, cxt_.rov_pressure_pid_kp_, cxt_.rov_pressure_pid_ki_,
-      cxt_.rov_pressure_pid_kd_);
+      cxt_.rov_pressure_pid_kd_, cxt_.rov_pressure_pid_i_max_);
 
   // Set target!
   if (holding_pressure()) {
