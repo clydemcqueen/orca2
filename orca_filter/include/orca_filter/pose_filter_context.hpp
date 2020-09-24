@@ -93,8 +93,18 @@ namespace orca_filter
   /* UKF beta -- see UKF  */ \
   CXT_MACRO_MEMBER(ukf_kappa, int, 0) \
   /* UKF kappa -- see UKF  */ \
-  CXT_MACRO_MEMBER(ukf_process_noise, double, 0.01) \
-  /* UKF process noise, all dimensions TODO probably need to split dof  */ \
+  CXT_MACRO_MEMBER(ukf_var_x, double, 0.01) \
+  /* UKF process noise, x  */ \
+  CXT_MACRO_MEMBER(ukf_var_y, double, 0.01) \
+  /* UKF process noise, y  */ \
+  CXT_MACRO_MEMBER(ukf_var_z, double, 0.01) \
+  /* UKF process noise, z  */ \
+  CXT_MACRO_MEMBER(ukf_var_roll, double, 0.01) \
+  /* UKF process noise, roll  */ \
+  CXT_MACRO_MEMBER(ukf_var_pitch, double, 0.01) \
+  /* UKF process noise, pitch  */ \
+  CXT_MACRO_MEMBER(ukf_var_yaw, double, 0.01) \
+  /* UKF process noise, yaw  */ \
   CXT_MACRO_MEMBER(ukf_outlier_distance, double, 4.0) \
   /* Reject measurements > n std devs from estimate  */ \
 /* End of list */

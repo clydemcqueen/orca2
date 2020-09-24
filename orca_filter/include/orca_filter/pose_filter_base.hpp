@@ -182,9 +182,10 @@ private:
   Type type_;                                 // 1d vs 4d vs 6d
   int state_dim_;                             // Number of dimensions, 1 for depth filter, etc.
   rclcpp::Time filter_time_;                  // Current time of filter
-  rclcpp::Time odom_time_;                    // Timestamp of last publish odom message
+  rclcpp::Time odom_time_;                    // Timestamp of last publish odometry (pose, etc.)
 
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub_;
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
   // Measurement priority queue, sorted from oldest to newest
@@ -232,13 +233,6 @@ protected:
   void init(const Eigen::VectorXd & x);
 
   /**
-   * Generate an odometry message from the current filter state
-   *
-   * @param filtered_odom Output: odometry message
-   */
-  virtual void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) = 0;
-
-  /**
    * Convert a Depth message to a Measurement
    *
    * @param depth Incoming message
@@ -263,7 +257,8 @@ public:
     Type type,
     const rclcpp::Logger & logger,
     const PoseFilterContext & cxt,
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
     int state_dim);
 
@@ -318,6 +313,20 @@ public:
   Type type() {return type_;}
 
   std::string name();
+
+  /**
+ * Generate a pose from the current filter state
+ *
+ * @param filtered_pose Output: Pose message
+ */
+  virtual void pose_from_filter(geometry_msgs::msg::Pose & filtered_pose) = 0;
+
+  /**
+   * Generate a fiducial pose from the current filter state
+   *
+   * @param filtered_fp Output: FiducialPose message
+   */
+  virtual void fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp) = 0;
 };
 
 //=============================================================================
@@ -326,8 +335,6 @@ public:
 
 class PoseFilter1D : public PoseFilterBase
 {
-  void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
-
   Measurement to_measurement(
     const orca_msgs::msg::Depth & depth,
     const mw::Observations & observations) const override;
@@ -340,11 +347,16 @@ public:
   explicit PoseFilter1D(
     const rclcpp::Logger & logger,
     const PoseFilterContext & cxt,
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
   // Reset the filter with a pose
   void init(const geometry_msgs::msg::Pose & pose) override;
+
+  void pose_from_filter(geometry_msgs::msg::Pose & filtered_pose) override;
+
+  void fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp) override;
 };
 
 //=============================================================================
@@ -353,8 +365,6 @@ public:
 
 class PoseFilter4D : public PoseFilterBase
 {
-  void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
-
   Measurement to_measurement(
     const orca_msgs::msg::Depth & depth,
     const mw::Observations & observations) const override;
@@ -367,11 +377,16 @@ public:
   explicit PoseFilter4D(
     const rclcpp::Logger & logger,
     const PoseFilterContext & cxt,
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
 
   // Reset the filter with a pose
   void init(const geometry_msgs::msg::Pose & pose) override;
+
+  void pose_from_filter(geometry_msgs::msg::Pose & filtered_pose) override;
+
+  void fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp) override;
 };
 
 //=============================================================================
@@ -380,18 +395,6 @@ public:
 
 class PoseFilter6D : public PoseFilterBase
 {
-  void odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom) override;
-
-public:
-  explicit PoseFilter6D(
-    const rclcpp::Logger & logger,
-    const PoseFilterContext & cxt,
-    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
-    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
-
-  // Reset the filter with a pose
-  void init(const geometry_msgs::msg::Pose & pose) override;
-
   Measurement to_measurement(
     const orca_msgs::msg::Depth & depth,
     const mw::Observations & observations) const override;
@@ -399,6 +402,21 @@ public:
   Measurement to_measurement(
     const geometry_msgs::msg::PoseWithCovarianceStamped & pose,
     const mw::Observations & observations) const override;
+
+public:
+  explicit PoseFilter6D(
+    const rclcpp::Logger & logger,
+    const PoseFilterContext & cxt,
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+    rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub);
+
+  // Reset the filter with a pose
+  void init(const geometry_msgs::msg::Pose & pose) override;
+
+  void pose_from_filter(geometry_msgs::msg::Pose & filtered_pose) override;
+
+  void fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp) override;
 };
 
 }  // namespace orca_filter

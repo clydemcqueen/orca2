@@ -47,7 +47,7 @@ namespace orca_base
 class Mission
 {
   rclcpp::Logger logger_;                               // ROS logger
-  const AUVContext & cxt_;                               // Parameters
+  const AUVContext & cxt_;                              // Parameters
   std::shared_ptr<GlobalPlanner> planner_;              // Global planner
 
   // Mission action state

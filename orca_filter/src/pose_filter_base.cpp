@@ -76,7 +76,8 @@ PoseFilterBase::PoseFilterBase(
   Type type,
   const rclcpp::Logger & logger,
   const PoseFilterContext & cxt,
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
   int state_dim)
 :
@@ -84,7 +85,8 @@ PoseFilterBase::PoseFilterBase(
   type_{type},
   logger_{logger},
   cxt_{cxt},
-  filtered_odom_pub_{std::move(filtered_odom_pub)},
+  filtered_pose_pub_{std::move(filtered_pose_pub)},
+  filtered_fp_pub_{std::move(filtered_fp_pub)},
   tf_pub_{std::move(tf_pub)},
   state_dim_{state_dim},
   filter_{state_dim, cxt_.ukf_alpha_, cxt_.ukf_beta_, cxt_.ukf_kappa_},
@@ -276,28 +278,37 @@ void PoseFilterBase::publish_odom(const Measurement & measurement)
   odom_time_ = filter_time_;
 
   // Get pose from the filter
-  orca_msgs::msg::FiducialPoseStamped odom;
-  odom.header.stamp = odom_time_;
-  odom.header.frame_id = cxt_.frame_id_map_;
-  odom_from_filter(odom.fp);
+  geometry_msgs::msg::PoseStamped pose_stamped;
+  pose_stamped.header.stamp = odom_time_;
+  pose_stamped.header.frame_id = cxt_.frame_id_map_;
+  pose_from_filter(pose_stamped.pose);
 
-  // Copy the unfiltered observations from the measurement
-  odom.fp.observations = measurement.observations_.msg();
+  // Publish pose
+  if (filtered_pose_pub_->get_subscription_count() > 0) {
+    filtered_pose_pub_->publish(pose_stamped);
+  }
 
-  // Publish odometry
-  if (filtered_odom_pub_->get_subscription_count() > 0) {
-    filtered_odom_pub_->publish(odom);
+  // Publish fiducial pose
+  if (filtered_fp_pub_->get_subscription_count() > 0) {
+    orca_msgs::msg::FiducialPoseStamped fp_stamped;
+    fp_stamped.header = pose_stamped.header;
+    fp_from_filter(fp_stamped.fp);
+
+    // Copy the unfiltered observations from the measurement
+    fp_stamped.fp.observations = measurement.observations_.msg();
+
+    filtered_fp_pub_->publish(fp_stamped);
   }
 
   // Publish filtered tf
   if (cxt_.publish_tf_ && tf_pub_->get_subscription_count() > 0) {
     geometry_msgs::msg::TransformStamped geo_tf;
-    geo_tf.header = odom.header;
+    geo_tf.header = pose_stamped.header;
     geo_tf.child_frame_id = cxt_.frame_id_base_link_;
 
     // geometry_msgs::msg::Pose -> tf2::Transform -> geometry_msgs::msg::Transform
     tf2::Transform t_map_base;
-    fromMsg(odom.fp.pose.pose, t_map_base);
+    fromMsg(pose_stamped.pose, t_map_base);
     geo_tf.transform = toMsg(t_map_base);
 
     // One transform in this tf message

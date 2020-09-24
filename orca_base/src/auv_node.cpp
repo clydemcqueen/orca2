@@ -187,6 +187,10 @@ void AUVNode::validate_parameters()
     { this->timer_cb_.call(); });
 
   cxt_.log_info(get_logger());
+
+  if (mission_) {
+    RCLCPP_WARN(get_logger(), "Restart the mission to see the effect of many parameters!");
+  }
 }
 
 bool AUVNode::depth_ok(const rclcpp::Time & t)

@@ -72,7 +72,8 @@ class PoseFilterNode : public rclcpp::Node
   double estimated_yaw_{};      // Yaw used to rotate thruster commands into the world frame
   mw::Acceleration u_bar_{};    // Last control, used for filter predict step
 
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub_;
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 
   rclcpp::Subscription<orca_msgs::msg::Depth>::SharedPtr depth_sub_;

@@ -44,6 +44,7 @@
 
     <!-- Sensor properties, should match orca_shared/model.hpp -->
     <xacro:property name="BARO_FREQ" value="23.0"/>
+    <xacro:property name="CAMERA_FREQ" value="30.0"/>
 
     <!-- General constants -->
     <xacro:property name="PI" value="3.1415926535897931"/>
@@ -416,7 +417,7 @@
     <xacro:macro name="camera_plugin" params="prefix width height horizontal_fov">
         <gazebo reference="${prefix}_camera_link">
             <sensor type="camera" name="${prefix}_camera">
-                <update_rate>30.0</update_rate>
+                <update_rate>${CAMERA_FREQ}</update_rate>
                 <camera name="head">
                     <horizontal_fov>${horizontal_fov}</horizontal_fov>
                     <image>

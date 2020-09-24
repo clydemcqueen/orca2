@@ -47,7 +47,9 @@ namespace orca_filter
 // PoseFilter6D -- 6dof filter with 18 dimensions
 //==================================================================
 
-constexpr int POSE_6D_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
+constexpr int NUM_VAR = 6;
+constexpr int NUM_DER = 3;
+constexpr int STATE_DIM = NUM_VAR * NUM_DER;  // [x, y, ..., vx, vy, ..., ax, ay, ...]T
 
 // State macros
 #define px_x x(0)
@@ -72,7 +74,7 @@ constexpr int POSE_6D_STATE_DIM = 18;      // [x, y, ..., vx, vy, ..., ax, ay, .
 // Init x from pose
 Eigen::VectorXd pose_to_px(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_6D_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(STATE_DIM);
 
   px_x = pose.position.x;
   px_y = pose.position.y;
@@ -184,9 +186,10 @@ Eigen::VectorXd six_state_mean(const Eigen::MatrixXd & sigma_points, const Eigen
 PoseFilter6D::PoseFilter6D(
   const rclcpp::Logger & logger,
   const PoseFilterContext & cxt,
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose_6d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_6D_STATE_DIM}
+: PoseFilterBase{Type::pose_6d, logger, cxt, std::move(filtered_pose_pub), std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
 {
 }
 
@@ -194,7 +197,11 @@ void PoseFilter6D::init(const geometry_msgs::msg::Pose & pose)
 {
   PoseFilterBase::init(pose_to_px(pose));
 
-  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_6D_STATE_DIM, POSE_6D_STATE_DIM) * cxt_.ukf_process_noise_);
+  // Process noise
+  Eigen::VectorXd variances(NUM_VAR);
+  variances << cxt_.ukf_var_x_, cxt_.ukf_var_y_, cxt_.ukf_var_z_,
+               cxt_.ukf_var_roll_, cxt_.ukf_var_pitch_, cxt_.ukf_var_yaw_;
+  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1/orca::Model::CAMERA_FREQ, variances));
 
   // State transition function
   filter_.set_f_fn(
@@ -278,12 +285,17 @@ void PoseFilter6D::init(const geometry_msgs::msg::Pose & pose)
   filter_.set_mean_x_fn(six_state_mean);
 }
 
-void PoseFilter6D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
+void PoseFilter6D::pose_from_filter(geometry_msgs::msg::Pose & filtered_pose)
 {
-  pose_from_px(filter_.x(), filtered_odom.pose.pose);
-  // twist_from_px(filter_.x(), filtered_odom.twist.twist);
-  flatten_6x6_covar(filter_.P(), filtered_odom.pose.covariance, 0);
-  // flatten_6x6_covar(filter_.P(), filtered_odom.twist.covariance, 6);
+  pose_from_px(filter_.x(), filtered_pose);
+}
+
+void PoseFilter6D::fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp)
+{
+  pose_from_filter(filtered_fp.pose.pose);
+  // twist_from_px(filter_.x(), filtered_fp.twist.twist);
+  flatten_6x6_covar(filter_.P(), filtered_fp.pose.covariance, 0);
+  // flatten_6x6_covar(filter_.P(), filtered_fp.twist.covariance, 6);
 }
 
 Measurement PoseFilter6D::to_measurement(

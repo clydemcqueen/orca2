@@ -78,8 +78,10 @@ PoseFilterNode::PoseFilterNode()
   (void) control_sub_;
   (void) fcam_sub_;
 
-  // Create this before calling validate_parameters()
-  filtered_odom_pub_ =
+  // Create these before calling validate_parameters()
+  filtered_pose_pub_ =
+    create_publisher<geometry_msgs::msg::PoseStamped>("filtered_pose", QUEUE_SIZE);
+  filtered_fp_pub_ =
     create_publisher<orca_msgs::msg::FiducialPoseStamped>("filtered_fp", QUEUE_SIZE);
 
   // Get parameters, this will immediately call validate_parameters()
@@ -149,12 +151,17 @@ void PoseFilterNode::validate_parameters()
   open_water_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_open_water_ms_)};
   outlier_timeout_ = rclcpp::Duration{RCL_MS_TO_NS(cxt_.timeout_outlier_ms_)};
 
+  // Get the most recent pose
+  geometry_msgs::msg::Pose current_pose;
+  if (filter_) {
+    filter_->pose_from_filter(current_pose);
+  }
+
   // Nuke any existing filter
   filter_.reset();
 
-  // Create a filter
-  // TODO(clyde) would be nice if we passed in a pose
-  create_filter(geometry_msgs::msg::Pose{});
+  // Create a filter, initialize with the most recent pose
+  create_filter(current_pose);
 }
 
 // Create the appropriate filter, return true if we have a good pose
@@ -168,11 +175,11 @@ bool PoseFilterNode::create_filter(const geometry_msgs::msg::Pose & pose)
 
   if (!filter_ || filter_->type() != expected_type) {
     if (expected_type == PoseFilterBase::Type::pose_1d) {
-      filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     } else if (expected_type == PoseFilterBase::Type::pose_4d) {
-      filter_ = std::make_shared<PoseFilter4D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter4D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     } else {
-      filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_odom_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     }
 
     // Always init!

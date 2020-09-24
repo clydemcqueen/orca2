@@ -39,12 +39,13 @@ TODO(clyde): plotting time is 0.7s, so we're dropping messages, add threading
 
 Usage:
 
-ros2 run orca_base plot_filter_fp.py \
+ros2 run orca_base plot_filter_fp.py 8 \
 --ros-args -r /pre_filter:=/forward_camera/fp -r /post_filter:=/filtered_fp
 """
 
 import math
 import statistics
+import sys
 import time
 from typing import List
 
@@ -52,7 +53,7 @@ import matplotlib
 from nav_msgs.msg import Odometry
 import nees_fp
 import numpy as np
-from orca_msgs.msg import Depth, FiducialPoseStamped
+from orca_msgs.msg import Control, Depth, FiducialPoseStamped
 from orca_util import q_to_rpy, seconds, set_ylim_with_min_range
 import rclpy
 from rclpy.node import Node
@@ -62,8 +63,6 @@ matplotlib.use('pdf')
 
 # Turn off flake8 checking for this late import
 import matplotlib.pyplot as plt  # noqa: E402,I100
-
-QUEUE_FOR = 2.0  # Seconds
 
 
 def diag_index(dim):
@@ -82,42 +81,39 @@ def plot_subplot(subplot, name,
                  depth_xs, depth_values, depth_sds,
                  pre_xs, pre_values, pre_sds,
                  post_xs, post_values, post_sds,
-                 gt_xs, gt_values):
+                 gt_xs, gt_values,
+                 plan_xs, plan_values):
     """Plot data in a single subplot."""
-    plot_filter_points = True  # Plot filter results as points vs. line
-    plot_error = False  # Plot error bars or not
+    plot_error = False  # Plot points with error bars, best with queue_for <= 2s
 
     if gt_xs and gt_values:
         subplot.plot(gt_xs, gt_values, label='truth')
 
-    if plot_filter_points and plot_error:
+    if plot_error:
         subplot.errorbar(post_xs, post_values, yerr=post_sds, marker='+', ls='', alpha=1.0,
                          elinewidth=1, label='filter')
     else:
-        if plot_error:
-            subplot.plot(post_xs, post_values, label='filter')
-            post_s_los = [value - sd for value, sd in zip(post_values, post_sds)]
-            post_s_his = [value + sd for value, sd in zip(post_values, post_sds)]
-            subplot.fill_between(post_xs, post_s_los, post_s_his, color='gray', alpha=0.2)
-        else:
-            subplot.plot(post_xs, post_values, marker='+', ls='', label='filter')
+        subplot.plot(post_xs, post_values, label='filter')
 
     if pre_xs and pre_values and pre_sds:
         if plot_error:
             subplot.errorbar(pre_xs, pre_values, yerr=pre_sds, marker='x', ls='', alpha=0.8,
                              elinewidth=1, label='pre')
         else:
-            subplot.plot(pre_xs, pre_values, marker='x', ls='', label='pre')
+            subplot.plot(pre_xs, pre_values, label='pre')
 
     if depth_xs and depth_values and depth_sds:
         if plot_error:
             subplot.errorbar(depth_xs, depth_values, yerr=depth_sds, marker='o', ls='', alpha=0.8,
                              elinewidth=1, label='depth')
         else:
-            subplot.plot(depth_xs, depth_values, marker='o', ls='', label='depth')
+            subplot.plot(depth_xs, depth_values, label='depth')
+
+    if plan_xs and plan_values:
+        subplot.plot(plan_xs, plan_values, label='plan')
 
     set_ylim_with_min_range(subplot, 0.05)
-    subplot.set_xticklabels([])
+    # subplot.set_xticklabels([])
     subplot.legend()
 
     if post_values and len(post_values) > 1:
@@ -139,19 +135,22 @@ def plot_subplot(subplot, name,
 
 class PlotFilterNode(Node):
 
-    def __init__(self):
+    def __init__(self, queue_for: float):
         super().__init__('plot_filter')
+        self._queue_for = queue_for
         self._first_time = None
         self._last_time = None
         self._depth_msgs: List[Depth] = []
         self._pre_msgs: List[FiducialPoseStamped] = []
         self._post_msgs: List[FiducialPoseStamped] = []
         self._gt_msgs: List[Odometry] = []
+        self._control_msgs: List[Control] = []
 
-        plot_baro = True
-        plot_gt = True
+        plot_depth = True
+        plot_gt = False
+        plot_plan = True
 
-        if plot_baro:
+        if plot_depth:
             self._depth_sub = self.create_subscription(Depth, '/depth', self.depth_callback, 10)
         self._fcam_sub = self.create_subscription(FiducialPoseStamped, '/pre_filter',
                                                   self.pre_callback, 10)
@@ -160,6 +159,18 @@ class PlotFilterNode(Node):
         if plot_gt:
             self._gt_sub = self.create_subscription(Odometry, '/ground_truth',
                                                     self.gt_callback, 10)
+        if plot_plan:
+            self._control_sub = self.create_subscription(Control, '/control',
+                                                         self.control_callback, 10)
+
+    def reset(self):
+        self._first_time = None
+        self._last_time = None
+        self._depth_msgs = []
+        self._pre_msgs = []
+        self._post_msgs = []
+        self._gt_msgs = []
+        self._control_msgs = []
 
     def depth_callback(self, msg: Depth):
         self._depth_msgs.append(msg)
@@ -183,6 +194,10 @@ class PlotFilterNode(Node):
         self._gt_msgs.append(msg)
         self.process(msg)
 
+    def control_callback(self, msg: Control):
+        self._control_msgs.append(msg)
+        self.process(msg)
+
     def process(self, msg):
         s = seconds(msg.header.stamp)
 
@@ -193,16 +208,9 @@ class PlotFilterNode(Node):
             self._last_time = s
 
         # Plot messages?
-        if self._last_time - self._first_time > QUEUE_FOR:
+        if self._last_time - self._first_time > self._queue_for:
             self.plot_msgs()
-
-            # Reset
-            self._first_time = None
-            self._last_time = None
-            self._depth_msgs: List[Depth] = []
-            self._pre_msgs: List[FiducialPoseStamped] = []
-            self._post_msgs: List[FiducialPoseStamped] = []
-            self._gt_msgs: List[Odometry] = []
+            self.reset()
 
     def calc_nees(self) -> float:
         """Calc mean NEES value."""
@@ -218,23 +226,25 @@ class PlotFilterNode(Node):
         start_time = time.process_time()
 
         # Convert quaternions to Euler angles
-        pre_pose_rpys = [q_to_rpy(pre.fp.pose.pose.orientation) for pre in self._pre_msgs]
-        post_pose_rpys = [q_to_rpy(post.fp.pose.pose.orientation) for post in self._post_msgs]
-        gt_pose_rpys = [q_to_rpy(gt.pose.pose.orientation) for gt in self._gt_msgs]
+        pre_pose_rpys = [q_to_rpy(msg.fp.pose.pose.orientation) for msg in self._pre_msgs]
+        post_pose_rpys = [q_to_rpy(msg.fp.pose.pose.orientation) for msg in self._post_msgs]
+        gt_pose_rpys = [q_to_rpy(msg.pose.pose.orientation) for msg in self._gt_msgs]
+        plan_pose_rpys = [q_to_rpy(msg.mission.pose.fp.pose.pose.orientation) for msg in self._control_msgs]
 
         # Create a figure and 6 subplots
         fig, ((axpx, axpy, axpz), (axproll, axppitch, axpyaw)) = plt.subplots(2, 3)
 
-        # Build lists of items to plot
-        depth_xs = [seconds(msg.header.stamp) for msg in self._depth_msgs]  # Depth messages
-        pre_xs = [seconds(msg.header.stamp) for msg in self._pre_msgs]  # Pre-filter pose messages
-        post_xs = [seconds(msg.header.stamp) for msg in
-                   self._post_msgs]  # Pose-filter pose messages
-        gt_xs = [seconds(msg.header.stamp) for msg in self._gt_msgs]  # Ground truth messages
+        # X values are seconds from the first message
+        depth_xs = [seconds(msg.header.stamp) - self._first_time for msg in self._depth_msgs]
+        pre_xs = [seconds(msg.header.stamp) - self._first_time for msg in self._pre_msgs]
+        post_xs = [seconds(msg.header.stamp) - self._first_time for msg in self._post_msgs]
+        gt_xs = [seconds(msg.header.stamp) - self._first_time for msg in self._gt_msgs]
+        plan_xs = [seconds(msg.header.stamp) - self._first_time for msg in self._control_msgs]
 
         subplots = [axpx, axpy, axpz, axproll, axppitch, axpyaw]
         names = ['x', 'y', 'z', 'roll', 'pitch', 'yaw']
 
+        # Build 6 lists of y values, 1 for each subplot
         depth_valuess = [None, None, [msg.z for msg in self._depth_msgs],
                          None, None, None]
 
@@ -276,15 +286,23 @@ class PlotFilterNode(Node):
                       [rpy[1] for rpy in gt_pose_rpys],
                       [rpy[2] for rpy in gt_pose_rpys]]
 
+        plan_valuess = [[msg.mission.pose.fp.pose.pose.position.x for msg in self._control_msgs],
+                        [msg.mission.pose.fp.pose.pose.position.y for msg in self._control_msgs],
+                        [msg.mission.pose.fp.pose.pose.position.z for msg in self._control_msgs],
+                        None,
+                        None,
+                        [rpy[2] for rpy in plan_pose_rpys]]
+
         # Plot everything
         for subplot, name, depth_values, depth_sds, pre_values, pre_sds, post_values, post_sds, \
-            gt_values in zip(subplots, names, depth_valuess, depth_sdss, pre_valuess, pre_sdss,
-                             post_valuess, post_sdss, gt_valuess):
+            gt_values, plan_values in zip(subplots, names, depth_valuess, depth_sdss, pre_valuess,
+                                          pre_sdss, post_valuess, post_sdss, gt_valuess,
+                                          plan_valuess):
             plot_subplot(subplot, name,
                          depth_xs, depth_values, depth_sds,
                          pre_xs, pre_values, pre_sds,
                          post_xs, post_values, post_sds,
-                         gt_xs, gt_values)
+                         gt_xs, gt_values, plan_xs, plan_values)
 
         # Calc average NEES
         ave_nees = self.calc_nees()
@@ -297,7 +315,7 @@ class PlotFilterNode(Node):
 
         # Set figure title
         fig.suptitle(
-            'UKF status, {} second(s), with (mean, stddev), {}'.format(QUEUE_FOR, nees_str))
+            'UKF status, {} second(s), with (mean, stddev), {}'.format(self._queue_for, nees_str))
 
         # [Over]write PDF to disk
         plt.savefig('plot_filter.pdf')
@@ -317,8 +335,12 @@ def main(args=None):
     # Set figure size (width and height in inches)
     plt.rcParams['figure.figsize'] = [21., 10.]
 
-    rclpy.init(args=args)
-    node = PlotFilterNode()
+    queue_for = 8
+    queue_for = int(sys.argv[1])
+    print('queue for {} seconds'.format(queue_for))
+
+    rclpy.init()
+    node = PlotFilterNode(queue_for)
 
     try:
         rclpy.spin(node)

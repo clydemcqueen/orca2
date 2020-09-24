@@ -46,7 +46,9 @@ namespace orca_filter
 // PoseFilter1D
 //==================================================================
 
-constexpr int POSE_1D_STATE_DIM = 3;      // [z, vz, az]T
+constexpr int NUM_VAR = 1;
+constexpr int NUM_DER = 3;
+constexpr int STATE_DIM = NUM_VAR * NUM_DER;  // [z, vz, az]T
 
 // State macros
 #define dx_z x(0)
@@ -56,7 +58,7 @@ constexpr int POSE_1D_STATE_DIM = 3;      // [z, vz, az]T
 // Init x from pose
 Eigen::VectorXd pose_to_dx(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_1D_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(STATE_DIM);
 
   dx_z = pose.position.z;
 
@@ -99,9 +101,10 @@ void flatten_1x1_covar(const Eigen::MatrixXd & P, std::array<double, 36> & pose_
 PoseFilter1D::PoseFilter1D(
   const rclcpp::Logger & logger,
   const PoseFilterContext & cxt,
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_1D_STATE_DIM}
+: PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_pose_pub), std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
 {
 }
 
@@ -109,7 +112,10 @@ void PoseFilter1D::init(const geometry_msgs::msg::Pose & pose)
 {
   PoseFilterBase::init(pose_to_dx(pose));
 
-  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_1D_STATE_DIM, POSE_1D_STATE_DIM) * cxt_.ukf_process_noise_);
+  // Process noise
+  Eigen::VectorXd variances(NUM_VAR);
+  variances << cxt_.ukf_var_z_;
+  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1/orca::Model::CAMERA_FREQ, variances));
 
   // State transition function
   filter_.set_f_fn(
@@ -154,12 +160,17 @@ void PoseFilter1D::init(const geometry_msgs::msg::Pose & pose)
       });
 }
 
-void PoseFilter1D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
+void PoseFilter1D::pose_from_filter(geometry_msgs::msg::Pose & filtered_pose)
 {
-  pose_from_dx(filter_.x(), filtered_odom.pose.pose);
-  // twist_from_dx(filter_.x(), filtered_odom.twist.twist);
-  flatten_1x1_covar(filter_.P(), filtered_odom.pose.covariance, true);
-  // flatten_1x1_covar(filter_.P(), filtered_odom.twist.covariance, false);
+  pose_from_dx(filter_.x(), filtered_pose);
+}
+
+void PoseFilter1D::fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp)
+{
+  pose_from_filter(filtered_fp.pose.pose);
+  // twist_from_dx(filter_.x(), filtered_fp.twist.twist);
+  flatten_1x1_covar(filter_.P(), filtered_fp.pose.covariance, true);
+  // flatten_1x1_covar(filter_.P(), filtered_fp.twist.covariance, false);
 }
 
 Measurement PoseFilter1D::to_measurement(

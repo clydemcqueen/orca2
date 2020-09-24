@@ -147,12 +147,14 @@ def generate_launch_description():
         'loop_driver': 0,
 
         # If we're not running a filter, then override depth in auv_node
-        # FT3: rely exclusively on vloc poses TODO
-        # 'depth_override': not filter_poses,
-        'depth_override': False,
+        'depth_override': not filter_poses,
+        # 'depth_override': False,
 
         # FT3: turn pids off while tuning dead reckoning
         'auv_pid_enabled': False,
+
+        # FT3: use the estimate yaw while PID tuning
+        'control_use_est_yaw': False,
 
         # Slow down while tuning
         'auv_xy_accel': 0.05,
@@ -286,12 +288,14 @@ def generate_launch_description():
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', 'filtered_fp'),
+                    ('barometer', 'filtered_barometer'),
                 ]))
     else:
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', '/' + camera_name + '/fp'),
+                    ('barometer', 'filtered_barometer'),
                 ]))
 
     return LaunchDescription(all_entities)

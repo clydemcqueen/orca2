@@ -91,6 +91,7 @@ struct Model
   static constexpr double BARO_STDDEV = 201.7;      // Measured during ft3
   static constexpr double BARO_FREQ = 23.0;
   static constexpr double DEPTH_STDDEV = 0.02064;   // Measured during ft3
+  static constexpr double CAMERA_FREQ = 30.0;
 
   //=====================================================================================
   // Vehicle constants, in the body frame (x forward, y left, z up)

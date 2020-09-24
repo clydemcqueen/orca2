@@ -73,7 +73,7 @@ def generate_launch_description():
     # How far away from a single marker is a good pose?
     # 800x600: 2.0
     # 1920x1280: 4.0
-    good_pose_dist = 1.8
+    good_pose_dist = 2.5
 
     # How far away from a single marker is a good observation (just bearing & distance)?
     # 800x600: 10.0
@@ -81,7 +81,7 @@ def generate_launch_description():
     good_obs_dist = 10.0
 
     # Run pose_filter_node or not
-    filter_poses = True
+    filter_poses = False
 
     # Select map
     world = World.SMALL_RING
@@ -224,27 +224,22 @@ def generate_launch_description():
     }
 
     rov_node_params = {
-        # Tuned in simulation
-        'rov_pressure_pid_kp': 0.00006,
-        'rov_pressure_pid_ki': 0.00002,
-        'rov_pressure_pid_kd': 0.000045,
-        'rov_pressure_pid_i_max': 0.1
+        # Moved to defaults in orca_base::ROVContext
     }
     rov_node_params.update(model_params)
 
     pose_filter_node_params = {
+        # Hack: predicting acceleration makes the filter kinda stable
+        # TODO(clyde): huge amount of work needed here
         'predict_accel': True,
         'predict_accel_control': True,
         'predict_accel_drag': True,
         'predict_accel_buoyancy': True,
-        'filter_baro': True,  # Fuse depth
+        'filter_baro': False,  # Fuse depth
         'filter_fcam': True,
         'publish_tf': True,  # Publish map=>base tf
         'good_pose_dist': good_pose_dist,
         'good_obs_dist': good_obs_dist,
-
-        # Process noise, similar to /depth noise
-        'ukf_process_noise': 0.0004,
 
         # Turn outlier detection off
         'ukf_outlier_distance': -1.0,
@@ -270,6 +265,30 @@ def generate_launch_description():
         'pose_plan_max_short_plan_xy': pose_plan_max_short_plan_xy,
         'pose_plan_target_dist': pose_plan_target_dist,
         'mtm_plan_target_dist': 1.5,
+
+        # Hacks for PID tuning
+        # 'control_use_est_yaw': True,
+        # 'global_plan_max_xy_err': 3.0,
+
+        # rov_pressure_pid_k? * 10000 (roughly 1/Pascals to 1/meters)
+        'auv_z_pid_kp': 0.6,
+        'auv_z_pid_ki': 0.2,
+        'auv_z_pid_kd': 0.45,
+
+        # classic(10., 2.5)
+        'auv_yaw_pid_kp': 6.0,
+        'auv_yaw_pid_ki': 4.8,
+        'auv_yaw_pid_kd': 1.875,
+
+        # no_overshoot(4.0, 4.0)
+        'auv_x_pid_kp': 0.8,
+        'auv_x_pid_ki': 0.4,
+        'auv_x_pid_kd': 1.0672,
+
+        # no_overshoot(4.0, 4.0)
+        'auv_y_pid_kp': 0.8,
+        'auv_y_pid_ki': 0.4,
+        'auv_y_pid_kd': 1.0672,
     }
     auv_node_params.update(model_params)
 
@@ -301,7 +320,10 @@ def generate_launch_description():
              }]),
 
         # Barometer filter
-        Node(package='orca_filter', node_executable='baro_filter_node', output='screen'),
+        Node(package='orca_filter', node_executable='baro_filter_node', output='screen',
+             parameters=[{
+                 'ukf_Q': True,
+             }]),
 
         # ROV controller, uses joystick to control the sub
         Node(package='orca_base', node_executable='rov_node', output='screen',
@@ -314,7 +336,8 @@ def generate_launch_description():
         Node(package='orca_filter', node_executable='depth_node', output='screen',
              node_name='depth_node', parameters=[model_params], remappings=[
                 ('fp', '/' + camera_name + '/fp'),
-             ]),
+                ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
+            ]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

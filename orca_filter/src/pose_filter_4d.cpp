@@ -47,7 +47,9 @@ namespace orca_filter
 // PoseFilter4D -- 4dof filter with 12 dimensions
 //==================================================================
 
-constexpr int POSE_4D_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, ...]T
+constexpr int NUM_VAR = 4;
+constexpr int NUM_DER = 3;
+constexpr int STATE_DIM = NUM_VAR * NUM_DER;  // [x, y, ..., vx, vy, ..., ax, ay, ...]T
 
 // State macros
 #define fx_x x(0)
@@ -66,7 +68,7 @@ constexpr int POSE_4D_STATE_DIM = 12;      // [x, y, ..., vx, vy, ..., ax, ay, .
 // Init x from pose
 Eigen::VectorXd pose_to_fx(const geometry_msgs::msg::Pose & pose)
 {
-  Eigen::VectorXd x = Eigen::VectorXd::Zero(POSE_4D_STATE_DIM);
+  Eigen::VectorXd x = Eigen::VectorXd::Zero(STATE_DIM);
 
   fx_x = pose.position.x;
   fx_y = pose.position.y;
@@ -160,9 +162,10 @@ Eigen::VectorXd four_state_mean(const Eigen::MatrixXd & sigma_points, const Eige
 PoseFilter4D::PoseFilter4D(
   const rclcpp::Logger & logger,
   const PoseFilterContext & cxt,
-  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_odom_pub,
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
+  rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose_4d, logger, cxt, std::move(filtered_odom_pub), std::move(tf_pub), POSE_4D_STATE_DIM}
+: PoseFilterBase{Type::pose_4d, logger, cxt, std::move(filtered_pose_pub), std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
 {
 }
 
@@ -170,7 +173,10 @@ void PoseFilter4D::init(const geometry_msgs::msg::Pose & pose)
 {
   PoseFilterBase::init(pose_to_fx(pose));
 
-  filter_.set_Q(Eigen::MatrixXd::Identity(POSE_4D_STATE_DIM, POSE_4D_STATE_DIM) * cxt_.ukf_process_noise_);
+  // Process noise
+  Eigen::VectorXd variances(NUM_VAR);
+  variances << cxt_.ukf_var_x_, cxt_.ukf_var_y_, cxt_.ukf_var_z_, cxt_.ukf_var_yaw_;
+  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1/orca::Model::CAMERA_FREQ, variances));
 
   // State transition function
   filter_.set_f_fn(
@@ -240,12 +246,17 @@ void PoseFilter4D::init(const geometry_msgs::msg::Pose & pose)
   filter_.set_mean_x_fn(four_state_mean);
 }
 
-void PoseFilter4D::odom_from_filter(orca_msgs::msg::FiducialPose & filtered_odom)
+void PoseFilter4D::pose_from_filter(geometry_msgs::msg::Pose & filtered_pose)
 {
-  pose_from_fx(filter_.x(), filtered_odom.pose.pose);
-  // twist_from_fx(filter_.x(), filtered_odom.twist.twist);
-  flatten_4x4_covar(filter_.P(), filtered_odom.pose.covariance, true);
-  // flatten_4x4_covar(filter_.P(), filtered_odom.twist.covariance, false);
+  pose_from_fx(filter_.x(), filtered_pose);
+}
+
+void PoseFilter4D::fp_from_filter(orca_msgs::msg::FiducialPose & filtered_fp)
+{
+  pose_from_filter(filtered_fp.pose.pose);
+  // twist_from_fx(filter_.x(), filtered_fp.twist.twist);
+  flatten_4x4_covar(filter_.P(), filtered_fp.pose.covariance, true);
+  // flatten_4x4_covar(filter_.P(), filtered_fp.twist.covariance, false);
 }
 
 Measurement PoseFilter4D::to_measurement(
