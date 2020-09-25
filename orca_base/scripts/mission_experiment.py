@@ -150,9 +150,9 @@ class MissionExperiment(object):
 
     # Can call this at any time, but the general idea is to call this once when the experiment
     # is over. msg_processor should return True to stop experiments
-    def process_messages(self) -> bool:
+    def process_messages(self, logger) -> bool:
         if self.msg_processor:
-            result = self.msg_processor(self)
+            result = self.msg_processor(self, logger)
             self.co_msgs.clear()
             self.fp_msgs.clear()
             self.gt_msgs.clear()
@@ -360,7 +360,7 @@ class MissionExperimentRunNode(Node):
                                                                   result.targets_total))
 
             # Do any post-processing
-            if self._experiments[self._idx].process_messages():
+            if self._experiments[self._idx].process_messages(self.get_logger()):
                 self.get_logger().info('messages processor returned True, STOPPING')
             else:
                 # Clear goal_handle

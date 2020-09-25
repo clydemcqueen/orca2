@@ -49,7 +49,10 @@ def generate_launch_description():
         'mdl_mass': 11.1,
         'mdl_volume': 0.0111335,
         'mdl_fluid_density': 997.0,
-        'mdl_thrust_scale': 0.2,
+
+        # After 1st round drag tests
+        'mdl_thrust_scale': 0.17,
+        'mdl_drag_coef_f': 0.80,
     }
 
     # Must match camera name in URDF file

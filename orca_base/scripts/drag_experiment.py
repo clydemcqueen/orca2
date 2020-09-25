@@ -105,7 +105,7 @@ yes_pids_auv_params = [
 ]
 
 # Drag coefficients
-drag_coef_f = 0.90
+drag_coef_f = 0.80  # After 1st round drag tests
 drag_coef_s = 0.95
 drag_coef_z = 0.95
 drag_partial_const_yaw = 0.004
@@ -146,12 +146,12 @@ EXPERIMENT_YAW = 'drag experiment yaw ccw/cw'
 
 
 # Calculate drag coefficients
-def process_messages(ex: MissionExperiment):
+def process_messages(ex: MissionExperiment, logger):
     if len(ex.co_msgs) < 2:
-        print('too few control messages, wrong topic?')
+        logger.info('too few control messages, wrong topic?')
         return
 
-    print('{} recorded {} control messages spanning {:.2f} seconds'.format(
+    logger.info('{} recorded {} control messages spanning {:.2f} seconds'.format(
         ex.mission_info, len(ex.co_msgs), seconds(
             ex.co_msgs[-1].header.stamp) - seconds(ex.co_msgs[0].header.stamp)))
 
@@ -184,7 +184,7 @@ def process_messages(ex: MissionExperiment):
                 # Starting deceleration phase, which means the run phase is over, or didn't happen
                 if msg_start is None:
                     # There was no run phase
-                    print('no run phase, skipping segment')
+                    logger.info('no run phase, skipping segment')
                 else:
                     # Run time
                     run_dt = seconds(msg.header.stamp) - seconds(msg_start.header.stamp)
@@ -216,9 +216,10 @@ def process_messages(ex: MissionExperiment):
                     # drag coefficients.
                     actual_drag_coef = plan_drag_coef * pow(plan_run_v / actual_run_v, 2)
 
-                    print(('decel phase dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
-                           'plan drag {:.2f}, actual drag {:.2f}').format(
-                        run_dt, plan_run_v, actual_run_v, plan_drag_coef, actual_drag_coef))
+                    logger.info(('run phase dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
+                           'actual d {:.3f}, plan drag {:.2f}, actual drag {:.2f}').format(
+                        run_dt, plan_run_v, actual_run_v, actual_run_d, plan_drag_coef,
+                        actual_drag_coef))
 
                     # Reset
                     msg_start = None
