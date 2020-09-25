@@ -186,7 +186,7 @@ void AUVNode::validate_parameters()
   spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
     { this->timer_cb_.call(); });
 
-  cxt_.log_info(get_logger());
+  // TODO log info if some params have changed: cxt_.log_info(get_logger());
 
   if (mission_) {
     RCLCPP_WARN(get_logger(), "Restart the mission to see the effect of many parameters!");

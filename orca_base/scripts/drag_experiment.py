@@ -71,6 +71,10 @@ straight_motion_auv_params = [
     Parameter(name='pose_plan_max_short_plan_xy',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=99.)),
 
+    # Turn off replanning
+    Parameter(name='global_plan_max_xy_err',
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=99.0)),
+
     # good_pose_dist controls how close we need to be to a marker to trust the pose.
     # Set this to a large-ish value so that we always build a local plan at each pose.
     Parameter(name='good_pose_dist',
@@ -87,14 +91,18 @@ straight_motion_auv_params = [
 ]
 
 # Turn off PID controllers
-no_pids_auv_params = [Parameter(name='auv_pid_enabled',
-                                value=ParameterValue(type=ParameterType.PARAMETER_BOOL,
-                                                     bool_value=False))]
+no_pids_auv_params = [
+    Parameter(name='auv_pid_enabled',
+              value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=False)),
+]
+
+
 
 # Turn on PID controllers
-yes_pids_auv_params = [Parameter(name='auv_pid_enabled',
-                                 value=ParameterValue(type=ParameterType.PARAMETER_BOOL,
-                                                      bool_value=True))]
+yes_pids_auv_params = [
+    Parameter(name='auv_pid_enabled',
+              value=ParameterValue(type=ParameterType.PARAMETER_BOOL, bool_value=True)),
+]
 
 # Drag coefficients
 drag_coef_f = 0.90
@@ -106,22 +114,22 @@ drag_coef_yaw = fluid_density * drag_partial_const_yaw
 
 # Set drag coefficients
 drag_auv_params = [
-    Parameter(name='drag_coef_f',
+    Parameter(name='mdl_drag_coef_f',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_f)),
-    Parameter(name='drag_coef_s',
+    Parameter(name='mdl_drag_coef_s',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_s)),
-    Parameter(name='drag_coef_z',
+    Parameter(name='mdl_drag_coef_z',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=drag_coef_z)),
-    Parameter(name='drag_partial_const_yaw',
+    Parameter(name='mdl_drag_partial_const_yaw',
               value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE,
                                    double_value=drag_partial_const_yaw)),
 ]
 
-# Pause for 5s between poses, good for stopping motion even if dynamics are poor,
+# Pause between poses, good for stopping motion even if dynamics are poor,
 # e.g., if drag or thrust parameters aren't very accurate. Must have PIDs on.
 long_pause_auv_params = [
     Parameter(name='pose_plan_pause_duration',
-              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=5.)),
+              value=ParameterValue(type=ParameterType.PARAMETER_DOUBLE, double_value=10.)),
 ]
 
 # Don't pause between poses
@@ -218,10 +226,10 @@ def process_messages(ex: MissionExperiment):
 
 # Tweak these for ft3, other tests
 base_z = -0.2  # x, y and yaw tests are run at this depth
-extent_xy = 0.6  # x and y tests run from extent_xy to -extent_xy
+extent_xy = 0.5  # x and y tests run from extent_xy to -extent_xy
 high_z = -0.0  # Highest z point
 low_z = -0.3  # Lowest z point
-extent_yaw = 0.6  # yaw tests run from extent_yaw to -extent_yaw
+extent_yaw = 0.5  # yaw tests run from extent_yaw to -extent_yaw
 
 ex_f_sequence = [
     # Move to start position: PIDs on, 5s pause
@@ -240,7 +248,7 @@ ex_f_sequence = [
     # Experiment: PIDs off, no pause, back/forth, repeat motion several times
     MissionExperiment.go_to_poses(
         EXPERIMENT_F,
-        3,
+        1,
         straight_motion_auv_params + no_pids_auv_params + drag_auv_params + no_pause_auv_params,
         [],
         [
@@ -258,7 +266,7 @@ ex_f_sequence = [
         straight_motion_auv_params + yes_pids_auv_params + drag_auv_params + long_pause_auv_params,
         [],
         [
-            Pose(position=Point(z=base_z)),
+            Pose(position=Point(x=extent_xy, z=base_z)),
         ],
         False,
         False,
@@ -323,7 +331,7 @@ ex_z_sequence = [
         False,
         None
     ),
-    # Experiment: PIDs off, no pause, back/forth, repeat motion several times
+    # Experiment: PIDs off, no pause, back/forth
     MissionExperiment.go_to_poses(
         EXPERIMENT_Z,
         3,
@@ -399,8 +407,7 @@ ex_yaw_sequence = [
 def main(args=None):
     rclpy.init(args=args)
 
-    node = MissionExperimentRunNode(
-        ex_f_sequence + ex_s_sequence + ex_z_sequence + ex_yaw_sequence)
+    node = MissionExperimentRunNode(ex_f_sequence + ex_f_sequence + ex_f_sequence)
 
     node.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 

@@ -151,14 +151,17 @@ def generate_launch_description():
         # 'depth_override': False,
 
         # FT3: turn pids off while tuning dead reckoning
-        'auv_pid_enabled': False,
+        'auv_pid_enabled': True,
+
+        # A little tuning in the field
+        'auv_yaw_pid_kd': 0.5,
 
         # FT3: use the estimate yaw while PID tuning
         'control_use_est_yaw': False,
 
         # Slow down while tuning
-        'auv_xy_accel': 0.05,
-        'auv_xy_velo': 0.2,
+        # 'auv_xy_accel': 0.05,
+        # 'auv_xy_velo': 0.2,
 
         # How far in front of a marker is a good pose?
         # FT3: set to 3m, this assumes we're always looking at 2+ markers TODO
