@@ -91,7 +91,7 @@ def generate_launch_description():
         map_path = os.path.join(orca_gazebo_path, 'worlds', 'small_field_map.yaml')
 
         # Do not allow MTM recovery
-        global_plan_allow_mtm = False
+        global_plan_allow_mtm = True  # TODO ft3 hack
 
         # If xy distance is > this, then build a long plan (rotate, run, rotate)
         # Otherwise build a short plan (move in all DoF at once)
@@ -131,7 +131,7 @@ def generate_launch_description():
         pose_plan_target_dist = 0.8
 
     # Optionally build and use a map
-    build_map = False
+    build_map = True
     use_built_map = False
 
     if build_map:
@@ -270,25 +270,26 @@ def generate_launch_description():
         # 'control_use_est_yaw': True,
         # 'global_plan_max_xy_err': 3.0,
 
+        # TODO these screw up the simulation...
         # rov_pressure_pid_k? * 10000 (roughly 1/Pascals to 1/meters)
-        'auv_z_pid_kp': 0.6,
-        'auv_z_pid_ki': 0.2,
-        'auv_z_pid_kd': 0.45,
+        # 'auv_z_pid_kp': 0.6,
+        # 'auv_z_pid_ki': 0.2,
+        # 'auv_z_pid_kd': 0.45,
 
         # classic(10., 2.5)
-        'auv_yaw_pid_kp': 6.0,
-        'auv_yaw_pid_ki': 4.8,
-        'auv_yaw_pid_kd': 1.875,
+        # 'auv_yaw_pid_kp': 6.0,
+        # 'auv_yaw_pid_ki': 4.8,
+        # 'auv_yaw_pid_kd': 1.875,
 
         # no_overshoot(4.0, 4.0)
-        'auv_x_pid_kp': 0.8,
-        'auv_x_pid_ki': 0.4,
-        'auv_x_pid_kd': 1.0672,
+        # 'auv_x_pid_kp': 0.8,
+        # 'auv_x_pid_ki': 0.4,
+        # 'auv_x_pid_kd': 1.0672,
 
         # no_overshoot(4.0, 4.0)
-        'auv_y_pid_kp': 0.8,
-        'auv_y_pid_ki': 0.4,
-        'auv_y_pid_kd': 1.0672,
+        # 'auv_y_pid_kp': 0.8,
+        # 'auv_y_pid_ki': 0.4,
+        # 'auv_y_pid_kd': 1.0672,
     }
     auv_node_params.update(model_params)
 

@@ -29,3 +29,6 @@ ros2 action send_goal /mission orca_msgs/action/Mission "{target_type: 2, motion
 {forward: 0, strafe: 0, vertical: 0, yaw: 1.57},\
 ], keep_station: False}"
 
+# Go to (1, 0, -0.1)
+ros2 action send_goal /mission orca_msgs/action/Mission "{target_type: 1, poses: [\
+{position: {x: 1, z: -0.1}}], keep_station: False}"

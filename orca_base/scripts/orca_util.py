@@ -64,10 +64,31 @@ def get_yaw(q: Quaternion) -> float:
     return rpy[2]
 
 
-def q_to_rpy(q):
+# [r, p, y] to geometry_msgs.msg.Quaternion
+def rpy_to_q(r, p, y) -> Quaternion:
+    matrix = xf.euler_matrix(r, p, y, axes='sxyz')
+    q = xf.quaternion_from_matrix(matrix)
+    return Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])  # Order is w, x, y, z
+
+
+# geometry_msgs.msg.Quaternion to [r, p, y]
+def q_to_rpy(q: Quaternion) -> []:
     m = xf.quaternion_matrix([q.w, q.x, q.y, q.z])  # Order is w, x, y, z
     rpy = xf.euler_from_matrix(m)
     return rpy
+
+
+# Multiple 2 geometry_msgs.msg.Quaternions
+def q_multiply(left: Quaternion, right: Quaternion) -> Quaternion:
+    result = xf.quaternion_multiply([left.w, left.x, left.y, left.z],
+                                    [right.w, right.x, right.y, right.z])
+    return Quaternion(w=result[0], x=result[1], y=result[2], z=result[3])
+
+
+# Multiple 2 rpys
+def rpy_multiply(left: [], right: []) -> []:
+    q_result = q_multiply(rpy_to_q(*left), rpy_to_q(*right))
+    return q_to_rpy(q_result)
 
 
 def get_quaternion(yaw: float) -> Quaternion:

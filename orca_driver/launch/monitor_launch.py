@@ -69,6 +69,12 @@ def generate_launch_description():
                 ('out/theora', 'monitor_raw/theora'),
                 ('out/theora', 'monitor_raw/h264'),
             ]),
+
+        # Annotate image for diagnostics
+        Node(package='orca_base', node_executable='annotate_image_node', output='screen',
+             node_name='annotate_image_node', node_namespace=camera_name, remappings=[
+                ('image_raw', 'monitor_raw'),
+            ]),
     ]
 
     return LaunchDescription(all_entities)

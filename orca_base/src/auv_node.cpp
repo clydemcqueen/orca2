@@ -370,9 +370,9 @@ void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
   auto action = goal_handle->get_goal();
 
   RCLCPP_INFO(get_logger(),
-    "start mission, target_type=%d, %d marker(s), %d pose(s), random=%d, keep=%d",
-    action->target_type, action->marker_ids.size(), action->poses.size(), action->random,
-    action->keep_station);
+    "start mission, target_type=%d, %d marker(s), %d pose(s), %d motion(s), random=%d, keep=%d",
+    action->target_type, action->marker_ids.size(), action->poses.size(), action->motions.size(),
+    action->random, action->keep_station);
 
   ++global_plan_idx_;
   std::shared_ptr<GlobalPlanner> planner;

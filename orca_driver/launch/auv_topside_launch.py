@@ -281,7 +281,9 @@ def generate_launch_description():
 
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
-             node_name='annotate_image_node', node_namespace=camera_name),
+             node_name='annotate_image_node', node_namespace=camera_name, remappings=[
+                ('image_raw', 'repub_raw'),
+             ]),
     ]
 
     if filter_poses:

@@ -59,7 +59,7 @@ GlobalPlanner::GlobalPlanner(
     static_cast<int>(targets_.size()),
     static_cast<int>(targets_[0].id())}
 {
-  RCLCPP_INFO_STREAM(logger_, targets_.size() << " targets:");
+  RCLCPP_INFO_STREAM(logger_, targets_.size() << " target(s):");
   for (auto & i : targets_) {
     RCLCPP_INFO_STREAM(logger_, i);
   }
