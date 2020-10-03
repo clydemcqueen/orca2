@@ -143,3 +143,16 @@ It also calls the `Mission` action server to start missions
   * Depends on `orca_description`
   * Depends on `orca_msgs`
   * Depends on `orca_shared`
+
+## Status and Future Work
+
+I built the sub and ran it through a series of tests with mixed results.
+There's still a lot of work to do in vehicle dynamics (understanding drag, tuning PID controllers).
+
+I'm currently evaluating [ROS Nav2](https://navigation.ros.org/). One idea is to use Nav2
+and add plugins for specific Orca2 control strategies.
+
+Possible future sensors:
+* down-facing camera(s), useful for measuring distance to the seafloor and for visual odometry
+* forward-facing and/or down-facing lasers for measuring distance
+* sonar for obstacle avoidance

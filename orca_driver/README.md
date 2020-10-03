@@ -1,9 +1,5 @@
 # Hardware Interface
 
-# TODO
-* redo again for UP board
-* install chrony
-
 ## Hardware Build
 
 The current hardware build is called FT3 (Field Test #3).
@@ -25,11 +21,18 @@ I made the following custom modifications -- YMMV:
 
 ## Software Installation
 
-Below I've outlined rough instructions... you'll need to dive into the system-specific instructions for details.
+Below I've outlined rough instructions to install the required software on the UP board.
+You'll need to dive into the system-specific instructions for details.
 
 ### Install Ubuntu 18.04.4 LTS Server
 
 Install Ubuntu 18.04.4 LTS Server.
+
+### Install Chrony
+
+Since the logic is split across 2 machines, the clocks need to be synchronized.
+I've had good luck with [https://chrony.tuxfamily.org/doc/3.5/installation.html](Chrony).
+Have the UP board use the desktop as a reference.
 
 ### Install ffmpeg
 
@@ -62,7 +65,7 @@ sudo apt-get update
 sudo apt-get install libmraa2 libmraa-dev libmraa-java python3-mraa node-mraa mraa-tools
 ~~~
 
-### Install Orca on the ROV
+### Install Orca2 on the ROV
 
 ~~~
 mkdir -p ~/ros2/orca_ws/src
@@ -87,7 +90,7 @@ source install/local_setup.bash
 
 ## Manual Launch
 
-On the Raspberry Pi:
+On the UP board:
 
 ~~~
 cd ~/ros2/orca_ws
@@ -105,15 +108,6 @@ source install/local_setup.bash
 ros2 launch orca_driver topside_launch.py
 ~~~
 
-## Launch on Boot
-
-To configure the Raspberry Pi to launch on boot:
-
-~~~
-sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_driver.service /lib/systemd/system
-sudo systemctl enable orca_driver.service
-~~~
-
 ## Troubleshooting
 
 The compiler (`cc1plus`) sometimes dies during build, try restarting `colcon build`.
@@ -124,9 +118,6 @@ colcon build
 ~~~
 
 Test the i2c bus using `i2cdetect 1`.
-
-`raspi-config` isn't installed as part of Ubuntu 18.04.4, and the PPA I found has a few bugs.
-I hand-edited the boot sector config files on the SD card and added `dtparam=i2c_arm=on`.
 
 Make sure that `$USER` is in the dialout, video and i2c groups.
 Remember to log out and log back in after changing groups.
