@@ -32,6 +32,7 @@
 
 #include "orca_filter/pose_filter_base.hpp"
 
+#include <limits>
 #include <queue>
 #include <string>
 #include <utility>
@@ -80,8 +81,7 @@ PoseFilterBase::PoseFilterBase(
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub,
   int state_dim)
-:
-  initialized_{false},
+: initialized_{false},
   type_{type},
   logger_{logger},
   cxt_{cxt},

@@ -97,7 +97,6 @@ no_pids_auv_params = [
 ]
 
 
-
 # Turn on PID controllers
 yes_pids_auv_params = [
     Parameter(name='auv_pid_enabled',
@@ -217,7 +216,7 @@ def process_messages(ex: MissionExperiment, logger):
                     actual_drag_coef = plan_drag_coef * pow(plan_run_v / actual_run_v, 2)
 
                     logger.info(('run phase dt {:.2f}, plan v {:.2f}, actual v {:.2f}, '
-                           'actual d {:.3f}, plan drag {:.2f}, actual drag {:.2f}').format(
+                                 'actual d {:.3f}, plan drag {:.2f}, actual drag {:.2f}').format(
                         run_dt, plan_run_v, actual_run_v, actual_run_d, plan_drag_coef,
                         actual_drag_coef))
 

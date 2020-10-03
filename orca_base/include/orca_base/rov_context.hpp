@@ -63,7 +63,7 @@ namespace orca_base
   /* Attenuate vertical joystick input  */ \
  \
   CXT_MACRO_MEMBER(rov_pid_enabled, bool, true) \
-  /* Turn pid controller on/off TODO remove the rov_ prefix  */   \
+  /* Turn pid controller on/off TODO remove the rov_ prefix  */ \
  \
   CXT_MACRO_MEMBER(rov_pressure_pid_kp, double, 0.00006) \
   /* ROV hold pressure pid Kp  */ \

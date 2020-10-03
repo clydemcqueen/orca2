@@ -49,7 +49,7 @@ public:
   PoseBody() = default;
 
   explicit PoseBody(const orca_msgs::msg::PoseBody & msg)
-    : msg_{msg} {}
+  : msg_{msg} {}
 
   PoseBody(double forward, double strafe, double vertical, double yaw)
   {
@@ -63,7 +63,7 @@ public:
   {
     return msg_;
   }
-  
+
   double forward() const
   {
     return msg_.forward;
@@ -144,9 +144,9 @@ public:
   bool operator==(const PoseBody & that) const
   {
     return msg_.forward == that.msg_.forward &&
-      msg_.strafe == that.msg_.strafe &&
-      msg_.vertical == that.msg_.vertical &&
-      msg_.yaw == that.msg_.yaw;
+           msg_.strafe == that.msg_.strafe &&
+           msg_.vertical == that.msg_.vertical &&
+           msg_.yaw == that.msg_.yaw;
   }
 
   bool operator!=(const PoseBody & that) const

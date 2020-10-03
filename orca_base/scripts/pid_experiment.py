@@ -192,6 +192,10 @@ def default_pid_params(dim: str):
 
 # Get zn_no_overshoot PID parameters
 # Not used in ft3
+def zn_no_overshoot(Ku, Tu):
+    return [0.2 * Ku, 0.4 * Ku / Tu, 0.0667 * Ku * Tu]
+
+
 def zn_no_overshoot_params(dim: str, Ku, Tu):
     return pid_param_obj(dim, zn_no_overshoot(Ku, Tu))
 

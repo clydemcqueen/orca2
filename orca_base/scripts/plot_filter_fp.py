@@ -32,7 +32,7 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
+r"""
 Analyze and plot the output of the filter.
 
 TODO(clyde): plotting time is 0.7s, so we're dropping messages, add threading
@@ -229,7 +229,8 @@ class PlotFilterNode(Node):
         pre_pose_rpys = [q_to_rpy(msg.fp.pose.pose.orientation) for msg in self._pre_msgs]
         post_pose_rpys = [q_to_rpy(msg.fp.pose.pose.orientation) for msg in self._post_msgs]
         gt_pose_rpys = [q_to_rpy(msg.pose.pose.orientation) for msg in self._gt_msgs]
-        plan_pose_rpys = [q_to_rpy(msg.mission.pose.fp.pose.pose.orientation) for msg in self._control_msgs]
+        plan_pose_rpys = [q_to_rpy(msg.mission.pose.fp.pose.pose.orientation)
+                          for msg in self._control_msgs]
 
         # Create a figure and 6 subplots
         fig, ((axpx, axpy, axpz), (axproll, axppitch, axpyaw)) = plt.subplots(2, 3)

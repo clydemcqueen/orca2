@@ -32,12 +32,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Scratch area, ignore these routines.
-"""
+"""Scratch area, ignore these routines."""
+
+from math import pi
 
 from orca_util import rpy_multiply
-from math import pi
 
 
 # Generate the rotations to split sam_map into 3 parts

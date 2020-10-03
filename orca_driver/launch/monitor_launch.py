@@ -32,9 +32,6 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import os
-
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -52,14 +49,14 @@ def generate_launch_description():
         Node(package='joy', node_executable='joy_node', output='screen',
              node_name='joy_node', parameters=[{
                 'dev': '/dev/input/js0'  # Update as required
-            }]),
+             }]),
 
         # Decode h264 stream
         Node(package='image_transport', node_executable='republish', output='screen',
              node_name='monitor_node', node_namespace=camera_name, arguments=[
                 'h264',  # Input
                 'raw'  # Output
-            ], remappings=[
+             ], remappings=[
                 ('in', 'image_raw'),
                 ('in/compressed', 'image_raw/compressed'),
                 ('in/theora', 'image_raw/theora'),
@@ -68,13 +65,13 @@ def generate_launch_description():
                 ('out/compressed', 'monitor_raw/compressed'),
                 ('out/theora', 'monitor_raw/theora'),
                 ('out/theora', 'monitor_raw/h264'),
-            ]),
+             ]),
 
         # Annotate image for diagnostics
         Node(package='orca_base', node_executable='annotate_image_node', output='screen',
              node_name='annotate_image_node', node_namespace=camera_name, remappings=[
                 ('image_raw', 'monitor_raw'),
-            ]),
+             ]),
     ]
 
     return LaunchDescription(all_entities)

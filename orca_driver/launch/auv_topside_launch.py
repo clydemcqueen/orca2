@@ -235,7 +235,7 @@ def generate_launch_description():
              node_name='depth_node', parameters=[model_params], remappings=[
                 ('barometer', 'filtered_barometer'),
                 ('fp', '/' + camera_name + '/fp'),
-            ]),
+             ]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
@@ -291,19 +291,19 @@ def generate_launch_description():
             Node(package='orca_filter', node_executable='pose_filter_node', output='screen',
                  node_name='pose_filter_node', parameters=[pose_filter_node_params], remappings=[
                     ('fcam_fp', '/' + camera_name + '/fp'),
-                ]))
+                 ]))
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', 'filtered_fp'),
                     ('barometer', 'filtered_barometer'),
-                ]))
+                 ]))
     else:
         all_entities.append(
             Node(package='orca_base', node_executable='auv_node', output='screen',
                  node_name='auv_node', parameters=[auv_node_params], remappings=[
                     ('filtered_fp', '/' + camera_name + '/fp'),
                     ('barometer', 'filtered_barometer'),
-                ]))
+                 ]))
 
     return LaunchDescription(all_entities)

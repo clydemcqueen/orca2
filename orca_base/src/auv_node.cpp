@@ -84,7 +84,7 @@ constexpr int FIDUCIAL_DRIVEN = 2;
 constexpr int QUEUE_SIZE = 10;
 
 AUVNode::AUVNode()
-  : Node{"auv_node"}
+: Node{"auv_node"}
 {
   // Suppress IDE warnings
   (void) control_sub_;
@@ -129,14 +129,14 @@ AUVNode::AUVNode()
   // Monotonic subscriptions
   driver_sub_ = create_subscription<orca_msgs::msg::Driver>(
     "driver_status", QUEUE_SIZE, [this](const orca_msgs::msg::Driver::SharedPtr msg) -> void
-      { this->driver_cb_.call(msg); });
+    {this->driver_cb_.call(msg);});
   fp_sub_ = create_subscription<orca_msgs::msg::FiducialPoseStamped>(
     "filtered_fp", QUEUE_SIZE,
     [this](const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg) -> void
-      { this->fp_cb_.call(msg); });
+    {this->fp_cb_.call(msg);});
   map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
     "fiducial_map", QUEUE_SIZE, [this](const fiducial_vlam_msgs::msg::Map::SharedPtr msg) -> void
-      { this->map_cb_.call(msg); });
+    {this->map_cb_.call(msg);});
 
   using namespace std::placeholders;
 
@@ -171,7 +171,7 @@ void AUVNode::validate_parameters()
   if (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.depth_override_) {
     depth_sub_ = create_subscription<orca_msgs::msg::Depth>(
       "depth", QUEUE_SIZE, [this](const orca_msgs::msg::Depth::SharedPtr msg) -> void
-        { this->depth_cb_.call(msg); });
+      {this->depth_cb_.call(msg);});
   } else {
     depth_sub_.reset();
   }
@@ -184,9 +184,9 @@ void AUVNode::validate_parameters()
   // [Re-]start loop
   // Loop will run at ~constant wall speed, switch to ros_timer when it exists
   spin_timer_ = create_wall_timer(std::chrono::milliseconds{cxt_.timer_period_ms_}, [this]() -> void
-    { this->timer_cb_.call(); });
+      {this->timer_cb_.call();});
 
-  // TODO log info if some params have changed: cxt_.log_info(get_logger());
+  // TODO(clyde): log info if some params have changed: cxt_.log_info(get_logger());
 
   if (mission_) {
     RCLCPP_WARN(get_logger(), "Restart the mission to see the effect of many parameters!");
@@ -236,7 +236,8 @@ bool AUVNode::accept_goal(const rclcpp::Time & t)
   }
 
   if (!(estimate_.fp().good(cxt_.good_pose_dist_) ||
-    estimate_.fp().observations().good(cxt_.good_obs_dist_))) {
+    estimate_.fp().observations().good(cxt_.good_obs_dist_)))
+  {
     RCLCPP_ERROR(get_logger(), "goal rejected: no good pose, no good observation");
     return false;
   }
@@ -262,14 +263,16 @@ void AUVNode::timer_callback(bool first)
 
   // If we're expecting steady depth messages, but they stop, then abort the mission
   if (mission_ && (cxt_.loop_driver_ == DEPTH_DRIVEN || cxt_.depth_override_) &&
-    !depth_ok(curr_time)) {
+    !depth_ok(curr_time))
+  {
     RCLCPP_ERROR(get_logger(), "lost depth messages, abort mission");
     abort_mission(curr_time);
   }
 
   // If we're expecting steady fiducial messages, but they stop, then abort the mission
   if (mission_ && !fp_ok(curr_time) &&
-    (cxt_.loop_driver_ == FIDUCIAL_DRIVEN || !cxt_.depth_override_)) {
+    (cxt_.loop_driver_ == FIDUCIAL_DRIVEN || !cxt_.depth_override_))
+  {
     RCLCPP_ERROR(get_logger(), "lost fiducial pose messages, abort mission");
     abort_mission(curr_time);
   }
@@ -314,7 +317,8 @@ void AUVNode::depth_callback(orca_msgs::msg::Depth::SharedPtr msg, bool first)
 void AUVNode::driver_callback(const orca_msgs::msg::Driver::SharedPtr msg)
 {
   if (mission_ && !(msg->status == orca_msgs::msg::Driver::STATUS_OK ||
-    msg->status == orca_msgs::msg::Driver::STATUS_OK_MISSION)) {
+    msg->status == orca_msgs::msg::Driver::STATUS_OK_MISSION))
+  {
     RCLCPP_ERROR(get_logger(), "driver problem, abort mission");
     abort_mission(msg->header.stamp);
   }
@@ -379,14 +383,12 @@ void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
 
   // What kind of target?
   if (action->target_type == MissionAction::Goal::TARGET_MARKER) {
-
     // Look at action->marker_ids()
     planner = GlobalPlanner::plan_markers(get_logger(), cxt_, map_,
-      estimate_.fp().observations().observer(), action->mission_info,
-      action->marker_ids, action->random, action->keep_station);
+        estimate_.fp().observations().observer(), action->mission_info,
+        action->marker_ids, action->random, action->keep_station);
 
   } else if (action->target_type == MissionAction::Goal::TARGET_POSE) {
-
     // Look at action->poses()
     if (action->poses.empty()) {
       // Edge case: if keep_station is true, then keep_station at the current pose
@@ -396,8 +398,8 @@ void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
           std::vector<geometry_msgs::msg::Pose> poses;
           poses.push_back(estimate_.fp().pose().pose().msg());
           planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_,
-            estimate_.fp().observations().observer(), action->mission_info, poses,
-            action->random, action->keep_station);
+              estimate_.fp().observations().observer(), action->mission_info, poses,
+              action->random, action->keep_station);
         } else {
           RCLCPP_ERROR(get_logger(), "current pose unknown, cannot keep station");
         }
@@ -406,14 +408,13 @@ void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
       }
     } else {
       planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_,
-        estimate_.fp().observations().observer(), action->mission_info,
-        action->poses, action->random, action->keep_station);
+          estimate_.fp().observations().observer(), action->mission_info,
+          action->poses, action->random, action->keep_station);
     }
 
   } else {
-
     // Look at action->motions()
-    // TODO support motions w/o a good pose
+    // TODO(clyde): support motions w/o a good pose
     if (estimate_.fp().good(cxt_.good_pose_dist_)) {
       RCLCPP_INFO(get_logger(), "motions");
       std::vector<geometry_msgs::msg::Pose> poses;
@@ -423,8 +424,8 @@ void AUVNode::mission_accepted(const std::shared_ptr<MissionHandle> goal_handle)
         poses.push_back(current_pose.msg());
       }
       planner = GlobalPlanner::plan_poses(get_logger(), cxt_, map_,
-        estimate_.fp().observations().observer(), action->mission_info, poses,
-        action->random, action->keep_station);
+          estimate_.fp().observations().observer(), action->mission_info, poses,
+          action->random, action->keep_station);
     } else {
       RCLCPP_ERROR(get_logger(), "current pose unknown, cannot use motions");
     }
@@ -512,7 +513,8 @@ void AUVNode::auv_advance(const rclcpp::Time & t, const rclcpp::Duration & d)
 
   // Publish estimated path
   if (estimate_.fp().good(cxt_.good_pose_dist_) &&
-    count_subscribers(esimated_path_pub_->get_topic_name()) > 0) {
+    count_subscribers(esimated_path_pub_->get_topic_name()) > 0)
+  {
     if (estimated_path_.poses.size() > cxt_.keep_poses_) {
       estimated_path_.poses.clear();
     }
@@ -527,7 +529,8 @@ void AUVNode::auv_advance(const rclcpp::Time & t, const rclcpp::Duration & d)
     publish_control(t, efforts);
 
     if (mission_->status().planner() == orca_msgs::msg::MissionState::PLAN_LOCAL &&
-      count_subscribers(planned_pose_pub_->get_topic_name()) > 0) {
+      count_subscribers(planned_pose_pub_->get_topic_name()) > 0)
+    {
       // Publish planned pose for visualization
       geometry_msgs::msg::PoseStamped pose_msg;
       pose_msg.header.frame_id = cxt_.map_frame_;

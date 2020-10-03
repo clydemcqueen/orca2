@@ -86,6 +86,7 @@ public:
 
   // Floor == true: markers must be on the floor facing up, and there must be a down-facing camera
   // Floor == false: markers must be on the wall, and there must be a forward-facing camera
+  // TODO(clyde): add support for rotated markers, e.g., the sideways markers used in ft3
   Target target(const double & target_z, const double & target_dist, const bool & floor) const
   {
     Pose target_pose = pose_;

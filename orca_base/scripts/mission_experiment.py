@@ -119,8 +119,8 @@ class MissionExperiment(object):
     def log_info(self, logger):
         logger.info(
             'experiment mission_info={}, count={}, target_type={}'.format(self.mission_info,
-                                                                           self.count,
-                                                                           self.target_type))
+                                                                          self.count,
+                                                                          self.target_type))
 
         if self.target_type == Mission.Goal.TARGET_POSE:
             for p in self.poses:

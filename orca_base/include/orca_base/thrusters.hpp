@@ -83,7 +83,8 @@ public:
    * @param xy_limit Limit forward + strafe efforts to this value
    * @param control_msg Write to this control message
    */
-  void efforts_to_control(const BaseContext & cxt, const mw::Efforts & efforts,
+  void efforts_to_control(
+    const BaseContext & cxt, const mw::Efforts & efforts,
     orca_msgs::msg::Control & control_msg);
 };
 

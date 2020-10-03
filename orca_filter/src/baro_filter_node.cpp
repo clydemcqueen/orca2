@@ -70,7 +70,7 @@ constexpr int MEASUREMENT_DIM = NUM_VAR;      // [p]
 constexpr int CONTROL_DIM = 0;                // No control input
 
 constexpr double VARIANCE = orca::Model::BARO_STDDEV * orca::Model::BARO_STDDEV;
-constexpr double DT = 1/orca::Model::BARO_FREQ;
+constexpr double DT = 1 / orca::Model::BARO_FREQ;
 
 constexpr int QUEUE_SIZE = 10;
 
@@ -95,7 +95,7 @@ class BaroFilterNode : public rclcpp::Node
 
   // Callback wrapper, guarantees timestamp monotonicity
   monotonic::Monotonic<BaroFilterNode *, const orca_msgs::msg::Barometer::SharedPtr>
-    baro_cb_{this, &BaroFilterNode::baro_callback};
+  baro_cb_{this, &BaroFilterNode::baro_callback};
 
   // Barometer callback
   void baro_callback(orca_msgs::msg::Barometer::SharedPtr msg, bool first)
@@ -139,7 +139,7 @@ class BaroFilterNode : public rclcpp::Node
 
 public:
   BaroFilterNode()
-    : Node{"baro_filter_node"}
+  : Node{"baro_filter_node"}
   {
     (void) baro_sub_;
 
@@ -167,7 +167,7 @@ public:
       "barometer",
       QUEUE_SIZE,
       [this](const orca_msgs::msg::Barometer::SharedPtr msg) -> void
-        { this->baro_cb_.call(msg); });
+      {this->baro_cb_.call(msg);});
 
     // Advertise
     filtered_baro_pub_ = create_publisher<orca_msgs::msg::Barometer>(

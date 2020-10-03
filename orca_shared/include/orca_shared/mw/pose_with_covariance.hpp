@@ -54,7 +54,7 @@ public:
   constexpr static int PITCH_IX = 4 * 7;
   constexpr static int YAW_IX = 5 * 7;
 
-  constexpr static double THRESHOLD = 1e4;
+  constexpr static double TH = 1e4;
   constexpr static double VERY_HIGH = 1e5;
 
   constexpr static int DOF_NONE = 0;
@@ -117,13 +117,11 @@ public:
 
   int dof() const
   {
-    if (covariance_[Z_IX] > THRESHOLD) {
+    if (covariance_[Z_IX] > TH) {
       return DOF_NONE;
-    } else if (covariance_[X_IX] > THRESHOLD || covariance_[Y_IX] > THRESHOLD ||
-      covariance_[YAW_IX] > THRESHOLD)
-    {
+    } else if (covariance_[X_IX] > TH || covariance_[Y_IX] > TH || covariance_[YAW_IX] > TH) {
       return DOF_Z;
-    } else if (covariance_[ROLL_IX] > THRESHOLD || covariance_[PITCH_IX] > THRESHOLD) {
+    } else if (covariance_[ROLL_IX] > TH || covariance_[PITCH_IX] > TH) {
       return DOF_FOUR;
     } else {
       return DOF_SIX;

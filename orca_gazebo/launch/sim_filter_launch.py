@@ -34,7 +34,6 @@
 
 """Launch a simulation of a single marker plus a filter."""
 
-from enum import Enum
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -140,7 +139,7 @@ def generate_launch_description():
 
                 # Keep the existing timestamps
                 'psl_stamp_msgs_with_current_time': 0,
-            }]),
+             }]),
 
         # Combine poses and observations into fiducial poses
         Node(package='orca_filter', node_executable='fp_node', output='screen',
@@ -150,6 +149,6 @@ def generate_launch_description():
         Node(package='orca_filter', node_executable='pose_filter_node', output='screen',
              node_name='pose_filter_node', parameters=[pose_filter_node_params], remappings=[
                 ('fcam_fp', '/' + camera_name + '/fp'),
-            ])]
+             ])]
 
     return LaunchDescription(all_entities)

@@ -189,7 +189,8 @@ PoseFilter6D::PoseFilter6D(
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose_6d, logger, cxt, std::move(filtered_pose_pub), std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
+: PoseFilterBase{Type::pose_6d, logger, cxt, std::move(filtered_pose_pub),
+    std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
 {
 }
 
@@ -200,85 +201,85 @@ void PoseFilter6D::init(const geometry_msgs::msg::Pose & pose)
   // Process noise
   Eigen::VectorXd variances(NUM_VAR);
   variances << cxt_.ukf_var_x_, cxt_.ukf_var_y_, cxt_.ukf_var_z_,
-               cxt_.ukf_var_roll_, cxt_.ukf_var_pitch_, cxt_.ukf_var_yaw_;
-  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1/orca::Model::CAMERA_FREQ, variances));
+    cxt_.ukf_var_roll_, cxt_.ukf_var_pitch_, cxt_.ukf_var_yaw_;
+  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1 / orca::Model::CAMERA_FREQ, variances));
 
   // State transition function
   filter_.set_f_fn(
     [this](const double dt, const Eigen::VectorXd & u, Eigen::Ref<Eigen::VectorXd> x)
-      {
-        if (cxt_.predict_accel_) {
-          // Assume 0 acceleration
-          px_ax = 0;
-          px_ay = 0;
-          px_az = 0;
-          px_aroll = 0;
-          px_apitch = 0;
-          px_ayaw = 0;
+    {
+      if (cxt_.predict_accel_) {
+        // Assume 0 acceleration
+        px_ax = 0;
+        px_ay = 0;
+        px_az = 0;
+        px_aroll = 0;
+        px_apitch = 0;
+        px_ayaw = 0;
 
-          if (cxt_.predict_accel_control_) {
-            // Add acceleration due to control
-            px_ax += u(0, 0);
-            px_ay += u(1, 0);
-            px_az += u(2, 0);
-            px_ayaw += u(3, 0);
-          }
-
-          if (cxt_.predict_accel_drag_) {
-            // Add acceleration due to drag
-            // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass)
-            //  and AddRelativeTorque(drag_torque)
-            // Simple approximation:
-            px_ax += cxt_.drag_accel_f(px_vx);    // TODO(clyde): f or x?
-            px_ay += cxt_.drag_accel_s(px_vy);    // TODO(clyde): s or y?
-            px_az += cxt_.drag_accel_z(px_vz);
-            px_aroll += cxt_.drag_accel_yaw(px_vroll);
-            px_apitch += cxt_.drag_accel_yaw(px_vpitch);
-            px_ayaw += cxt_.drag_accel_yaw(px_vyaw);
-          }
-
-          if (cxt_.predict_accel_buoyancy_) {
-            // Add acceleration due to gravity and buoyancy
-            // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
-            // Simple approximation:
-            px_roll = 0;
-            px_pitch = 0;
-            px_az -= cxt_.hover_accel_z();
-          }
+        if (cxt_.predict_accel_control_) {
+          // Add acceleration due to control
+          px_ax += u(0, 0);
+          px_ay += u(1, 0);
+          px_az += u(2, 0);
+          px_ayaw += u(3, 0);
         }
 
-        // Clamp acceleration
-        px_ax = orca::clamp(px_ax, MAX_PREDICTED_ACCEL_XYZ);
-        px_ay = orca::clamp(px_ay, MAX_PREDICTED_ACCEL_XYZ);
-        px_az = orca::clamp(px_az, MAX_PREDICTED_ACCEL_XYZ);
-        px_aroll = orca::clamp(px_aroll, MAX_PREDICTED_ACCEL_RPY);
-        px_apitch = orca::clamp(px_apitch, MAX_PREDICTED_ACCEL_RPY);
-        px_ayaw = orca::clamp(px_ayaw, MAX_PREDICTED_ACCEL_RPY);
+        if (cxt_.predict_accel_drag_) {
+          // Add acceleration due to drag
+          // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass)
+          //  and AddRelativeTorque(drag_torque)
+          // Simple approximation:
+          px_ax += cxt_.drag_accel_f(px_vx);      // TODO(clyde): f or x?
+          px_ay += cxt_.drag_accel_s(px_vy);      // TODO(clyde): s or y?
+          px_az += cxt_.drag_accel_z(px_vz);
+          px_aroll += cxt_.drag_accel_yaw(px_vroll);
+          px_apitch += cxt_.drag_accel_yaw(px_vpitch);
+          px_ayaw += cxt_.drag_accel_yaw(px_vyaw);
+        }
 
-        // Velocity, vx += ax * dt
-        px_vx += px_ax * dt;
-        px_vy += px_ay * dt;
-        px_vz += px_az * dt;
-        px_vroll += px_aroll * dt;
-        px_vpitch += px_apitch * dt;
-        px_vyaw += px_ayaw * dt;
+        if (cxt_.predict_accel_buoyancy_) {
+          // Add acceleration due to gravity and buoyancy
+          // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
+          // Simple approximation:
+          px_roll = 0;
+          px_pitch = 0;
+          px_az -= cxt_.hover_accel_z();
+        }
+      }
 
-        // Clamp velocity
-        px_vx = orca::clamp(px_vx, MAX_PREDICTED_VELO_XYZ);
-        px_vy = orca::clamp(px_vy, MAX_PREDICTED_VELO_XYZ);
-        px_vz = orca::clamp(px_vz, MAX_PREDICTED_VELO_XYZ);
-        px_vroll = orca::clamp(px_vroll, MAX_PREDICTED_VELO_RPY);
-        px_vpitch = orca::clamp(px_vpitch, MAX_PREDICTED_VELO_RPY);
-        px_vyaw = orca::clamp(px_vyaw, MAX_PREDICTED_VELO_RPY);
+      // Clamp acceleration
+      px_ax = orca::clamp(px_ax, MAX_PREDICTED_ACCEL_XYZ);
+      px_ay = orca::clamp(px_ay, MAX_PREDICTED_ACCEL_XYZ);
+      px_az = orca::clamp(px_az, MAX_PREDICTED_ACCEL_XYZ);
+      px_aroll = orca::clamp(px_aroll, MAX_PREDICTED_ACCEL_RPY);
+      px_apitch = orca::clamp(px_apitch, MAX_PREDICTED_ACCEL_RPY);
+      px_ayaw = orca::clamp(px_ayaw, MAX_PREDICTED_ACCEL_RPY);
 
-        // Position, x += vx * dt
-        px_x += px_vx * dt;
-        px_y += px_vy * dt;
-        px_z += px_vz * dt;
-        px_roll = orca::norm_angle(px_roll + px_vroll * dt);
-        px_pitch = orca::norm_angle(px_pitch + px_vpitch * dt);
-        px_yaw = orca::norm_angle(px_yaw + px_vyaw * dt);
-      });
+      // Velocity, vx += ax * dt
+      px_vx += px_ax * dt;
+      px_vy += px_ay * dt;
+      px_vz += px_az * dt;
+      px_vroll += px_aroll * dt;
+      px_vpitch += px_apitch * dt;
+      px_vyaw += px_ayaw * dt;
+
+      // Clamp velocity
+      px_vx = orca::clamp(px_vx, MAX_PREDICTED_VELO_XYZ);
+      px_vy = orca::clamp(px_vy, MAX_PREDICTED_VELO_XYZ);
+      px_vz = orca::clamp(px_vz, MAX_PREDICTED_VELO_XYZ);
+      px_vroll = orca::clamp(px_vroll, MAX_PREDICTED_VELO_RPY);
+      px_vpitch = orca::clamp(px_vpitch, MAX_PREDICTED_VELO_RPY);
+      px_vyaw = orca::clamp(px_vyaw, MAX_PREDICTED_VELO_RPY);
+
+      // Position, x += vx * dt
+      px_x += px_vx * dt;
+      px_y += px_vy * dt;
+      px_z += px_vz * dt;
+      px_roll = orca::norm_angle(px_roll + px_vroll * dt);
+      px_pitch = orca::norm_angle(px_pitch + px_vpitch * dt);
+      px_yaw = orca::norm_angle(px_yaw + px_vyaw * dt);
+    });
 
   // Custom residual and mean functions
   filter_.set_r_x_fn(six_state_residual);

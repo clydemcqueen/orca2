@@ -289,7 +289,8 @@ void ROVNode::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg, bool firs
 
     // Z trim
     if (holding_pressure() && trim_down(msg, joy_msg_, joy_axis_z_trim_)) {
-      target_pressure_ += (msg->axes[joy_axis_z_trim_] > 0) ? -cxt_.inc_pressure_ : cxt_.inc_pressure_;
+      target_pressure_ +=
+        (msg->axes[joy_axis_z_trim_] > 0) ? -cxt_.inc_pressure_ : cxt_.inc_pressure_;
       pressure_hold_pid_->set_target(target_pressure_);
       RCLCPP_INFO(get_logger(), "hold pressure at %g", target_pressure_);
     }

@@ -87,7 +87,7 @@ constexpr int pwm_to_brightness(const uint16_t pwm)
 //---------------------------------
 
 // Domain
-// TODO add deadzone
+// TODO(clyde): add deadzone
 constexpr double THRUST_FULL_REV = -1.0;
 constexpr double THRUST_STOP = 0.0;
 constexpr double THRUST_FULL_FWD = 1.0;

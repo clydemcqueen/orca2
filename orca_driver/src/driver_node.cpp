@@ -47,17 +47,17 @@ bool valid(const rclcpp::Time & t)
 bool pwm_valid(uint16_t pwm)
 {
   return pwm <= orca_msgs::msg::Control::THRUST_FULL_FWD &&
-    pwm >= orca_msgs::msg::Control::THRUST_FULL_REV;
+         pwm >= orca_msgs::msg::Control::THRUST_FULL_REV;
 }
 
 bool control_msg_ok(const orca_msgs::msg::Control & msg)
 {
   return pwm_valid(msg.thruster_pwm.fr_1) &&
-    pwm_valid(msg.thruster_pwm.fl_2) &&
-    pwm_valid(msg.thruster_pwm.rr_3) &&
-    pwm_valid(msg.thruster_pwm.rl_4) &&
-    pwm_valid(msg.thruster_pwm.vr_5) &&
-    pwm_valid(msg.thruster_pwm.vl_6);
+         pwm_valid(msg.thruster_pwm.fl_2) &&
+         pwm_valid(msg.thruster_pwm.rr_3) &&
+         pwm_valid(msg.thruster_pwm.rl_4) &&
+         pwm_valid(msg.thruster_pwm.vr_5) &&
+         pwm_valid(msg.thruster_pwm.vl_6);
 }
 
 //=============================================================================

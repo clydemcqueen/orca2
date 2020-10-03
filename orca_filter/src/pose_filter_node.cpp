@@ -136,7 +136,7 @@ void PoseFilterNode::validate_parameters()
     control_sub_ = create_subscription<orca_msgs::msg::Control>(
       "control", QUEUE_SIZE,
       [this](const orca_msgs::msg::Control::SharedPtr msg) -> void
-        {this->control_cb_.call(msg);});
+      {this->control_cb_.call(msg);});
   } else {
     control_sub_.reset();
   }
@@ -175,11 +175,14 @@ bool PoseFilterNode::create_filter(const geometry_msgs::msg::Pose & pose)
 
   if (!filter_ || filter_->type() != expected_type) {
     if (expected_type == PoseFilterBase::Type::pose_1d) {
-      filter_ = std::make_shared<PoseFilter1D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter1D>(
+        get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     } else if (expected_type == PoseFilterBase::Type::pose_4d) {
-      filter_ = std::make_shared<PoseFilter4D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter4D>(
+        get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     } else {
-      filter_ = std::make_shared<PoseFilter6D>(get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
+      filter_ = std::make_shared<PoseFilter6D>(
+        get_logger(), cxt_, filtered_pose_pub_, filtered_fp_pub_, tf_pub_);
     }
 
     // Always init!
@@ -218,7 +221,9 @@ void PoseFilterNode::control_callback(const orca_msgs::msg::Control::SharedPtr m
   u_bar_ = efforts.acceleration(cxt_, estimated_yaw_);
 }
 
-void PoseFilterNode::fcam_callback(const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg, bool first)
+void PoseFilterNode::fcam_callback(
+  const orca_msgs::msg::FiducialPoseStamped::SharedPtr msg,
+  bool first)
 {
   START_PERF()
 

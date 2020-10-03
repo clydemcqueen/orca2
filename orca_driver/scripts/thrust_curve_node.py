@@ -42,14 +42,12 @@ Usage:
 -- measure thrust force at each stage
 """
 
-from typing import Optional
-
 from orca_msgs.msg import Control
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 import rclpy.logging
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rcl_interfaces.msg import SetParametersResult
 
 CMD = 'cmd'
 CMD_START = 'start'

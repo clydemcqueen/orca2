@@ -338,7 +338,7 @@ def generate_launch_description():
              node_name='depth_node', parameters=[model_params], remappings=[
                 ('fp', '/' + camera_name + '/fp'),
                 ('barometer', 'filtered_barometer'),  # Use filtered barometer messages
-            ]),
+             ]),
 
         # Publish, and possibly build, a map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',

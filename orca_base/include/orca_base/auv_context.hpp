@@ -61,7 +61,7 @@ namespace orca_base
   CXT_MACRO_MEMBER(map_frame, std::string, "map") \
  \
   CXT_MACRO_MEMBER(auv_pid_enabled, bool, true) \
-  /* Turn pid controllers on/off  */   \
+  /* Turn pid controllers on/off  */ \
  \
   CXT_MACRO_MEMBER(auv_x_pid_kp, double, 0.5) \
   CXT_MACRO_MEMBER(auv_x_pid_ki, double, 0.0) \

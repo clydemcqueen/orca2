@@ -69,7 +69,7 @@ namespace orca
   CXT_MACRO_MEMBER(mdl_drag_partial_const_yaw, double, 0.004) \
   /* Yaw drag, wild guess  */ \
   CXT_MACRO_MEMBER(mdl_thrust_dz_pwm, uint16_t, 35) \
-  /* Thruster deadzone  */                 \
+  /* Thruster deadzone  */ \
 /* End of list */
 
 #undef CXT_MACRO_MEMBER
@@ -135,7 +135,8 @@ struct Model
   //=====================================================================================
 
   // Assume a uniform distribution of mass in the vehicle box
-  double moment_of_inertia_yaw_ = mdl_mass_ / 12.0 * (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
+  double moment_of_inertia_yaw_ = mdl_mass_ / 12.0 *
+    (ROV_DIM_F * ROV_DIM_F + ROV_DIM_S * ROV_DIM_S);
 
   // Force / torque => acceleration
   double force_to_accel(double force) const {return force / mdl_mass_;}
@@ -329,7 +330,8 @@ struct Model
   //=====================================================================================
 
   void
-  drag_const_world(double yaw, double motion_world, double & drag_const_x,
+  drag_const_world(
+    double yaw, double motion_world, double & drag_const_x,
     double & drag_const_y) const;
 
   // Log some info... handy for debugging

@@ -104,7 +104,8 @@ PoseFilter1D::PoseFilter1D(
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_pose_pub,
   rclcpp::Publisher<orca_msgs::msg::FiducialPoseStamped>::SharedPtr filtered_fp_pub,
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub)
-: PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_pose_pub), std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
+: PoseFilterBase{Type::pose_1d, logger, cxt, std::move(filtered_pose_pub),
+    std::move(filtered_fp_pub), std::move(tf_pub), STATE_DIM}
 {
 }
 
@@ -115,49 +116,49 @@ void PoseFilter1D::init(const geometry_msgs::msg::Pose & pose)
   // Process noise
   Eigen::VectorXd variances(NUM_VAR);
   variances << cxt_.ukf_var_z_;
-  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1/orca::Model::CAMERA_FREQ, variances));
+  filter_.set_Q(ukf::Q_discrete_white_noise_Xv(NUM_DER, 1 / orca::Model::CAMERA_FREQ, variances));
 
   // State transition function
   filter_.set_f_fn(
     [this](const double dt, const Eigen::VectorXd & u, Eigen::Ref<Eigen::VectorXd> x)
-      {
-        if (cxt_.predict_accel_) {
-          // Assume 0 acceleration
-          dx_az = 0;
+    {
+      if (cxt_.predict_accel_) {
+        // Assume 0 acceleration
+        dx_az = 0;
 
-          if (cxt_.predict_accel_control_) {
-            // Add acceleration due to control
-            dx_az += u(2, 0);
-          }
-
-          if (cxt_.predict_accel_drag_) {
-            // Add acceleration due to drag
-            // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass) and
-            //  AddRelativeTorque(drag_torque)
-            // Simple approximation:
-            dx_az += cxt_.drag_accel_z(dx_vz);
-          }
-
-          if (cxt_.predict_accel_buoyancy_) {
-            // Add acceleration due to gravity and buoyancy
-            // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
-            // Simple approximation:
-            dx_az -= cxt_.hover_accel_z();
-          }
+        if (cxt_.predict_accel_control_) {
+          // Add acceleration due to control
+          dx_az += u(2, 0);
         }
 
-        // Clamp acceleration
-        dx_az = orca::clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
+        if (cxt_.predict_accel_drag_) {
+          // Add acceleration due to drag
+          // TODO(clyde): create & use AddLinkForce(drag_force, c_of_mass) and
+          //  AddRelativeTorque(drag_torque)
+          // Simple approximation:
+          dx_az += cxt_.drag_accel_z(dx_vz);
+        }
 
-        // Velocity, vx += ax * dt
-        dx_vz += dx_az * dt;
+        if (cxt_.predict_accel_buoyancy_) {
+          // Add acceleration due to gravity and buoyancy
+          // TODO(clyde): create & use AddLinkForce(buoyancy_force, c_of_volume)
+          // Simple approximation:
+          dx_az -= cxt_.hover_accel_z();
+        }
+      }
 
-        // Clamp velocity
-        dx_vz = orca::clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
+      // Clamp acceleration
+      dx_az = orca::clamp(dx_az, MAX_PREDICTED_ACCEL_XYZ);
 
-        // Position, x += vx * dt
-        dx_z += dx_vz * dt;
-      });
+      // Velocity, vx += ax * dt
+      dx_vz += dx_az * dt;
+
+      // Clamp velocity
+      dx_vz = orca::clamp(dx_vz, MAX_PREDICTED_VELO_XYZ);
+
+      // Position, x += vx * dt
+      dx_z += dx_vz * dt;
+    });
 }
 
 void PoseFilter1D::pose_from_filter(geometry_msgs::msg::Pose & filtered_pose)

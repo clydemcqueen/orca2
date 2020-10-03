@@ -65,7 +65,7 @@ constexpr double MAX_PREDICTED_VELO_XYZ = 100;
 constexpr double MAX_PREDICTED_VELO_RPY = 100;
 
 //==================================================================
-// Unscented residual and mean functions for PoseFilter6D 6dof state (x) and 6dof pose measurement (z)
+// Unscented residual and mean for PoseFilter6D 6dof state (x) and 6dof pose measurement (z)
 //
 // Because of the layout of the state and pose measurement matrices and the way that Eigen works
 // these functions can serve double-duty.
@@ -291,7 +291,8 @@ public:
    * @return True if there was at least one inlier and the filter is good
    */
   template<typename T>
-  bool process_message(const T & msg, const mw::Observations & observations,
+  bool process_message(
+    const T & msg, const mw::Observations & observations,
     const mw::Acceleration & u_bar)
   {
     assert(initialized_);

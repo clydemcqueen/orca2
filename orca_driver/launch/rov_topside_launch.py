@@ -87,7 +87,7 @@ def generate_launch_description():
         Node(package='orca_base', node_executable='rov_node', output='screen',
              node_name='rov_node', parameters=[rov_node_params], remappings=[
                 ('barometer', 'filtered_barometer'),
-            ]),
+             ]),
     ]
 
     return LaunchDescription(all_entities)

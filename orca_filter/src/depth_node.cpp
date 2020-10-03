@@ -89,7 +89,7 @@ class DepthNode : public rclcpp::Node
   monotonic::Monotonic<DepthNode *, const orca_msgs::msg::Barometer::SharedPtr>
   baro_cb_{this, &DepthNode::baro_callback};
 
-  monotonic::Monotonic<DepthNode *, const orca_msgs::msg::FiducialPoseStamped ::SharedPtr>
+  monotonic::Monotonic<DepthNode *, const orca_msgs::msg::FiducialPoseStamped::SharedPtr>
   fp_cb_{this, &DepthNode::fp_callback};
 
   void baro_callback(orca_msgs::msg::Barometer::SharedPtr baro_msg, bool first)
@@ -127,7 +127,8 @@ class DepthNode : public rclcpp::Node
         // Initialize the barometer with a known pressure and depth
         auto base_link_z = fp_msg->fp.pose.pose.position.z;
         barometer_.initialize(cxt_, pressure_, base_link_z);
-        RCLCPP_INFO(get_logger(), "barometer initialized, pressure %g, depth %g, atmospheric pressure %g",
+        RCLCPP_INFO(
+          get_logger(), "barometer initialized, pressure %g, depth %g, atmospheric pressure %g",
           pressure_, base_link_z, barometer_.atmospheric_pressure());
       }
     }

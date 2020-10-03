@@ -45,7 +45,7 @@ from typing import List
 
 import matplotlib
 from orca_msgs.msg import Barometer, Control
-from orca_util import seconds, set_ylim_with_min_range
+from orca_util import seconds
 import rclpy
 from rclpy.node import Node
 import rclpy.time

@@ -327,10 +327,10 @@ std::ostream & operator<<(std::ostream & os, const AccelerationBody & v)
 std::ostream & operator<<(std::ostream & os, Efforts const & e)
 {
   return os << std::fixed << std::setprecision(3) << "{" <<
-            e.forward() << ", " <<
-            e.strafe() << ", " <<
-            e.vertical() << ", " <<
-            e.yaw() << "}";
+         e.forward() << ", " <<
+         e.strafe() << ", " <<
+         e.vertical() << ", " <<
+         e.yaw() << "}";
 }
 
 std::ostream & operator<<(std::ostream & os, const FiducialPose & v)
@@ -435,10 +435,10 @@ std::ostream & operator<<(std::ostream & os, const Pose & v)
 std::ostream & operator<<(std::ostream & os, const PoseBody & v)
 {
   return os << std::fixed << std::setprecision(3) << "{" <<
-            v.forward() << ", " <<
-            v.strafe() << ", " <<
-            v.vertical() << ", " <<
-            v.yaw() << "}";
+         v.forward() << ", " <<
+         v.strafe() << ", " <<
+         v.vertical() << ", " <<
+         v.yaw() << "}";
 }
 
 std::ostream & operator<<(std::ostream & os, const PoseStamped & v)

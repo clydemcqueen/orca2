@@ -115,7 +115,8 @@ Thrusters::Thrusters()
   }
 }
 
-void Thrusters::efforts_to_control(const BaseContext & cxt, const mw::Efforts & efforts,
+void Thrusters::efforts_to_control(
+  const BaseContext & cxt, const mw::Efforts & efforts,
   orca_msgs::msg::Control & control_msg)
 {
   // Keep track of saturation for diagnostics
