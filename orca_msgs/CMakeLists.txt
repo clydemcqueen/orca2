@@ -6,6 +6,10 @@ if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif ()
 
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif ()
+
 # Emulate colcon in CLion
 if ($ENV{CLION_IDE})
   message("Running inside CLion")
@@ -46,6 +50,8 @@ rosidl_generate_interfaces(
   msg/Observations.msg
   msg/Observer.msg
   msg/PolarObservation.msg
+  msg/PoseBody.msg
+  msg/Thrusters.msg
   DEPENDENCIES fiducial_vlam_msgs geometry_msgs std_msgs
 )
 

@@ -13,20 +13,31 @@ I made the following standard modifications to my 2017 BlueRobotics BlueROV2:
 
 I made the following custom modifications -- YMMV:
 
-* Replaced the Pixhawk with a Pololu Maestro 18
+* Replaced the Raspberry Pi with an [UP Board](https://up-board.org/up/specifications/)
+* Replaced the Pixhawk with a [Pololu Maestro 18](https://www.pololu.com/product/1354)
 * Built a voltage divider to provide a voltage signal from the battery (0-17V) to a Maestro analog input (0-5V)
 * There is no current sensor
 * There is no IMU
 
-## Raspberry Pi Software Installation
+## Software Installation
 
-The Raspberry Pi is now the primary controller.
-Below I've outlined rough instructions... you'll need to dive into the system-specific instructions for details.
+Below I've outlined rough instructions to install the required software on the UP board.
+You'll need to dive into the system-specific instructions for details.
 
 ### Install Ubuntu 18.04.4 LTS Server
 
-Install Ubuntu 18.04.4 LTS Server for ARM64
-[using these instructions](https://wiki.ubuntu.com/ARM/RaspberryPi).
+Install Ubuntu 18.04.4 LTS Server.
+
+### Install Chrony
+
+Since the logic is split across 2 machines, the clocks need to be synchronized.
+I've had good luck with [https://chrony.tuxfamily.org/doc/3.5/installation.html](Chrony).
+Have the UP board use the desktop as a reference.
+
+### Install ffmpeg
+
+Check the requirements for [h264_image_transport](https://github.com/clydemcqueen/h264_image_transport)
+and install any missing ffmpeg libraries.
 
 ### Install ROS2 Eloquent
 
@@ -34,15 +45,15 @@ Install ROS2 Eloquent
 [using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
 Use the `ros-eloquent-ros-base` option to avoid installing the GUI tools.
 
-Install Colcon (the build tool for ROS2)
-[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+Install ROS2 development tools
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Development-Setup/).
+Stop after installing the development tools (before "Get ROS 2 code").
 
-### Install GStreamer
-
-GStreamer is used to read the h264 stream from the USB camera and forward it to the desktop over UDP.
-
-Install GStreamer
-[using these instructions](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c#).
+Initialize rosdep:
+~~~
+sudo rosdep init
+rosdep update
+~~~
 
 ### Install MRAA
 
@@ -54,15 +65,16 @@ sudo apt-get update
 sudo apt-get install libmraa2 libmraa-dev libmraa-java python3-mraa node-mraa mraa-tools
 ~~~
 
-### Install Orca
+### Install Orca2 on the ROV
 
 ~~~
 mkdir -p ~/ros2/orca_ws/src
 cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/BlueRobotics_MS5837_Library.git -b mraa_ros2
 git clone https://github.com/ptrmu/ros2_shared.git
-git clone https://github.com/ptrmu/fiducial_vlam.git
+git clone https://github.com/ptrmu/fiducial_vlam_sam.git
 touch fiducial_vlam/fiducial_vlam/COLCON_IGNORE
+git clone https://github.com/clydemcqueen/h264_image_transport.git
 git clone https://github.com/clydemcqueen/orca2.git
 touch orca2/orca_base/COLCON_IGNORE
 touch orca2/orca_description/COLCON_IGNORE
@@ -71,13 +83,14 @@ touch orca2/orca_gazebo/COLCON_IGNORE
 touch orca2/orca_shared/COLCON_IGNORE
 cd ~/ros2/orca_ws
 source /opt/ros/eloquent/setup.bash
+rosdep install --from-paths . --ignore-src
 colcon build
 source install/local_setup.bash
 ~~~
 
-### Manual Launch
+## Manual Launch
 
-In terminal 1 on the Raspberry Pi:
+On the UP board:
 
 ~~~
 cd ~/ros2/orca_ws
@@ -86,13 +99,7 @@ source install/local_setup.bash
 ros2 launch orca_driver sub_launch.py
 ~~~
 
-In terminal 2 on the Raspberry Pi:
-
-~~~
-gst-launch-1.0 -v v4l2src device=/dev/video1 do-timestamp=true ! queue ! video/x-h264,width=1920,height=1080,framerate=30/1 ! h264parse ! rtph264pay config-interval=10 ! udpsink host=192.168.86.105 port=5600
-~~~
-
-In terminal 1 on the desktop computer:
+On the desktop computer:
 
 ~~~
 cd ~/ros2/orca_ws
@@ -101,21 +108,16 @@ source install/local_setup.bash
 ros2 launch orca_driver topside_launch.py
 ~~~
 
-### Launch on Boot
-
-To configure the Raspberry Pi to launch on boot:
-
-~~~
-sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_fcam.service /lib/systemd/system
-sudo cp ~/ros2/orca_ws/src/orca2/orca_driver/scripts/orca_driver.service /lib/systemd/system
-sudo systemctl enable orca_fcam.service
-sudo systemctl enable orca_driver.service
-~~~
-
 ## Troubleshooting
 
-* Test the i2c bus using `i2cdetect 1`
-* `raspi-config` isn't installed as part of Ubuntu 18.04.4, and the PPA I found has a few bugs.
-I hand-edited the boot sector config files on the SD card and added `dtparam=i2c_arm=on`.
-* Make sure that `$USER` is in the dialout, video and i2c groups.
+The compiler (`cc1plus`) sometimes dies during build, try restarting `colcon build`.
+If that fails, try:
+~~~
+export MAKEFLAGS='-j 1'
+colcon build
+~~~
+
+Test the i2c bus using `i2cdetect 1`.
+
+Make sure that `$USER` is in the dialout, video and i2c groups.
 Remember to log out and log back in after changing groups.

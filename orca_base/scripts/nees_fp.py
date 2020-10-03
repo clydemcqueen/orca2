@@ -1,17 +1,53 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Compute Normalized Estimated Error Squared (NEES)
-See https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/08-Designing-Kalman-Filters.ipynb
+Compute Normalized Estimated Error Squared (NEES).
+
+See https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/, chapter 08
+
+Only works in simulations, and only useful if we're running a filter
 """
 
 from typing import List, Optional
 
-import numpy as np
-import transformations as xf
 from builtin_interfaces.msg import Time
 from nav_msgs.msg import Odometry
+import numpy as np
+from orca_msgs.msg import FiducialPoseStamped
 from scipy.linalg import inv
+import transformations as xf
 
 
 def seconds(stamp: Time) -> float:
@@ -32,9 +68,9 @@ def normalize_angle(x):
 
 
 class State(object):
-    """Filter state"""
+    """Filter state."""
 
-    def __init__(self, s=0., x=np.zeros(12), P=np.identity(12)):
+    def __init__(self, s=0., x=np.zeros(6), P=np.identity(6)):
         self._s = s  # Timestamp, in seconds
         self._x = x  # x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw
         self._P = P
@@ -43,29 +79,31 @@ class State(object):
         return self._s
 
     def __str__(self):
-        return 's: ' + str(self._s) + '\nx: ' + str(self._x) + '\n' # + 'P:\n' + str(self._P) + '\n'
+        return 's: ' + str(self._s) + '\nx: ' + str(self._x) + '\n'
+
+    @classmethod
+    def from_fp(cls, msg: FiducialPoseStamped):
+        x = np.array([msg.fp.pose.pose.position.x,
+                      msg.fp.pose.pose.position.y,
+                      msg.fp.pose.pose.position.z,
+                      *q_to_rpy(msg.fp.pose.pose.orientation)])
+        P = np.zeros((6, 6))
+        P[0:6, 0:6] = msg.fp.pose.covariance.reshape((6, 6))  # Better way to do this?
+        return State(seconds(msg.header.stamp), x, P)
 
     @classmethod
     def from_odometry(cls, msg: Odometry):
         x = np.array([msg.pose.pose.position.x,
                       msg.pose.pose.position.y,
                       msg.pose.pose.position.z,
-                      *q_to_rpy(msg.pose.pose.orientation),
-                      msg.twist.twist.linear.x,
-                      msg.twist.twist.linear.y,
-                      msg.twist.twist.linear.z,
-                      msg.twist.twist.angular.x,
-                      msg.twist.twist.angular.y,
-                      msg.twist.twist.angular.z])
-        P = np.zeros((12, 12))
-        P[0:6, 0:6] = msg.pose.covariance.reshape((6, 6))
-        P[6:12, 6:12] = msg.twist.covariance.reshape((6, 6))
+                      *q_to_rpy(msg.pose.pose.orientation)])
+        P = np.zeros((6, 6))
+        P[0:6, 0:6] = msg.pose.covariance.reshape((6, 6))  # Better way to do this?
         return State(seconds(msg.header.stamp), x, P)
 
     @classmethod
     def interpolate(cls, a: 'State', b: 'State', s: float) -> Optional['State']:
-        """Interpolate between a and b"""
-
+        """Interpolate between a and b."""
         epsilon = 0.001
         if abs(a._s - s) < epsilon:
             return a
@@ -89,8 +127,7 @@ class State(object):
 
     @classmethod
     def nees(cls, truth: 'State', estimate: 'State') -> float:
-        """Calc NEES"""
-
+        """Calc NEES."""
         error_x = truth._x - estimate._x
 
         # Normalize the angles
@@ -101,15 +138,15 @@ class State(object):
         return np.dot(error_x.T, inv(estimate._P)).dot(error_x)
 
 
-def nees(e_msgs: List[Odometry], gt_msgs: List[Odometry]) -> List[float]:
+def nees(e_msgs: List[FiducialPoseStamped], gt_msgs: List[Odometry]) -> List[float]:
     """
     Given lists of estimated values and true values, calculate a list of NEES values.
+
     Interpolate between the true values as necessary. The lists must be sorted by time.
     """
-
     estimates = []
     for e_msg in e_msgs:
-        estimates.append(State.from_odometry(e_msg))
+        estimates.append(State.from_fp(e_msg))
 
     truths = []
     for gt_msg in gt_msgs:
@@ -126,12 +163,12 @@ def nees(e_msgs: List[Odometry], gt_msgs: List[Odometry]) -> List[float]:
     return results
 
 
-def main(args=None):
-    print('Test nees.py')
+def main():
+    print('Test nees_fp.py')
 
-    a = State(0., np.ones(12) * 10.)
-    b = State(1., np.ones(12) * 20.)
-    c = State(2., np.ones(12) * 20.5)
+    a = State(0., np.ones(6) * 10.)
+    b = State(1., np.ones(6) * 20.)
+    c = State(2., np.ones(6) * 20.5)
     print('a\n', a)
     print('b\n', b)
     print('c\n', c)

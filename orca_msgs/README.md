@@ -15,6 +15,8 @@
 | Observations | Marker observations, includes Observer |
 | Observer | Information about the camera making the observations |
 | PolarObservation | Marker location in polar coordinates from base_link |
+| PoseBody | 4 DoF pose in the body frame |
+| Thrusters | Thruster pwm values |
 
 ## Action
 

@@ -1,8 +1,41 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Analyze and plot orca_msgs/msg/Control messages, looking only at the AUV motion segments
-Write a new plot when the motion segment changes
+Analyze and plot orca_msgs/msg/Control messages, looking only at the AUV motion segments.
+
+Write a new plot when the motion segment changes.
 
 Usage:
 
@@ -12,31 +45,20 @@ ros2 run orca_base plot_auv_segments.py
 import queue
 import threading
 import time
+from typing import List
 
 import matplotlib
+from orca_msgs.msg import Control, MissionState, PolarObservation
+from orca_util import get_yaw, norm_angle, seconds, set_ylim_with_min_range
+import rclpy
+from rclpy.node import Node
+import rclpy.time
 
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 
-import matplotlib.pyplot as plt
-from orca_msgs.msg import Control, Observation
-import rclpy
-import rclpy.time
-from rclpy.node import Node
-from typing import List
-from orca_util import norm_angle, get_yaw, seconds
-
-MIN_RANGE = 0.2
-
-
-# Set ylim to some reasonable values
-def set_ylim_with_min_range(ax):
-    limits = ax.get_ylim()
-    range = limits[1] - limits[0]
-
-    if range < MIN_RANGE:
-        adj = (MIN_RANGE - range) / 2.0
-        ax.set_ylim(limits[0] - adj, limits[1] + adj)
+# Turn off flake8 checking for this late import
+import matplotlib.pyplot as plt  # noqa: E402,I100
 
 
 def plot_velo(ax, name, x_values, y_values):
@@ -46,13 +68,14 @@ def plot_velo(ax, name, x_values, y_values):
     ax.plot(x_values, y_values)
 
 
-def plot_pose(ax, name, plan_name, est_name, plan_x_values, est_x_values, plan_y_values, est_y_values):
+def plot_pose(ax, name, plan_name, est_name, plan_x_values, est_x_values, plan_y_values,
+              est_y_values):
     ax.plot(plan_x_values, plan_y_values, label=plan_name)
     ax.plot(est_x_values, est_y_values, label=est_name, marker='+', ls='')
     ax.set_xticklabels([])
     ax.set_title(name)
     ax.legend()
-    set_ylim_with_min_range(ax)
+    set_ylim_with_min_range(ax, 0.2)
 
 
 def plot_error(ax, name, x_values, y_values):
@@ -115,101 +138,136 @@ class Plotter(object):
 
         # For pose-based segments plot x, y, z, yaw
         # For observation-based segments plot distance, z and bearing
-        if self._control_msgs[0].segment_type == Control.OBS_RTM or \
-                self._control_msgs[0].segment_type == Control.OBS_MTM:
+        if self._control_msgs[0].mission.segment_type == MissionState.OBS_RTM or \
+                self._control_msgs[0].mission.segment_type == MissionState.OBS_MTM:
 
             # We expect 1 planned observation -- the marker we're tracking
-            # The number of observations in the estimate may vary from 0 to the total number of markers
-            plan_obs_sizes = [len(msg.plan_observations) for msg in self._control_msgs]
-            est_obs_sizes = [len(msg.estimate_observations) for msg in self._control_msgs]
+            # The number of observations in estimate may vary from 0 to the total number of markers
+            plan_obs_sizes = [len(msg.mission.pose.fp.observations.observations) for msg in
+                              self._control_msgs]
+            est_obs_sizes = [len(msg.estimate.observations.observations) for msg in
+                             self._control_msgs]
             fewest_plan = min(plan_obs_sizes)
             most_plan = max(plan_obs_sizes)
             fewest_est = min(est_obs_sizes)
             most_est = max(est_obs_sizes)
 
             if fewest_plan != 1 or most_plan != 1:
-                print('ERROR expected 1 planned observation, found min {}, max {}'.format(fewest_plan, most_plan))
+                print('ERROR expected 1 planned observation, found min {}, max {}'.format(
+                    fewest_plan, most_plan))
                 return
 
             print('len(estimate_observations) varies from {} to {}'.format(fewest_est, most_est))
 
             # The marker we're tracking
-            marker_id = self._control_msgs[0].plan_observations[0].vlam.id
+            marker_id = self._control_msgs[0].mission.pose.fp.observations.observations[0].id
 
-            # We may not find the marker in estimate_observations, so the # of data points may be smaller
+            # We may not find the marker in msg.estimate.observations,
+            # so the # of data points may be smaller
             est_obs_stamps = []
             est_obs_distance_values = []
             est_obs_bearing_values = []
             error_distance_values = []
             error_bearing_values = []
             for msg in self._control_msgs:
-                obs: Observation
-                for obs in msg.estimate_observations:
-                    if obs.vlam.id == marker_id:
+                # Get distance and bearing to the planned observation
+                plan_distance = msg.mission.pose.fp.observations.polar_observations[0].distance
+                plan_bearing = msg.mission.pose.fp.observations.polar_observations[0].bearing
+
+                # Try to find the marker in the estimate
+                polar_obs: PolarObservation  # Type hint
+                for polar_obs in msg.estimate.observations.polar_observations:
+                    if polar_obs.id == marker_id:
                         est_obs_stamps.append(seconds(msg.header.stamp))
-                        est_obs_distance_values.append(obs.distance)
-                        est_obs_bearing_values.append(obs.yaw)
-                        error_distance_values.append(obs.distance - msg.plan_observations[0].distance)
-                        error_bearing_values.append(obs.yaw - msg.plan_observations[0].yaw)
+                        est_obs_distance_values.append(polar_obs.distance)
+                        est_obs_bearing_values.append(polar_obs.bearing)
+                        error_distance_values.append(polar_obs.distance - plan_distance)
+                        error_bearing_values.append(polar_obs.bearing - plan_bearing)
 
             # Plot velocity data
             # No planned velocity for observations
-            plot_velo(axvz, 'velo z', all_stamps, [msg.plan_twist.linear.z for msg in self._control_msgs])
+            plot_velo(axvz, 'velo z', all_stamps,
+                      [msg.mission.twist.linear.z for msg in self._control_msgs])
 
             # Plot pose data
-            plot_pose(axpx, 'obs distance', 'plan distance', 'est distance', all_stamps, est_obs_stamps,
-                      [msg.plan_observations[0].distance for msg in self._control_msgs],
+            plot_pose(axpx, 'obs distance', 'plan distance', 'est distance', all_stamps,
+                      est_obs_stamps,
+                      [msg.mission.pose.fp.observations.polar_observations[0].distance for msg in
+                       self._control_msgs],
                       est_obs_distance_values)
             plot_pose(axpz, 'pose z', 'plan z', 'est z', all_stamps, all_stamps,
-                      [msg.plan_pose.position.z for msg in self._control_msgs],
-                      [msg.estimate_pose.position.z for msg in self._control_msgs])
-            plot_pose(axpw, 'obs bearing', 'plan bearing', 'est bearing', all_stamps, est_obs_stamps,
-                      [msg.plan_observations[0].yaw for msg in self._control_msgs],
+                      [msg.mission.pose.position.z for msg in self._control_msgs],
+                      [msg.estimate.pose.position.z for msg in self._control_msgs])
+            plot_pose(axpw, 'obs bearing', 'plan bearing', 'est bearing', all_stamps,
+                      est_obs_stamps,
+                      [msg.mission.pose.fp.observations.polar_observations[0].bearing for msg in
+                       self._control_msgs],
                       est_obs_bearing_values)
 
             # Plot error data
             plot_error(axex, 'error distance', est_obs_stamps, error_distance_values)
             plot_error(axez, 'error z', all_stamps,
-                       [msg.estimate_pose.position.z - msg.plan_pose.position.z for msg in self._control_msgs])
+                       [msg.estimate.pose.position.z - msg.mission.pose.position.z for msg in
+                        self._control_msgs])
             plot_error(axew, 'error bearing', est_obs_stamps, error_bearing_values)
 
         else:
 
             # Plot velocity data
-            plot_velo(axvx, 'velo x', all_stamps, [msg.plan_twist.linear.x for msg in self._control_msgs])
-            plot_velo(axvy, 'velo y', all_stamps, [msg.plan_twist.linear.y for msg in self._control_msgs])
-            plot_velo(axvz, 'velo z', all_stamps, [msg.plan_twist.linear.z for msg in self._control_msgs])
-            plot_velo(axvw, 'velo yaw', all_stamps, [msg.plan_twist.angular.z for msg in self._control_msgs])
+            plot_velo(axvx, 'velo x', all_stamps,
+                      [msg.mission.twist.linear.x for msg in self._control_msgs])
+            plot_velo(axvy, 'velo y', all_stamps,
+                      [msg.mission.twist.linear.y for msg in self._control_msgs])
+            plot_velo(axvz, 'velo z', all_stamps,
+                      [msg.mission.twist.linear.z for msg in self._control_msgs])
+            plot_velo(axvw, 'velo yaw', all_stamps,
+                      [msg.mission.twist.angular.z for msg in self._control_msgs])
 
             # Plot pose data
             plot_pose(axpx, 'pose x', 'plan x', 'est x', all_stamps, all_stamps,
-                      [msg.plan_pose.position.x for msg in self._control_msgs],
-                      [msg.estimate_pose.position.x for msg in self._control_msgs])
+                      [msg.mission.pose.fp.pose.pose.position.x for msg in self._control_msgs],
+                      [msg.estimate.pose.pose.position.x for msg in self._control_msgs])
             plot_pose(axpy, 'pose y', 'plan y', 'est y', all_stamps, all_stamps,
-                      [msg.plan_pose.position.y for msg in self._control_msgs],
-                      [msg.estimate_pose.position.y for msg in self._control_msgs])
+                      [msg.mission.pose.fp.pose.pose.position.y for msg in self._control_msgs],
+                      [msg.estimate.pose.pose.position.y for msg in self._control_msgs])
             plot_pose(axpz, 'pose z', 'plan z', 'est z', all_stamps, all_stamps,
-                      [msg.plan_pose.position.z for msg in self._control_msgs],
-                      [msg.estimate_pose.position.z for msg in self._control_msgs])
+                      [msg.mission.pose.fp.pose.pose.position.z for msg in self._control_msgs],
+                      [msg.estimate.pose.pose.position.z for msg in self._control_msgs])
             plot_pose(axpw, 'pose yaw', 'plan yaw', 'est yaw', all_stamps, all_stamps,
-                      [get_yaw(msg.plan_pose.orientation) for msg in self._control_msgs],
-                      [get_yaw(msg.estimate_pose.orientation) for msg in self._control_msgs])
+                      [get_yaw(msg.mission.pose.fp.pose.pose.orientation) for msg in
+                       self._control_msgs],
+                      [get_yaw(msg.estimate.pose.pose.orientation) for msg in self._control_msgs])
 
             # Plot error data
             plot_error(axex, 'error x', all_stamps,
-                       [msg.estimate_pose.position.x - msg.plan_pose.position.x for msg in self._control_msgs])
+                       [
+                           msg.estimate.pose.pose.position.x -
+                           msg.mission.pose.fp.pose.pose.position.x
+                           for msg in
+                           self._control_msgs])
             plot_error(axey, 'error y', all_stamps,
-                       [msg.estimate_pose.position.x - msg.plan_pose.position.y for msg in self._control_msgs])
+                       [
+                           msg.estimate.pose.pose.position.x -
+                           msg.mission.pose.fp.pose.pose.position.y
+                           for msg in
+                           self._control_msgs])
             plot_error(axez, 'error z', all_stamps,
-                       [msg.estimate_pose.position.x - msg.plan_pose.position.z for msg in self._control_msgs])
-            plot_error(axew, 'error yaw', all_stamps,
-                       [norm_angle(get_yaw(msg.estimate_pose.orientation) - get_yaw(msg.plan_pose.orientation))
-                        for msg in self._control_msgs])
+                       [
+                           msg.estimate.pose.pose.position.x -
+                           msg.mission.pose.fp.pose.pose.position.z
+                           for msg in
+                           self._control_msgs])
+            plot_error(axew, 'error yaw', all_stamps, [norm_angle(
+                get_yaw(msg.estimate.pose.pose.orientation) - get_yaw(
+                    msg.mission.pose.fp.pose.pose.orientation)) for
+                msg in self._control_msgs])
 
         # Plot effort data
-        plot_effort(axff, 'forward', all_stamps, [msg.efforts.forward for msg in self._control_msgs])
+        plot_effort(axff, 'forward', all_stamps,
+                    [msg.efforts.forward for msg in self._control_msgs])
         plot_effort(axfs, 'strafe', all_stamps, [msg.efforts.strafe for msg in self._control_msgs])
-        plot_effort(axfv, 'vertical', all_stamps, [msg.efforts.vertical for msg in self._control_msgs])
+        plot_effort(axfv, 'vertical', all_stamps,
+                    [msg.efforts.vertical for msg in self._control_msgs])
         plot_effort(axfw, 'yaw', all_stamps, [msg.efforts.yaw for msg in self._control_msgs])
 
         # Set figure title
@@ -219,7 +277,7 @@ class Plotter(object):
         # -- once with a unique name for later analysis
         # -- again with a repeated name so I can watch the plots live
         plt.savefig(self._filename)
-        plt.savefig('plot_control.pdf')
+        plt.savefig('plot_auv_segments.pdf')
 
         # Close the figure to reclaim the memory
         plt.close(fig)
@@ -239,17 +297,17 @@ class PlannerStatus(object):
     def __init__(self, msg: Control):
         self.global_plan_idx = msg.global_plan_idx
 
-        self.targets_total = msg.targets_total
-        self.target_idx = msg.target_idx
-        self.target_marker_id = msg.target_marker_id
+        self.targets_total = msg.mission.targets_total
+        self.target_idx = msg.mission.target_idx
+        self.target_marker_id = msg.mission.target_marker_id
 
-        self.planner = msg.planner
-        self.local_plan_idx = msg.local_plan_idx
+        self.planner = msg.mission.planner
+        self.local_plan_idx = msg.mission.local_plan_idx
 
-        self.segments_total = msg.segments_total
-        self.segment_idx = msg.segment_idx
-        self.segment_info = msg.segment_info
-        self.segment_type = msg.segment_type
+        self.segments_total = msg.mission.segments_total
+        self.segment_idx = msg.mission.segment_idx
+        self.segment_info = msg.mission.segment_info
+        self.segment_type = msg.mission.segment_type
 
     def different_segment(self, other):
         return self.global_plan_idx != other.global_plan_idx or \
@@ -258,32 +316,34 @@ class PlannerStatus(object):
                self.segment_idx != other.segment_idx
 
     def segment_name(self):
-        if self.segment_type == Control.PAUSE:
+        if self.segment_type == MissionState.PAUSE:
             return 'pause'
-        if self.segment_type == Control.POSE_VERTICAL:
+        if self.segment_type == MissionState.POSE_VERTICAL:
             return 'pose_vertical'
-        if self.segment_type == Control.POSE_ROTATE:
+        if self.segment_type == MissionState.POSE_ROTATE:
             return 'pose_rotate'
-        if self.segment_type == Control.POSE_LINE:
+        if self.segment_type == MissionState.POSE_LINE:
             return 'pose_line'
-        if self.segment_type == Control.POSE_COMBO:
+        if self.segment_type == MissionState.POSE_COMBO:
             return 'pose_combo'
-        if self.segment_type == Control.OBS_RTM:
+        if self.segment_type == MissionState.OBS_RTM:
             return 'obs_rtm'
-        if self.segment_type == Control.OBS_MTM:
+        if self.segment_type == MissionState.OBS_MTM:
             return 'obs_mtm'
         return 'none'
 
     def filename(self):
-        return 'g{}_t{}_l{}_s{}_{}.pdf'.format(self.global_plan_idx, self.target_idx, self.local_plan_idx,
-                                               self.segment_idx, self.segment_name())
+        return 'g{}_t{}_l{}_s{}_{}.pdf'.format(self.global_plan_idx, self.target_idx,
+                                               self.local_plan_idx, self.segment_idx,
+                                               self.segment_name())
 
 
 class PlotControlNode(Node):
 
     def __init__(self):
         super().__init__('plot_control')
-        self._control_sub = self.create_subscription(Control, '/control', self.control_callback, 10)
+        self._control_sub = self.create_subscription(Control, '/control',
+                                                     self.control_callback, 10)
 
         self._plot = None
         self._prev_status = None

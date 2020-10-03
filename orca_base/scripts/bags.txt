@@ -1,0 +1,69 @@
+All topics:
+/barometer
+/control
+/depth
+/driver_status
+/fiducial_map
+/fiducial_markers
+/fiducial_observations
+/filtered_barometer
+/filtered_path
+/forward_camera/camera_info
+/forward_camera/camera_pose
+/forward_camera/fp
+/forward_camera/image_annotated
+/forward_camera/image_marked
+/forward_camera/image_raw
+/forward_camera/image_raw/h264
+/forward_camera/parameter_events
+/forward_camera/repub_raw
+/forward_camera/rosout
+/joint_states
+/joy
+/move_base_simple/goal
+/parameter_events
+/planned_pose
+/robot_description
+/rosout
+/rov_control
+/target_path
+/tf
+/tf_static
+
+Record all topics except images and robot_description:
+ros2 bag record /barometer \
+                /control \
+                /depth \
+                /driver_status \
+                /fiducial_map \
+                /fiducial_markers \
+                /fiducial_observations \
+                /filtered_barometer \
+                /filtered_path \
+                /forward_camera/camera_info \
+                /forward_camera/camera_pose \
+                /forward_camera/fp \
+                /forward_camera/parameter_events \
+                /forward_camera/rosout \
+                /joint_states \
+                /joy \
+                /move_base_simple/goal \
+                /parameter_events \
+                /planned_pose \
+                /rosout \
+                /rov_control \
+                /target_path \
+                /tf \
+                /tf_static
+
+Record all topics from the sub:
+ros2 bag record /barometer \
+                /control \
+                /driver_status \
+                /forward_camera/camera_info \
+                /forward_camera/image_raw/h264 \
+                /forward_camera/parameter_events \
+                /forward_camera/rosout \
+                /parameter_events \
+                /rosout
+

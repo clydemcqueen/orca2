@@ -2,19 +2,19 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_base)
 
 # Default to C++14
-if (NOT CMAKE_CXX_STANDARD)
+if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif ()
+endif()
 
 # Emulate colcon by providing paths to other projects in the workspace
-if ($ENV{CLION_IDE})
+if($ENV{CLION_IDE})
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(orca_description_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_description/share/orca_description/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(orca_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_shared/share/orca_shared/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(ukf_DIR "${PROJECT_SOURCE_DIR}/../../../install/ukf/share/ukf/cmake")
-endif ()
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
@@ -51,6 +51,7 @@ add_executable(
   src/mission.cpp
   src/move_to_marker_planner.cpp
   src/observation_segment.cpp
+  src/pid.cpp
   src/pose_planner.cpp
   src/pose_segment.cpp
   src/segment_common.cpp
@@ -79,6 +80,7 @@ ament_target_dependencies(
 
 add_executable(
   rov_node
+  src/pid.cpp
   src/rov_node.cpp
   src/thrusters.cpp
 )
@@ -110,12 +112,19 @@ ament_target_dependencies(
   orca_msgs
   orca_shared
   rclcpp
+  ros2_shared
   sensor_msgs
 )
 
 #=============
 # Test
 #=============
+
+# This will load & run linters listed in package.xml
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
 
 add_executable(
   test_main
@@ -153,12 +162,18 @@ install(
 # PROGRAMS sets execute bits, FILES clears them
 install(
   PROGRAMS
-  scripts/experiments.py
-  scripts/nees.py
+  scripts/calc_var.py
+  scripts/drag_experiment.py
+  scripts/mission_experiment.py
+  scripts/nees_experiment.py
+  scripts/nees_fp.py
+  scripts/pid_experiment.py
   scripts/plot_auv_segments.py
+  scripts/plot_baro.py
   scripts/plot_control.py
-  scripts/plot_filter.py
-  scripts/plot_odom.py
+  scripts/plot_corners.py
+  scripts/plot_filter_fp.py
+  scripts/set_pid.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -2,18 +2,18 @@ cmake_minimum_required(VERSION 3.5)
 project(orca_filter)
 
 # Default to C++14
-if (NOT CMAKE_CXX_STANDARD)
+if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif ()
+endif()
 
 # Emulate colcon by providing paths to other projects in the workspace
-if ($ENV{CLION_IDE})
+if($ENV{CLION_IDE})
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(orca_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_msgs/share/orca_msgs/cmake")
   set(orca_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/orca_shared/share/orca_shared/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(ukf_DIR "${PROJECT_SOURCE_DIR}/../../../install/ukf/share/ukf/cmake")
-endif ()
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -50,6 +50,7 @@ add_executable(
 
 ament_target_dependencies(
   depth_node
+  image_geometry
   orca_msgs
   orca_shared
   rclcpp
@@ -80,21 +81,39 @@ ament_target_dependencies(
 )
 
 #=============
+# Barometer filter node
+#=============
+
+add_executable(
+  baro_filter_node
+  src/baro_filter_node.cpp
+)
+
+ament_target_dependencies(
+  baro_filter_node
+  orca_msgs
+  orca_shared
+  rclcpp
+  ros2_shared
+  ukf
+)
+
+#=============
 # Filter node
 #=============
 
 add_executable(
-  filter_node
-  src/depth_filter.cpp
-  src/filter_node.cpp
-  src/filter_base.cpp
-  src/four_filter.cpp
+  pose_filter_node
+  src/pose_filter_node.cpp
   src/measurement.cpp
-  src/pose_filter.cpp
+  src/pose_filter_base.cpp
+  src/pose_filter_1d.cpp
+  src/pose_filter_4d.cpp
+  src/pose_filter_6d.cpp
 )
 
 ament_target_dependencies(
-  filter_node
+  pose_filter_node
   fiducial_vlam_msgs
   geometry_msgs
   image_geometry
@@ -110,10 +129,20 @@ ament_target_dependencies(
 )
 
 #=============
+# Test
+#=============
+
+# This will load & run linters listed in package.xml
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+#=============
 # Install
 #=============
 
 # Install C++ targets
-install(TARGETS depth_node filter_node fp_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS baro_filter_node depth_node fp_node pose_filter_node DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

@@ -1,3 +1,35 @@
+// Copyright (c) 2020, Clyde McQueen.
+// All rights reserved.
+//
+// Software License Agreement (BSD License 2.0)
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above
+//    copyright notice, this list of conditions and the following
+//    disclaimer in the documentation and/or other materials provided
+//    with the distribution.
+//  * Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 #include "orca_shared/mw/fiducial_pose_stamped.hpp"
 #include "orca_shared/test.hpp"
 
@@ -80,12 +112,13 @@ bool test_mw_roundtrip()
 
   mw::CovarianceType covariance1{};
   double variance = 0.1;
-  for (auto &item : covariance1) {
+  for (auto & item : covariance1) {
     item = variance++;
   }
 
   const mw::PoseWithCovariance pose_with_covariance1{pose1, covariance1};
-  const mw::PoseWithCovariance pose_with_covariance2 = mw::PoseWithCovariance{pose_with_covariance1.msg()};
+  const mw::PoseWithCovariance
+    pose_with_covariance2 = mw::PoseWithCovariance{pose_with_covariance1.msg()};
 
   std::cout << "PoseWithCovariance" << std::endl;
   std::cout << pose_with_covariance1 << std::endl;
@@ -105,7 +138,8 @@ bool test_mw_roundtrip()
   // Msg round trip:
   const mw::Observer observer2 = mw::Observer{observer1.msg()};
   // Getter/setter round trip:
-  const mw::Observer observer3{observer2.marker_length(), observer2.camera_model(), observer2.t_base_cam()};
+  const mw::Observer
+    observer3{observer2.marker_length(), observer2.camera_model(), observer2.t_base_cam()};
 
   std::cout << "Observer" << std::endl;
   std::cout << observer1 << std::endl;

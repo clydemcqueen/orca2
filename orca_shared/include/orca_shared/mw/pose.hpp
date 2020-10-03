@@ -1,171 +1,202 @@
-#ifndef ORCA_SHARED_MW_POSE_HPP
-#define ORCA_SHARED_MW_POSE_HPP
+// Copyright (c) 2020, Clyde McQueen.
+// All rights reserved.
+//
+// Software License Agreement (BSD License 2.0)
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above
+//    copyright notice, this list of conditions and the following
+//    disclaimer in the documentation and/or other materials provided
+//    with the distribution.
+//  * Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+#ifndef ORCA_SHARED__MW__POSE_HPP_
+#define ORCA_SHARED__MW__POSE_HPP_
 
 #include <cmath>
 
 #include "geometry_msgs/msg/pose.hpp"
 #include "orca_shared/mw/acceleration.hpp"
 #include "orca_shared/mw/point.hpp"
+#include "orca_shared/mw/pose_body.hpp"
 #include "orca_shared/mw/quaternion.hpp"
 #include "orca_shared/mw/twist.hpp"
 
 namespace mw
 {
 
-  class Pose
+class Pose
+{
+  Point position_;
+  Quaternion orientation_;
+
+public:
+  Pose() = default;
+
+  explicit Pose(const geometry_msgs::msg::Pose & msg)
+  : position_{msg.position},
+    orientation_{msg.orientation} {}
+
+  Pose(const Point & position, const Quaternion & orientation)
+  : position_{position},
+    orientation_{orientation} {}
+
+  Pose(const double & x, const double & y, const double & z, const double & yaw)
+  : position_{x, y, z},
+    orientation_{0, 0, yaw} {}
+
+  geometry_msgs::msg::Pose msg() const
   {
-    Point position_;
-    Quaternion orientation_;
+    geometry_msgs::msg::Pose msg;
+    msg.position = position_.msg();
+    msg.orientation = orientation_.msg();
+    return msg;
+  }
 
-  public:
+  const Point & position() const
+  {
+    return position_;
+  }
 
-    Pose() = default;
+  const Quaternion & orientation() const
+  {
+    return orientation_;
+  }
 
-    explicit Pose(const geometry_msgs::msg::Pose &msg) :
-      position_{msg.position},
-      orientation_{msg.orientation}
-    {}
+  Point & position()
+  {
+    return position_;
+  }
 
-    Pose(const Point &position, const Quaternion &orientation) :
-      position_{position},
-      orientation_{orientation}
-    {}
+  Quaternion & orientation()
+  {
+    return orientation_;
+  }
 
-    Pose(const double &x, const double &y, const double &z, const double &yaw) :
-      position_{x, y, z},
-      orientation_{0, 0, yaw}
-    {}
+  double x() const
+  {
+    return position_.x();
+  }
 
-    geometry_msgs::msg::Pose msg() const
-    {
-      geometry_msgs::msg::Pose msg;
-      msg.position = position_.msg();
-      msg.orientation = orientation_.msg();
-      return msg;
-    }
+  double y() const
+  {
+    return position_.y();
+  }
 
-    const Point &position() const
-    {
-      return position_;
-    }
+  double z() const
+  {
+    return position_.z();
+  }
 
-    const Quaternion &orientation() const
-    {
-      return orientation_;
-    }
+  double & x()
+  {
+    return position_.x();
+  }
 
-    Point &position()
-    {
-      return position_;
-    }
+  double & y()
+  {
+    return position_.y();
+  }
 
-    Quaternion &orientation()
-    {
-      return orientation_;
-    }
+  double & z()
+  {
+    return position_.z();
+  }
 
-    double x() const
-    {
-      return position_.x();
-    }
+  double roll() const
+  {
+    return orientation_.roll();
+  }
 
-    double y() const
-    {
-      return position_.y();
-    }
+  double pitch() const
+  {
+    return orientation_.pitch();
+  }
 
-    double z() const
-    {
-      return position_.z();
-    }
+  double yaw() const
+  {
+    return orientation_.yaw();
+  }
 
-    double &x()
-    {
-      return position_.x();
-    }
+  void roll(const double & v)
+  {
+    orientation_.roll(v);
+  }
 
-    double &y()
-    {
-      return position_.y();
-    }
+  void pitch(const double & v)
+  {
+    orientation_.pitch(v);
+  }
 
-    double &z()
-    {
-      return position_.z();
-    }
+  void yaw(const double & v)
+  {
+    orientation_.yaw(v);
+  }
 
-    double roll() const
-    {
-      return orientation_.roll();
-    }
+  // TODO(clyde): return ref to avoid assignment errors, e.g., pose_.transform() = my_transform;
+  tf2::Transform transform() const
+  {
+    tf2::Transform transform;
+    tf2::fromMsg(msg(), transform);
+    return transform;
+  }
 
-    double pitch() const
-    {
-      return orientation_.pitch();
-    }
+  Pose motion(const rclcpp::Duration & d, const mw::Twist & v0, const mw::Acceleration & a) const
+  {
+    return Pose{position_.motion(d, v0, a), orientation_.motion(d, v0, a)};
+  }
 
-    double yaw() const
-    {
-      return orientation_.yaw();
-    }
+  Pose operator+(const Pose & that) const
+  {
+    return Pose{position_ + that.position_, orientation_ + that.orientation_};
+  }
 
-    void roll(const double &v)
-    {
-      orientation_.roll(v);
-    }
+  Pose operator+(const PoseBody & that) const;
 
-    void pitch(const double &v)
-    {
-      orientation_.pitch(v);
-    }
+  Pose operator-(const Pose & that) const
+  {
+    return Pose{position_ - that.position_, orientation_ - that.orientation_};
+  }
 
-    void yaw(const double &v)
-    {
-      orientation_.yaw(v);
-    }
+  Pose operator-() const
+  {
+    return Pose{-position_, -orientation_};
+  }
 
-    // TODO return ref to avoid possible assignment errors, e.g., pose_.transform() = my_transform;
-    tf2::Transform transform() const
-    {
-      tf2::Transform transform;
-      tf2::fromMsg(msg(), transform);
-      return transform;
-    }
+  bool operator==(const Pose & that) const
+  {
+    return position_ == that.position_ &&
+           orientation_ == that.orientation_;
+  }
 
-    Pose motion(const rclcpp::Duration &d, const mw::Twist &v0, const mw::Acceleration &a) const
-    {
-      return Pose{position_.motion(d, v0, a), orientation_.motion(d, v0, a)};
-    }
+  bool operator!=(const Pose & that) const
+  {
+    return !(*this == that);
+  }
 
-    Pose operator+(const Pose &that) const
-    {
-      return Pose{position_ + that.position_, orientation_ + that.orientation_};
-    }
+  friend std::ostream & operator<<(std::ostream & os, const Pose & v);
+};
 
-    Pose operator-(const Pose &that) const
-    {
-      return Pose{position_ - that.position_, orientation_ - that.orientation_};
-    }
+}  // namespace mw
 
-    Pose operator-() const
-    {
-      return Pose{-position_, -orientation_};
-    }
-
-    bool operator==(const Pose &that) const
-    {
-      return position_ == that.position_ &&
-             orientation_ == that.orientation_;
-    }
-
-    bool operator!=(const Pose &that) const
-    {
-      return !(*this == that);
-    }
-
-    friend std::ostream &operator<<(std::ostream &os, const Pose &v);
-  };
-
-}
-
-#endif //ORCA_SHARED_MW_POSE_HPP
+#endif  // ORCA_SHARED__MW__POSE_HPP_

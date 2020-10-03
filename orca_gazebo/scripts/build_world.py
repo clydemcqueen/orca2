@@ -1,7 +1,40 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2020, Clyde McQueen.
+# All rights reserved.
+#
+# Software License Agreement (BSD License 2.0)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Build Gazebo world and fiducial_vlam map files from a list of markers and poses
+Build Gazebo world and fiducial_vlam map files from a list of markers and poses.
+
 Run by CMake -- see CMakeLists.txt
 
 Marker format: [marker_num, x, y, z, roll, pitch, yaw]
@@ -19,8 +52,9 @@ Also:
 """
 
 import math
-import transformations as xf
 import sys
+
+import transformations as xf
 
 # SDF and fiducial_vlam have different coordinate models
 t_world_map = xf.quaternion_matrix([math.sqrt(0.5), 0, 0, -math.sqrt(0.5)])
@@ -167,28 +201,53 @@ small_pool = [
 ]
 
 
+# Generate a ring of vertical markers
 def gen_ring_of_markers(num_markers, radius, z):
     marker = 0
     angle = 0
     inc = -2 * math.pi / num_markers
     while marker < num_markers:
-        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi / 2, 0]
+        yield [marker, radius * math.cos(angle), radius * math.sin(angle), z, angle, -math.pi / 2,
+               0]
         marker += 1
         angle += inc
 
 
-# Field test #3: 12' diameter pool x 3' deep, markers on walls
-ft3 = list(gen_ring_of_markers(num_markers=12, radius=3.6/2, z=-0.5))
+# Small ring: 12' diameter pool x 3' deep, 12 markers on walls
+small_ring = list(gen_ring_of_markers(num_markers=12, radius=3.6 / 2, z=-0.5))
+
+# Six ring: 12' diameter pool x 3' deep, just 6 markers on walls
+six_ring = list(gen_ring_of_markers(num_markers=6, radius=3.6 / 2, z=-0.5))
 
 medium_ring = list(gen_ring_of_markers(num_markers=12, radius=3, z=-0.5))
 
-# Very large ring of vertical markers
-large_ring = list(gen_ring_of_markers(num_markers=4, radius=8, z=-0.5))
+large_ring = list(gen_ring_of_markers(num_markers=16, radius=8, z=-0.5))
 
-# Even simpler pool test #2: 1 marker on the wall and 1 on the floor
-small_simple = [
+# 1 marker on the wall
+one_wall = [
+    [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
+]
+
+# 2 markers on the wall
+two_wall = [
+    [0, 2, -0.5, -0.5, 0, -math.pi / 2, 0],
+    [1, 2, 0.5, -0.5, 0, -math.pi / 2, 0],
+]
+
+# 1 marker on the wall and 1 on the floor
+two_wall_floor = [
     [0, 2, 0, -0.5, 0, -math.pi / 2, 0],
     [1, 1, 1, -3, 0, 0, 0],
+]
+
+# Vertical field of 2x3=6 markers that will fit in the 12' pool
+small_field = [
+    [0, 2, 0.6, -0.3, 0, -math.pi / 2, 0],
+    [1, 2, 0, -0.3, 0, -math.pi / 2, 0],
+    [2, 2, -0.6, -0.3, 0, -math.pi / 2, 0],
+    [3, 2, 0.6, -0.7, 0, -math.pi / 2, 0],
+    [4, 2, 0, -0.7, 0, -math.pi / 2, 0],
+    [5, 2, -0.6, -0.7, 0, -math.pi / 2, 0],
 ]
 
 worlds = [
@@ -196,15 +255,18 @@ worlds = [
     ['large.world', 'large_map.yaml', large_pool],
     ['medium.world', 'medium_map.yaml', medium_square],
     ['small.world', 'small_map.yaml', small_pool],
-    ['ft3.world', 'ft3_map.yaml', ft3],
+    ['small_ring.world', 'small_ring_map.yaml', small_ring],
     ['medium_ring.world', 'medium_ring_map.yaml', medium_ring],
     ['large_ring.world', 'large_ring_map.yaml', large_ring],
-    ['simple.world', 'simple_map.yaml', small_simple],
+    ['one_wall.world', 'one_wall_map.yaml', one_wall],
+    ['two_wall.world', 'two_wall_map.yaml', two_wall],
+    ['two_wall_floor.world', 'two_wall_floor_map.yaml', two_wall_floor],
+    ['small_field.world', 'small_field_map.yaml', small_field],
+    ['six_ring.world', 'six_ring_map.yaml', six_ring],
 ]
 
-
-output_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
+result_dir = sys.argv[1] if len(sys.argv) > 1 else 'worlds'
 
 for world in worlds:
-    build_world(output_dir, world[0], world[2])
-    build_map(output_dir, world[1], world[2])
+    build_world(result_dir, world[0], world[2])
+    build_map(result_dir, world[1], world[2])

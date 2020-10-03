@@ -1,21 +1,27 @@
 # Goal
 
-# Targets are either markers or poses
-bool pose_targets false
+# This will be copied to /control.mission.mission_info, useful for experiments
+string mission_info
+
+# Target type
+uint16 TARGET_MARKER=0    # Markers in marker_ids[]
+uint16 TARGET_POSE=1      # Poses in poses[]
+uint16 TARGET_MOTION=2    # Motions in motions[]
+uint16 target_type
 
 # List of target markers, if empty visit all markers on the map
 int32[] marker_ids
 
-# List of target poses, if empty use the current pose (default is empty)
+# List of target poses, if empty use the current pose
 geometry_msgs/Pose[] poses
 
-# Randomize the list of targets (default is empty)
+# List of motions, relative to the current pose, additive
+orca_msgs/PoseBody[] motions
+
+# Randomize the list of targets
 bool random false
 
-# Repeat the mission forever
-bool repeat false
-
-# Keep station at the last target (not compatible with repeat)
+# Keep station at the last target
 bool keep_station false
 
 ######
@@ -28,7 +34,7 @@ bool keep_station false
 #     marker_ids = [0, 1, 2]
 #
 # To keep station at the current pose:
-#     pose_targets = true
+#     target_type = 1
 #     keep_station = true
 ######
 

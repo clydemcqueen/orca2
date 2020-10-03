@@ -2,40 +2,45 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-    <name>orca_filter</name>
-    <version>0.3.0</version>
-    <description>Orca filter</description>
+  <name>orca_filter</name>
+  <version>0.3.0</version>
+  <description>Orca filter</description>
 
-    <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
-    <license>BSD</license>
+  <maintainer email="clyde@mcqueen.net">Clyde McQueen</maintainer>
+  <license>BSD</license>
 
-    <url type="repository">https://github.com/clydemcqueen/orca2.git</url>
-    <url type="bugtracker">https://github.com/clydemcqueen/orca2/issues</url>
+  <url type="repository">https://github.com/clydemcqueen/orca2.git</url>
+  <url type="bugtracker">https://github.com/clydemcqueen/orca2/issues</url>
 
-    <author>Clyde McQueen</author>
+  <author>Clyde McQueen</author>
 
-    <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>Eigen3</depend>
-    <depend>fiducial_vlam_msgs</depend>
-    <depend>geometry_msgs</depend>
-    <depend>image_geometry</depend>
-    <depend>nav_msgs</depend>
-    <depend>orca_description</depend>
-    <depend>orca_msgs</depend>
-    <depend>orca_shared</depend>
-    <depend>rclcpp</depend>
-    <depend>rclcpp_action</depend>
-    <depend>rclpy</depend>
-    <depend>ros2_shared</depend>
-    <depend>sensor_msgs</depend>
-    <depend>tf2</depend>
-    <depend>tf2_ros</depend>
-    <depend>ukf</depend>
-    <depend>visualization_msgs</depend>
+  <test_depend>ament_lint_auto</test_depend>
 
-    <export>
-        <build_type>ament_cmake</build_type>
-    </export>
+  <!-- This recursively depends on a set of common linters -->
+  <test_depend>ament_lint_common</test_depend>
+  
+  <depend>eigen</depend>
+  <depend>fiducial_vlam_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>image_geometry</depend>
+  <depend>nav_msgs</depend>
+  <depend>orca_description</depend>
+  <depend>orca_msgs</depend>
+  <depend>orca_shared</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>rclpy</depend>
+  <depend>ros2_shared</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>ukf</depend>
+  <depend>visualization_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 
 </package>

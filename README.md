@@ -12,23 +12,31 @@ Installation instructions:
 [using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Install-Debians/).
 Use the `ros-eloquent-desktop` option.
 
-* Install Colcon (the build tool for ROS2)
-[using these instructions](https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/).
+* Install ROS2 development tools
+[using these instructions](https://index.ros.org/doc/ros2/Installation/Eloquent/Linux-Development-Setup/).
+Stop after installing the development tools (before "Get ROS 2 code").
+
+* Initialize rosdep:
+~~~
+sudo rosdep init
+rosdep update
+~~~
 
 * Install Gazebo v9:
 ~~~
 sudo apt install gazebo9 libgazebo9 libgazebo9-dev
 ~~~
 
-* Install these additional ROS2 packages:
-~~~
-sudo apt install ros-eloquent-cv-bridge ros-eloquent-camera-calibration-parsers ros-eloquent-camera-info-manager ros-eloquent-gazebo-ros-pkgs ros-eloquent-xacro
-~~~
-
 * Use your favorite Python package manager to install these Python packages:
 ~~~
 pip3 install numpy transformations
 ~~~
+
+* Orca2 uses [fiducial_vlam_sam](https://github.com/ptrmu/fiducial_vlam_sam),
+which in turn uses [GTSAM](https://github.com/borglab/gtsam).
+You will need to install GTSAM.
+Alternatively you can swap [fiducial_vlam](https://github.com/ptrmu/fiducial_vlam) for fiducial_vlam_sam,
+but the parameters are different, so the launch files will need to be modified.
 
 * Build Orca2 (orca_driver is not required for the simulation):
 ~~~
@@ -37,12 +45,14 @@ cd ~/ros2/orca_ws/src
 git clone https://github.com/clydemcqueen/orca2.git
 touch orca2/orca_driver/COLCON_IGNORE
 git clone https://github.com/clydemcqueen/ukf.git
-git clone https://github.com/ptrmu/fiducial_vlam.git
+git clone https://github.com/ptrmu/fiducial_vlam_sam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 git clone https://github.com/clydemcqueen/sim_fiducial.git
 git clone https://github.com/clydemcqueen/astar.git
 cd ~/ros2/orca2_ws
 source /opt/ros/eloquent/setup.bash
+# Install system dependencies:
+rosdep install --from-paths . --ignore-src
 colcon build
 ~~~
 
@@ -133,3 +143,16 @@ It also calls the `Mission` action server to start missions
   * Depends on `orca_description`
   * Depends on `orca_msgs`
   * Depends on `orca_shared`
+
+## Status and Future Work
+
+I built the sub and ran it through a series of tests with mixed results.
+There's still a lot of work to do in vehicle dynamics (understanding drag, tuning PID controllers).
+
+I'm currently evaluating [ROS Nav2](https://navigation.ros.org/). One idea is to use Nav2
+and add plugins for specific Orca2 control strategies.
+
+Possible future sensors:
+* down-facing camera(s), useful for measuring distance to the seafloor and for visual odometry
+* forward-facing and/or down-facing lasers for measuring distance
+* sonar for obstacle avoidance

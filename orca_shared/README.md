@@ -32,13 +32,14 @@ The `mw` (message wrapper) library provides core classes for Orca.
 | PolarObservation | orca_msgs::msg::PolarObservation | Marker location in polar coordinates from base_link |
 | PolarObservationStamped | n/a | Header + PolarObservation |
 | Pose | geometry_msgs::msg::Pose | Point + Quaternion |
+| PoseBody | orca_msgs::msg::PoseBody | Pose in the body frame |
 | PoseStamped | geometry_msgs::msg::PoseStamped | Header + Pose |
 | PoseWithCovariance | geometry_msgs::msg::PoseWithCovariance | Pose + covariance matrix |
 | PoseWithCovarianceStamped | geometry_msgs::msg::PoseWithCovarianceStamped | Header + PoseWithCovariance |
+| Quaternion | geometry_msgs::msg::Quaternion | Quaternion |
 | Target | n/a | Target pose for AUV, often near a marker |
 | Twist | geometry_msgs::msg::Twist | Velocity in the world frame |
 | TwistBody | n/a | Velocity in the body frame |
-| Quaternion | geometry_msgs::msg::Quaternion | Quaternion |
 
 ### Unwrapped messages
 
