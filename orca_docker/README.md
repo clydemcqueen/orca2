@@ -23,6 +23,3 @@ They can be started with `docker exec`:
 docker ps  # Get container id
 docker exec -it CONTAINER_ID bash
 ~~~
-
-TODO
-* script that launches rviz2 with a preconfigured layout

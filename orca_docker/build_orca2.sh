@@ -1,19 +1,34 @@
 #!/bin/bash -x
 
-docker build --tag orca2_vision:eloquent -f- scripts <<EOF
+# Build orca2
+# TODO(clyde): wait on gtsam
+# TODO(clyde): add foxy branch to https://github.com/clydemcqueen/gazebo_ros_pkgs.git
+# TODO(clyde): update eloquent version of these scripts (checkout eloquent branches)
 
-FROM osrf/ros:eloquent-desktop
+docker build --tag orca2_vision:foxy -f- scripts <<EOF
+
+FROM osrf/ros:foxy-desktop
 RUN apt-get update && apt-get upgrade -y
 
-# Get OpenCV 4.4 and GTSAM
-COPY do_build_opencv_gtsam.sh /scripts/do_build_opencv_gtsam.sh
-RUN /scripts/do_build_opencv_gtsam.sh
+# Get OpenCV 4.4
+COPY do_build_opencv.sh /scripts/do_build_opencv.sh
+RUN /scripts/do_build_opencv.sh
 
 EOF
 
-docker build --tag orca2_tools:eloquent -f- scripts <<EOF
+docker build --tag orca2_gtsam:foxy -f- scripts <<EOF
 
-FROM orca2_vision:eloquent
+FROM orca2_vision:foxy
+
+# Get GTSAM
+COPY do_build_gtsam.sh /scripts/do_build_gtsam.sh
+RUN /scripts/do_build_gtsam.sh
+
+EOF
+
+docker build --tag orca2_tools:foxy -f- scripts <<EOF
+
+FROM orca2_gtsam:foxy
 
 # Get python3 packages
 COPY do_get_python.sh /scripts/do_get_python.sh
@@ -25,9 +40,9 @@ RUN /scripts/do_get_tools.sh
 
 EOF
 
-docker build --tag orca2_src:eloquent -f- scripts <<EOF
+docker build --tag orca2_src:foxy -f- scripts <<EOF
 
-FROM orca2_tools:eloquent
+FROM orca2_tools:foxy
 
 # Get orca2
 COPY do_get_src.sh /scripts/do_get_src.sh
@@ -40,9 +55,9 @@ RUN /scripts/do_rosdep.sh
 
 EOF
 
-docker build --tag orca2_build:eloquent -f- scripts <<EOF
+docker build --tag orca2_build:foxy -f- scripts <<EOF
 
-FROM orca2_src:eloquent
+FROM orca2_src:foxy
 
 # Build
 COPY do_colcon.sh /scripts/do_colcon.sh

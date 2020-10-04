@@ -21,24 +21,3 @@ cd ./lib/opencv/build \
   && make -j$((`nproc`+2)) \
   && make install \
   && cd ../../../
-
-# Get GTSAM prerequisites
-apt-get install -y libboost-all-dev libtbb-dev
-
-# Get GTSAM source
-mkdir -p ./lib/gtsam/build \
-  && mkdir -p ./lib/gtsam/install \
-  && cd ./lib/gtsam \
-  && git clone https://github.com/borglab/gtsam.git \
-  && cd gtsam \
-  && git checkout 4.0.3 \
-  && cd ../../../
-
-# Build GTSAM
-cd ./lib/gtsam/build \
-  && cmake ../gtsam -DCMAKE_INSTALL_PREFIX=../install \
-    -DGTSAM_BUILD_TESTS=0 -DGTSAM_BUILD_EXAMPLES_ALWAYS=0 -DGTSAM_ALLOW_DEPRICATED_SINCE_V4=0 -DGTSAM_BUILD_WRAP=0 \
-    -DGTSAM_INSTALL_CPPUNITLITE=0 -DTSAM_WRAP_SERIALIZATION=0 \
-  && make -j$((`nproc`+2)) \
-  && make install \
-  && cd ../../../

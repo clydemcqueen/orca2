@@ -2,6 +2,6 @@
 
 # Run colcon
 cd /ros2_ws
-source /opt/ros/eloquent/setup.bash
+source /opt/ros/foxy/setup.bash
 source setup.sh
 colcon build

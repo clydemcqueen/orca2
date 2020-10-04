@@ -10,7 +10,7 @@ unset COLCON_PREFIX_PATH
 unset PYTHONPATH
 
 # ROS
-source /opt/ros/eloquent/setup.bash
+source /opt/ros/foxy/setup.bash
 source install/local_setup.bash
 
 # Log behavior, should not be required in Foxy
