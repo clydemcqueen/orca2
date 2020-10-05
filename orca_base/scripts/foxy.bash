@@ -12,9 +12,17 @@ unset PYTHONPATH
 . /opt/ros/foxy/setup.bash
 . install/local_setup.bash
 
+# Force logging to stdout, not stderr
+export RCUTILS_LOGGING_USE_STDOUT=1
+
 # Gazebo
-export GAZEBO_MODEL_PATH=${PWD}/install/sim_fiducial/share/sim_fiducial/models
 . /usr/share/gazebo/setup.sh
+
+# Gazebo -- Orca2
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:${PWD}/install/sim_fiducial/share/sim_fiducial/models
+
+# Gazebo -- Turtlebot3
+# export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:${PWD}/install/turtlebot3_gazebo/share/turtlebot3_gazebo/models
 
 # GTSAM
 # export CMAKE_PREFIX_PATH=~/lib/gtsam/install/lib/cmake/GTSAM:$CMAKE_PREFIX_PATH
