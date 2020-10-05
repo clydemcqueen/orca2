@@ -1,4 +1,14 @@
 # Handy script, store this in ~/ros2 and run `. ../eloquent.bash` from the workspace
+
+# Clear the decks
+unset AMENT_PREFIX_PATH
+unset CMAKE_PREFIX_PATH
+unset COLCON_PREFIX_PATH
+unset GAZEBO_MODEL_PATH
+unset LD_LIBRARY_PATH
+unset PYTHONPATH
+
+# ROS distro and overlay
 . /opt/ros/eloquent/setup.bash
 . install/local_setup.bash
 
