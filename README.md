@@ -49,7 +49,7 @@ git clone https://github.com/ptrmu/fiducial_vlam_sam.git
 git clone https://github.com/ptrmu/ros2_shared.git
 git clone https://github.com/clydemcqueen/sim_fiducial.git
 git clone https://github.com/clydemcqueen/astar.git
-cd ~/ros2/orca2_ws
+cd ~/ros2/orca_ws
 source /opt/ros/eloquent/setup.bash
 # Install system dependencies:
 rosdep install --from-paths . --ignore-src
