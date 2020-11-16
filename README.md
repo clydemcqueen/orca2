@@ -3,6 +3,9 @@
 Orca2 is a [ROS2](http://www.ros.org/) AUV (Autonomous Underwater Vehicle) based on the
 [BlueRobotics BlueROV2](https://www.bluerobotics.com/store/rov/bluerov2/).
 
+> **NOTE:** development has shifted to [Orca3](https://github.com/clydemcqueen/orca3),
+> which uses [ROS2 Navigation](https://navigation.ros.org/index.html) for mission planning and execution.
+
 ## Simulation
 
 Orca2 runs on Ubuntu 18.04 in [Gazebo](http://gazebosim.org/), a SITL (software-in-the-loop) simulator.
