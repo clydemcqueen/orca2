@@ -3,8 +3,7 @@
 Orca2 is a [ROS2](http://www.ros.org/) AUV (Autonomous Underwater Vehicle) based on the
 [BlueRobotics BlueROV2](https://www.bluerobotics.com/store/rov/bluerov2/).
 
-> **NOTE:** development has shifted to [Orca3](https://github.com/clydemcqueen/orca3),
-> which uses [ROS2 Navigation](https://navigation.ros.org/index.html) for mission planning and execution.
+> Update 17-June-2022: work has shifted to [Orca4](https://github.com/clydemcqueen/orca4), which uses [ArduSub](http://www.ardusub.com/) as the flight controller.
 
 ## Simulation
 
